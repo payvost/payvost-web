@@ -1,0 +1,26 @@
+{
+  "name": "qwibik-global-pay-backend",
+  "private": true,
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.12.0",
+    "@supabase/ssr": "^0.6.1",
+    "@types/express": "^5.0.3",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.12.0"
+  }
+}

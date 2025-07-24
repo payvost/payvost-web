@@ -1,0 +1,28 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+# Specifies the version of the App Hosting schema.
+schemaVersion: v1alpha1
+
+# For a standard Next.js project, you can often omit buildConfig and entryPoint
+# as App Hosting automatically detects and builds Next.js apps.
+
+runConfig:
+  # The maximum number of container instances that can be running at a time.
+  # Increase this value to automatically spin up more instances
+  # in response to increased traffic.
+  maxInstances: 2
+  # You can also configure CPU, memory, and concurrency.
+  # cpu: 1
+  # memoryMiB: 512
+  # concurrency: 80
+
+# env defines environment variables for the backend.
+# It's recommended to use secrets for sensitive data.
+# You can set a secret using the Firebase CLI:
+# firebase apphosting:secrets:set MY_SECRET_NAME
+env:
+  - variable: FIREBASE_CONFIG
+    value: '{{ env.FIREBASE_CONFIG }}'
+  # - variable: MY_API_KEY
+  #   secret: MY_SECRET_NAME
