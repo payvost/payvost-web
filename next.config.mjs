@@ -22,6 +22,18 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@opentelemetry\/exporter-jaeger$/,
+      }),
+    );
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      handlebars: 'handlebars/dist/cjs/handlebars.js',
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
