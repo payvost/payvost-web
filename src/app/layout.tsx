@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/components/theme-provider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -32,17 +33,19 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-            <AuthProvider>
-                {children}
-            </AuthProvider>
-            <Toaster />
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+              <AuthProvider>
+                  {children}
+              </AuthProvider>
+              <Toaster />
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
