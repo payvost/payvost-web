@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "genkit:dev": "genkit dev",
-    "dev:all": "npm-run-all --parallel dev genkit:dev",
+    "dev:all": "npm-run-all --parallel dev genkit:dev dev:backend",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "dev:backend": "ts-node backend/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -58,6 +59,7 @@
     "input-otp": "^1.2.5",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
+    "next-pwa": "^5.6.0",
     "next-themes": "^0.3.0",
     "patch-package": "^8.0.0",
     "react": "^18.3.1",
@@ -77,12 +79,14 @@
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18",
     "@types/topojson-client": "^3.1.4",
+    "concurrently": "^9.2.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
     "genkit-cli": "^1.13.0",
     "npm-run-all": "^4.1.5",
     "postcss": "^8",
     "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
