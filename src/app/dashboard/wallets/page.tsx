@@ -98,7 +98,7 @@ export default function WalletsPage() {
                          <div className="flex justify-between items-center">
                             <CardTitle>Primary Wallet</CardTitle>
                              <Image 
-                                src={`/flags/${primaryWallet.flag.toUpperCase()}.png`}
+                                src={`/flag/${primaryWallet.flag.toUpperCase()}.png`}
                                 alt={`${primaryWallet.name} flag`}
                                 width={32}
                                 height={32}
@@ -125,8 +125,8 @@ export default function WalletsPage() {
                         <ul className="space-y-4">
                             {otherWallets.map(wallet => (
                                 <li key={wallet.currency} className="flex items-center">
-                                    <Image 
-                                        src={`/flags/${wallet.flag.toUpperCase()}.png`}
+                                    <Image
+                                        src={`/flag/${wallet.flag.toUpperCase()}.png`}
                                         alt={`${wallet.name} flag`}
                                         width={24}
                                         height={24}

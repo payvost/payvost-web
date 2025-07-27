@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import type { BusinessAccountData, BusinessVerificationStatus, BusinessKycTier } from '@/types/business-account';
+import type { BusinessAccountData, BusinessVerificationStatus } from '@/types/business-account';
 
 const businessDetails: BusinessAccountData = {
     id: 'biz_1',
@@ -45,7 +45,11 @@ const statusConfig: Record<BusinessVerificationStatus, { icon: React.ReactNode; 
     Restricted: { icon: <AlertTriangle className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
 };
 
-export default function BusinessDetailsPage({ params }: { params: { id: string } }) {
+interface BusinessDetailsPageProps {
+    params: { id: string };
+}
+
+export default function BusinessDetailsPage({ params }: BusinessDetailsPageProps) {
     const business = businessDetails; // Fetch by params.id in real app
     const status = statusConfig[business.verificationStatus];
 
