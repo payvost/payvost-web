@@ -103,7 +103,7 @@ export default function BusinessAccountsPage() {
                             {sampleBusinesses.map((biz) => {
                                 const status = statusConfig[biz.verificationStatus];
                                 return (
-                                <TableRow key={biz.id} onClick={() => router.push(`/admin-panel/dashboard/business-accounts/${biz.id}`)} className="cursor-pointer">
+                                <TableRow key={biz.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-accounts/${biz.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <img src={`/flags/${biz.countryCode}.png`} alt={biz.country} className="h-4 w-6 object-cover rounded-sm"/>
@@ -114,7 +114,7 @@ export default function BusinessAccountsPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Link href={`/admin-panel/dashboard/customers/${biz.owner.id}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>{biz.owner.name}</Link>
+                                        <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${biz.owner.id}`} className="hover:underline text-primary" onClick={(e) => e.stopPropagation()}>{biz.owner.name}</Link>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={status.variant} className={cn('capitalize', status.color.replace('text-','bg-').replace('-600','-500/20'))}>{biz.verificationStatus}</Badge>

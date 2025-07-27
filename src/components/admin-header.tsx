@@ -26,7 +26,7 @@ export function AdminHeader() {
     const pathname = usePathname();
 
     const isActive = (href: string) => {
-        if (href === '/admin-panel/dashboard') {
+        if (href === '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard') {
             return pathname === href;
         }
         return pathname.startsWith(href);
@@ -36,10 +36,9 @@ export function AdminHeader() {
       { 
         group: 'Overview', 
         items: [
-          { href: '/admin-panel/dashboard', icon: <LineChart />, label: 'Dashboard' },
-          { href: '/admin-panel/dashboard/global-overview', icon: <Globe />, label: 'Global Overview' },
-          { href: '/admin-panel/dashboard/real-time', icon: <LineChart />, label: 'Real-Time Transactions' },
-          { href: '/admin-panel/dashboard/system-status', icon: <FileText />, label: 'System Status' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard', icon: <LineChart />, label: 'Dashboard' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/real-time', icon: <LineChart />, label: 'Real-Time Transactions' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <FileText />, label: 'System Status' },
         ]
       },
       // ... other menu groups can be added here for the mobile view if needed
@@ -96,9 +95,9 @@ export function AdminHeader() {
                </ScrollArea>
                  <div className="mt-auto p-4">
                     <Link
-                        href="/admin-panel/dashboard/settings"
+                        href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settings"
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                        isActive('/admin-panel/dashboard/settings')
+                        isActive('/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settings')
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-primary'
                         }`}

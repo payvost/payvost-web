@@ -4,6 +4,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Send, ArrowDownLeft, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
@@ -33,27 +34,33 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
                     <TooltipProvider>
                      <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Send className="h-4 w-4" />
-                                <span className="sr-only">Send</span>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                <Link href="/dashboard/payments">
+                                    <Send className="h-4 w-4" />
+                                    <span className="sr-only">Send</span>
+                                </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Send</TooltipContent>
                      </Tooltip>
                      <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <ArrowDownLeft className="h-4 w-4" />
-                                <span className="sr-only">Receive</span>
+                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                <Link href="/dashboard/request-payment">
+                                    <ArrowDownLeft className="h-4 w-4" />
+                                    <span className="sr-only">Receive</span>
+                                </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Receive</TooltipContent>
                      </Tooltip>
                      <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Plus className="h-4 w-4" />
-                                <span className="sr-only">Fund</span>
+                             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                <Link href="/dashboard/wallets">
+                                    <Plus className="h-4 w-4" />
+                                    <span className="sr-only">Fund</span>
+                                </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>Fund</TooltipContent>

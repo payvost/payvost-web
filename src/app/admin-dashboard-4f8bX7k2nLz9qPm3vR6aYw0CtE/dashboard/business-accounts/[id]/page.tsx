@@ -54,7 +54,7 @@ export default function BusinessDetailsPage({ params }: { params: { id: string }
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div className="flex items-center gap-4">
                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/admin-panel/dashboard/business-accounts">
+                        <Link href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-accounts">
                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -81,7 +81,7 @@ export default function BusinessDetailsPage({ params }: { params: { id: string }
                             <CardTitle>Business Profile</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div><p className="text-muted-foreground">Owner</p><Link href={`/admin-panel/dashboard/customers/${business.owner.id}`} className="font-medium text-primary hover:underline flex items-center gap-1"><User className="h-4 w-4" />{business.owner.name}</Link></div>
+                            <div><p className="text-muted-foreground">Owner</p><Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${business.owner.id}`} className="font-medium text-primary hover:underline flex items-center gap-1"><User className="h-4 w-4" />{business.owner.name}</Link></div>
                             <div><p className="text-muted-foreground">Sector</p><p className="font-medium">{business.sector}</p></div>
                             <div><p className="text-muted-foreground">Country</p><p className="font-medium">{business.country}</p></div>
                             <div><p className="text-muted-foreground">Onboarded</p><p className="font-medium">{business.onboardingDate}</p></div>

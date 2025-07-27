@@ -56,7 +56,7 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div className="flex items-center gap-4">
                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/admin-panel/dashboard/compliance-risk">
+                        <Link href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk">
                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
@@ -140,7 +140,7 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
                         </CardContent>
                         <CardFooter>
                            <Button variant="outline" className="w-full" asChild>
-                             <Link href={`/admin-panel/dashboard/customers/${caseData.userId}`}>View Full Profile</Link>
+                             <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${caseData.userId}`}>View Full Profile</Link>
                            </Button>
                         </CardFooter>
                     </Card>

@@ -35,7 +35,7 @@ export default function AboutPage() {
         {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6 text-center">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">About Payvost</h1>
+            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">About Qwibik</h1>
             <p className="max-w-[700px] mx-auto text-muted-foreground md:text-xl mt-4">
               Connecting lives, one transfer at a time. Discover the story behind our mission to make global finance accessible to everyone.
             </p>
@@ -71,7 +71,7 @@ export default function AboutPage() {
                 <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
                     <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Meet Our Team</h2>
                     <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                        The passionate individuals driving the Payvost vision forward.
+                        The passionate individuals driving the Qwibik vision forward.
                     </p>
                 </div>
                 <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-4 lg:gap-16">
@@ -171,7 +171,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm">&copy; 2024 Payvost. All rights reserved.</p>
+            <p className="text-sm">&copy; 2024 Qwibik. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 sm:mt-0">
               <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
               <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>

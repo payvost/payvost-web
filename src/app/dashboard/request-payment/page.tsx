@@ -176,7 +176,7 @@ export default function RequestPaymentPage() {
         </div>
         
         <Tabs defaultValue="payment-link" className="w-full" onValueChange={setActiveTab} value={activeTab}>
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6">
+          <TabsList className="mb-6">
             <TabsTrigger value="payment-link"><LinkIcon className="mr-2 h-4 w-4"/>Payment Link</TabsTrigger>
             <TabsTrigger value="invoice"><FileText className="mr-2 h-4 w-4"/>Invoice</TabsTrigger>
             <TabsTrigger value="recurring"><Repeat className="mr-2 h-4 w-4"/>Recurring</TabsTrigger>

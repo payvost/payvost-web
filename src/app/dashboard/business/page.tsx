@@ -14,7 +14,7 @@ const roles = [
       icon: <Briefcase className="h-10 w-10 text-primary" />,
       title: 'Business Owner',
       description: 'Manage day-to-day operations, invoicing, and global payments for your established business.',
-      link: '#',
+      link: '/dashboard/business/onboarding',
     },
 ];
 
@@ -50,10 +50,13 @@ export default function BusinessOnboardingPage() {
                         </CardContent>
                         <CardFooter>
                            <Button 
+                                asChild
                                 className="w-full" 
                                 variant={selectedRole === role.title ? 'default' : 'outline'}
                             >
-                                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                                <Link href={role.link}>
+                                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
                             </Button>
                         </CardFooter>
                     </Card>
