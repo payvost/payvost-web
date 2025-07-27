@@ -105,7 +105,7 @@ export default function AdminRemittancesPage() {
                                 </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                <DropdownMenuItem asChild><Link href={`/admin-panel/dashboard/transactions/${rem.id}`}>View Details</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions/${rem.id}`}>View Details</Link></DropdownMenuItem>
                                 <DropdownMenuItem>Mark as Reviewed</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive">Escalate Issue</DropdownMenuItem>

@@ -52,7 +52,7 @@ export function AdminLoginForm() {
           description: "Redirecting you to the admin dashboard...",
       });
       
-      router.push('/admin-panel/dashboard'); 
+      router.push('/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard'); 
     } catch (error: any) {
       let errorMessage = "An unknown error occurred.";
       // Handle specific Firebase auth errors for better user feedback

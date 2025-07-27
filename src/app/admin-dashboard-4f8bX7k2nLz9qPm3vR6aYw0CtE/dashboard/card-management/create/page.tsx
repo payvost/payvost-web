@@ -52,7 +52,7 @@ export default function CreateCardPage() {
             title: "Virtual Card Issued!",
             description: `A new card "${data.cardLabel}" has been issued to ${data.cardholder}.`,
         });
-        router.push('/admin-panel/dashboard/card-management');
+        router.push('/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/card-management');
     };
 
     return (

@@ -31,7 +31,7 @@ export default function CardManagementPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                     <Button variant="outline"><SlidersHorizontal className="mr-2 h-4 w-4"/>Configure Rules</Button>
-                    <Button onClick={() => router.push('/admin-panel/dashboard/card-management/create')}><PlusCircle className="mr-2 h-4 w-4" />Issue New Card</Button>
+                    <Button onClick={() => router.push('/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/card-management/create')}><PlusCircle className="mr-2 h-4 w-4" />Issue New Card</Button>
                 </div>
             </div>
 
@@ -91,7 +91,7 @@ export default function CardManagementPage() {
                         </TableHeader>
                         <TableBody>
                             {sampleCards.map((card) => (
-                                <TableRow key={card.id} onClick={() => router.push(`/admin-panel/dashboard/card-management/${card.id}`)} className="cursor-pointer">
+                                <TableRow key={card.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/card-management/${card.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="font-medium">{card.cardLabel}</div>
                                         <div className="text-sm text-muted-foreground font-mono">•••• {card.last4}</div>

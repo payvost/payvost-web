@@ -97,7 +97,7 @@ export default function AdminTransactionsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem asChild><Link href={`/admin-panel/dashboard/transactions/${tx.id}`}>View Details</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions/${tx.id}`}>View Details</Link></DropdownMenuItem>
                                 <DropdownMenuItem>Flag for Review</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive">Open Dispute</DropdownMenuItem>

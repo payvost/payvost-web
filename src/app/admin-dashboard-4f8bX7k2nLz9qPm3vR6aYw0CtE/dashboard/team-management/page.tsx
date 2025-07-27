@@ -96,7 +96,7 @@ export default function TeamManagementPage() {
                                     {sampleMembers.map((member) => {
                                         const status = statusConfig[member.status];
                                         return (
-                                        <TableRow key={member.id} onClick={() => router.push(`/admin-panel/dashboard/team-management/${member.id}`)} className="cursor-pointer">
+                                        <TableRow key={member.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management/${member.id}`)} className="cursor-pointer">
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar>

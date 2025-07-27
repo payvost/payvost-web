@@ -126,7 +126,7 @@ export default function CustomersPage() {
                             {sampleCustomers.map((user) => {
                                 const status = kycStatusConfig[user.kycStatus];
                                 return (
-                                <TableRow key={user.id} onClick={() => router.push(`/admin-panel/dashboard/customers/${user.id}`)} className="cursor-pointer">
+                                <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <img src={`/flags/${user.countryCode}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>

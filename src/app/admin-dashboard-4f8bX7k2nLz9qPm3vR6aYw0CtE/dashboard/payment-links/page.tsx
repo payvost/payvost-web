@@ -95,7 +95,7 @@ export default function PaymentLinksPage() {
                             {sampleLinks.map((link) => (
                                 <TableRow key={link.id}>
                                     <TableCell>
-                                        <Link href={`/admin-panel/dashboard/payment-links/${link.id}`} className="font-medium hover:underline">{link.title}</Link>
+                                        <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-links/${link.id}`} className="font-medium hover:underline">{link.title}</Link>
                                         <div className="text-xs text-muted-foreground">{link.created}</div>
                                     </TableCell>
                                     <TableCell>

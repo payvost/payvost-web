@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { QuickRemit } from '@/components/quick-remit';
+import { QuickRemit } from '@/components/Qwibik';
 import { RecentTransactions } from '@/components/recent-transactions';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
+import { KycNotification } from '@/components/kyc-notification';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -63,6 +64,7 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState('Last 30 Days');
   const [hasWallets, setHasWallets] = useState(true); // Set to false to see the empty state
   const [hasTransactionData, setHasTransactionData] = useState(true); // Set to true to see chart
+  const [isKycVerified, setIsKycVerified] = useState(false); // Set to false to show notification
   
   const [greeting, setGreeting] = useState<GreetingState | null>(null);
 
@@ -87,6 +89,8 @@ export default function DashboardPage() {
                 {greeting?.text}, {firstName}!
             </h1>
         </div>
+
+        {!isKycVerified && <KycNotification onDismiss={() => setIsKycVerified(true)} />}
 
         <div className="relative">
           <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5", !hasWallets && "blur-sm pointer-events-none")}>
@@ -123,8 +127,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
-            <div className="lg:col-span-4 space-y-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8 items-start">
+            <div className="lg:col-span-4 space-y-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Overview</CardTitle>
@@ -152,42 +156,17 @@ export default function DashboardPage() {
                       )}
                     </CardContent>
                 </Card>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive" />Disputes</CardTitle>
-                            <CardDescription>Overview of transaction disputes.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <p><strong className="text-lg">2</strong> cases require your response.</p>
-                            <p className="text-sm text-muted-foreground">$1,275.50 is currently under review.</p>
-                        </CardContent>
-                        <CardFooter>
-                            <Button variant="outline" asChild>
-                                <Link href="/dashboard/dispute">View All Disputes</Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                    <Card>
-                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" />Virtual Cards</CardTitle>
-                            <CardDescription>Manage your virtual debit & credit cards.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <p><strong className="text-lg">5</strong> active cards.</p>
-                             <p className="text-sm text-muted-foreground">Create cards for specific vendors or subscriptions.</p>
-                        </CardContent>
-                        <CardFooter>
-                            <Button asChild>
-                                <Link href="/dashboard/cards">
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Create New Card
-                                </Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                </div>
-                 <Card>
+                 <RecentTransactions />
+            </div>
+            <div className="lg:col-span-3 space-y-6">
+               <QuickRemit />
+               <AccountCompletion />
+            </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8 items-start">
+            <div className="lg:col-span-4 space-y-6">
+                <Card>
                     <CardHeader>
                         <CardTitle>Spending Breakdown</CardTitle>
                         <CardDescription>Overview of your spending this month.</CardDescription>
@@ -208,69 +187,78 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-            <div className="lg:col-span-3 space-y-4">
-               <QuickRemit />
-               <AccountCompletion />
-            </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 mt-8">
-            <RecentTransactions />
-             <Card>
-                <CardHeader className="flex flex-row items-center">
-                    <div className="grid gap-2">
-                        <CardTitle>Invoice Overview</CardTitle>
-                        <CardDescription>
-                            Recent invoices and their statuses.
-                        </CardDescription>
-                    </div>
-                     <Button asChild size="sm" className="ml-auto gap-1">
-                        <Link href="/dashboard/request-payment?tab=invoice">
-                            View All
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Client</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                                <TableHead className="text-right">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sampleInvoices.map((invoice) => (
-                                <TableRow key={invoice.id}>
-                                    <TableCell>
-                                        <div className="font-medium">{invoice.client}</div>
-                                        <div className="text-sm text-muted-foreground hidden md:inline">{invoice.id}</div>
-                                    </TableCell>
-                                    <TableCell className="text-right">{invoice.amount}</TableCell>
-                                    <TableCell className="text-right">
-                                         <Badge 
-                                            variant={
-                                            invoice.status === 'Paid' ? 'default' : 
-                                            invoice.status === 'Pending' ? 'secondary' : 'destructive'
-                                            }
-                                            className="capitalize"
-                                        >
-                                            {invoice.status}
-                                        </Badge>
-                                    </TableCell>
+             <div className="lg:col-span-3 space-y-6">
+                 <Card>
+                    <CardHeader className="flex flex-row items-center">
+                        <div className="grid gap-2">
+                            <CardTitle>Invoice Overview</CardTitle>
+                            <CardDescription>
+                                Recent invoices and their statuses.
+                            </CardDescription>
+                        </div>
+                         <Button asChild size="sm" className="ml-auto gap-1">
+                            <Link href="/dashboard/request-payment?tab=invoice">
+                                View All
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-                 <CardFooter className="justify-end">
-                     <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create Invoice
-                    </Button>
-                </CardFooter>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {sampleInvoices.map((invoice) => (
+                                    <TableRow key={invoice.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{invoice.client}</div>
+                                            <div className="text-sm text-muted-foreground hidden md:inline">{invoice.id}</div>
+                                        </TableCell>
+                                        <TableCell className="text-right">{invoice.amount}</TableCell>
+                                        <TableCell className="text-right">
+                                             <Badge 
+                                                variant={
+                                                invoice.status === 'Paid' ? 'default' : 
+                                                invoice.status === 'Pending' ? 'secondary' : 'destructive'
+                                                }
+                                                className="capitalize"
+                                            >
+                                                {invoice.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                     <CardFooter className="justify-end">
+                         <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Create Invoice
+                        </Button>
+                    </CardFooter>
+                </Card>
+                 <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive" />Disputes</CardTitle>
+                            <CardDescription>Overview of transaction disputes.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <p><strong className="text-lg">2</strong> cases require your response.</p>
+                            <p className="text-sm text-muted-foreground">$1,275.50 is currently under review.</p>
+                        </CardContent>
+                        <CardFooter>
+                            <Button variant="outline" asChild>
+                                <Link href="/dashboard/dispute">View All Disputes</Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+             </div>
         </div>
       </div>
     </DashboardLayout>

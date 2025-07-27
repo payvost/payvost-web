@@ -30,9 +30,9 @@ export function UserNav({ user }: UserNavProps) {
   const pathname = usePathname();
   const { toast } = useToast();
 
-  const isAdminRoute = pathname.startsWith('/admin-panel');
-  const profileHref = isAdminRoute ? '/admin-panel/dashboard/profile' : '/dashboard/profile';
-  const settingsHref = isAdminRoute ? '/admin-panel/dashboard/settings' : '/dashboard/settings';
+  const isAdminRoute = pathname.startsWith('/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE');
+  const profileHref = isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/profile' : '/dashboard/profile';
+  const settingsHref = isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settings' : '/dashboard/settings';
 
   const handleLogout = async () => {
     try {
@@ -41,7 +41,7 @@ export function UserNav({ user }: UserNavProps) {
         title: "Logged Out",
         description: "You have been successfully logged out."
       })
-      router.push(isAdminRoute ? '/admin-panel/login' : '/login');
+      router.push(isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/login' : '/login');
     } catch (error) {
       toast({
         title: "Logout Failed",

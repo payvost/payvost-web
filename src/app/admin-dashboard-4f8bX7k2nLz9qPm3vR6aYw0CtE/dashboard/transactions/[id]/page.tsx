@@ -67,7 +67,7 @@ export default function AdminTransactionDetailsPage({ params }: { params: { id: 
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div className="flex items-center gap-4">
                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/admin-panel/dashboard/transactions">
+                        <Link href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions">
                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>

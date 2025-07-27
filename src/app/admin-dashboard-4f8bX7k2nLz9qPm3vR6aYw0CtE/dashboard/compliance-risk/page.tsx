@@ -120,10 +120,10 @@ export default function ComplianceRiskPage() {
                             {sampleAlerts.map((alert) => {
                                 const risk = riskConfig[alert.riskLevel];
                                 return (
-                                <TableRow key={alert.id} onClick={() => router.push(`/admin-panel/dashboard/compliance-risk/${alert.id}`)} className="cursor-pointer">
+                                <TableRow key={alert.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk/${alert.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="font-medium">{alert.id}</div>
-                                        <Link href={`/admin-panel/dashboard/customers/${alert.userId}`} className="text-sm text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                                        <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${alert.userId}`} className="text-sm text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
                                             {alert.userName}
                                         </Link>
                                     </TableCell>
