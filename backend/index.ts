@@ -6,7 +6,7 @@ import cors from 'cors';
 import userRoutes from './services/user/routes/userRoutes'; // Import user routes
 
 // Correctly resolve the path to the service account key
-const serviceAccountPath = path.resolve(__dirname, '..', 'qwibil-remit-firebase-adminsdk-fbsvc-9ffb02d58c.json');
+const serviceAccountPath = path.resolve(__dirname, '..', 'backend/payvost-firebase-adminsdk-d1yhq-da84137a2e.json');
 
 try {
   const serviceAccount = require(serviceAccountPath);
@@ -21,7 +21,7 @@ try {
 }
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3000;
 
 // Enable CORS for all routes
 app.use(cors());

@@ -6,4 +6,4 @@ app.use(express.json());
 app.use('/user', userRoutes);
 
 app.get('/', (req, res) => res.send('User Service Running'));
-app.listen(3001, () => console.log('User Service listening on port 3001'));
+app.listen(3000, () => console.log('User Service listening on port 3000'));

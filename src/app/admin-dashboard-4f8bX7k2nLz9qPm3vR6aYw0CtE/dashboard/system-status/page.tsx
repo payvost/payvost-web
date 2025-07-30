@@ -57,7 +57,7 @@ export default function SystemStatusPage() {
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">System Status</h2>
-                    <p className="text-muted-foreground">Live status of all Qwibik services and components.</p>
+                    <p className="text-muted-foreground">Live status of all Payvost services and components.</p>
                 </div>
                 <Button variant="outline">
                     <RefreshCw className="mr-2 h-4 w-4" />

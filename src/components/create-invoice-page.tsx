@@ -76,7 +76,7 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
         defaultValues: {
             invoiceNumber: `INV-${Math.floor(Math.random() * 10000)}`,
             issueDate: new Date(),
-            fromName: 'Qwibik Inc.',
+            fromName: 'Payvost Inc.',
             fromAddress: '123 Finance Street, Moneyville, USA',
             toName: '',
             toAddress: '',

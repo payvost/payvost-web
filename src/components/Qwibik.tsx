@@ -153,7 +153,7 @@ export function QuickRemit() {
                 <SendToUserForm />
             </CardContent>
              <CardFooter>
-                 <PaymentConfirmationDialog onConfirm={handleSendMoney} transactionDetails={{...transactionDetails, recipientName: "Qwibik User"}} isLoading={isLoading}>
+                 <PaymentConfirmationDialog onConfirm={handleSendMoney} transactionDetails={{...transactionDetails, recipientName: "Payvost User"}} isLoading={isLoading}>
                     <Button className="w-full" disabled={isLoading}>Send to User</Button>
                  </PaymentConfirmationDialog>
             </CardFooter>
