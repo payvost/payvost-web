@@ -1,17 +1,38 @@
-// Example: bootstrapping the main service
-import './services/user'; // Replace with your actual main entry file
 
-console.log("Backend root started.");
-
-// backend/index.ts
 import express from 'express';
+import admin from 'firebase-admin';
+import path from 'path';
+import cors from 'cors'; 
+import userRoutes from './services/user/routes/userRoutes'; // Import user routes
+
+// Correctly resolve the path to the service account key
+const serviceAccountPath = path.resolve(__dirname, '..', 'qwibil-remit-firebase-adminsdk-fbsvc-9ffb02d58c.json');
+
+try {
+  const serviceAccount = require(serviceAccountPath);
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://payvost-default-rtdb.firebaseio.com"
+  });
+  console.log("Firebase Admin SDK initialized successfully.");
+} catch (error) {
+  console.error("Failed to initialize Firebase Admin SDK:", error);
+}
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
+
+// Enable CORS for all routes
+app.use(cors());
+app.use(express.json());
 
 app.get("/", (_req, res) => {
   res.send("Payvost backend is running 🚀");
 });
+
+// Mount the user routes
+app.use('/user', userRoutes);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
