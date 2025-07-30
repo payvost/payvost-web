@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText } from 'lucide-react';
-import { QuickRemit } from '@/components/Qwibik';
+import { QuickRemit } from '@/components/Payvost';
 import { Beneficiaries } from '@/components/beneficiaries';
 
 const billCategories = [
