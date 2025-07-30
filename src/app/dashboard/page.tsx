@@ -9,10 +9,10 @@ import { RecentTransactions } from '@/components/recent-transactions';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowRight, Sun, Moon, PlusCircle, FileText, ShieldAlert, CreditCard, ArrowRightLeft, Smartphone, ShoppingCart, Wallet } from 'lucide-react';
+import { ArrowRight, Sun, Moon, PlusCircle, FileText, ShieldAlert, CreditCard, ArrowRightLeft, Smartphone, ShoppingCart, Wallet, LineChart, CheckCircle, Users } from 'lucide-react';
 import { CurrencyCard } from '@/components/currency-card';
 import { AccountCompletion } from '@/components/account-completion';
-import { cn } from '@/lib/utils';
+import { cn, abbreviateNumber } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -30,11 +30,11 @@ const TransactionChart = dynamic(() => import('@/components/transaction-chart').
 
 
 const currencyBalances = [
-  { currency: 'USD', balance: '$1,250.75', growth: '+20.1% from last month', flag: 'us' },
-  { currency: 'EUR', balance: '€2,500.50', growth: '+15.5% from last month', flag: 'eu' },
-  { currency: 'GBP', balance: '£850.00', growth: '+5.2% from last month', flag: 'gb' },
-  { currency: 'NGN', balance: '₦1,850,000.00', growth: '+30.8% from last month', flag: 'ng' },
-  { currency: 'JPY', balance: '¥150,000', growth: '-2.1% from last month', flag: 'jp' },
+  { currency: 'USD', balance: 1250.75, growth: '+20.1% from last month', flag: 'us' },
+  { currency: 'EUR', balance: 2500.50, growth: '+15.5% from last month', flag: 'eu' },
+  { currency: 'GBP', balance: 850.00, growth: '+5.2% from last month', flag: 'gb' },
+  { currency: 'NGN', balance: 1850000.00, growth: '+30.8% from last month', flag: 'ng' },
+  { currency: 'JPY', balance: 150000, growth: '-2.1% from last month', flag: 'jp' },
 ];
 
 const sampleInvoices = [
@@ -49,6 +49,13 @@ const spendingData = [
     { category: 'Bill Payments', amount: 85, total: 1585, icon: <Smartphone className="h-5 w-5 text-primary" /> },
     { category: 'Card Spending', amount: 450, total: 1585, icon: <ShoppingCart className="h-5 w-5 text-primary" /> },
     { category: 'Gift Cards', amount: 200, total: 1585, icon: <CreditCard className="h-5 w-5 text-primary" /> },
+];
+
+const kpiCards = [
+    { title: "Total Volume", value: 12500, change: "+15.2% vs last month", icon: <LineChart className="h-4 w-4 text-muted-foreground" />, currency: 'USD' },
+    { title: "Successful Payouts", value: 420, change: "+35 vs last month", icon: <CheckCircle className="h-4 w-4 text-muted-foreground" /> },
+    { title: "Active Customers", value: 87, change: "+5 new this month", icon: <Users className="h-4 w-4 text-muted-foreground" /> },
+    { title: "Pending Invoices", value: 4, change: "$12,500 outstanding", icon: <FileText className="h-4 w-4 text-muted-foreground" /> },
 ];
 
 
@@ -79,6 +86,12 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const formatValue = (value: number, currency?: string) => {
+    if (currency) {
+        return `${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(value)}`;
+    }
+    return abbreviateNumber(value);
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -264,3 +277,5 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
+
+    

@@ -61,7 +61,7 @@ interface CreateInvoicePageProps {
     onBack: () => void;
 }
 
-export default function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
+export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,7 +76,7 @@ export default function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
         defaultValues: {
             invoiceNumber: `INV-${Math.floor(Math.random() * 10000)}`,
             issueDate: new Date(),
-            fromName: 'Qwibik Remit Inc.',
+            fromName: 'Qwibik Inc.',
             fromAddress: '123 Finance Street, Moneyville, USA',
             toName: '',
             toAddress: '',
@@ -96,7 +96,7 @@ export default function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     const watchedTaxRate = watch('taxRate') || 0;
     const selectedCurrency = watch('currency');
     const currencySymbol = currencySymbols[selectedCurrency] || '$';
-
+    
     const subtotal = watchedItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = subtotal * (watchedTaxRate / 100);
     const grandTotal = subtotal + taxAmount;
@@ -121,12 +121,17 @@ export default function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-lg font-semibold md:text-2xl">Create Invoice</h1>
-                    <p className="text-muted-foreground text-sm">Fill out the form below to create a new invoice.</p>
+                <div className="flex items-center gap-4">
+                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={onBack}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="sr-only">Back</span>
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Create Invoice</h1>
+                        <p className="text-muted-foreground text-sm">Fill out the form below to create a new invoice.</p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Back to all invoices</Button>
                     <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
                     <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                 </div>

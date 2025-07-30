@@ -1,6 +1,6 @@
 {
   "name": "Payvost",
-  "short_name": "Payvost",
+  "short_name": "Banking Beyond Borders",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -8,12 +8,12 @@
   "orientation": "landscape",
   "icons": [
     {
-      "src": "/public/clay-logo.png",
+      "src": "/clay-logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/public/clay-logo.png",
+      "src": "/clay-logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }

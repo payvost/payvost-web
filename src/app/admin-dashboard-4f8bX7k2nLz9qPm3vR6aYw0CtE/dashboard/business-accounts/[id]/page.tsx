@@ -46,7 +46,8 @@ const statusConfig: Record<BusinessVerificationStatus, { icon: React.ReactNode; 
 };
 
 interface BusinessDetailsPageProps {
-    params: { id: string };
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
 export default function BusinessDetailsPage({ params }: BusinessDetailsPageProps) {

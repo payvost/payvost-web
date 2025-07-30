@@ -9,7 +9,6 @@ import { MoreVertical, Copy, Eye, EyeOff, DollarSign, Snowflake, Power } from 'l
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
-import { VisaIcon } from './icons/visa-icon';
 import type { VirtualCardData, CardTheme } from '@/types/virtual-card';
 
 const themeClasses: Record<CardTheme, string> = {
@@ -49,7 +48,7 @@ export function VirtualCard({ card }: { card: VirtualCardData }) {
                         </Badge>
                     </div>
                      <div className="flex items-center gap-2">
-                        {card.cardType === 'visa' ? <VisaIcon className="h-8 w-auto" /> : <Image src="https://placehold.co/100x40.png" data-ai-hint="mastercard logo" alt="Mastercard" width={60} height={36} />}
+                        {card.cardType === 'visa' ? <Image src="/visa.png" alt="Visa" width={49} height={16} /> : <Image src="/mastercard.png" alt="Mastercard" width={60} height={36} />}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-white hover:bg-white/20"><MoreVertical className="h-4 w-4" /></Button>
