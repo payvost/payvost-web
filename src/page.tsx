@@ -30,7 +30,7 @@ export default function LandingPage() {
                     Send money instantly, securely — anywhere in the world
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl mx-auto lg:mx-0">
-                    Join thousands of satisfied customers who trust Qwibik for their international money transfers.
+                    Join thousands of satisfied customers who trust Payvost for their international money transfers.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
@@ -114,7 +114,7 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Why Choose Qwibik?</h2>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Why Choose Payvost?</h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   We offer a secure, fast, and affordable way to send money internationally.
                 </p>
@@ -213,7 +213,7 @@ export default function LandingPage() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-muted-foreground">"Qwibik is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad."</p>
+                          <p className="text-muted-foreground">"Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad."</p>
                         </CardContent>
                       </Card>
                     </div>
@@ -303,7 +303,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm">&copy; 2024 Qwibik. All rights reserved.</p>
+            <p className="text-sm">&copy; 2024 Payvost. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 sm:mt-0">
               <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
               <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>

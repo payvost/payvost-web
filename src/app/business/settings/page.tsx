@@ -20,7 +20,7 @@ const integrations = [
   { name: 'Slack', category: 'Communication', logo: 'https://placehold.co/40x40.png', hint: 'slack logo', description: 'Get real-time notifications for important events in your Slack channels.' },
   { name: 'HubSpot', category: 'CRM', logo: 'https://placehold.co/40x40.png', hint: 'hubspot logo', description: 'Link payments and invoices to customer records in HubSpot.' },
   { name: 'Salesforce', category: 'CRM', logo: 'https://placehold.co/40x40.png', hint: 'salesforce logo', description: 'Enhance your sales workflow with integrated payment data.' },
-  { name: 'Zapier', category: 'Automation', logo: 'https://placehold.co/40x40.png', hint: 'zapier logo', description: 'Connect Qwibik to thousands of other apps with Zapier.' },
+  { name: 'Zapier', category: 'Automation', logo: 'https://placehold.co/40x40.png', hint: 'zapier logo', description: 'Connect Payvost to thousands of other apps with Zapier.' },
 ];
 
 export default function BusinessSettingsPage() {
@@ -61,7 +61,7 @@ export default function BusinessSettingsPage() {
                              <Card>
                                 <CardHeader>
                                     <CardTitle>App Marketplace</CardTitle>
-                                    <CardDescription>Connect your Qwibik account to other business tools to automate your workflow.</CardDescription>
+                                    <CardDescription>Connect your Payvost account to other business tools to automate your workflow.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {integrations.map(app => (

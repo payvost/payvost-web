@@ -26,7 +26,7 @@ const supportChatFlow = ai.defineFlow(
     const response = await llm.generate({
       history: history,
       prompt: message,
-      system: `You are a friendly and helpful customer support agent for Qwibik, a global remittance service.
+      system: `You are a friendly and helpful customer support agent for Payvost, a global remittance service.
       Your goal is to assist users with their questions about the platform.
       Be concise and clear in your answers.
       You cannot perform any actions on their account. You can only provide information.

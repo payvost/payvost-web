@@ -23,17 +23,17 @@ interface FundingDetailsProps {
 // These are mock details for demonstration purposes.
 const accountDetails: { [key: string]: any } = {
     USD: {
-        beneficiary: 'Qwibik Inc.',
+        beneficiary: 'Payvost Inc.',
         accountNumber: '0123456789',
         routingNumber: '987654321',
         bankName: 'Global Citizen Bank',
         address: '123 Finance Street, New York, NY 10001, USA'
     },
     NGN: {
-        beneficiary: 'Qwibik Nigeria Ltd.',
+        beneficiary: 'Payvost Nigeria Ltd.',
         accountNumber: '9876543210',
         bankName: 'Providus Bank',
-        address: '1 Qwibik Close, Lagos, Nigeria'
+        address: '1 Payvost Close, Lagos, Nigeria'
     },
     // Add other currencies as needed
 };

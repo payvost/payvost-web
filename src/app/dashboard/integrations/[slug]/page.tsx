@@ -22,17 +22,17 @@ const integrationData = {
         name: 'WooCommerce',
         logo: 'https://placehold.co/80x80.png',
         hint: 'woocommerce logo',
-        description: 'Integrate Qwibik directly into your WooCommerce store to accept payments from customers worldwide. Our plugin offers a seamless checkout experience, automatic currency conversion, and robust security features.',
+        description: 'Integrate Payvost directly into your WooCommerce store to accept payments from customers worldwide. Our plugin offers a seamless checkout experience, automatic currency conversion, and robust security features.',
         features: [
             'Accept payments in 100+ currencies.',
             'Automatic exchange rate calculations.',
-            'Secure checkout process powered by Qwibik.',
+            'Secure checkout process powered by Payvost.',
             'Easy refund processing from your WordPress dashboard.',
         ],
         setupSteps: [
             {
                 title: 'Step 1: Download the Plugin',
-                content: 'Download the latest version of the Qwibik for WooCommerce plugin from the official WordPress plugin repository or from our website.'
+                content: 'Download the latest version of the Payvost for WooCommerce plugin from the official WordPress plugin repository or from our website.'
             },
             {
                 title: 'Step 2: Install and Activate',
@@ -40,11 +40,11 @@ const integrationData = {
             },
             {
                 title: 'Step 3: Configure API Keys',
-                content: 'Go to WooCommerce > Settings > Payments > Qwibik. Enter your Publishable and Secret Keys from your Qwibik developer dashboard. Configure other settings as needed and save changes.'
+                content: 'Go to WooCommerce > Settings > Payments > Payvost. Enter your Publishable and Secret Keys from your Payvost developer dashboard. Configure other settings as needed and save changes.'
             },
             {
                 title: 'Step 4: Enable and Test',
-                content: 'Ensure the Qwibik payment gateway is enabled. You can use test mode to make a few test transactions to ensure everything is working correctly before going live.'
+                content: 'Ensure the Payvost payment gateway is enabled. You can use test mode to make a few test transactions to ensure everything is working correctly before going live.'
             },
         ],
     },
@@ -76,7 +76,7 @@ export default function IntegrationDetailPage({ params }: { params: { slug: stri
                   <img src={integration.logo} data-ai-hint={integration.hint} alt={integration.name} className="h-16 w-16 rounded-lg" />
                   <div>
                     <CardTitle className="text-3xl">{integration.name}</CardTitle>
-                    <CardDescription className="mt-1">By Qwibik Team</CardDescription>
+                    <CardDescription className="mt-1">By Payvost Team</CardDescription>
                   </div>
                 </div>
               </CardHeader>

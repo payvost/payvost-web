@@ -48,7 +48,7 @@ const supportCategories = [
 const featuredArticles = [
     { title: 'How to track your transfer', href: '#' },
     { title: 'Understanding our fees', href: '#' },
-    { title: 'Securing your Qwibik account', href: '#' },
+    { title: 'Securing your Payvost account', href: '#' },
     { title: 'What to do if your transfer fails', href: '#' },
     { title: 'API documentation for developers', href: '#' },
 ];
@@ -80,7 +80,7 @@ export default function SupportPage() {
                 Hi {userName}, how can we help?
                 </h1>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl mt-4">
-                Find answers, articles, and contact information to get the most out of Qwibik.
+                Find answers, articles, and contact information to get the most out of Payvost.
                 </p>
                 <div className="mx-auto mt-6 max-w-2xl">
                 <div className="relative">

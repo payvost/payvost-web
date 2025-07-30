@@ -143,7 +143,7 @@ export default function ContactPage() {
                             <div>
                                 <h4 className="font-semibold">Email</h4>
                                 <p className="text-sm text-muted-foreground">For general and technical inquiries.</p>
-                                <a href="mailto:support@qwibik.remit" className="text-sm text-primary hover:underline">support@qwibik.remit</a>
+                                <a href="mailto:support@payvost.remit" className="text-sm text-primary hover:underline">support@payvost.remit</a>
                             </div>
                         </div>
                          <div className="flex items-start gap-4">

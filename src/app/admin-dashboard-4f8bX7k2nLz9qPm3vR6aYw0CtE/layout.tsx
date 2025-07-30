@@ -4,8 +4,8 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata = {
-  title: 'Qwibik - Admin Panel',
-  description: 'Management dashboard for Qwibik.',
+  title: 'Payvost - Admin Panel',
+  description: 'Management dashboard for Payvost.',
 };
 
 export default function AdminLayout({

@@ -1,5 +1,5 @@
 {
-  "name": "qwibik-global-pay-backend",
+  "name": "payvost-global-pay-backend",
   "private": true,
   "workspaces": [
     "services/*"
