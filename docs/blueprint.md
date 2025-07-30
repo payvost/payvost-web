@@ -1,4 +1,4 @@
-# **App Name**: Qwibik Remit
+# **App Name**: Payvost
 
 ## Core Features:
 

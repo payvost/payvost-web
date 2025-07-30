@@ -14,7 +14,7 @@ const roles = [
       icon: <Briefcase className="h-10 w-10 text-primary" />,
       title: 'Business Owner',
       description: 'Manage day-to-day operations, invoicing, and global payments for your established business.',
-      link: '/dashboard/business/onboarding',
+      link: '/business',
     },
 ];
 

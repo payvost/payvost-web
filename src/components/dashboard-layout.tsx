@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -34,6 +34,7 @@ import { ProtectRoute, useAuth } from '@/hooks/use-auth';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
+import { ThemeSwitcher } from './theme-switcher';
 
 
 interface DashboardLayoutProps {
@@ -122,9 +123,9 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
       <SidebarProvider>
         <TooltipProvider>
         <Sidebar>
-          <SidebarHeader className="h-14 lg:h-[60px] flex items-center px-4 border-b">
-            <Link href="/" className="flex items-center justify-center">
-              <Icons.logo className="h-10" />
+          <SidebarHeader className="h-12 lg:h-[52px] flex items-center px-4 border-b">
+            <Link href="/" className="flex items-center justify-start">
+              <Icons.logo className="h-8" />
             </Link>
           </SidebarHeader>
           <SidebarContent>
@@ -202,12 +203,19 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                    </div>
                 </div>
                 <div className="ml-auto flex items-center gap-1">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/business">
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        Switch to Business
+                      </Link>
+                    </Button>
                     <Button variant="ghost" size="icon" asChild>
                     <Link href="/dashboard/support">
                         <HelpCircle className="h-[1.2rem] w-[1.2rem]" />
                         <span className="sr-only">Support</span>
                     </Link>
                     </Button>
+                    <ThemeSwitcher />
                     <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
                     <NotificationDropdown />
                     <UserNav user={user} />

@@ -7,11 +7,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Send, ArrowDownLeft, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { abbreviateNumber } from '@/lib/utils';
 
 
 interface CurrencyCardProps {
   currency: string;
-  balance: string;
+  balance: number;
   growth: string;
   flag: string;
 }
@@ -21,6 +22,22 @@ const availableFlags = ['US', 'EU', 'GB', 'NG', 'JP'];
 export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardProps) {
   const upperCaseFlag = flag.toUpperCase();
   const flagPath = `/flag/${upperCaseFlag}.png`;
+  
+  const currencySymbols: { [key: string]: string } = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    NGN: '₦',
+    JPY: '¥',
+  };
+  const symbol = currencySymbols[currency] || '$';
+
+  const formattedBalance = balance >= 100000 ? `${symbol}${abbreviateNumber(balance)}` : new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(balance);
 
   return (
     <Card>
@@ -29,7 +46,7 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
                 <CardTitle className="text-sm font-medium">
                 {currency} Balance
                 </CardTitle>
-                <div className="text-2xl font-bold">{balance}</div>
+                <div className="text-2xl font-bold">{formattedBalance}</div>
                  <div className="flex items-center mt-2 gap-1">
                     <TooltipProvider>
                      <Tooltip>

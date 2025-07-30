@@ -13,8 +13,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Qwibik Remit',
+  title: 'Payvost',
   description: 'Fast and secure global remittance.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -24,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head />
+      <head>
+        <meta name="theme-color" content="#3CB371" />
+      </head>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",

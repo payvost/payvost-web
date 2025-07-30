@@ -184,7 +184,7 @@ export function AdminSidebar() {
   );
 
   return (
-    <div className="hidden md:block fixed inset-y-0 left-0 w-[280px] z-50">
+    <div className="hidden md:block fixed inset-y-0 left-0 w-[220px] z-50">
       <div className="flex h-full max-h-screen flex-col gap-2 border-r bg-muted/40">
         <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold">

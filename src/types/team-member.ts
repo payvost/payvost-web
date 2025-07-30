@@ -1,5 +1,5 @@
 
-export type MemberRole = 'Super Admin' | 'Admin' | 'Support' | 'Compliance' | 'Developer';
+export type MemberRole = 'Super Admin' | 'Admin' | 'Support' | 'Compliance' | 'Developer' | 'Finance';
 export type MemberStatus = 'Active' | 'Invited' | 'Suspended';
 
 export interface TeamMember {

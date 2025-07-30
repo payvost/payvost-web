@@ -22,10 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Image from 'next/image';
-
+import { FundWalletDialog } from '@/components/fund-wallet-dialog';
+import { CurrencyExchangeDialog } from '@/components/currency-exchange-dialog';
+import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 // Placeholder data - in a real app, this would come from an API
 const wallets = [
@@ -49,6 +50,8 @@ const transactions = [
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const [selectedWallet, setSelectedWallet] = useState<(typeof wallets)[0] | null>(null);
+
   
   const totalBalanceUSD = wallets.reduce((acc, wallet) => {
     return acc + (wallet.balance * wallet.rate);
@@ -91,7 +94,7 @@ export default function WalletsPage() {
             </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="lg:col-span-1 space-y-6">
                  <Card className="bg-primary text-primary-foreground">
                     <CardHeader>
@@ -111,9 +114,15 @@ export default function WalletsPage() {
                         <p className="text-4xl font-bold">{formatCurrency(primaryWallet.balance, primaryWallet.currency)}</p>
                     </CardContent>
                     <CardFooter className="grid grid-cols-3 gap-2">
-                        <Button variant="secondary" size="sm"><Send className="mr-2 h-4 w-4"/>Send</Button>
-                        <Button variant="secondary" size="sm"><ArrowDownLeft className="mr-2 h-4 w-4"/>Fund</Button>
-                        <Button variant="secondary" size="sm"><Repeat className="mr-2 h-4 w-4"/>Exchange</Button>
+                        <Button variant="secondary" size="sm" asChild>
+                            <Link href="/dashboard/payments"><Send className="mr-2 h-4 w-4"/>Send</Link>
+                        </Button>
+                         <FundWalletDialog wallet={primaryWallet}>
+                            <Button variant="secondary" size="sm" className="w-full"><ArrowDownLeft className="mr-2 h-4 w-4"/>Fund</Button>
+                        </FundWalletDialog>
+                        <CurrencyExchangeDialog wallets={wallets}>
+                          <Button variant="secondary" size="sm" className="w-full"><Repeat className="mr-2 h-4 w-4"/>Exchange</Button>
+                        </CurrencyExchangeDialog>
                     </CardFooter>
                 </Card>
                  <Card>
@@ -122,9 +131,9 @@ export default function WalletsPage() {
                         <CardDescription>An overview of all your currency balances.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-4">
+                        <div className="space-y-2">
                             {otherWallets.map(wallet => (
-                                <li key={wallet.currency} className="flex items-center">
+                                <div key={wallet.currency} className="flex items-center p-3 rounded-lg hover:bg-muted/50">
                                     <Image
                                         src={`/flag/${wallet.flag.toUpperCase()}.png`}
                                         alt={`${wallet.name} flag`}
@@ -135,16 +144,28 @@ export default function WalletsPage() {
                                     <div className="flex-1">
                                         <p className="font-medium">{wallet.currency}</p>
                                     </div>
-                                    <div className="text-right">
-                                         <p className="font-mono text-sm">{formatCurrency(wallet.balance, wallet.currency)}</p>
+                                    <div className="text-right font-mono text-sm mr-2">
+                                         {formatCurrency(wallet.balance, wallet.currency)}
                                     </div>
-                                </li>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem>Send</DropdownMenuItem>
+                                            <DropdownMenuItem>Fund</DropdownMenuItem>
+                                            <DropdownMenuItem>Exchange</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
-             <div className="lg:col-span-2">
+             <div className="lg:col-span-1">
                 <Card>
                     <CardHeader>
                         <CardTitle>Recent Activity</CardTitle>
