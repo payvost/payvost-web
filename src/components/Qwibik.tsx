@@ -27,7 +27,7 @@ import { SendToUserForm } from "./send-to-user-form"
 import { PaymentConfirmationDialog } from "./payment-confirmation-dialog";
 
 
-export function QuickRemit() {
+export function Payvost() {
   const [isLoading, setIsLoading] = useState(false);
   
   const handleSendMoney = async () => {

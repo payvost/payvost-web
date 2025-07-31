@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { QuickRemit } from '@/components/Payvost';
+import { Payvost } from '@/components/Payvost';
 import { RecentTransactions } from '@/components/recent-transactions';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                  <RecentTransactions />
             </div>
             <div className="lg:col-span-3 space-y-6">
-               <QuickRemit />
+               <Payvost />
                <AccountCompletion />
             </div>
         </div>
