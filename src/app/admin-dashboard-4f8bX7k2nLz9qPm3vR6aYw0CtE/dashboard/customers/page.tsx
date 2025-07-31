@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -14,12 +13,7 @@ import { cn } from '@/lib/utils';
 import { ListFilter } from 'lucide-react';
 
 
-const sampleCustomers: CustomerData[] = [
-    { id: 'usr_1', name: 'Liam Johnson', email: 'liam@example.com', country: 'USA', countryCode: 'US', kycStatus: 'Verified', userType: 'Business Owner', riskScore: 10, totalSpend: 12500, phone: '+1-202-555-0151', wallets: [], transactions: [], associatedAccounts: [{ id: 'biz_1', name: 'Tech Innovators Inc.', type: 'Business' }] },
-    { id: 'usr_3', name: 'Noah Williams', email: 'noah@example.com', country: 'Nigeria', countryCode: 'NG', kycStatus: 'Verified', userType: 'Normal User', riskScore: 5, totalSpend: 850, phone: '+234-80-0000-0000', wallets: [], transactions: [] },
-    { id: 'usr_4', name: 'Emma Brown', email: 'emma@example.com', country: 'Canada', countryCode: 'CA', kycStatus: 'Restricted', userType: 'Normal User', riskScore: 85, totalSpend: 25000, phone: '+1-416-555-0123', wallets: [], transactions: [] },
-    { id: 'usr_5', name: 'James Jones', email: 'james@example.com', country: 'Ghana', countryCode: 'GH', kycStatus: 'Unverified', userType: 'Normal User', riskScore: 22, totalSpend: 120, phone: '+233-24-000-0000', wallets: [], transactions: [] },
-];
+import { useEffect, useState } from 'react';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -31,13 +25,26 @@ const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | '
 
 export default function CustomersPage() {
     const router = useRouter();
+    const [customers, setCustomers] = useState<CustomerData[]>([]);
+
+    useEffect(() => {
+      async function fetchCustomers() {
+        try {
+          const res = await fetch('http://localhost:3001/user');
+          const data = await res.json();
+          setCustomers(data.customers || []);
+        } catch (err) {
+          setCustomers([]);
+        }
+      }
+      fetchCustomers();
+    }, []);
 
     const getRiskBadge = (score: number) => {
         if (score > 75) return <Badge variant="destructive">High</Badge>;
         if (score > 40) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700">Medium</Badge>;
         return <Badge variant="default" className="bg-green-500/20 text-green-700">Low</Badge>;
     }
-
 
     return (
         <>
@@ -123,13 +130,13 @@ export default function CustomersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sampleCustomers.map((user) => {
-                                const status = kycStatusConfig[user.kycStatus];
+                            {customers.map((user) => {
+                                const status = kycStatusConfig[user.kycStatus as KycStatus] || kycStatusConfig['Unverified'];
                                 return (
                                 <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <img src={`/flags/${user.countryCode}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>
+                                            <img src={`/flags/${user.countryCode || 'US'}.png`} alt={user.country || 'Unknown'} className="h-4 w-6 object-cover rounded-sm"/>
                                             <div>
                                                 <div className="font-medium">{user.name}</div>
                                                 <div className="text-sm text-muted-foreground">{user.email}</div>
