@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText } from 'lucide-react';
-import { QuickRemit } from '@/components/Payvost';
+import { Payvost } from '@/components/Payvost';
 import { Beneficiaries } from '@/components/beneficiaries';
 
 const billCategories = [
@@ -42,7 +42,7 @@ export default function PaymentsPage() {
           <TabsContent value="remittances">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div className="lg:col-span-2">
-                    <QuickRemit />
+                    <Payvost />
                 </div>
                 <div className="lg:col-span-1">
                     <Beneficiaries />
