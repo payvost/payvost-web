@@ -9,7 +9,7 @@ console.log("Backend root started.");
 // backend/index.ts
 const express_1 = __importDefault(require("express"));
 const app = (0, express_1.default)();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 app.get("/", (_req, res) => {
     res.send("Payvost backend is running 🚀");
 });
