@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -10,12 +9,28 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin } from "lucide-react";
+import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin, MoreHorizontal } from "lucide-react";
 import React from "react";
 import { SiteHeader } from "@/components/site-header";
+import Image from "next/image";
+import placeholderImageData from '@/app/lib/placeholder-images.json';
+
+
+const popularCountries = [
+    { name: 'Nigeria', currency: 'Naira (NGN)', flag: 'NG.png', hint: 'Lagos skyline' },
+    { name: 'United States', currency: 'Dollar (USD)', flag: 'US.png', hint: 'New York city' },
+    { name: 'United Kingdom', currency: 'Pounds (GBP)', flag: 'GB.png', hint: 'London city' },
+    { name: 'Ghana', currency: 'Cedi (GHS)', flag: 'GH.png', hint: 'Accra landscape' },
+    { name: 'Kenya', currency: 'Shilling (KES)', flag: 'KE.png', hint: 'Nairobi park' },
+    { name: 'Canada', currency: 'Dollar (CAD)', flag: 'CA.png', hint: 'Toronto city' },
+    { name: 'Australia', currency: 'Dollar (AUD)', flag: 'AU.png', hint: 'Sydney opera' },
+    { name: 'Germany', currency: 'Euro (EUR)', flag: 'DE.png', hint: 'Berlin city' },
+    { name: 'South Africa', currency: 'Rand (ZAR)', flag: 'ZA.png', hint: 'Cape Town' },
+];
 
 
 export default function LandingPage() {
+  const { blog: blogImages } = placeholderImageData;
   return (
     <div className="flex flex-col min-h-screen">
       <SiteHeader />
@@ -155,33 +170,20 @@ export default function LandingPage() {
                 A few of the popular destinations our customers send to.
               </p>
             </div>
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full max-w-6xl mx-auto"
-            >
-              <CarouselContent>
-                {Array.from({ length: 9 }).map((_, index) => (
-                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex flex-col items-center justify-center p-6 gap-4">
-                           <img src="https://placehold.co/300x200.png" data-ai-hint="international currency" alt="Country" className="rounded-lg object-cover aspect-[3/2]" />
-                           <div className="text-center">
-                            <p className="text-lg font-semibold">Country Name</p>
-                            <p className="text-sm text-muted-foreground">Currency (CUR)</p>
-                           </div>
-                        </CardContent>
-                      </Card>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 md:gap-10 max-w-4xl mx-auto">
+                {popularCountries.map((country) => (
+                    <div key={country.name} className="flex flex-col items-center gap-2 text-center">
+                        <img src={`/flag/${country.flag}`} alt={country.name} className="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover border-2 border-border" />
+                        <p className="text-sm font-medium">{country.name}</p>
                     </div>
-                  </CarouselItem>
                 ))}
-              </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
-            </Carousel>
+                <Link href="#" className="flex flex-col items-center gap-2 text-center">
+                    <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-border hover:bg-muted/80 transition-colors">
+                        <MoreHorizontal className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">See All</p>
+                </Link>
+            </div>
           </div>
         </section>
         
@@ -205,7 +207,7 @@ export default function LandingPage() {
                       <Card>
                         <CardHeader className="flex flex-row items-center gap-4">
                           <Avatar>
-                            <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="person portrait" alt="User" />
+                            <AvatarImage src="https://picsum.photos/seed/t1/100/100" data-ai-hint="person portrait" alt="User" />
                             <AvatarFallback>U</AvatarFallback>
                           </Avatar>
                           <div>
@@ -235,36 +237,78 @@ export default function LandingPage() {
                 Stay updated with the latest news and insights from the world of finance.
               </p>
             </div>
-            <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:gap-16">
-              {[1, 2, 3].map((item) => (
-                <Card key={item}>
-                  <img
-                    src="https://placehold.co/600x400.png"
-                    data-ai-hint="finance technology"
-                    alt="Blog Post"
+            <div className="mx-auto grid max-w-7xl items-start gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+              <Card className="flex flex-col">
+                  <Image
+                    src={blogImages.payvost_google_partnership.src}
+                    width={blogImages.payvost_google_partnership.width}
+                    height={blogImages.payvost_google_partnership.height}
+                    data-ai-hint={blogImages.payvost_google_partnership.hint}
+                    alt="Payvost partners with Google"
                     className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
                   />
-                  <CardHeader>
-                    <CardTitle className="text-xl">Blog Post Title {item}</CardTitle>
+                  <CardHeader className="flex-grow">
+                    <CardTitle className="text-xl md:text-2xl">Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-grow">
                     <p className="text-muted-foreground">
-                      A brief summary of the blog post goes here. Catch the reader's interest.
+                      A brief summary of the blog post goes here. Catch the reader's interest and give them a reason to click and read more about this exciting topic.
                     </p>
                   </CardContent>
                   <CardFooter>
                     <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </CardFooter>
                 </Card>
-              ))}
+                 <Card className="flex flex-col">
+                  <Image
+                    src={blogImages.ai_remittance.src}
+                    width={blogImages.ai_remittance.width}
+                    height={blogImages.ai_remittance.height}
+                    data-ai-hint={blogImages.ai_remittance.hint}
+                    alt="AI in Remittance"
+                    className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
+                  />
+                  <CardHeader className="flex-grow">
+                    <CardTitle className="text-xl md:text-2xl">The Future of Remittances: How AI is Changing the Game</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <p className="text-muted-foreground">
+                      Discover the revolutionary impact of artificial intelligence on cross-border payments.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  </CardFooter>
+                </Card>
+                 <Card className="flex flex-col">
+                  <Image
+                    src={blogImages.secure_transfers.src}
+                    width={blogImages.secure_transfers.width}
+                    height={blogImages.secure_transfers.height}
+                    data-ai-hint={blogImages.secure_transfers.hint}
+                    alt="Secure Transfers"
+                    className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
+                  />
+                  <CardHeader className="flex-grow">
+                    <CardTitle className="text-xl md:text-2xl">5 Tips for Secure International Money Transfers</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <p className="text-muted-foreground">
+                      Protect your money and personal information with these essential security tips.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  </CardFooter>
+                </Card>
             </div>
           </div>
         </section>
       </main>
       <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-1 sm:col-span-2 space-y-4">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="w-full md:w-[30%] space-y-4">
               <Link href="#" className="flex items-center space-x-2">
                 <Icons.logo className="h-8" />
               </Link>
@@ -274,32 +318,41 @@ export default function LandingPage() {
                 <Button type="submit">Subscribe</Button>
               </form>
             </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Product</h4>
-              <ul className="space-y-2">
-                <li><Link href="#features" className="hover:text-primary transition-colors">Features</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Company</h4>
-              <ul className="space-y-2">
-                <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
-              </ul>
+            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Product</h4>
+                <ul className="space-y-2">
+                    <li><Link href="#features" className="hover:text-primary transition-colors">Features</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Company</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Resources</h4>
+                <ul className="space-y-2">
+                    <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Policies</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+                </ul>
+                </div>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
@@ -315,5 +368,3 @@ export default function LandingPage() {
     </div>
   )
 }
-
-    

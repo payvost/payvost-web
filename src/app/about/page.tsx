@@ -131,8 +131,8 @@ export default function AboutPage() {
 
       <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-2 md:col-span-2 space-y-4">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="w-full md:w-[30%] space-y-4">
               <Link href="/" className="flex items-center space-x-2">
                  <Icons.logo className="h-8" />
               </Link>
@@ -142,32 +142,41 @@ export default function AboutPage() {
                 <Button type="submit">Subscribe</Button>
               </form>
             </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Product</h4>
-              <ul className="space-y-2">
-                <li><Link href="/#features" className="hover:text-primary transition-colors">Features</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Company</h4>
-              <ul className="space-y-2">
-                <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link href="/#blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
-              </ul>
+            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Product</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/#features" className="hover:text-primary transition-colors">Features</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Company</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Resources</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/#blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Policies</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+                </ul>
+                </div>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
