@@ -1,0 +1,22 @@
+{
+    "blog": {
+        "payvost_google_partnership": {
+            "src": "/Payvost Building.png",
+            "width": 600,
+            "height": 400,
+            "hint": "modern building"
+        },
+        "ai_remittance": {
+            "src": "/Payvost Building.png",
+            "width": 600,
+            "height": 400,
+            "hint": "finance technology"
+        },
+        "secure_transfers": {
+            "src": "/Payvost Building.png",
+            "width": 600,
+            "height": 400,
+            "hint": "digital security"
+        }
+    }
+}

@@ -157,7 +157,7 @@ export default function CustomersPage() {
                                 <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <img src={`/flags/${user.countryCode?.toUpperCase()}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>
+                                            <img src={`/flag/${user.countryCode?.toUpperCase()}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>
                                             <div>
                                                 <div className="font-medium">{user.name}</div>
                                                 <div className="text-sm text-muted-foreground">{user.email}</div>

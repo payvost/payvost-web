@@ -78,9 +78,9 @@ export default function AdminRemittancesPage() {
                         </TableCell>
                         <TableCell>
                             <div className="flex items-center gap-2 font-medium">
-                                <img src={`/flags/${rem.from}.png`} alt={rem.from} className="h-4 w-6 object-cover"/>
+                                <img src={`/flag/${rem.from}.png`} alt={rem.from} className="h-4 w-6 object-cover"/>
                                 <ArrowRight className="h-4 w-4 text-muted-foreground"/>
-                                <img src={`/flags/${rem.to}.png`} alt={rem.to} className="h-4 w-6 object-cover"/>
+                                <img src={`/flag/${rem.to}.png`} alt={rem.to} className="h-4 w-6 object-cover"/>
                             </div>
                         </TableCell>
                          <TableCell>
