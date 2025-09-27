@@ -1,23 +1,19 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Gift, Search, BarChart2, Edit, Link as LinkIcon } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Gift, Search, BarChart2, Edit, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
-
-const sampleDonations = [
-  { id: 'DON-001', name: 'Community Park Cleanup', raised: 1250, goal: 2000, status: 'Active' },
-  { id: 'DON-002', name: 'Children\'s Hospital Toy Drive', raised: 5000, goal: 5000, status: 'Completed' },
-  { id: 'DON-003', name: 'Animal Shelter Support Fund', raised: 850, goal: 1500, status: 'Active' },
-  { id: 'DON-004', name: 'New Website Design', raised: 0, goal: 1000, status: 'Draft' },
-  { id: 'DON-005', name: 'Emergency Relief Fund', raised: 10200, goal: 10000, status: 'Completed' },
-];
+import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, onSnapshot, DocumentData } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Active: 'default',
@@ -30,9 +26,44 @@ interface DonationPageListViewProps {
 }
 
 export function DonationPageListView({ onFabClick }: DonationPageListViewProps) {
-  const [donations, setDonations] = useState(sampleDonations);
+  const { user } = useAuth();
+  const [campaigns, setCampaigns] = useState<DocumentData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (donations.length === 0) {
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+
+    const q = query(collection(db, "donations"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const campaignsData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+            campaignsData.push({ id: doc.id, ...doc.data() });
+        });
+        setCampaigns(campaignsData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching campaigns: ", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
+
+  if (campaigns.length === 0) {
     return (
       <Card className="h-96">
         <CardContent className="flex flex-col items-center justify-center h-full text-center">
@@ -78,13 +109,13 @@ export function DonationPageListView({ onFabClick }: DonationPageListViewProps) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {donations.map((d) => (
+            {campaigns.map((d) => (
               <TableRow key={d.id}>
-                <TableCell className="font-medium">{d.name}</TableCell>
+                <TableCell className="font-medium">{d.title}</TableCell>
                 <TableCell>
                     <div className="flex flex-col gap-2">
-                        <Progress value={(d.raised / d.goal) * 100} className="h-2" />
-                        <span className="text-xs text-muted-foreground">${d.raised.toLocaleString()} of ${d.goal.toLocaleString()}</span>
+                        <Progress value={(d.raisedAmount / d.goal) * 100} className="h-2" />
+                        <span className="text-xs text-muted-foreground">${d.raisedAmount?.toLocaleString()} of ${d.goal?.toLocaleString()}</span>
                     </div>
                 </TableCell>
                 <TableCell className="text-right">
@@ -107,7 +138,7 @@ export function DonationPageListView({ onFabClick }: DonationPageListViewProps) 
       </CardContent>
        <CardFooter>
         <div className="text-xs text-muted-foreground">
-            Showing <strong>1-{donations.length}</strong> of <strong>{donations.length}</strong> campaigns
+            Showing <strong>1-{campaigns.length}</strong> of <strong>{campaigns.length}</strong> campaigns
         </div>
       </CardFooter>
     </Card>

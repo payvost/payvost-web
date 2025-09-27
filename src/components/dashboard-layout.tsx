@@ -168,7 +168,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
                     <Button size="sm" className="w-full" asChild>
-                      <Link href="/dashboard/profile">Get Started</Link>
+                      <Link href="/dashboard/get-started">Get Started</Link>
                     </Button>
                  </div>
             </SidebarGroup>
