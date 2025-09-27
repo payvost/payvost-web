@@ -28,9 +28,9 @@ export function WalletCard({ currency, name, balance, flag }: WalletCardProps) {
             <Image
                 src={flagPath}
                 alt={`${name} flag`}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-full"
+                fill
+                sizes="40px"
+                className="rounded-full object-cover"
                 data-ai-hint={!hasFlag ? 'logo icon' : undefined}
             />
         </div>

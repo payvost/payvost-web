@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -30,7 +29,7 @@ export default function OnboardingFormPage() {
             description: "Next, please provide some documents to verify your business.",
         });
         setIsLoading(false);
-        router.push('/dashboard/profile/verify');
+        router.push('/dashboard/get-started/verify');
     }, 1500)
   }
 
@@ -39,7 +38,7 @@ export default function OnboardingFormPage() {
       <main className="flex-1 p-4 lg:p-6">
          <div className="flex items-center gap-4 mb-6">
             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                <Link href="/dashboard/profile">
+                <Link href="/dashboard/get-started">
                     <ArrowLeft className="h-4 w-4" />
                 </Link>
             </Button>

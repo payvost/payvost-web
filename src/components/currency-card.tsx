@@ -89,9 +89,9 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
                 <Image 
                     src={flagPath}
                     alt={`${currency} flag`}
-                    layout="fill" 
-                    objectFit="cover" 
-                    className="rounded-full"
+                    fill
+                    sizes="24px"
+                    className="rounded-full object-cover"
                 />
             </div>
         </CardHeader>

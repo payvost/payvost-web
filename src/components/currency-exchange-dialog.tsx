@@ -118,7 +118,7 @@ export function CurrencyExchangeDialog({ children, wallets }: CurrencyExchangeDi
                                     {wallets.map(w => (
                                         <SelectItem key={w.currency} value={w.currency}>
                                             <div className="flex items-center gap-2">
-                                                <Image src={`/flag/${w.flag.toUpperCase()}.png`} alt={w.name} width={20} height={20} className="rounded-full"/>
+                                                <Image src={`/flag/${w.flag.toUpperCase()}.png`} alt={w.name} width={20} height={20} className="rounded-full object-cover"/>
                                                 {w.currency}
                                             </div>
                                         </SelectItem>
@@ -155,7 +155,7 @@ export function CurrencyExchangeDialog({ children, wallets }: CurrencyExchangeDi
                                      {wallets.map(w => (
                                         <SelectItem key={w.currency} value={w.currency}>
                                             <div className="flex items-center gap-2">
-                                                <Image src={`/flag/${w.flag.toUpperCase()}.png`} alt={w.name} width={20} height={20} className="rounded-full"/>
+                                                <Image src={`/flag/${w.flag.toUpperCase()}.png`} alt={w.name} width={20} height={20} className="rounded-full object-cover"/>
                                                 {w.currency}
                                             </div>
                                         </SelectItem>

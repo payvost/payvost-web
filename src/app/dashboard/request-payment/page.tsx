@@ -15,7 +15,7 @@ import { Copy, QrCode, Link as LinkIcon, FileText, Repeat, Users, Ticket, Gift }
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvoiceTab } from '@/components/invoice-tab';
-import CreateInvoicePage from '@/components/create-invoice-page';
+import { CreateInvoicePage } from '@/components/create-invoice-page';
 import { RecurringTab } from '@/components/recurring-tab';
 import { SplitPaymentTab } from '@/components/split-payment-tab';
 import { EventTicketsTab } from '@/components/event-tickets-tab';
