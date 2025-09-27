@@ -105,8 +105,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
      if (href === '/dashboard/support') {
         return pathname.startsWith('/dashboard/support');
     }
-     if (href === '/dashboard/business') {
-        return pathname.startsWith('/dashboard/business');
+     if (href === '/dashboard/profile') {
+        return pathname.startsWith('/dashboard/profile');
     }
     // Updated logic to handle the dispute page correctly
     if (href === '/dashboard/dispute') {
@@ -164,13 +164,19 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                         </SidebarMenuItem>
                     ))}
                  </SidebarMenu>
-                 <div className="mt-4 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-                    <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
-                    <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
-                    <Button size="sm" className="w-full" asChild>
-                      <Link href="/dashboard/business">Get Started</Link>
-                    </Button>
-                 </div>
+            </SidebarGroup>
+             <SidebarGroup>
+              <SidebarGroupLabel>Business</SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/dashboard/profile')}>
+                    <Link href="/dashboard/profile">
+                      <Briefcase />
+                      For Business
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
             </SidebarGroup>
           </SidebarContent>
            <SidebarFooter className="p-2 mt-auto flex-col gap-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">
@@ -192,7 +198,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
         </Sidebar>
         <SidebarInset ref={mainContentRef}>
             <header className={cn(
-              "flex h-14 items-center gap-4 bg-background/95 backdrop-blur-sm px-4 lg:h-[60px] lg:px-6 transition-all",
+              "sticky top-0 z-30 flex h-14 items-center gap-4 bg-background/95 px-4 backdrop-blur-sm transition-all lg:h-[60px] lg:px-6",
               scrolled && "border-b shadow-sm"
               )}>
                 <SidebarTrigger className="md:hidden" />
@@ -203,12 +209,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                    </div>
                 </div>
                 <div className="ml-auto flex items-center gap-1">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/business">
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        Switch to Business
-                      </Link>
-                    </Button>
                     <Button variant="ghost" size="icon" asChild>
                     <Link href="/dashboard/support">
                         <HelpCircle className="h-[1.2rem] w-[1.2rem]" />

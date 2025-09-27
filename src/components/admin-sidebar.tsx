@@ -87,7 +87,6 @@ export function AdminSidebar() {
         items: [
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers', icon: <Users />, label: 'Customers' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management', icon: <UserCog />, label: 'Team Management' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance & Risk' },
         ]
       },
        {
@@ -133,7 +132,6 @@ export function AdminSidebar() {
       {
         group: 'Developer Tools',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/api-docs', icon: <BookOpen />, label: 'API Docs' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/webhooks-logs', icon: <Webhook />, label: 'Webhooks & Logs' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/error-tracking', icon: <FileWarning />, label: 'Error Tracking' },
         ]
@@ -141,6 +139,7 @@ export function AdminSidebar() {
        {
         group: 'Compliance & Legal',
         items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance & Risk' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/reporting', icon: <Gavel />, label: 'Regulatory Reporting' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/audit-trails', icon: <FileCode />, label: 'Audit Trails' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/legal-docs', icon: <FileText />, label: 'Legal Documents' },
