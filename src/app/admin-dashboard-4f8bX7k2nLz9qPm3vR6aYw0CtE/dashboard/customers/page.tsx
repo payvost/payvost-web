@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -11,9 +12,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { CustomerData, KycStatus, UserType } from '@/types/customer';
 import { cn } from '@/lib/utils';
 import { ListFilter } from 'lucide-react';
-
-
 import { useEffect, useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import axios from 'axios';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -26,25 +27,34 @@ const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | '
 export default function CustomersPage() {
     const router = useRouter();
     const [customers, setCustomers] = useState<CustomerData[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-      async function fetchCustomers() {
-        try {
-          const res = await fetch('http://localhost:3001/user');
-          const data = await res.json();
-          setCustomers(data.customers || []);
-        } catch (err) {
-          setCustomers([]);
-        }
-      }
-      fetchCustomers();
+        const fetchCustomers = async () => {
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+                if (!apiUrl) {
+                    throw new Error("API URL is not configured. Please set NEXT_PUBLIC_API_URL environment variable.");
+                }
+                const response = await axios.get(`${apiUrl}/user/all`);
+                setCustomers(response.data);
+            } catch (error) {
+                console.error("Error fetching customers:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCustomers();
     }, []);
+
 
     const getRiskBadge = (score: number) => {
         if (score > 75) return <Badge variant="destructive">High</Badge>;
         if (score > 40) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700">Medium</Badge>;
         return <Badge variant="default" className="bg-green-500/20 text-green-700">Low</Badge>;
     }
+
 
     return (
         <>
@@ -65,7 +75,7 @@ export default function CustomersPage() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">12,482</div>
+                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-20" /> : customers.length}</div>
                         <p className="text-xs text-muted-foreground">+2,130 from last month</p>
                     </CardContent>
                 </Card>
@@ -85,7 +95,7 @@ export default function CustomersPage() {
                         <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">84</div>
+                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-10" /> : customers.filter(c => c.kycStatus === 'Pending').length}</div>
                         <p className="text-xs text-muted-foreground">Awaiting document review</p>
                     </CardContent>
                 </Card>
@@ -130,13 +140,24 @@ export default function CustomersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {customers.map((user) => {
-                                const status = kycStatusConfig[user.kycStatus as KycStatus] || kycStatusConfig['Unverified'];
+                            {loading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                            customers.map((user) => {
+                                const status = kycStatusConfig[user.kycStatus];
                                 return (
                                 <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <img src={`/flags/${user.countryCode || 'US'}.png`} alt={user.country || 'Unknown'} className="h-4 w-6 object-cover rounded-sm"/>
+                                            <img src={`/flags/${user.countryCode?.toUpperCase()}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>
                                             <div>
                                                 <div className="font-medium">{user.name}</div>
                                                 <div className="text-sm text-muted-foreground">{user.email}</div>
@@ -169,7 +190,8 @@ export default function CustomersPage() {
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            )})}
+                            )})
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

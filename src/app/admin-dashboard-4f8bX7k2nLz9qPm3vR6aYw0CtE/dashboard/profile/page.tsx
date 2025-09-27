@@ -13,6 +13,7 @@ import type { TeamMember } from '@/types/team-member';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const memberDetails: TeamMember = {
     id: 'tm_1',
@@ -37,8 +38,8 @@ const statusConfig = {
     Suspended: { color: 'text-red-600', variant: 'destructive' as const },
 };
 
-export default function TeamMemberDetailsPage({ params }: { params: { id: string } }) {
-    const member = memberDetails; // Fetch by params.id in real app
+export default function AdminProfilePage() {
+    const member = memberDetails; // In a real app, this would be the logged-in user's data
     const status = statusConfig[member.status];
 
      const getInitials = (name: string) => {
@@ -51,12 +52,7 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
         <>
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div className="flex items-center gap-4">
-                     <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management">
-                           <ArrowLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
-                     <Avatar className="h-12 w-12">
+                     <Avatar className="h-16 w-16">
                         <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="admin portrait" />
                         <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                     </Avatar>
@@ -69,8 +65,8 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
                     </div>
                 </div>
                  <div className="flex items-center space-x-2">
-                    <Button variant="outline"><KeyRound className="mr-2 h-4 w-4" />Force Logout</Button>
-                    <Button variant="destructive"><Power className="mr-2 h-4 w-4" />Suspend User</Button>
+                    <Button variant="outline"><KeyRound className="mr-2 h-4 w-4" />Change Password</Button>
+                    <Button>Update Profile</Button>
                 </div>
             </div>
             
@@ -79,7 +75,7 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
                     <Card>
                         <CardHeader>
                             <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>A log of the most recent actions taken by this user.</CardDescription>
+                            <CardDescription>A log of the most recent actions taken by you.</CardDescription>
                         </CardHeader>
                         <CardContent>
                              <Table>
@@ -107,7 +103,7 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
                      <Card>
                         <CardHeader>
                             <CardTitle>Active Sessions</CardTitle>
-                            <CardDescription>Manage this user's logged-in sessions.</CardDescription>
+                            <CardDescription>Manage your logged-in sessions.</CardDescription>
                         </CardHeader>
                         <CardContent>
                              <Table>
@@ -142,21 +138,10 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
                         </CardHeader>
                         <CardContent className="space-y-4">
                            <div className="space-y-2">
-                            <Label htmlFor="role">Assigned Role</Label>
-                            <Select defaultValue={member.role}>
-                                <SelectTrigger id="role">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Super Admin">Super Admin</SelectItem>
-                                    <SelectItem value="Admin">Admin</SelectItem>
-                                    <SelectItem value="Support">Support</SelectItem>
-                                    <SelectItem value="Compliance">Compliance</SelectItem>
-                                    <SelectItem value="Developer">Developer</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label htmlFor="role">Your Role</Label>
+                             <Input id="role" value={member.role} readOnly disabled />
                            </div>
-                           <Button className="w-full">Update Role</Button>
+                           <p className="text-xs text-muted-foreground">Your role determines your access level. Contact a Super Admin to make changes.</p>
                         </CardContent>
                     </Card>
                     <Card>

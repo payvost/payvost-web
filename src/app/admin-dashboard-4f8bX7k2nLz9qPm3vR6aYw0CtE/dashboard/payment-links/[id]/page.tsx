@@ -19,7 +19,7 @@ const linkDetails = {
     amountReceived: 4350, 
     currency: 'USD', 
     created: '2024-08-10',
-    url: 'https://payvost.pay/pl_1a2b3c4d'
+    url: 'https://qwibik.pay/pl_1a2b3c4d'
 };
 
 const recentPayments = [

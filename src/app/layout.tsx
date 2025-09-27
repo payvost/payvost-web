@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Payvost',
+  title: 'Payvost Remit',
   description: 'Fast and secure global remittance.',
   manifest: '/manifest.json',
 };

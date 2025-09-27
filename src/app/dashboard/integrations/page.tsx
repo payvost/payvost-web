@@ -41,7 +41,7 @@ const integrations = [
 const webhooks = [
     { id: 'wh_1', url: 'https://api.example.com/webhook', status: 'enabled', events: 5 },
     { id: 'wh_2', url: 'https://staging.example.com/webhook', status: 'disabled', events: 2 },
-    { id: 'wh_3', url: 'https://dev.myapp.com/payvost/events', status: 'failed', events: 8 },
+    { id: 'wh_3', url: 'https://dev.myapp.com/qwibik/events', status: 'failed', events: 8 },
 ];
 
 const apiLogs = [
@@ -83,7 +83,7 @@ export default function IntegrationsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>App Marketplace</CardTitle>
-                    <CardDescription>Connect Payvost with your favorite tools and services.</CardDescription>
+                    <CardDescription>Connect Payvost Remit with your favorite tools and services.</CardDescription>
                      <div className="relative pt-4">
                         <Search className="absolute left-2.5 top-6.5 h-4 w-4 text-muted-foreground" />
                         <Input placeholder="Search integrations..." className="pl-8 w-full md:w-1/3" />
