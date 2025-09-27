@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -237,29 +238,31 @@ export default function LandingPage() {
                 Stay updated with the latest news and insights from the world of finance.
               </p>
             </div>
-            <div className="mx-auto grid max-w-7xl items-start gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
-              <Card className="flex flex-col">
-                  <Image
-                    src={blogImages.payvost_google_partnership.src}
-                    width={blogImages.payvost_google_partnership.width}
-                    height={blogImages.payvost_google_partnership.height}
-                    data-ai-hint={blogImages.payvost_google_partnership.hint}
-                    alt="Payvost partners with Google"
-                    className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
-                  />
-                  <CardHeader className="flex-grow">
-                    <CardTitle className="text-xl md:text-2xl">Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="text-muted-foreground">
-                      A brief summary of the blog post goes here. Catch the reader's interest and give them a reason to click and read more about this exciting topic.
-                    </p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
-                  </CardFooter>
-                </Card>
-                 <Card className="flex flex-col">
+            <div className="mx-auto grid max-w-7xl items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+              <Link href="/blog/payvost-partners-with-google" className="group">
+                <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 group-hover:shadow-lg">
+                    <Image
+                      src={blogImages.payvost_google_partnership.src}
+                      width={blogImages.payvost_google_partnership.width}
+                      height={blogImages.payvost_google_partnership.height}
+                      data-ai-hint={blogImages.payvost_google_partnership.hint}
+                      alt="Payvost partners with Google"
+                      className="aspect-video w-full object-cover"
+                    />
+                    <CardHeader>
+                      <CardTitle className="text-xl md:text-2xl group-hover:text-primary">Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <p className="text-muted-foreground">
+                        A brief summary of the blog post goes here. Catch the reader's interest and give them a reason to click and read more about this exciting topic.
+                      </p>
+                    </CardContent>
+                    <CardFooter>
+                      <Button variant="link" className="p-0 -ml-1 group-hover:underline">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                    </CardFooter>
+                  </Card>
+              </Link>
+                 <Card className="flex flex-col h-full">
                   <Image
                     src={blogImages.ai_remittance.src}
                     width={blogImages.ai_remittance.width}
@@ -268,7 +271,7 @@ export default function LandingPage() {
                     alt="AI in Remittance"
                     className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
                   />
-                  <CardHeader className="flex-grow">
+                  <CardHeader>
                     <CardTitle className="text-xl md:text-2xl">The Future of Remittances: How AI is Changing the Game</CardTitle>
                   </CardHeader>
                   <CardContent className="flex-grow">
@@ -280,7 +283,7 @@ export default function LandingPage() {
                     <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
                   </CardFooter>
                 </Card>
-                 <Card className="flex flex-col">
+                 <Card className="flex flex-col h-full">
                   <Image
                     src={blogImages.secure_transfers.src}
                     width={blogImages.secure_transfers.width}
@@ -289,7 +292,7 @@ export default function LandingPage() {
                     alt="Secure Transfers"
                     className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
                   />
-                  <CardHeader className="flex-grow">
+                  <CardHeader>
                     <CardTitle className="text-xl md:text-2xl">5 Tips for Secure International Money Transfers</CardTitle>
                   </CardHeader>
                   <CardContent className="flex-grow">
@@ -340,7 +343,7 @@ export default function LandingPage() {
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Resources</h4>
                 <ul className="space-y-2">
-                    <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>

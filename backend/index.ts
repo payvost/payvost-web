@@ -34,6 +34,4 @@ app.get("/", (_req, res) => {
 // Mount the user routes
 app.use('/user', userRoutes);
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+export default app;
