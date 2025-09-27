@@ -41,7 +41,7 @@ const integrations = [
 const webhooks = [
     { id: 'wh_1', url: 'https://api.example.com/webhook', status: 'enabled', events: 5 },
     { id: 'wh_2', url: 'https://staging.example.com/webhook', status: 'disabled', events: 2 },
-    { id: 'wh_3', url: 'https://dev.myapp.com/qwibik/events', status: 'failed', events: 8 },
+    { id: 'wh_3', url: 'https://dev.myapp.com/payvost/events', status: 'failed', events: 8 },
 ];
 
 const apiLogs = [

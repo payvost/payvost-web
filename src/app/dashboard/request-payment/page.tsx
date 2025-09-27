@@ -36,7 +36,7 @@ function PaymentLinkTab() {
 
   const handleCreateRequest = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const link = `https://qwibik.remit/pay/${Math.random().toString(36).substring(2, 10)}`;
+    const link = `https://payvost.remit/pay/${Math.random().toString(36).substring(2, 10)}`;
     setGeneratedLink(link);
     toast({
         title: "Payment Link Generated!",
