@@ -54,7 +54,7 @@ export default function VerifyBusinessPage() {
       <main className="flex-1 p-4 lg:p-6">
          <div className="flex items-center gap-4 mb-6">
             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                <Link href="/dashboard/profile/onboarding">
+                <Link href="/dashboard/get-started/onboarding">
                     <ArrowLeft className="h-4 w-4" />
                 </Link>
             </Button>

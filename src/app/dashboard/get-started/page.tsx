@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -18,7 +17,7 @@ export default function BusinessOnboardingPage() {
         title: 'Business Owner',
         description: 'Manage day-to-day operations, invoicing, and global payments for your established business.',
         icon: <Briefcase className="h-10 w-10 text-primary" />,
-        href: '/dashboard/profile/onboarding',
+        href: '/dashboard/get-started/onboarding/business',
         status: 'default'
     },
     {

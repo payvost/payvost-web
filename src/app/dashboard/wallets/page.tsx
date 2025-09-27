@@ -105,7 +105,7 @@ export default function WalletsPage() {
                                 alt={`${primaryWallet.name} flag`}
                                 width={32}
                                 height={32}
-                                className="rounded-full border-2 border-primary-foreground/50"
+                                className="rounded-full border-2 border-primary-foreground/50 object-cover"
                             />
                         </div>
                         <CardDescription className="text-primary-foreground/80">{primaryWallet.name}</CardDescription>
@@ -139,7 +139,7 @@ export default function WalletsPage() {
                                         alt={`${wallet.name} flag`}
                                         width={24}
                                         height={24}
-                                        className="rounded-full mr-3"
+                                        className="rounded-full mr-3 object-cover"
                                     />
                                     <div className="flex-1">
                                         <p className="font-medium">{wallet.currency}</p>
