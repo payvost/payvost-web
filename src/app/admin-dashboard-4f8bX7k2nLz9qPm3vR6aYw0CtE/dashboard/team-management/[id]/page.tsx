@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 const memberDetails: TeamMember = {
     id: 'tm_1',
     name: 'Admin User',
-    email: 'admin@qwibik.com',
+    email: 'admin@payvost.com',
     role: 'Super Admin',
     status: 'Active',
     lastActive: '2024-08-15 10:30 AM',
