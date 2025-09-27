@@ -1,4 +1,7 @@
 
+
+import type { Timestamp } from "firebase/firestore";
+
 export type KycStatus = 'Verified' | 'Pending' | 'Unverified' | 'Restricted';
 export type UserType = 'Normal User' | 'Business Owner';
 
@@ -35,6 +38,6 @@ export interface CustomerData {
   totalSpend: number;
   wallets: WalletBalance[];
   transactions: Transaction[];
-  joinedDate?: string;
+  joinedDate?: string | Timestamp;
   associatedAccounts?: AssociatedAccount[];
 }

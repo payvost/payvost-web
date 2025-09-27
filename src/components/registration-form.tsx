@@ -19,7 +19,7 @@ import { CalendarIcon, Loader2, UploadCloud } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -153,25 +153,20 @@ export function RegistrationForm() {
        }
       
       const firestoreData = {
-        uid: user.uid,
-        fullName: data.fullName,
+        id: user.uid,
+        name: data.fullName,
         email: data.email,
         photoURL: photoURL,
-        dateOfBirth: format(data.dateOfBirth, 'yyyy-MM-dd'),
         country: data.country,
-        address: {
-            street: data.street,
-            city: data.city,
-            state: data.state,
-            zip: data.zip,
-        },
-        verification: {
-            idType: data.idType,
-            idNumber: data.idNumber,
-            idExpiry: format(data.idExpiry, 'yyyy-MM-dd'),
-        },
-        agreeTerms: data.agreeTerms,
-        createdAt: new Date().toISOString(),
+        // Mock data for fields not in the form yet
+        kycStatus: 'Pending' as const,
+        userType: 'Normal User' as const,
+        riskScore: Math.floor(Math.random() * 30), // Random low risk score
+        totalSpend: 0,
+        phone: '', // Not in form, add if needed
+        wallets: [],
+        transactions: [],
+        joinedDate: serverTimestamp(),
       };
 
       // Set user's display name and photo in Auth
@@ -443,5 +438,3 @@ export function RegistrationForm() {
     </div>
   );
 }
-
-    
