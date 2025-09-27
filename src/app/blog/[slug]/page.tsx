@@ -100,7 +100,7 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
 
             {/* Featured Image */}
             <div className="relative aspect-video w-full overflow-hidden rounded-lg mb-8 md:mb-12">
-                <Image src={featuredImage} alt={title} layout="fill" objectFit="cover" />
+                <Image src={featuredImage} alt={title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
             </div>
 
             {/* Content and Sidebar */}

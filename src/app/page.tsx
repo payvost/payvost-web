@@ -241,14 +241,16 @@ export default function LandingPage() {
             <div className="mx-auto grid max-w-7xl items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
               <Link href="/blog/payvost-partners-with-google" className="group">
                 <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 group-hover:shadow-lg">
-                    <Image
-                      src={blogImages.payvost_google_partnership.src}
-                      width={blogImages.payvost_google_partnership.width}
-                      height={blogImages.payvost_google_partnership.height}
-                      data-ai-hint={blogImages.payvost_google_partnership.hint}
-                      alt="Payvost partners with Google"
-                      className="aspect-video w-full object-cover"
-                    />
+                    <div className="relative aspect-video w-full">
+                      <Image
+                        src={blogImages.payvost_google_partnership.src}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        data-ai-hint={blogImages.payvost_google_partnership.hint}
+                        alt="Payvost partners with Google"
+                        className="object-cover"
+                      />
+                    </div>
                     <CardHeader>
                       <CardTitle className="text-xl md:text-2xl group-hover:text-primary">Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management</CardTitle>
                     </CardHeader>
@@ -263,14 +265,16 @@ export default function LandingPage() {
                   </Card>
               </Link>
                  <Card className="flex flex-col h-full">
-                  <Image
-                    src={blogImages.ai_remittance.src}
-                    width={blogImages.ai_remittance.width}
-                    height={blogImages.ai_remittance.height}
-                    data-ai-hint={blogImages.ai_remittance.hint}
-                    alt="AI in Remittance"
-                    className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
-                  />
+                  <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
+                    <Image
+                      src={blogImages.ai_remittance.src}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      data-ai-hint={blogImages.ai_remittance.hint}
+                      alt="AI in Remittance"
+                      className="object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <CardTitle className="text-xl md:text-2xl">The Future of Remittances: How AI is Changing the Game</CardTitle>
                   </CardHeader>
@@ -284,14 +288,16 @@ export default function LandingPage() {
                   </CardFooter>
                 </Card>
                  <Card className="flex flex-col h-full">
-                  <Image
-                    src={blogImages.secure_transfers.src}
-                    width={blogImages.secure_transfers.width}
-                    height={blogImages.secure_transfers.height}
-                    data-ai-hint={blogImages.secure_transfers.hint}
-                    alt="Secure Transfers"
-                    className="aspect-video w-full overflow-hidden rounded-t-lg object-cover"
-                  />
+                  <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
+                    <Image
+                      src={blogImages.secure_transfers.src}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      data-ai-hint={blogImages.secure_transfers.hint}
+                      alt="Secure Transfers"
+                      className="object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <CardTitle className="text-xl md:text-2xl">5 Tips for Secure International Money Transfers</CardTitle>
                   </CardHeader>

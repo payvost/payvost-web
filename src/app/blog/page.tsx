@@ -115,8 +115,9 @@ export default function BlogArchivePage() {
                                             <Image
                                                 src={article.featuredImage}
                                                 alt={article.title}
-                                                layout="fill"
-                                                objectFit="cover"
+                                                fill
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                                className="object-cover"
                                                 data-ai-hint={article.imageHint || 'abstract technology'}
                                             />
                                         </div>

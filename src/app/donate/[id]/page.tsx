@@ -84,7 +84,7 @@ export default function DonationPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <Card className="overflow-hidden">
                            <div className="relative aspect-video w-full">
-                                <Image src={campaign.bannerImage} alt={campaign.title} layout="fill" objectFit="cover" />
+                                <Image src={campaign.bannerImage} alt={campaign.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 67vw, 50vw" className="object-cover" />
                             </div>
                             <CardHeader>
                                 <CardTitle className="text-3xl font-bold tracking-tight">{campaign.title}</CardTitle>
@@ -152,4 +152,3 @@ export default function DonationPage() {
         </div>
     );
 }
-
