@@ -107,7 +107,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
                         <NavigationMenuItem>
                             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                                <Link href="/#blog">Blog</Link>
+                                <Link href="/blog">Blog</Link>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
                     </NavigationMenuList>

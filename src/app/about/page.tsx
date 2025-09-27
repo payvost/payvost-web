@@ -164,7 +164,7 @@ export default function AboutPage() {
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Resources</h4>
                 <ul className="space-y-2">
-                    <li><Link href="/#blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
