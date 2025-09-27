@@ -164,19 +164,13 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                         </SidebarMenuItem>
                     ))}
                  </SidebarMenu>
-            </SidebarGroup>
-             <SidebarGroup>
-              <SidebarGroupLabel>Business</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/dashboard/profile')}>
-                    <Link href="/dashboard/profile">
-                      <Briefcase />
-                      For Business
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+                 <div className="mt-4 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
+                    <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
+                    <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
+                    <Button size="sm" className="w-full" asChild>
+                      <Link href="/dashboard/profile">Get Started</Link>
+                    </Button>
+                 </div>
             </SidebarGroup>
           </SidebarContent>
            <SidebarFooter className="p-2 mt-auto flex-col gap-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">

@@ -83,7 +83,7 @@ export default function IntegrationsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>App Marketplace</CardTitle>
-                    <CardDescription>Connect Payvost Remit with your favorite tools and services.</CardDescription>
+                    <CardDescription>Connect Payvost with your favorite tools and services.</CardDescription>
                      <div className="relative pt-4">
                         <Search className="absolute left-2.5 top-6.5 h-4 w-4 text-muted-foreground" />
                         <Input placeholder="Search integrations..." className="pl-8 w-full md:w-1/3" />
