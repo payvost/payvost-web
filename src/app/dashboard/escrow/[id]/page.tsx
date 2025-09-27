@@ -19,7 +19,7 @@ const agreementDetails = {
     status: 'In Escrow',
     parties: {
         buyer: { name: 'Acme Corp', email: 'buyer@acme.com' },
-        seller: { name: 'You (Payvost Inc.)', email: 'you@payvost.com' },
+        seller: { name: 'You (Payvost Inc.)', email: 'you@qwibik.com' },
     },
     financials: {
         total: { amount: 5000, currency: 'USD' },
