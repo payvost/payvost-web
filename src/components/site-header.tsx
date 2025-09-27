@@ -69,7 +69,7 @@ interface SiteHeaderProps {
 
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     return (
-        <header className="px-4 lg:px-6 h-14 flex items-center">
+        <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center bg-background/95 backdrop-blur-sm border-b rounded-b-md">
             <Link href="/" className="flex items-center justify-center">
                 <Icons.logo className="h-8" />
             </Link>

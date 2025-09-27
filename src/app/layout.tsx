@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: 'Payvost',
   description: 'Fast and secure global remittance.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/clay-logo.png',
+  },
 };
 
 export default function RootLayout({

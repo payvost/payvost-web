@@ -106,7 +106,7 @@ export default function BusinessAccountsPage() {
                                 <TableRow key={biz.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-accounts/${biz.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <img src={`/flags/${biz.countryCode}.png`} alt={biz.country} className="h-4 w-6 object-cover rounded-sm"/>
+                                            <img src={`/flag/${biz.countryCode}.png`} alt={biz.country} className="h-4 w-6 object-cover rounded-sm"/>
                                             <div>
                                                 <div className="font-medium">{biz.businessName}</div>
                                                 <div className="text-sm text-muted-foreground">{biz.sector}</div>
