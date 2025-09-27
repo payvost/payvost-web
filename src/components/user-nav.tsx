@@ -57,7 +57,7 @@ export function UserNav({ user }: UserNavProps) {
     if (names.length > 1 && names[1]) {
       return `${names[0][0]}${names[1][0]}`;
     }
-    return names[0].substring(0, 2).toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   }
 
   return (
@@ -91,14 +91,6 @@ export function UserNav({ user }: UserNavProps) {
                 <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {!isAdminRoute && (
-            <DropdownMenuItem asChild>
-                <Link href="/dashboard/cards">
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Billing</span>
-                </Link>
-            </DropdownMenuItem>
-           )}
           <DropdownMenuItem asChild>
             <Link href={settingsHref}>
               <Settings className="mr-2 h-4 w-4" />

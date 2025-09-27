@@ -13,7 +13,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { UserNav } from '@/components/user-nav';
 import { useAuth } from '@/hooks/use-auth';
@@ -85,6 +85,9 @@ export function AdminHeader() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0 w-[280px]">
+              <SheetHeader className="p-0">
+                  <SheetTitle className="sr-only">Sidebar Menu</SheetTitle>
+              </SheetHeader>
               <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
                  <Link href="/" className="flex items-center gap-2 font-semibold">
                    <Icons.logo className="h-8" />
