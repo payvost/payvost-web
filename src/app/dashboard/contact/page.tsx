@@ -112,7 +112,7 @@ export default function ContactPage() {
                                             <SelectItem value="feedback">Feedback/Suggestion</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                     {errors.category && <p className="text-destructive text-sm">{errors.category.message}</p>}
+                                     {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="subject">Subject</Label>
@@ -123,7 +123,7 @@ export default function ContactPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="message">Message</Label>
                                 <Textarea id="message" placeholder="Please provide as much detail as possible..." rows={6} {...register('message')} />
-                                {errors.message && <p className="text-destructive text-sm">{errors.message.message}</p>}
+                                {errors.message && <p className="text-sm text-destructive">{errors.message.message}</p>}
                             </div>
                              <Button type="submit" className="w-full"><Send className="mr-2 h-4 w-4" />Submit Message</Button>
                         </CardContent>
@@ -143,7 +143,7 @@ export default function ContactPage() {
                             <div>
                                 <h4 className="font-semibold">Email</h4>
                                 <p className="text-sm text-muted-foreground">For general and technical inquiries.</p>
-                                <a href="mailto:support@payvost.remit" className="text-sm text-primary hover:underline">support@payvost.remit</a>
+                                <a href="mailto:support@payvost.com" className="text-sm text-primary hover:underline">support@payvost.com</a>
                             </div>
                         </div>
                          <div className="flex items-start gap-4">

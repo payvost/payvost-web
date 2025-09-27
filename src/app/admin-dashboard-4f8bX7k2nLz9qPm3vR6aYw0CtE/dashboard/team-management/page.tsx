@@ -18,10 +18,10 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 const sampleMembers: TeamMember[] = [
-    { id: 'tm_1', name: 'Admin User', email: 'admin@payvost.com', role: 'Super Admin', status: 'Active', lastActive: '2024-08-15 10:30 AM' },
-    { id: 'tm_2', name: 'Support Staff', email: 'support@payvost.com', role: 'Support', status: 'Active', lastActive: '2024-08-15 11:00 AM' },
-    { id: 'tm_3', name: 'Compliance Officer', email: 'compliance@payvost.com', role: 'Compliance', status: 'Invited', lastActive: 'Never' },
-    { id: 'tm_4', name: 'Suspended Admin', email: 'suspended@payvost.com', role: 'Admin', status: 'Suspended', lastActive: '2024-08-14 05:00 PM' },
+    { id: 'tm_1', name: 'Admin User', email: 'admin@qwibik.com', role: 'Super Admin', status: 'Active', lastActive: '2024-08-15 10:30 AM' },
+    { id: 'tm_2', name: 'Support Staff', email: 'support@qwibik.com', role: 'Support', status: 'Active', lastActive: '2024-08-15 11:00 AM' },
+    { id: 'tm_3', name: 'Compliance Officer', email: 'compliance@qwibik.com', role: 'Compliance', status: 'Invited', lastActive: 'Never' },
+    { id: 'tm_4', name: 'Suspended Admin', email: 'suspended@qwibik.com', role: 'Admin', status: 'Suspended', lastActive: '2024-08-14 05:00 PM' },
 ];
 
 const roles = [

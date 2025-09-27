@@ -170,10 +170,10 @@ export default function SettingsPage() {
                 <CardTitle>Support & Legal</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="#"><FileText className="mr-2 h-4 w-4" /> Terms & Conditions</Link></Button>
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="#"><ShieldCheck className="mr-2 h-4 w-4" /> Privacy Policy</Link></Button>
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="#"><MessageCircleQuestion className="mr-2 h-4 w-4" /> FAQs</Link></Button>
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="#"><LifeBuoy className="mr-2 h-4 w-4" /> Contact Support</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/terms"><FileText className="mr-2 h-4 w-4" /> Terms & Conditions</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/privacy"><ShieldCheck className="mr-2 h-4 w-4" /> Privacy Policy</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/dashboard/contact"><MessageCircleQuestion className="mr-2 h-4 w-4" /> FAQs</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/dashboard/support"><LifeBuoy className="mr-2 h-4 w-4" /> Contact Support</Link></Button>
               </CardContent>
             </Card>
 
@@ -183,7 +183,7 @@ export default function SettingsPage() {
                     <CardTitle>Account Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Button asChild variant="outline" className="w-full justify-start text-destructive hover:text-destructive border-destructive/50 hover:bg-destructive/10"><Link href="#"><Trash2 className="mr-2 h-4 w-4" /> Request Account Deletion</Link></Button>
+                    <Button asChild variant="destructive-outline" className="w-full justify-start text-destructive hover:text-destructive border-destructive/50 hover:bg-destructive/10"><Link href="#"><Trash2 className="mr-2 h-4 w-4" /> Request Account Deletion</Link></Button>
                 </CardContent>
              </Card>
 
