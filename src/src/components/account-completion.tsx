@@ -51,7 +51,7 @@ export function AccountCompletion() {
       <CardHeader>
         <CardTitle>Complete Your Setup</CardTitle>
         <CardDescription>
-          Follow these steps to get the most out of Payvost Remit.
+          Follow these steps to get the most out of Payvost.
         </CardDescription>
       </CardHeader>
       <CardContent>
