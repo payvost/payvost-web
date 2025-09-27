@@ -28,7 +28,7 @@ import { Progress } from '@/components/ui/progress';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
-const campaignDetailsSchema = z.object({
+const campaignSchema = z.object({
   title: z.string().min(3, 'Campaign title is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   bannerImage: z.any()
@@ -38,24 +38,13 @@ const campaignDetailsSchema = z.object({
       (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
       "Only .jpg, .jpeg, .png and .webp formats are supported."
     ),
-});
-
-const donationSettingsSchema = z.object({
   goal: z.preprocess((val) => (val === '' ? undefined : Number(val)), z.number().positive('Goal must be a positive number').optional()),
   currency: z.string().min(1, 'Currency is required'),
   suggestedAmounts: z.string().optional(),
   allowCustomAmount: z.boolean(),
 });
 
-type CampaignDetailsValues = z.infer<typeof campaignDetailsSchema>;
-type DonationSettingsValues = z.infer<typeof donationSettingsSchema>;
-type FormValues = CampaignDetailsValues & DonationSettingsValues;
-
-
-const steps = [
-  { id: 1, name: 'Campaign Details', fields: ['title', 'description', 'bannerImage'] },
-  { id: 2, name: 'Donation Settings', fields: ['goal', 'currency', 'suggestedAmounts', 'allowCustomAmount'] },
-];
+type FormValues = z.infer<typeof campaignSchema>;
 
 interface CreateDonationPageFormProps {
     onBack: () => void;
@@ -63,7 +52,6 @@ interface CreateDonationPageFormProps {
 
 export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
@@ -73,12 +61,9 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
     control,
     handleSubmit,
     setValue,
-    trigger,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(
-      currentStep === 0 ? campaignDetailsSchema : donationSettingsSchema
-    ),
+    resolver: zodResolver(campaignSchema),
     defaultValues: {
         title: '',
         description: '',
@@ -103,22 +88,7 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
       setValue('bannerImage', e.target.files, { shouldValidate: true });
     }
   };
-
-  const handleNext = async () => {
-    const fields = steps[currentStep].fields;
-    const output = await trigger(fields as (keyof FormValues)[], { shouldFocus: true });
-    if (!output) return;
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(step => step + 1);
-    }
-  };
   
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(step => step - 1);
-    }
-  };
-
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!user) {
         toast({ title: "Authentication Error", description: "You must be logged in to create a campaign.", variant: "destructive" });
@@ -162,8 +132,6 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
     }
   };
 
-  const progress = ((currentStep + 1) / steps.length) * 100;
-
   return (
     <Card>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -178,109 +146,97 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
                     <CardDescription>Set up a public campaign to collect donations for your cause.</CardDescription>
                 </div>
             </div>
-            <Progress value={progress} className="mt-4" />
         </CardHeader>
         <CardContent className="space-y-8">
-            {currentStep === 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Campaign Details</h3>
-                    <div className="p-4 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-video flex flex-col justify-center items-center relative overflow-hidden">
-                        <input
-                            type="file"
-                            id="banner-upload"
-                            className="hidden"
-                            accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                            onChange={handleFileChange}
-                        />
-                        <Label htmlFor="banner-upload" className="w-full h-full absolute inset-0 cursor-pointer">
-                            {previewImage ? (
-                                <Image src={previewImage} alt="Campaign banner preview" fill sizes="500px" className="object-cover" />
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full">
-                                    <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                                    <p className="mt-4 text-sm text-muted-foreground">Click to upload a campaign banner</p>
-                                </div>
-                            )}
-                        </Label>
-                    </div>
-                    {errors.bannerImage && <p className="text-sm text-destructive">{errors.bannerImage.message as string}</p>}
-
-                    <div className="space-y-2">
-                        <Label htmlFor="title">Campaign Title</Label>
-                        <Input id="title" {...register('title')} placeholder="e.g., Help Us Build a New Playground" />
-                        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="description">Description / Story</Label>
-                        <Textarea id="description" {...register('description')} placeholder="Tell people about your cause..." rows={5} />
-                        {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
-                    </div>
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Campaign Details</h3>
+                <div className="p-4 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-video flex flex-col justify-center items-center relative overflow-hidden">
+                    <input
+                        type="file"
+                        id="banner-upload"
+                        className="hidden"
+                        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                        onChange={handleFileChange}
+                    />
+                    <Label htmlFor="banner-upload" className="w-full h-full absolute inset-0 cursor-pointer">
+                        {previewImage ? (
+                            <Image src={previewImage} alt="Campaign banner preview" fill sizes="500px" className="object-cover" />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full">
+                                <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <p className="mt-4 text-sm text-muted-foreground">Click to upload a campaign banner</p>
+                            </div>
+                        )}
+                    </Label>
                 </div>
-            )}
-            
-            {currentStep === 1 && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Donation Settings</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="goal">Fundraising Goal (Optional)</Label>
-                            <Input id="goal" type="number" {...register('goal')} placeholder="e.g., 5000" />
-                            {errors.goal && <p className="text-sm text-destructive">{errors.goal.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="currency">Currency</Label>
-                            <Controller
-                                name="currency"
-                                control={control}
-                                render={({ field }) => (
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="USD">USD</SelectItem>
-                                            <SelectItem value="EUR">EUR</SelectItem>
-                                            <SelectItem value="GBP">GBP</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-                        </div>
+                {errors.bannerImage && <p className="text-sm text-destructive">{errors.bannerImage.message as string}</p>}
+
+                <div className="space-y-2">
+                    <Label htmlFor="title">Campaign Title</Label>
+                    <Input id="title" {...register('title')} placeholder="e.g., Help Us Build a New Playground" />
+                    {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="description">Description / Story</Label>
+                    <Textarea id="description" {...register('description')} placeholder="Tell people about your cause..." rows={5} />
+                    {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Donation Settings</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="goal">Fundraising Goal (Optional)</Label>
+                        <Input id="goal" type="number" {...register('goal')} placeholder="e.g., 5000" />
+                        {errors.goal && <p className="text-sm text-destructive">{errors.goal.message}</p>}
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="suggestedAmounts">Suggested Donation Amounts</Label>
-                        <Input id="suggestedAmounts" {...register('suggestedAmounts')} placeholder="e.g. 10, 25, 50, 100" />
-                        <p className="text-xs text-muted-foreground">Enter comma-separated values.</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                        <Label htmlFor="currency">Currency</Label>
                         <Controller
-                            name="allowCustomAmount"
+                            name="currency"
                             control={control}
                             render={({ field }) => (
-                                <Switch 
-                                    id="allowCustomAmount"
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger><SelectValue/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="USD">USD</SelectItem>
+                                        <SelectItem value="EUR">EUR</SelectItem>
+                                        <SelectItem value="GBP">GBP</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             )}
                         />
-                        <Label htmlFor="allowCustomAmount">Allow donors to enter a custom amount</Label>
                     </div>
                 </div>
-            )}
+                <div className="space-y-2">
+                    <Label htmlFor="suggestedAmounts">Suggested Donation Amounts</Label>
+                    <Input id="suggestedAmounts" {...register('suggestedAmounts')} placeholder="e.g. 10, 25, 50, 100" />
+                    <p className="text-xs text-muted-foreground">Enter comma-separated values.</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Controller
+                        name="allowCustomAmount"
+                        control={control}
+                        render={({ field }) => (
+                            <Switch 
+                                id="allowCustomAmount"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                            />
+                        )}
+                    />
+                    <Label htmlFor="allowCustomAmount">Allow donors to enter a custom amount</Label>
+                </div>
+            </div>
         </CardContent>
-        <CardFooter className="justify-between">
-            <Button type="button" variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isSubmitting}>
-              Back
+        <CardFooter className="justify-end">
+            <Button type="submit" disabled={isSubmitting}>
+                <Gift className="mr-2 h-4 w-4" />
+                {isSubmitting ? 'Creating Campaign...' : 'Create Campaign & Get Link'}
             </Button>
-            {currentStep < steps.length - 1 ? (
-              <Button type="button" onClick={handleNext}>
-                Next
-              </Button>
-            ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                    <Gift className="mr-2 h-4 w-4" />
-                    {isSubmitting ? 'Creating Campaign...' : 'Create Campaign & Get Link'}
-                </Button>
-            )}
         </CardFooter>
       </form>
     </Card>
