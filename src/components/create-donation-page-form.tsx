@@ -9,12 +9,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
+import Image from 'next/image';
+import { storage, db, auth } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '@/hooks/use-auth';
+
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const donationPageSchema = z.object({
   title: z.string().min(3, 'Campaign title is required'),
@@ -23,6 +34,13 @@ const donationPageSchema = z.object({
   currency: z.string().min(1, 'Currency is required'),
   suggestedAmounts: z.string().optional(),
   allowCustomAmount: z.boolean(),
+  bannerImage: z.any()
+    .refine((files) => files?.length === 1, "Image is required.")
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
+    .refine(
+      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      "Only .jpg, .jpeg, .png and .webp formats are supported."
+    ),
 });
 
 type DonationFormValues = z.infer<typeof donationPageSchema>;
@@ -34,11 +52,14 @@ interface CreateDonationPageFormProps {
 export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<DonationFormValues>({
     resolver: zodResolver(donationPageSchema),
@@ -51,16 +72,63 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast({ title: "File too large", description: "Please upload an image smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        toast({ title: "Invalid file type", description: "Only JPG, PNG, and WebP formats are supported.", variant: "destructive" });
+        return;
+      }
+      setPreviewImage(URL.createObjectURL(file));
+      setValue('bannerImage', e.target.files);
+    }
+  };
+
   const onSubmit: SubmitHandler<DonationFormValues> = async (data) => {
+    if (!user) {
+        toast({ title: "Authentication Error", description: "You must be logged in to create a campaign.", variant: "destructive" });
+        return;
+    }
     setIsSubmitting(true);
-    console.log(data);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast({
-      title: "Campaign Created!",
-      description: `Your campaign "${data.title}" is now live.`,
-    });
-    setIsSubmitting(false);
-    onBack();
+    
+    try {
+        const imageFile = data.bannerImage[0];
+        const storageRef = ref(storage, `donation_banners/${user.uid}/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        const donationData = {
+            ...data,
+            bannerImage: downloadURL,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+            raisedAmount: 0,
+            status: 'Active',
+            suggestedAmounts: data.suggestedAmounts?.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n)) || []
+        };
+        
+        const docRef = await addDoc(collection(db, "donations"), donationData);
+
+        toast({
+            title: "Campaign Created!",
+            description: `Your campaign "${data.title}" is now live.`,
+        });
+        onBack();
+
+    } catch (error) {
+        console.error("Error creating campaign:", error);
+        toast({
+            title: "Something went wrong",
+            description: "Could not create the campaign. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,13 +150,27 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
           {/* Campaign Details Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Campaign Details</h3>
-            <div className="p-8 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center">
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-sm text-muted-foreground">Drag and drop a campaign banner or click to upload.</p>
-              <Button variant="outline" className="mt-4" type="button">
-                Upload Image
-              </Button>
+             <div className="p-4 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-video flex flex-col justify-center items-center relative overflow-hidden">
+                <input
+                    type="file"
+                    id="banner-upload"
+                    className="hidden"
+                    accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                    onChange={handleFileChange}
+                />
+                <Label htmlFor="banner-upload" className="w-full h-full absolute inset-0 cursor-pointer">
+                    {previewImage ? (
+                        <Image src={previewImage} alt="Campaign banner preview" layout="fill" objectFit="cover" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full">
+                            <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <p className="mt-4 text-sm text-muted-foreground">Click to upload a campaign banner</p>
+                        </div>
+                    )}
+                </Label>
             </div>
+            {errors.bannerImage && <p className="text-sm text-destructive">{errors.bannerImage.message as string}</p>}
+
             <div className="space-y-2">
                 <Label htmlFor="title">Campaign Title</Label>
                 <Input id="title" {...register('title')} placeholder="e.g., Help Us Build a New Playground" />
