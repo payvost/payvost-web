@@ -35,7 +35,7 @@ const mockProfile: BusinessProfile = {
     registrationNumber: 'RC123456',
     taxId: 'TIN987654',
     businessAddress: '123 Finance Street, Moneyville, USA',
-    website: 'https://qwibik.remit',
+    website: 'https://payvost.remit',
     logoUrl: 'https://placehold.co/100x100.png',
     kycStatus: 'Verified'
 };
