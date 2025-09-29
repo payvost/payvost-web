@@ -34,7 +34,7 @@ export default function AboutPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6 text-center">
+          <div className="container mx-auto px-4 md:px-6 text-center">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">About Payvost</h1>
             <p className="max-w-[700px] mx-auto text-muted-foreground md:text-xl mt-4">
               Connecting lives, one transfer at a time. Discover the story behind our mission to make global finance accessible to everyone.
@@ -44,13 +44,13 @@ export default function AboutPage() {
 
         {/* Mission Section */}
         <section className="w-full py-12 md:py-24 lg:py-32">
-            <div className="container px-4 md:px-6">
-                <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
+            <div className="container mx-auto px-4 md:px-6">
+                <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-8">
                     <img 
                         src="https://placehold.co/600x400.png"
                         data-ai-hint="team collaboration"
                         alt="Our Mission" 
-                        className="rounded-lg object-cover aspect-video" 
+                        className="rounded-lg object-cover aspect-video w-full" 
                     />
                     <div className="space-y-4">
                         <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Our Mission</h2>
@@ -67,47 +67,51 @@ export default function AboutPage() {
 
         {/* Team Section */}
         <section id="team" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-                <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Meet Our Team</h2>
-                    <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                        The passionate individuals driving the Payvost vision forward.
-                    </p>
-                </div>
-                <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-4 lg:gap-16">
-                    {teamMembers.map((member) => (
-                        <div key={member.name} className="grid gap-2 text-center">
-                            <Avatar className="mx-auto h-24 w-24">
-                                <AvatarImage src={member.image} data-ai-hint={member.hint} alt={member.name} />
-                                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <h3 className="text-lg font-bold">{member.name}</h3>
-                            <p className="text-sm text-muted-foreground">{member.role}</p>
-                        </div>
-                    ))}
+            <div className="container mx-auto px-4 md:px-6 text-center">
+                <div className="max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center justify-center space-y-4 mb-12">
+                        <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Meet Our Team</h2>
+                        <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                            The passionate individuals driving the Payvost vision forward.
+                        </p>
+                    </div>
+                    <div className="grid items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-4 lg:gap-16">
+                        {teamMembers.map((member) => (
+                            <div key={member.name} className="grid gap-2 text-center">
+                                <Avatar className="mx-auto h-24 w-24">
+                                    <AvatarImage src={member.image} data-ai-hint={member.hint} alt={member.name} />
+                                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <h3 className="text-lg font-bold">{member.name}</h3>
+                                <p className="text-sm text-muted-foreground">{member.role}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>
 
          {/* Values Section */}
          <section id="values" className="w-full py-12 md:py-24 lg:py-32">
-            <div className="container px-4 md:px-6">
-                <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-                    <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Our Core Values</h2>
-                    <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                       The principles that guide every decision we make.
-                    </p>
-                </div>
-                <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:gap-16">
-                   {companyValues.map((value) => (
-                        <div key={value.title} className="grid gap-2 text-center p-4 rounded-lg hover:bg-muted transition-colors">
-                            {value.icon}
-                            <h3 className="text-lg font-bold">{value.title}</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {value.description}
-                            </p>
-                        </div>
-                   ))}
+            <div className="container mx-auto px-4 md:px-6 text-center">
+                <div className="max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center justify-center space-y-4 mb-12">
+                        <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Our Core Values</h2>
+                        <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                           The principles that guide every decision we make.
+                        </p>
+                    </div>
+                    <div className="grid items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:gap-16">
+                       {companyValues.map((value) => (
+                            <div key={value.title} className="grid gap-2 text-center p-4 rounded-lg hover:bg-muted transition-colors">
+                                {value.icon}
+                                <h3 className="text-lg font-bold">{value.title}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    {value.description}
+                                </p>
+                            </div>
+                       ))}
+                    </div>
                 </div>
             </div>
         </section>
@@ -115,7 +119,7 @@ export default function AboutPage() {
 
         {/* CTA Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-primary text-primary-foreground">
-          <div className="container px-4 md:px-6 text-center">
+          <div className="container mx-auto px-4 md:px-6 text-center">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Ready to Join Our Journey?</h2>
             <p className="max-w-[600px] mx-auto mt-4">
               Create an account today and experience the future of international money transfers.
@@ -131,18 +135,17 @@ export default function AboutPage() {
 
       <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="w-full md:w-[30%] space-y-4">
-              <Link href="/" className="flex items-center space-x-2">
-                 <Icons.logo className="h-8" />
-              </Link>
-              <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
-              <form className="flex w-full max-w-sm space-x-2">
-                <Input type="email" placeholder="Enter your email" />
-                <Button type="submit">Subscribe</Button>
-              </form>
-            </div>
-            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-2 space-y-4">
+                    <Link href="/" className="flex items-center space-x-2">
+                        <Icons.logo className="h-8" />
+                    </Link>
+                    <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
+                    <form className="flex w-full max-w-sm space-x-2">
+                        <Input type="email" placeholder="Enter your email" />
+                        <Button type="submit">Subscribe</Button>
+                    </form>
+                </div>
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Product</h4>
                 <ul className="space-y-2">
@@ -170,23 +173,15 @@ export default function AboutPage() {
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
                 </div>
-                <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Policies</h4>
-                <ul className="space-y-2">
-                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
-                </ul>
+            </div>
+            <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
+                <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
+                <div className="flex space-x-4 mt-4 sm:mt-0">
+                <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
+                <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
+                <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
                 </div>
             </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
-            <div className="flex space-x-4 mt-4 sm:mt-0">
-              <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
-            </div>
-          </div>
         </div>
       </footer>
     </div>
