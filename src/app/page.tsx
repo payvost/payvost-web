@@ -37,7 +37,7 @@ export default function LandingPage() {
       <SiteHeader />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+        <section className="w-full py-20 md:py-28 lg:py-32 rounded-b-[15px] bg-card">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 xl:items-center">
               <div className="flex flex-col justify-center space-y-4 text-center lg:text-left">
@@ -382,3 +382,7 @@ export default function LandingPage() {
     </div>
   )
 }
+
+    
+
+    
