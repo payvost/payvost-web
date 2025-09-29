@@ -166,7 +166,7 @@ export default function BlogArchivePage() {
                         <h4 className="font-semibold text-foreground">Company</h4>
                         <ul className="space-y-2">
                             <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                            <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
+                            <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
                         </ul>
@@ -190,7 +190,7 @@ export default function BlogArchivePage() {
                     </div>
                 </div>
                 <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-                    <p className="text-sm">&copy; 2024 Payvost. All rights reserved.</p>
+                    <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
                     <div className="flex space-x-4 mt-4 sm:mt-0">
                     <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
                     <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>

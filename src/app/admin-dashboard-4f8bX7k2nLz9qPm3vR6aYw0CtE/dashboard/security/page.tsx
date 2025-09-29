@@ -126,7 +126,7 @@ export default function SecuritySettingsPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="alert-email">Notification Email</Label>
-                                <Input id="alert-email" type="email" defaultValue="security@payvost.com" />
+                                <Input id="alert-email" type="email" defaultValue="security@qwibik.com" />
                             </div>
                             <div className="flex items-center space-x-2">
                                 <Switch id="breach-alerts" defaultChecked />

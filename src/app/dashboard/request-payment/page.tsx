@@ -55,7 +55,7 @@ function PaymentLinkTab() {
     const payerEmail = (form as any)['payer-email'].value;
     const currency = (form as any).currency.value;
 
-    const link = `https://payvost.com/pay/${Math.random().toString(36).substring(2, 10)}`;
+    const link = `https://qwibik.remit/pay/${Math.random().toString(36).substring(2, 10)}`;
     setGeneratedLink(link);
 
     try {
