@@ -5,9 +5,12 @@ import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { Globe, Wallet, BarChart, Landmark } from "lucide-react";
+import { Globe, Wallet, BarChart, Landmark, ChevronDown } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { countries, Country } from "@/lib/countries";
 
 const products: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
   {
@@ -67,6 +70,39 @@ interface SiteHeaderProps {
     showRegister?: boolean;
 }
 
+const CountrySelector = () => {
+    const globalCountry: Country = { name: "Global", code: "global", flag: "globe" };
+    const otherCountries = countries.filter(c => c.code !== "global");
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    <span>Global</span>
+                    <ChevronDown className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                 <DropdownMenuItem asChild>
+                    <Link href="/" className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        <span>Global</span>
+                    </Link>
+                </DropdownMenuItem>
+                {otherCountries.map(country => (
+                    <DropdownMenuItem key={country.code} asChild>
+                        <Link href={`/${country.code.toLowerCase()}/home`} className="flex items-center gap-2">
+                            <Image src={`/flag/${country.flag}`} alt={country.name} width={16} height={16} className="rounded-full" />
+                            <span>{country.name}</span>
+                        </Link>
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     return (
         <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center bg-background/95 backdrop-blur-sm border-b rounded-b-md">
@@ -114,6 +150,9 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 </NavigationMenu>
             </nav>
             <nav className="ml-auto flex items-center gap-4 sm:gap-6">
+                 <div className="hidden md:flex">
+                  <CountrySelector />
+                </div>
                 {showLogin && (
                     <Button variant="ghost" className="text-sm font-medium" asChild>
                         <Link href="/login">Login</Link>
