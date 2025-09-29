@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
                 <p className="text-lg mt-4 text-primary-foreground/80">Welcome to the Payvost command center. Monitor transactions, manage users, and ensure operational excellence.</p>
             </div>
             <footer className="text-sm text-primary-foreground/60">
-                <p>&copy; 2024 Payvost Inc. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
                 <p className="mt-2">NOTICE: This is a secure system. All activities are logged and monitored. Unauthorized access is strictly prohibited and may be subject to legal action.</p>
             </footer>
         </div>

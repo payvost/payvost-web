@@ -17,7 +17,7 @@ import { AdminTransactionOverviewChart } from '@/components/admin-transaction-ov
 const webhooks = [
     { id: 'wh_1', url: 'https://api.merchant-a.com/webhook', status: 'enabled', events: 5 },
     { id: 'wh_2', url: 'https://staging.merchant-b.com/webhook', status: 'disabled', events: 2 },
-    { id: 'wh_3', url: 'https://api.merchant-c.com/payvost/events', status: 'failed', events: 8 },
+    { id: 'wh_3', url: 'https://api.merchant-c.com/qwibik/events', status: 'failed', events: 8 },
 ];
 
 export default function ApiSettingsPage() {

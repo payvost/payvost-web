@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/components/theme-provider';
+import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -48,6 +49,7 @@ export default function RootLayout({
                 {children}
             </AuthProvider>
             <Toaster />
+            <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>

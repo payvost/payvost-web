@@ -21,7 +21,7 @@ const escrowAgreements = [
   { id: 'ESC-84321', title: 'Website Development for Acme Corp', parties: 'You & Acme Corp', amount: 5000, currency: 'USD', status: 'In Escrow', created: '2024-08-10' },
   { id: 'ESC-84320', title: 'Vintage Camera Purchase', parties: 'You & John Smith', amount: 850, currency: 'GBP', status: 'Funds Released', created: '2024-08-05' },
   { id: 'ESC-84319', title: 'Graphic Design Services', parties: 'You & DesignCo', amount: 1200, currency: 'EUR', status: 'Awaiting Funding', created: '2024-08-12' },
-  { id: 'ESC-84315', title: 'Domain Name Sale (payvost.ai)', parties: 'You & BuyerX', amount: 15000, currency: 'USD', status: 'Disputed', created: '2024-07-28' },
+  { id: 'ESC-84315', title: 'Domain Name Sale (qwibik.ai)', parties: 'You & BuyerX', amount: 15000, currency: 'USD', status: 'Disputed', created: '2024-07-28' },
   { id: 'ESC-84311', title: 'Consulting Retainer - Q3', parties: 'You & ClientY', amount: 2500000, currency: 'NGN', status: 'Cancelled', created: '2024-07-25' },
 ];
 
