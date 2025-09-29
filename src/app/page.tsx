@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin, MoreHorizontal } from "lucide-react";
-import React from "react";
+import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin, MoreHorizontal, Star } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { SiteHeader } from "@/components/site-header";
 import Image from "next/image";
 import placeholderImageData from '@/app/lib/placeholder-images.json';
@@ -29,9 +29,69 @@ const popularCountries = [
     { name: 'South Africa', currency: 'Rand (ZAR)', flag: 'ZA.png', hint: 'Cape Town' },
 ];
 
+const testimonials = [
+  {
+    name: "Sarah Johnson",
+    role: "CEO",
+    company: "Innovate Inc.",
+    image: { src: "https://picsum.photos/seed/t1/100/100", hint: "woman portrait" },
+    rating: 5,
+    quote: "Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad."
+  },
+  {
+    name: "Michael Chen",
+    role: "Freelancer",
+    company: "Chen Designs",
+    image: { src: "https://picsum.photos/seed/t2/100/100", hint: "man smiling" },
+    rating: 5,
+    quote: "As a freelancer working with international clients, Payvost has simplified my life. Getting paid is now fast and hassle-free."
+  },
+  {
+    name: "David Rodriguez",
+    role: "CTO",
+    company: "Tech Solutions",
+    image: { src: "https://picsum.photos/seed/t3/100/100", hint: "person portrait" },
+    rating: 4,
+    quote: "The API is well-documented and easy to integrate. We were able to get up and running in just a couple of days. Solid platform."
+  },
+  {
+    name: "Emily White",
+    role: "E-commerce Owner",
+    company: "The Shop",
+    image: { src: "https://picsum.photos/seed/t4/100/100", hint: "woman in cafe" },
+    rating: 5,
+    quote: "I love the multi-currency wallet feature. It makes managing payments from different countries so much easier."
+  }
+];
+
 
 export default function LandingPage() {
   const { blog: blogImages } = placeholderImageData;
+  const [sendAmount, setSendAmount] = useState('');
+  const [recipientGets, setRecipientGets] = useState('');
+  const [sendCurrency, setSendCurrency] = useState('USD');
+  const [receiveCurrency, setReceiveCurrency] = useState('NGN');
+
+  const exchangeRates: Record<string, Record<string, number>> = {
+      USD: { NGN: 1450.50, GHS: 14.50, KES: 130.25 },
+      GBP: { NGN: 1850.75, GHS: 18.50, KES: 165.80 },
+      EUR: { NGN: 1600.20, GHS: 16.00, KES: 143.50 },
+  };
+
+  const handleCheckPricing = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      const amount = parseFloat(sendAmount);
+      if (!isNaN(amount) && amount > 0 && exchangeRates[sendCurrency] && exchangeRates[sendCurrency][receiveCurrency]) {
+        const rate = exchangeRates[sendCurrency][receiveCurrency];
+        const convertedAmount = amount * rate;
+        setRecipientGets(convertedAmount.toFixed(2));
+      } else {
+        setRecipientGets('');
+      }
+  };
+  
+  const currentRate = exchangeRates[sendCurrency]?.[receiveCurrency] || 0;
+
   return (
     <div className="flex flex-col min-h-screen">
       <SiteHeader />
@@ -55,8 +115,8 @@ export default function LandingPage() {
                       Create Account
                     </Link>
                   </Button>
-                  <Button asChild size="lg" variant="outline">
-                    <Link href="#">
+                   <Button asChild size="lg" variant="outline">
+                    <Link href="/track-transfer">
                       Track Transfer
                     </Link>
                   </Button>
@@ -72,20 +132,20 @@ export default function LandingPage() {
                     <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="send-amount">You send</Label>
-                        <Input id="send-amount" defaultValue="1000.00" />
+                        <Input id="send-amount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} placeholder="0.00"/>
                       </div>
                       <div className="flex items-center justify-center">
                         <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="recipient-gets">Recipient gets</Label>
-                        <Input id="recipient-gets" readOnly placeholder="0.00" />
+                        <Input id="recipient-gets" readOnly value={recipientGets} placeholder="0.00" />
                       </div>
                     </div>
                     <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="send-currency">Currency</Label>
-                        <Select defaultValue="USD">
+                        <Select value={sendCurrency} onValueChange={setSendCurrency}>
                           <SelectTrigger id="send-currency">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -99,7 +159,7 @@ export default function LandingPage() {
                       <div></div>
                       <div className="space-y-2">
                         <Label htmlFor="receive-currency">Currency</Label>
-                        <Select defaultValue="NGN">
+                        <Select value={receiveCurrency} onValueChange={setReceiveCurrency}>
                           <SelectTrigger id="receive-currency">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -112,12 +172,12 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <div className="text-sm text-muted-foreground pt-2">
-                      <p>Exchange rate: 1 USD = 1,450.50 NGN</p>
+                      <p>Exchange rate: 1 {sendCurrency} = {currentRate.toFixed(2)} {receiveCurrency}</p>
                       <p>No hidden fees.</p>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full">Check Pricing</Button>
+                    <Button className="w-full" onClick={handleCheckPricing}>Check Pricing</Button>
                   </CardFooter>
                 </Card>
               </div>
@@ -193,38 +253,54 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">What Our Customers Say</h2>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  Hear from real people who trust Payvost for their global payments.
+                </p>
             </div>
             <Carousel
               opts={{
                 align: "start",
                 loop: true,
               }}
-              className="w-full max-w-4xl mx-auto"
+              className="w-full max-w-6xl mx-auto"
             >
               <CarouselContent>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <CarouselItem key={index}>
-                    <div className="p-4">
-                      <Card>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                          <Avatar>
-                            <AvatarImage src="https://picsum.photos/seed/t1/100/100" data-ai-hint="person portrait" alt="User" />
-                            <AvatarFallback>U</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-lg">Customer Name</CardTitle>
+                {testimonials.map((testimonial, index) => (
+                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                    <div className="p-4 h-full">
+                      <Card className="flex flex-col h-full">
+                         <CardContent className="pt-6 flex-grow">
+                          <div className="flex mb-4">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-5 w-5 ${
+                                  i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/50"
+                                }`}
+                              />
+                            ))}
                           </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">"Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad."</p>
+                          <p className="text-muted-foreground text-base">"{testimonial.quote}"</p>
                         </CardContent>
+                        <CardFooter>
+                           <div className="flex flex-row items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={testimonial.image.src} data-ai-hint={testimonial.image.hint} alt={testimonial.name} />
+                                <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="text-sm font-semibold">{testimonial.name}</p>
+                                <p className="text-sm text-muted-foreground">{testimonial.role}, {testimonial.company}</p>
+                            </div>
+                           </div>
+                        </CardFooter>
                       </Card>
                     </div>
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
+              <CarouselPrevious className="hidden md:flex" />
+              <CarouselNext className="hidden md:flex" />
             </Carousel>
           </div>
         </section>
@@ -318,6 +394,35 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* App Download CTA */}
+        <section className="w-full py-12 md:py-24 lg:py-32">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="bg-primary text-primary-foreground rounded-[15px] p-8 md:p-12">
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                  <div className="text-center lg:text-left">
+                      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Download the mobile app</h2>
+                      <p className="mt-4 max-w-xl text-lg text-primary-foreground/80 mx-auto lg:mx-0">
+                          Send money locally, pay bills globally, receive money, save, pay bills and do more with the Payvost app.
+                      </p>
+                      <div className="mt-8 flex justify-center lg:justify-start gap-4">
+                          <Link href="#">
+                              <Image src="/App Store.png" alt="Download on the App Store" width={180} height={54} />
+                          </Link>
+                           <Link href="#">
+                              <Image src="/Google Play (2).png" alt="Get it on Google Play" width={180} height={54} />
+                          </Link>
+                      </div>
+                  </div>
+                   <div className="hidden lg:flex justify-center">
+                      <div className="bg-primary-foreground/10 p-4 rounded-xl">
+                          <Image src="/Dashboard.png" alt="Payvost App Dashboard" width={400} height={300} data-ai-hint="app dashboard" className="rounded-lg shadow-2xl" />
+                      </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
       <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
@@ -382,7 +487,3 @@ export default function LandingPage() {
     </div>
   )
 }
-
-    
-
-    
