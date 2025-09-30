@@ -1,37 +1,21 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Printer, Download, Send, CheckCircle, AlertCircle, Clock, Repeat, UserPlus, ShieldQuestion, MessageSquareWarning } from 'lucide-react';
+import { ArrowLeft, Printer, Download, Send, CheckCircle, AlertCircle, Clock, Repeat, UserPlus, ShieldQuestion, MessageSquareWarning, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Dummy data for a single transaction - in a real app, you'd fetch this by ID
-const transactionDetails = {
-    id: 'txn_01',
-    status: 'Completed',
-    date: '2024-05-23T14:30:00Z',
-    from: {
-        name: 'Your USD Wallet',
-        account: '•••• 1234',
-    },
-    to: {
-        name: 'John Doe',
-        account: 'GTBank •••• 5678',
-    },
-    financials: {
-        sent: { amount: 250.00, currency: 'USD' },
-        fee: { amount: 5.00, currency: 'USD' },
-        total: { amount: 255.00, currency: 'USD' },
-        exchangeRate: '1 USD = 1,450.50 NGN',
-        received: { amount: 362625.00, currency: 'NGN' },
-    }
-};
 
 type Status = 'Completed' | 'Pending' | 'Failed';
 
@@ -42,12 +26,76 @@ const statusInfo: { [key in Status]: { icon: React.ReactNode; color: string; var
 };
 
 
-export default function TransactionDetailsPage({ params }: { params: { id: string } }) {
+export default function TransactionDetailsPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-    // For now, we use dummy data. In a real app, you'd fetch based on `params.id`
-    const transaction = transactionDetails;
+    const params = useParams();
+    const id = params.id as string;
+    const { user } = useAuth();
+    const [transaction, setTransaction] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user || !id) return;
+        
+        const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists()) {
+                const transactions = doc.data().transactions || [];
+                const foundTx = transactions.find((tx: any) => tx.id === id);
+                setTransaction(foundTx || null);
+            } else {
+                 setTransaction(null);
+            }
+            setLoading(false);
+        });
+
+        return () => unsub();
+
+    }, [user, id]);
+
+    if (loading) {
+         return (
+            <DashboardLayout language={language} setLanguage={setLanguage}>
+                 <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                    <Skeleton className="h-10 w-64"/>
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                             <Skeleton className="h-96 w-full"/>
+                        </div>
+                        <div className="lg:col-span-1 space-y-6">
+                             <Skeleton className="h-48 w-full"/>
+                             <Skeleton className="h-32 w-full"/>
+                        </div>
+                     </div>
+                 </main>
+            </DashboardLayout>
+         )
+    }
+
+    if (!transaction) {
+         return (
+            <DashboardLayout language={language} setLanguage={setLanguage}>
+                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 items-center justify-center">
+                    <AlertCircle className="h-16 w-16 text-destructive"/>
+                    <h2 className="text-2xl font-bold">Transaction Not Found</h2>
+                    <p className="text-muted-foreground">The requested transaction ID could not be found in your records.</p>
+                     <Button asChild>
+                        <Link href="/dashboard/transactions">Back to Transactions</Link>
+                    </Button>
+                </main>
+            </DashboardLayout>
+        )
+    }
+
     const status = transaction.status as Status;
     const currentStatusInfo = statusInfo[status];
+
+    const financials = {
+        sent: { amount: parseFloat(transaction.sendAmount) || 0, currency: transaction.sendCurrency || 'USD' },
+        fee: { amount: parseFloat(transaction.fee?.replace('$', '')) || 0, currency: transaction.sendCurrency || 'USD' },
+        total: { amount: (parseFloat(transaction.sendAmount) || 0) + (parseFloat(transaction.fee?.replace('$', '')) || 0), currency: transaction.sendCurrency || 'USD' },
+        exchangeRate: transaction.exchangeRate,
+        received: { amount: parseFloat(transaction.recipientGets) || 0, currency: transaction.recipientCurrency || 'USD' },
+    };
 
     return (
         <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -80,13 +128,11 @@ export default function TransactionDetailsPage({ params }: { params: { id: strin
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-1">
                                         <h4 className="font-semibold">From</h4>
-                                        <p>{transaction.from.name}</p>
-                                        <p className="text-muted-foreground text-sm">{transaction.from.account}</p>
+                                        <p>Your {financials.sent.currency} Wallet</p>
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="font-semibold">To</h4>
-                                        <p>{transaction.to.name}</p>
-                                        <p className="text-muted-foreground text-sm">{transaction.to.account}</p>
+                                        <p>{transaction.recipientName}</p>
                                     </div>
                                 </div>
                                 <Separator />
@@ -95,24 +141,24 @@ export default function TransactionDetailsPage({ params }: { params: { id: strin
                                     <dl className="space-y-2">
                                         <div className="flex justify-between">
                                             <dt>Amount Sent</dt>
-                                            <dd className="font-mono">{transaction.financials.sent.amount.toFixed(2)} {transaction.financials.sent.currency}</dd>
+                                            <dd className="font-mono">{financials.sent.amount.toFixed(2)} {financials.sent.currency}</dd>
                                         </div>
                                         <div className="flex justify-between">
                                             <dt>Fee</dt>
-                                            <dd className="font-mono">{transaction.financials.fee.amount.toFixed(2)} {transaction.financials.fee.currency}</dd>
+                                            <dd className="font-mono">{financials.fee.amount.toFixed(2)} {financials.fee.currency}</dd>
                                         </div>
                                          <div className="flex justify-between text-muted-foreground text-sm">
                                             <dt>Exchange Rate</dt>
-                                            <dd className="font-mono">{transaction.financials.exchangeRate}</dd>
+                                            <dd className="font-mono">{financials.exchangeRate}</dd>
                                         </div>
                                         <Separator />
                                         <div className="flex justify-between font-bold">
                                             <dt>Total Paid</dt>
-                                            <dd className="font-mono">{transaction.financials.total.amount.toFixed(2)} {transaction.financials.total.currency}</dd>
+                                            <dd className="font-mono">{financials.total.amount.toFixed(2)} {financials.total.currency}</dd>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg text-primary">
                                             <dt>Recipient Received</dt>
-                                            <dd className="font-mono">{transaction.financials.received.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {transaction.financials.received.currency}</dd>
+                                            <dd className="font-mono">{financials.received.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {financials.received.currency}</dd>
                                         </div>
                                     </dl>
                                 </div>
@@ -138,47 +184,9 @@ export default function TransactionDetailsPage({ params }: { params: { id: strin
                                 <Button variant="destructive-outline" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Dispute Transaction</Button>
                             </CardContent>
                         </Card>
-                         <Card>
-                            <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
-                            <CardContent>
-                                <ul className="space-y-4">
-                                    <li className="flex gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                                            <div className="h-full w-px bg-border"></div>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Transaction Completed</p>
-                                            <p className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleString()}</p>
-                                        </div>
-                                    </li>
-                                     <li className="flex gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                                            <div className="h-full w-px bg-border"></div>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Funds Sent to Partner</p>
-                                            <p className="text-sm text-muted-foreground">{new Date(new Date(transaction.date).getTime() - 5*60000).toLocaleString()}</p>
-                                        </div>
-                                    </li>
-                                     <li className="flex gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Transaction Initiated</p>
-                                            <p className="text-sm text-muted-foreground">{new Date(new Date(transaction.date).getTime() - 10*60000).toLocaleString()}</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </CardContent>
-                        </Card>
                     </div>
                 </div>
             </main>
         </DashboardLayout>
     );
 }
-
-    

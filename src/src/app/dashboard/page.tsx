@@ -21,6 +21,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
+import { CreateWalletDialog } from '@/components/create-wallet-dialog';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -28,14 +31,6 @@ const TransactionChart = dynamic(() => import('@/components/transaction-chart').
     loading: () => <Skeleton className="h-[250px]" />,
 });
 
-
-const currencyBalances = [
-  { currency: 'USD', balance: 1250.75, growth: '+20.1% from last month', flag: 'us' },
-  { currency: 'EUR', balance: 2500.50, growth: '+15.5% from last month', flag: 'eu' },
-  { currency: 'GBP', balance: 850.00, growth: '+5.2% from last month', flag: 'gb' },
-  { currency: 'NGN', balance: 1850000.00, growth: '+30.8% from last month', flag: 'ng' },
-  { currency: 'JPY', balance: 150000, growth: '-2.1% from last month', flag: 'jp' },
-];
 
 const sampleInvoices = [
   { id: 'INV-1235', client: 'Stark Industries', amount: '$10,000.00', status: 'Pending' },
@@ -66,14 +61,34 @@ interface GreetingState {
 
 export default function DashboardPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [isKycVerified, setIsKycVerified] = useState(false);
+  const [greeting, setGreeting] = useState<GreetingState | null>(null);
+  
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
-  const [hasWallets, setHasWallets] = useState(true); // Set to false to see the empty state
-  const [hasTransactionData, setHasTransactionData] = useState(true); // Set to true to see chart
-  const [isKycVerified, setIsKycVerified] = useState(false); // Set to false to show notification
-  
-  const [greeting, setGreeting] = useState<GreetingState | null>(null);
+  const hasTransactionData = true; // Placeholder
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoadingWallets(false);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setWallets(data.wallets || []);
+        setIsKycVerified(data.kycStatus === 'Verified');
+      }
+      setLoadingWallets(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -92,6 +107,83 @@ export default function DashboardPage() {
     }
     return abbreviateNumber(value);
   }
+  
+  const handleWalletCreated = () => {
+    // Real-time listener will update the state automatically
+  }
+
+  const isLoading = authLoading || loadingWallets;
+  const hasWallets = wallets.length > 0;
+  const showCreateWalletCTA = wallets.length < 4;
+
+  const renderWalletCards = () => {
+    const cards = [];
+    // Render existing wallets (up to 4)
+    wallets.slice(0, 4).forEach(wallet => {
+        cards.push(<CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={wallet.flag} />);
+    });
+    // Render "All Wallets" card if there are any wallets
+    if (hasWallets) {
+        cards.push(
+            <Card key="all-wallets" className="flex flex-col justify-between h-full">
+                <CardHeader className="pb-2 pt-6 px-6 text-center">
+                    <CardTitle className="text-sm font-medium">All Wallets</CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-center items-center">
+                    <p className="text-muted-foreground text-xs text-center">View all your currency balances in one place.</p>
+                </CardContent>
+                <CardFooter className="p-6 pt-0">
+                    <Button asChild className="w-full">
+                        <Link href="/dashboard/wallets">View All Wallets <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+        );
+    }
+     // Render "Create New Wallet" CTA if needed
+    if (showCreateWalletCTA && !hasWallets) {
+        // This is the blurred background version for zero wallets
+        return (
+            <div className="relative col-span-1 sm:col-span-2 lg:col-span-5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 blur-sm pointer-events-none">
+                    {[...Array(5)].map((_, i) => (
+                        <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                    ))}
+                </div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <Card className="w-full max-w-sm text-center bg-background/80 backdrop-blur-sm p-4">
+                        <CardHeader className="p-0">
+                            <Wallet className="mx-auto h-8 w-8 text-primary" />
+                            <CardTitle className="text-base">Create Your First Wallet</CardTitle>
+                            <CardDescription className="text-xs">Get started by adding a currency wallet.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 mt-4">
+                            <CreateWalletDialog onWalletCreated={handleWalletCreated}>
+                                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                            </CreateWalletDialog>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+     if (showCreateWalletCTA && hasWallets) {
+        cards.push(
+             <Card key="create-wallet-cta" className="flex flex-col justify-center items-center h-full border-dashed">
+                <CardContent className="p-6 text-center">
+                    <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
+                    <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
+                     <CreateWalletDialog onWalletCreated={handleWalletCreated}>
+                        <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                    </CreateWalletDialog>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    return cards;
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -105,39 +197,12 @@ export default function DashboardPage() {
 
         {!isKycVerified && <KycNotification onDismiss={() => setIsKycVerified(true)} />}
 
-        <div className="relative">
-          <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5", !hasWallets && "blur-sm pointer-events-none")}>
-              {currencyBalances.slice(0, 4).map((item) => (
-                  <CurrencyCard key={item.currency} {...item} />
-              ))}
-              <Card className="flex flex-col justify-between h-full">
-                  <CardHeader className="pb-2 pt-6 px-6 text-center">
-                      <CardTitle className="text-sm font-medium">All Wallets</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-center items-center">
-                      <p className="text-muted-foreground text-xs text-center">View all your currency balances in one place.</p>
-                  </CardContent>
-                  <CardFooter className="p-6 pt-0">
-                      <Button asChild className="w-full">
-                          <Link href="/dashboard/wallets">View All Wallets <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                      </Button>
-                  </CardFooter>
-              </Card>
-          </div>
-          {!hasWallets && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                  <Card className="w-full max-w-sm text-center bg-background/80 backdrop-blur-sm">
-                      <CardHeader>
-                           <Wallet className="mx-auto h-12 w-12 text-primary" />
-                          <CardTitle>Create Your First Wallet</CardTitle>
-                          <CardDescription>Get started by adding a currency wallet to your account.</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                          <Button onClick={() => setHasWallets(true)}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
-                      </CardContent>
-                  </Card>
-              </div>
-          )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {isLoading ? (
+                  [...Array(5)].map((_, i) => (
+                    <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                  ))
+              ) : renderWalletCards()}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8 items-start">

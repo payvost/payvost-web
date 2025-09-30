@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -14,22 +14,31 @@ import { Badge } from '@/components/ui/badge';
 import { FileDown, ListFilter, MoreHorizontal, Search } from 'lucide-react';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import Link from 'next/link';
-
-
-const transactions = [
-  { id: 'txn_01', recipient: 'John Doe', amount: '-$250.00', currency: 'USD', status: 'Completed', type: 'Transfer', date: '2024-05-23' },
-  { id: 'txn_02', recipient: 'Jane Smith', amount: '-$150.00', currency: 'USD', status: 'Pending', type: 'Transfer', date: '2024-05-22' },
-  { id: 'txn_03', recipient: 'MTN Airtime', amount: '-$10.00', currency: 'USD', status: 'Completed', type: 'Bill Payment', date: '2024-05-22' },
-  { id: 'txn_04', recipient: 'Pierre Dupont', amount: '-$350.00', currency: 'USD', status: 'Completed', type: 'Transfer', date: '2024-05-21' },
-  { id: 'txn_05', recipient: 'Adebayo Adekunle', amount: '-$50.00', currency: 'USD', status: 'Failed', type: 'Transfer', date: '2024-05-20' },
-  { id: 'txn_06', recipient: 'Amazon Gift Card', amount: '-$100.00', currency: 'USD', status: 'Completed', type: 'Gift Card', date: '2024-05-20' },
-  { id: 'txn_07', recipient: 'Emily White', amount: '-$500.00', currency: 'USD', status: 'Completed', type: 'Transfer', date: '2024-05-19' },
-  { id: 'txn_08', recipient: 'Ikeja Electric', amount: '-$75.00', currency: 'USD', status: 'Completed', type: 'Bill Payment', date: '2024-05-18' },
-];
-
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TransactionsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+        setLoading(false);
+        return;
+    }
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists()) {
+            setTransactions(doc.data().transactions || []);
+        }
+        setLoading(false);
+    });
+    return () => unsub();
+  }, [user]);
+
 
   const renderTransactionsTable = (filteredTransactions: typeof transactions) => (
     <CardContent>
@@ -46,13 +55,21 @@ export default function TransactionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
+            {loading ? (
+                 [...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell colSpan={5}>
+                             <Skeleton className="h-10 w-full" />
+                        </TableCell>
+                    </TableRow>
+                 ))
+            ) : filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
               <TableRow key={tx.id}>
                 <TableCell>
-                  <div className="font-medium">{tx.recipient}</div>
+                  <div className="font-medium">{tx.recipientName || tx.recipient}</div>
                   <div className="text-sm text-muted-foreground hidden md:inline">{tx.type}</div>
                 </TableCell>
-                <TableCell className="text-right">{tx.amount}</TableCell>
+                <TableCell className="text-right">{tx.sendAmount ? `${tx.sendCurrency} ${tx.sendAmount}` : tx.amount}</TableCell>
                 <TableCell className="hidden text-right sm:table-cell">
                   <Badge 
                     variant={
@@ -64,7 +81,7 @@ export default function TransactionsPage() {
                     {tx.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden text-right md:table-cell">{tx.date}</TableCell>
+                <TableCell className="hidden text-right md:table-cell">{new Date(tx.date).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -172,7 +189,7 @@ export default function TransactionsPage() {
                     </TabsContent>
                      <CardFooter>
                         <div className="text-xs text-muted-foreground">
-                            Showing <strong>1-8</strong> of <strong>{transactions.length}</strong> transactions
+                            Showing <strong>1-{transactions.length}</strong> of <strong>{transactions.length}</strong> transactions
                         </div>
                     </CardFooter>
                  </Card>
