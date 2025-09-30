@@ -33,14 +33,6 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Placeholder data for recent transactions
-const initialTransactions = [
-    { id: 'txn_1', type: 'Credit', currency: 'USD', amount: 500, date: '2024-08-15', description: 'From J. Smith' },
-    { id: 'txn_2', type: 'Debit', currency: 'USD', amount: -50, date: '2024-08-14', description: 'Netflix Subscription' },
-    { id: 'txn_3', type: 'Credit', currency: 'NGN', amount: 50000, date: '2024-08-13', description: 'From A. Adebayo' },
-    { id: 'txn_4', type: 'Debit', currency: 'EUR', amount: -100, date: '2024-08-12', description: 'Amazon.de Purchase' },
-];
-
 // Mock rates for demonstration
 const rates: Record<string, number> = {
   USD: 1,
@@ -58,7 +50,7 @@ export default function WalletsPage() {
   const [wallets, setWallets] = useState<any[]>([]);
   const { user, loading: authLoading } = useAuth();
   const [loadingWallets, setLoadingWallets] = useState(true);
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -66,14 +58,12 @@ export default function WalletsPage() {
         return;
     };
 
-    // In a real app, you would fetch transactions here as well.
-    // For now, we use the initialTransactions.
-    // To test the empty state, you can temporarily set:
-    // setTransactions([]);
-
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
         if (doc.exists()) {
-            setWallets(doc.data().wallets || []);
+            const userData = doc.data();
+            setWallets(userData.wallets || []);
+            const sortedTransactions = (userData.transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setTransactions(sortedTransactions);
         }
         setLoadingWallets(false);
     });
@@ -226,8 +216,12 @@ export default function WalletsPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem>Send</DropdownMenuItem>
-                                            <DropdownMenuItem>Fund</DropdownMenuItem>
-                                            <DropdownMenuItem>Exchange</DropdownMenuItem>
+                                            <FundWalletDialog wallet={wallet}>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Fund</DropdownMenuItem>
+                                            </FundWalletDialog>
+                                            <CurrencyExchangeDialog wallets={wallets}>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Exchange</DropdownMenuItem>
+                                            </CurrencyExchangeDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -255,14 +249,14 @@ export default function WalletsPage() {
                                 <TableBody>
                                     {transactions.map(tx => (
                                         <TableRow key={tx.id}>
-                                            <TableCell className="text-muted-foreground text-xs">{tx.date}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs">{new Date(tx.date).toLocaleDateString()}</TableCell>
                                             <TableCell>
-                                                <div className="font-medium">{tx.description}</div>
+                                                <div className="font-medium">{tx.recipientName || tx.description}</div>
                                                 <div className="text-xs text-muted-foreground">{tx.type}</div>
                                             </TableCell>
                                             <TableCell className="text-right font-mono">
-                                                <span className={tx.type === 'Credit' ? 'text-green-500' : 'text-destructive'}>
-                                                    {formatCurrency(tx.amount, tx.currency)}
+                                                <span className={tx.type === 'inflow' ? 'text-green-500' : 'text-destructive'}>
+                                                    {formatCurrency(parseFloat(tx.sendAmount || tx.amount), tx.sendCurrency || tx.currency)}
                                                 </span>
                                             </TableCell>
                                         </TableRow>
@@ -276,7 +270,9 @@ export default function WalletsPage() {
                         )}
                     </CardContent>
                     <CardFooter>
-                        <Button variant="outline" className="w-full">View All Transactions</Button>
+                        <Button variant="outline" className="w-full" asChild>
+                            <Link href="/dashboard/transactions">View All Transactions</Link>
+                        </Button>
                     </CardFooter>
                 </Card>
             </div>

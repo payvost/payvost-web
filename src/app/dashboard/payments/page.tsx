@@ -10,18 +10,74 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText } from 'lucide-react';
+import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText, Tv, ChevronDown } from 'lucide-react';
 import { Payvost } from '@/components/Payvost';
 import { Beneficiaries } from '@/components/beneficiaries';
+import { useAuth } from '@/hooks/use-auth';
+import Image from 'next/image';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PaymentConfirmationDialog } from '@/components/payment-confirmation-dialog';
 
-const billCategories = [
-    { value: 'airtime', label: 'Airtime', icon: <Smartphone className="h-5 w-5 mr-2" /> },
-    { value: 'data', label: 'Data', icon: <FileText className="h-5 w-5 mr-2" /> },
-    { value: 'electricity', label: 'Electricity', icon: <Zap className="h-5 w-5 mr-2" /> },
-];
+const billerData: Record<string, any> = {
+  NGA: {
+    currency: 'NGN',
+    flag: 'NG',
+    categories: [
+      { value: 'airtime', label: 'Airtime', icon: <Smartphone className="h-5 w-5 mr-2" />, providers: ['MTN', 'Airtel', 'Glo', '9mobile'] },
+      { value: 'data', label: 'Data', icon: <FileText className="h-5 w-5 mr-2" />, providers: ['MTN', 'Airtel', 'Spectranet'] },
+      { value: 'electricity', label: 'Electricity', icon: <Zap className="h-5 w-5 mr-2" />, providers: ['Ikeja Electric (IKEDC)', 'Eko Electric (EKEDC)'] },
+      { value: 'cable', label: 'Cable TV', icon: <Tv className="h-5 w-5 mr-2" />, providers: ['DSTV', 'GOtv'] },
+    ]
+  },
+  USA: {
+    currency: 'USD',
+    flag: 'US',
+    categories: [
+      { value: 'utilities', label: 'Utilities', icon: <Zap className="h-5 w-5 mr-2" />, providers: ['Con Edison', 'PG&E', 'Florida Power & Light'] },
+      { value: 'phone', label: 'Phone Bill', icon: <Smartphone className="h-5 w-5 mr-2" />, providers: ['AT&T', 'Verizon', 'T-Mobile'] },
+      { value: 'cable', label: 'Cable & Internet', icon: <Tv className="h-5 w-5 mr-2" />, providers: ['Comcast Xfinity', 'Spectrum', 'Cox'] },
+    ]
+  },
+  GBR: {
+      currency: 'GBP',
+      flag: 'GB',
+      categories: [
+          { value: 'energy', label: 'Energy', icon: <Zap className="h-5 w-5 mr-2" />, providers: ['British Gas', 'EDF Energy', 'ScottishPower'] },
+          { value: 'mobile', label: 'Mobile Top-up', icon: <Smartphone className="h-5 w-5 mr-2" />, providers: ['EE', 'O2', 'Vodafone'] },
+          { value: 'council_tax', label: 'Council Tax', icon: <Landmark className="h-5 w-5 mr-2" />, providers: [] },
+      ]
+  }
+};
+
 
 export default function PaymentsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const { user } = useAuth();
+  const [billCountry, setBillCountry] = useState('NGA'); // Default to Nigeria, can be dynamic
+  const [billCategory, setBillCategory] = useState('');
+  const [billProvider, setBillProvider] = useState('');
+  const [billAmount, setBillAmount] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const currentBillerData = billerData[billCountry];
+  const providers = currentBillerData.categories.find((c:any) => c.value === billCategory)?.providers || [];
+
+  const handleBillPayment = async () => {
+    setIsLoading(true);
+    // Simulate API call for bill payment
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsLoading(false);
+  };
+  
+  const billPaymentDetails = {
+    sendAmount: billAmount || "0.00",
+    sendCurrency: currentBillerData.currency,
+    recipientGets: billAmount || "0.00",
+    recipientCurrency: currentBillerData.currency,
+    recipientName: billProvider || "Bill Payment",
+    exchangeRate: 'N/A',
+    fee: '$0.00'
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -53,18 +109,39 @@ export default function PaymentsPage() {
           <TabsContent value="bill-payment">
             <Card>
               <CardHeader>
-                <CardTitle>Bill Payment</CardTitle>
-                <CardDescription>Pay for airtime, data, electricity, and more.</CardDescription>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Bill Payment</CardTitle>
+                        <CardDescription>Pay for airtime, data, electricity, and more.</CardDescription>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="flex items-center gap-2">
+                                <Image src={`/flag/${currentBillerData.flag}.png`} alt={billCountry} width={20} height={20} className="rounded-full object-cover" />
+                                <span>{billCountry}</span>
+                                <ChevronDown className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            {Object.keys(billerData).map(countryCode => (
+                                <DropdownMenuItem key={countryCode} onSelect={() => {setBillCountry(countryCode); setBillCategory('')}}>
+                                    <Image src={`/flag/${billerData[countryCode].flag}.png`} alt={countryCode} width={20} height={20} className="rounded-full object-cover mr-2" />
+                                    <span>{countryCode}</span>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="bill-category">Select Category</Label>
-                    <Select>
+                    <Select onValueChange={setBillCategory} value={billCategory}>
                         <SelectTrigger id="bill-category">
                             <SelectValue placeholder="Select a bill category" />
                         </SelectTrigger>
                         <SelectContent>
-                            {billCategories.map(cat => (
+                            {currentBillerData.categories.map((cat:any) => (
                                 <SelectItem key={cat.value} value={cat.value}>
                                     <div className="flex items-center">{cat.icon}{cat.label}</div>
                                 </SelectItem>
@@ -74,19 +151,32 @@ export default function PaymentsPage() {
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="provider">Provider/Biller</Label>
-                    <Input id="provider" placeholder="e.g. MTN, Ikeja Electric" />
+                    <Select disabled={!billCategory || providers.length === 0} onValueChange={setBillProvider}>
+                        <SelectTrigger id="provider">
+                            <SelectValue placeholder={providers.length > 0 ? "Select a provider" : "Enter details below"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {providers.map((p:string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="account-number">Account/Meter Number</Label>
                     <Input id="account-number" placeholder="Enter account or meter number" />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount</Label>
-                    <Input id="amount" type="number" placeholder="Enter amount" />
+                    <Label htmlFor="amount">Amount ({currentBillerData.currency})</Label>
+                    <Input id="amount" type="number" placeholder="Enter amount" value={billAmount} onChange={(e) => setBillAmount(e.target.value)} />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>Pay Bill</Button>
+                 <PaymentConfirmationDialog
+                  onConfirm={handleBillPayment}
+                  transactionDetails={billPaymentDetails}
+                  isLoading={isLoading}
+                >
+                  <Button disabled={isLoading}>Pay Bill</Button>
+                </PaymentConfirmationDialog>
               </CardFooter>
             </Card>
           </TabsContent>

@@ -51,7 +51,7 @@ export function PaymentConfirmationDialog({
     const [otp, setOtp] = useState('');
     const [open, setOpen] = useState(false);
 
-    const feeAmount = transactionDetails.sendCurrency === 'USD' ? 5.00 : 0.00;
+    const feeAmount = parseFloat(transactionDetails.fee.replace('$', '')) || 0.00;
     const sendAmountNum = parseFloat(transactionDetails.sendAmount) || 0;
     const totalDeducted = sendAmountNum + feeAmount;
 
@@ -74,7 +74,7 @@ export function PaymentConfirmationDialog({
 
         try {
             // 1. Generate unique transaction ID
-            const transactionId = `txn_${Math.random().toString(36).substring(2, 12)}`;
+            const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
@@ -92,7 +92,7 @@ export function PaymentConfirmationDialog({
                 if (w.currency === transactionDetails.sendCurrency) {
                     walletFound = true;
                     if (w.balance < totalDeducted) {
-                        throw new Error("Insufficient funds for transfer and fees.");
+                        throw new Error("Insufficient funds for this transaction.");
                     }
                     return { ...w, balance: w.balance - totalDeducted };
                 }
@@ -113,7 +113,7 @@ export function PaymentConfirmationDialog({
                 recipientCurrency: transactionDetails.recipientCurrency,
                 fee: feeAmount.toFixed(2),
                 status: 'Completed',
-                type: 'Transfer',
+                type: transactionDetails.recipientName === 'Bill Payment' ? 'Bill Payment' : 'Transfer',
                 date: new Date().toISOString(),
                 createdAt: Timestamp.now(),
                 exchangeRate: transactionDetails.exchangeRate,

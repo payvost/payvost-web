@@ -1,4 +1,6 @@
 
+'use client';
+
 import {
   Card,
   CardContent,
@@ -18,16 +20,44 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowUpRight } from "lucide-react"
 import Link from "next/link"
-
-const transactions = [
-  { name: 'John Doe', amount: '-$250.00', date: '2024-05-23', status: 'Completed', currency: 'USD' },
-  { name: 'Jane Smith', amount: '-$150.00', date: '2024-05-22', status: 'In Progress', currency: 'USD' },
-  { name: 'Pierre Dupont', amount: '-$350.00', date: '2024-05-21', status: 'Completed', currency: 'USD' },
-  { name: 'Adebayo Adekunle', amount: '-$50.00', date: '2024-05-20', status: 'Failed', currency: 'USD' },
-  { name: 'Emily White', amount: '-$500.00', date: '2024-05-19', status: 'Completed', currency: 'USD' },
-];
+import { useAuth } from "@/hooks/use-auth"
+import { useEffect, useState } from "react"
+import { doc, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { Skeleton } from "./ui/skeleton"
 
 export function RecentTransactions() {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        const sortedTransactions = (userData.transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(sortedTransactions.slice(0, 5)); // Get latest 5
+      }
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  const formatCurrency = (amount: string, currency: string) => {
+    const numericAmount = parseFloat(amount.replace(/[^0-9.-]+/g,""));
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency,
+    }).format(numericAmount);
+  };
+
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center">
@@ -55,27 +85,43 @@ export function RecentTransactions() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((tx) => (
-              <TableRow key={tx.name}>
-                <TableCell>
-                  <div className="font-medium">{tx.name}</div>
-                  <div className="text-sm text-muted-foreground hidden md:inline">{tx.currency}</div>
-                </TableCell>
-                <TableCell className="text-right">{tx.amount}</TableCell>
-                <TableCell className="hidden text-right sm:table-cell">
-                  <Badge 
-                    variant={
-                      tx.status === 'Completed' ? 'default' : 
-                      tx.status === 'In Progress' ? 'secondary' : 'destructive'
-                    }
-                    className="capitalize"
-                  >
-                    {tx.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden text-right md:table-cell">{tx.date}</TableCell>
-              </TableRow>
-            ))}
+            {loading ? (
+              [...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={4}>
+                    <Skeleton className="h-10 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : transactions.length > 0 ? (
+              transactions.map((tx) => (
+                <TableRow key={tx.id}>
+                  <TableCell>
+                    <div className="font-medium">{tx.recipientName || tx.recipient}</div>
+                    <div className="text-sm text-muted-foreground hidden md:inline">{tx.sendCurrency}</div>
+                  </TableCell>
+                  <TableCell className="text-right">{formatCurrency(tx.sendAmount, tx.sendCurrency)}</TableCell>
+                  <TableCell className="hidden text-right sm:table-cell">
+                    <Badge 
+                      variant={
+                        tx.status === 'Completed' ? 'default' : 
+                        tx.status === 'Pending' ? 'secondary' : 'destructive'
+                      }
+                      className="capitalize"
+                    >
+                      {tx.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden text-right md:table-cell">{new Date(tx.date).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        No recent transactions.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
