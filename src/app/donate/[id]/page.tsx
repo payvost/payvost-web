@@ -90,9 +90,7 @@ export default function DonationPage() {
                                 <CardTitle className="text-3xl font-bold tracking-tight">{campaign.title}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="prose dark:prose-invert max-w-none">
-                                    <p>{campaign.description}</p>
-                                </div>
+                                <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: campaign.description }} />
                             </CardContent>
                         </Card>
                     </div>

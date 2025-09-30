@@ -4,17 +4,28 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Gift, Search, BarChart2, Edit, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Gift, Search, BarChart2, Edit, Link as LinkIcon, Loader2, Trash2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, DocumentData, deleteDoc, doc } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase';
+import { ref, listAll, deleteObject } from "firebase/storage";
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Active: 'default',
@@ -31,6 +42,9 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<{id: string, title: string} | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,6 +74,56 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
         description: "The donation link has been copied to your clipboard.",
     });
   }
+  
+  const handleDelete = async () => {
+    if (!campaignToDelete || !user) return;
+
+    setIsDeleting(campaignToDelete.id);
+    
+    try {
+        // 1. Delete all media from Firebase Storage first
+        // It's safer to delete files first in case Firestore deletion fails.
+        const campaignDoc = campaigns.find(c => c.id === campaignToDelete.id);
+        if (campaignDoc) {
+             const filesToDelete: string[] = [];
+            if (campaignDoc.bannerImage) filesToDelete.push(campaignDoc.bannerImage);
+            if (campaignDoc.gallery) filesToDelete.push(...campaignDoc.gallery);
+
+            for (const fileUrl of filesToDelete) {
+                try {
+                    const fileRef = ref(storage, fileUrl);
+                    await deleteObject(fileRef);
+                } catch (storageError: any) {
+                    // It's possible the file doesn't exist, so we log but don't fail the whole operation
+                    if (storageError.code !== 'storage/object-not-found') {
+                       console.error(`Failed to delete storage file ${fileUrl}:`, storageError);
+                    }
+                }
+            }
+        }
+        
+        // 2. Delete Firestore document
+        await deleteDoc(doc(db, "donations", campaignToDelete.id));
+
+        toast({
+            title: "Campaign Deleted",
+            description: `"${campaignToDelete.title}" has been permanently removed.`,
+        });
+
+    } catch (error) {
+        console.error("Error deleting campaign:", error);
+        toast({
+            title: "Error",
+            description: "Failed to delete the campaign. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsDeleting(null);
+        setShowDeleteDialog(false);
+        setCampaignToDelete(null);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -91,6 +155,7 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -134,11 +199,16 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
                 </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={isDeleting === d.id}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem><BarChart2 className="mr-2 h-4 w-4"/>View Dashboard</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onEditClick(d.id)}><Edit className="mr-2 h-4 w-4"/>Edit Campaign</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleCopyLink(d.link)}><LinkIcon className="mr-2 h-4 w-4"/>Copy Donation Link</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); setCampaignToDelete({id: d.id, title: d.title}); setShowDeleteDialog(true);}}>
+                                {isDeleting === d.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                                Delete
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
@@ -153,5 +223,25 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
         </div>
       </CardFooter>
     </Card>
+
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the campaign
+                <span className="font-semibold">"{campaignToDelete?.title}"</span> and all of its associated data and media.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Confirm Deletion
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
