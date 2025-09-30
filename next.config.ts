@@ -1,9 +1,5 @@
-import type { NextConfig } from 'next';
-
-const isProd = process.env.NODE_ENV === 'production';
-
-// ✅ Use Firebase Hosting backend domain for static assets in production
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -15,18 +11,41 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'backend--payvost.us-central1.hosted.app',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'qwibil-remit.firebasestorage.app',
+        port: '',
+        pathname: '/**',
       },
     ],
   },
-  assetPrefix: isProd ? 'https://backend--payvost.us-central1.hosted.app' : undefined,
+  webpack: (config, { webpack }) => {
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@opentelemetry\/exporter-jaeger$/,
+      }),
+    );
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      handlebars: 'handlebars/dist/cjs/handlebars.js',
+    };
+    return config;
+  },
 };
-
-// Injected by Firebase Studio
-const { setConfig } = require('next/config');
-setConfig(nextConfig);
 
 export default nextConfig;

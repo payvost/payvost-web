@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { collection, query, where, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Active: 'default',
@@ -23,12 +24,14 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
 
 interface DonationPageListViewProps {
     onFabClick: () => void;
+    onEditClick: (campaignId: string) => void;
 }
 
-export function DonationPageListView({ onFabClick }: DonationPageListViewProps) {
+export function DonationPageListView({ onFabClick, onEditClick }: DonationPageListViewProps) {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user) return;
@@ -49,6 +52,14 @@ export function DonationPageListView({ onFabClick }: DonationPageListViewProps) 
 
     return () => unsubscribe();
   }, [user]);
+  
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    toast({
+        title: "Link Copied",
+        description: "The donation link has been copied to your clipboard.",
+    });
+  }
 
   if (loading) {
     return (
@@ -126,8 +137,8 @@ export function DonationPageListView({ onFabClick }: DonationPageListViewProps) 
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem><BarChart2 className="mr-2 h-4 w-4"/>View Dashboard</DropdownMenuItem>
-                            <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/>Edit Campaign</DropdownMenuItem>
-                            <DropdownMenuItem><LinkIcon className="mr-2 h-4 w-4"/>Copy Donation Link</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEditClick(d.id)}><Edit className="mr-2 h-4 w-4"/>Edit Campaign</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleCopyLink(d.link)}><LinkIcon className="mr-2 h-4 w-4"/>Copy Donation Link</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>

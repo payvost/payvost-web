@@ -11,56 +11,79 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Video, Youtube, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
 import Image from 'next/image';
-import { storage, db, auth } from '@/lib/firebase';
+import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
-import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB for images
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB for videos
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm"];
 
 const campaignSchema = z.object({
   title: z.string().min(3, 'Campaign title is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  bannerImage: z.any()
-    .refine((files) => files?.length === 1, "Image is required.")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
-    .refine(
-      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
-      "Only .jpg, .jpeg, .png and .webp formats are supported."
-    ),
+  mediaType: z.enum(['image', 'video', 'embed']).default('image'),
+  bannerFile: z.any().optional(),
+  bannerUrl: z.string().optional(),
+  galleryFiles: z.any().optional(),
   goal: z.preprocess((val) => (val === '' ? undefined : Number(val)), z.number().positive('Goal must be a positive number').optional()),
   currency: z.string().min(1, 'Currency is required'),
   suggestedAmounts: z.string().optional(),
   allowCustomAmount: z.boolean(),
+}).superRefine((data, ctx) => {
+    // Validation logic for banner file based on media type
+    if (data.mediaType === 'image' && data.bannerFile && data.bannerFile.length > 0) {
+        if (data.bannerFile[0].size > MAX_FILE_SIZE) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Max image size is 5MB.`, path: ['bannerFile'] });
+        if (!ACCEPTED_IMAGE_TYPES.includes(data.bannerFile[0].type)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Only .jpg, .jpeg, .png and .webp formats are supported.', path: ['bannerFile'] });
+    }
+    if (data.mediaType === 'video' && data.bannerFile && data.bannerFile.length > 0) {
+        if (data.bannerFile[0].size > MAX_VIDEO_SIZE) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Max video size is 50MB.`, path: ['bannerFile'] });
+        if (!ACCEPTED_VIDEO_TYPES.includes(data.bannerFile[0].type)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Only .mp4 and .webm formats are supported.', path: ['bannerFile'] });
+    }
+    if (data.mediaType === 'embed') {
+        if (!data.bannerUrl || !z.string().url().safeParse(data.bannerUrl).success) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A valid YouTube or Vimeo URL is required.', path: ['bannerUrl'] });
+        }
+    }
+    if (data.galleryFiles && data.galleryFiles.length > 5) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'You can upload a maximum of 5 gallery images.', path: ['galleryFiles'] });
+    }
 });
+
 
 type FormValues = z.infer<typeof campaignSchema>;
 
 interface CreateDonationPageFormProps {
     onBack: () => void;
+    campaignId?: string | null;
 }
 
-export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) {
+export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPageFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const { user } = useAuth();
+  const isEditing = !!campaignId;
 
   const {
     register,
     control,
     handleSubmit,
     setValue,
+    reset,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(campaignSchema),
@@ -70,61 +93,117 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
         currency: 'USD',
         suggestedAmounts: '10, 25, 50, 100',
         allowCustomAmount: true,
+        mediaType: 'image',
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (isEditing) {
+        const fetchCampaign = async () => {
+            const docRef = doc(db, "donations", campaignId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                reset({
+                    ...data,
+                    suggestedAmounts: data.suggestedAmounts?.join(', ') || '',
+                });
+                setBannerPreview(data.bannerImage);
+                setGalleryPreviews(data.galleryUrls || []);
+            }
+        }
+        fetchCampaign();
+    }
+  }, [campaignId, isEditing, reset]);
+
+
+  const mediaType = watch('mediaType');
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast({ title: "File too large", description: "Please upload an image smaller than 5MB.", variant: "destructive" });
-        return;
-      }
-      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        toast({ title: "Invalid file type", description: "Only JPG, PNG, and WebP formats are supported.", variant: "destructive" });
-        return;
-      }
-      setPreviewImage(URL.createObjectURL(file));
-      setValue('bannerImage', e.target.files, { shouldValidate: true });
+      setBannerPreview(URL.createObjectURL(file));
+      setValue('bannerFile', e.target.files, { shouldValidate: true });
     }
   };
+
+  const handleGalleryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+        if (files.length > 5) {
+            toast({ title: "Too many files", description: "You can only select up to 5 images.", variant: "destructive" });
+            return;
+        }
+        const newPreviews = Array.from(files).map(file => URL.createObjectURL(file));
+        setGalleryPreviews(newPreviews);
+        setValue('galleryFiles', files, { shouldValidate: true });
+    }
+  }
   
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     if (!user) {
-        toast({ title: "Authentication Error", description: "You must be logged in to create a campaign.", variant: "destructive" });
+        toast({ title: "Authentication Error", description: "You must be logged in to create or edit a campaign.", variant: "destructive" });
         return;
     }
     setIsSubmitting(true);
     
     try {
-        const imageFile = data.bannerImage[0];
-        const storageRef = ref(storage, `donation_banners/${user.uid}/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+        let bannerImage = data.bannerUrl || bannerPreview || '';
 
-        const donationData = {
-            ...data,
-            bannerImage: downloadURL,
-            userId: user.uid,
-            createdAt: serverTimestamp(),
-            raisedAmount: 0,
-            status: 'Active',
-            suggestedAmounts: data.suggestedAmounts?.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n)) || []
-        };
+        if (data.bannerFile && data.bannerFile.length > 0) {
+            const file = data.bannerFile[0];
+            const storageRef = ref(storage, `donation_media/${user.uid}/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            bannerImage = await getDownloadURL(snapshot.ref);
+        }
+
+        const galleryUrls = [...galleryPreviews];
+        if (data.galleryFiles) {
+            for (const file of Array.from(data.galleryFiles as FileList)) {
+                const storageRef = ref(storage, `donation_media/${user.uid}/gallery/${Date.now()}_${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                galleryUrls.push(await getDownloadURL(snapshot.ref));
+            }
+        }
         
-        await addDoc(collection(db, "donations"), donationData);
+        const campaignData = {
+            title: data.title,
+            description: data.description,
+            mediaType: data.mediaType,
+            bannerImage,
+            galleryUrls,
+            goal: data.goal || 0,
+            currency: data.currency,
+            suggestedAmounts: data.suggestedAmounts?.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n)) || [],
+            allowCustomAmount: data.allowCustomAmount,
+            userId: user.uid,
+            updatedAt: serverTimestamp(),
+        };
 
-        toast({
-            title: "Campaign Created!",
-            description: `Your campaign "${data.title}" is now live.`,
-        });
+        if (isEditing) {
+            const docRef = doc(db, "donations", campaignId);
+            await updateDoc(docRef, campaignData);
+            toast({ title: "Campaign Updated!", description: `Your campaign "${data.title}" has been saved.` });
+        } else {
+             const docRef = await addDoc(collection(db, "donations"), {
+                ...campaignData,
+                createdAt: serverTimestamp(),
+                raisedAmount: 0,
+                status: 'Active',
+            });
+            const link = `${window.location.origin}/donate/${docRef.id}`;
+            await updateDoc(docRef, { link });
+
+            toast({ title: "Campaign Created!", description: `Your campaign "${data.title}" is now live.` });
+        }
+        
         onBack();
 
     } catch (error) {
-        console.error("Error creating campaign:", error);
+        console.error("Error saving campaign:", error);
         toast({
             title: "Something went wrong",
-            description: "Could not create the campaign. Please try again.",
+            description: "Could not save the campaign. Please try again.",
             variant: "destructive"
         });
     } finally {
@@ -142,34 +221,55 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
                     <span className="sr-only">Back</span>
                 </Button>
                 <div>
-                    <CardTitle>Create a New Campaign</CardTitle>
-                    <CardDescription>Set up a public campaign to collect donations for your cause.</CardDescription>
+                    <CardTitle>{isEditing ? 'Edit Campaign' : 'Create a New Campaign'}</CardTitle>
+                    <CardDescription>
+                        {isEditing ? 'Update the details of your fundraising campaign.' : 'Set up a public page to collect donations for your cause.'}
+                    </CardDescription>
                 </div>
             </div>
         </CardHeader>
         <CardContent className="space-y-8">
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Campaign Details</h3>
-                <div className="p-4 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-video flex flex-col justify-center items-center relative overflow-hidden">
-                    <input
-                        type="file"
-                        id="banner-upload"
-                        className="hidden"
-                        accept={ACCEPTED_IMAGE_TYPES.join(',')}
-                        onChange={handleFileChange}
-                    />
-                    <Label htmlFor="banner-upload" className="w-full h-full absolute inset-0 cursor-pointer">
-                        {previewImage ? (
-                            <Image src={previewImage} alt="Campaign banner preview" fill sizes="500px" className="object-cover" />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full">
-                                <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <p className="mt-4 text-sm text-muted-foreground">Click to upload a campaign banner</p>
-                            </div>
-                        )}
-                    </Label>
-                </div>
-                {errors.bannerImage && <p className="text-sm text-destructive">{errors.bannerImage.message as string}</p>}
+                 <Tabs defaultValue="image" onValueChange={(value) => setValue('mediaType', value as 'image' | 'video' | 'embed')}>
+                    <TabsList>
+                        <TabsTrigger value="image"><ImageIcon className="mr-2 h-4 w-4"/>Image</TabsTrigger>
+                        <TabsTrigger value="video"><Video className="mr-2 h-4 w-4"/>Video Upload</TabsTrigger>
+                        <TabsTrigger value="embed"><Youtube className="mr-2 h-4 w-4"/>Video Embed</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="image">
+                        <div className="p-4 mt-2 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-[2.5/1] flex flex-col justify-center items-center relative overflow-hidden">
+                             <input type="file" id="banner-image-upload" className="hidden" accept={ACCEPTED_IMAGE_TYPES.join(',')} onChange={handleBannerFileChange} />
+                             <Label htmlFor="banner-image-upload" className="w-full h-full absolute inset-0 cursor-pointer">
+                                {bannerPreview && mediaType === 'image' ? (
+                                    <Image src={bannerPreview} alt="Campaign banner preview" fill sizes="500px" className="object-cover" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full"><ImageIcon className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-sm text-muted-foreground">Click to upload a campaign banner</p></div>
+                                )}
+                             </Label>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="video">
+                        <div className="p-4 mt-2 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center aspect-[2.5/1] flex flex-col justify-center items-center relative overflow-hidden">
+                            <input type="file" id="banner-video-upload" className="hidden" accept={ACCEPTED_VIDEO_TYPES.join(',')} onChange={handleBannerFileChange} />
+                            <Label htmlFor="banner-video-upload" className="w-full h-full absolute inset-0 cursor-pointer">
+                                {bannerPreview && mediaType === 'video' ? (
+                                    <video src={bannerPreview} controls className="w-full h-full object-cover"></video>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full"><Video className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-sm text-muted-foreground">Click to upload a video</p></div>
+                                )}
+                            </Label>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="embed">
+                         <div className="space-y-2 mt-2">
+                            <Label htmlFor="bannerUrl">YouTube or Vimeo URL</Label>
+                            <Input id="bannerUrl" {...register('bannerUrl')} placeholder="https://www.youtube.com/watch?v=..." />
+                            {errors.bannerUrl && <p className="text-sm text-destructive">{errors.bannerUrl.message}</p>}
+                        </div>
+                    </TabsContent>
+                </Tabs>
+                {errors.bannerFile && <p className="text-sm text-destructive mt-2">{errors.bannerFile.message as string}</p>}
 
                 <div className="space-y-2">
                     <Label htmlFor="title">Campaign Title</Label>
@@ -181,6 +281,26 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
                     <Textarea id="description" {...register('description')} placeholder="Tell people about your cause..." rows={5} />
                     {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
                 </div>
+
+                <div className="space-y-2">
+                    <Label>Image Gallery (Optional)</Label>
+                    <div className="p-4 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center">
+                        <input type="file" id="gallery-upload" multiple className="hidden" accept={ACCEPTED_IMAGE_TYPES.join(',')} onChange={handleGalleryFilesChange} />
+                        <Label htmlFor="gallery-upload" className="cursor-pointer">
+                            <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground" />
+                            <p className="mt-2 text-sm text-muted-foreground">Upload up to 5 images</p>
+                        </Label>
+                    </div>
+                     <div className="grid grid-cols-5 gap-2 mt-2">
+                        {galleryPreviews.map((src, index) => (
+                             <div key={index} className="relative aspect-square">
+                                <Image src={src} alt={`Preview ${index+1}`} fill sizes="100px" className="object-cover rounded-md" />
+                            </div>
+                        ))}
+                    </div>
+                    {errors.galleryFiles && <p className="text-sm text-destructive mt-2">{errors.galleryFiles.message as string}</p>}
+                </div>
+
             </div>
 
             <Separator />
@@ -234,8 +354,9 @@ export function CreateDonationPageForm({ onBack }: CreateDonationPageFormProps) 
         </CardContent>
         <CardFooter className="justify-end">
             <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <Gift className="mr-2 h-4 w-4" />
-                {isSubmitting ? 'Creating Campaign...' : 'Create Campaign & Get Link'}
+                {isEditing ? 'Save Changes' : 'Create Campaign & Get Link'}
             </Button>
         </CardFooter>
       </form>
