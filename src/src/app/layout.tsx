@@ -47,9 +47,9 @@ export default function RootLayout({
         >
             <AuthProvider>
                 {children}
+                <Toaster />
+                <CookieConsentBanner />
             </AuthProvider>
-            <Toaster />
-            <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>

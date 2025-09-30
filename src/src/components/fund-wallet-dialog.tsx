@@ -13,6 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Copy, CreditCard, Landmark, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 interface FundWalletDialogProps {
   children: React.ReactNode;
@@ -38,6 +41,7 @@ const accountDetails: { [key: string]: any } = {
 
 export function FundWalletDialog({ children, wallet }: FundWalletDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,15 +50,62 @@ export function FundWalletDialog({ children, wallet }: FundWalletDialogProps) {
   });
 
   const onSubmit = async (data: FundFormValues) => {
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in to fund a wallet.", variant: "destructive" });
+        return;
+    }
+
     setIsLoading(true);
-    console.log('Funding with:', data);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    toast({
-        title: "Funding Successful",
-        description: `Your ${wallet.currency} wallet has been funded with ${data.amount}.`,
-    });
-    setIsLoading(false);
-    setOpen(false);
+    
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+            throw new Error("User data not found.");
+        }
+
+        const userData = userDoc.data();
+        const wallets = userData.wallets || [];
+
+        // Find the wallet and update its balance
+        const updatedWallets = wallets.map((w: any) => {
+            if (w.currency === wallet.currency) {
+                return { ...w, balance: (w.balance || 0) + data.amount };
+            }
+            return w;
+        });
+
+        // Prepare new card details to be saved (non-sensitive info only)
+        const newCard = {
+            last4: data.cardNumber.slice(-4),
+            cardType: 'visa', // This can be determined from the card number in a real app
+            expiry: data.expiry,
+            cardLabel: 'New Card' // Or derive from user input
+        };
+
+        // Update the user document
+        await updateDoc(userDocRef, {
+            wallets: updatedWallets,
+            cards: arrayUnion(newCard) // Assuming you have a 'cards' array in your user doc
+        });
+
+        toast({
+            title: "Funding Successful",
+            description: `Your ${wallet.currency} wallet has been funded with ${data.amount}.`,
+        });
+        setOpen(false);
+
+    } catch (error) {
+        console.error("Funding failed:", error);
+        toast({
+            title: "Funding Failed",
+            description: "There was a problem funding your wallet. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const details = accountDetails[wallet.currency] || accountDetails.USD;
@@ -131,4 +182,3 @@ export function FundWalletDialog({ children, wallet }: FundWalletDialogProps) {
     </Dialog>
   );
 }
-

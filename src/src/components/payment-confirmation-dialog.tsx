@@ -18,6 +18,10 @@ import { Loader2 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
 import { Label } from "./ui/label";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc, getDoc, arrayUnion, Timestamp } from "firebase/firestore";
+
 
 interface PaymentConfirmationDialogProps {
   children: ReactNode;
@@ -41,10 +45,15 @@ export function PaymentConfirmationDialog({
 }: PaymentConfirmationDialogProps) {
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [step, setStep] = useState<'review' | 'otp'>('review');
     const [isConfirming, setIsConfirming] = useState(false);
     const [otp, setOtp] = useState('');
     const [open, setOpen] = useState(false);
+
+    const feeAmount = transactionDetails.sendCurrency === 'USD' ? 5.00 : 0.00;
+    const sendAmountNum = parseFloat(transactionDetails.sendAmount) || 0;
+    const totalDeducted = sendAmountNum + feeAmount;
 
 
     const handleInitialConfirm = async (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -55,25 +64,98 @@ export function PaymentConfirmationDialog({
     }
 
     const handleFinalConfirm = async () => {
+        if (!user) {
+            toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+            return;
+        }
         setIsConfirming(true);
         // Here you would verify the OTP and then execute the transfer
         console.log("Verifying OTP:", otp);
-        await onConfirm();
-        toast({
-            title: "Transfer Initiated!",
-            description: `Your transfer to ${transactionDetails.recipientName} is being processed.`,
-        });
-        setIsConfirming(false);
-        setOpen(false); // Manually close the dialog on success
-        router.push('/dashboard/transactions/txn_01'); // Redirect to details page
+
+        try {
+            // 1. Generate unique transaction ID
+            const transactionId = `txn_${Math.random().toString(36).substring(2, 12)}`;
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                throw new Error("User document not found.");
+            }
+            
+            const userData = userDoc.data();
+            const wallets = userData.wallets || [];
+
+            // 2. Debit the user's wallet
+            let walletFound = false;
+            const updatedWallets = wallets.map((w: any) => {
+                if (w.currency === transactionDetails.sendCurrency) {
+                    walletFound = true;
+                    if (w.balance < totalDeducted) {
+                        throw new Error("Insufficient funds for transfer and fees.");
+                    }
+                    return { ...w, balance: w.balance - totalDeducted };
+                }
+                return w;
+            });
+            
+            if (!walletFound) {
+                throw new Error(`Wallet for ${transactionDetails.sendCurrency} not found.`);
+            }
+
+            // 3. Create the transaction record
+            const newTransaction = {
+                id: transactionId,
+                recipientName: transactionDetails.recipientName,
+                sendAmount: transactionDetails.sendAmount,
+                sendCurrency: transactionDetails.sendCurrency,
+                recipientGets: transactionDetails.recipientGets,
+                recipientCurrency: transactionDetails.recipientCurrency,
+                fee: feeAmount.toFixed(2),
+                status: 'Completed',
+                type: 'Transfer',
+                date: new Date().toISOString(),
+                createdAt: Timestamp.now(),
+                exchangeRate: transactionDetails.exchangeRate,
+            };
+
+            // 4. Update Firestore
+            await updateDoc(userDocRef, {
+                wallets: updatedWallets,
+                transactions: arrayUnion(newTransaction)
+            });
+
+            await onConfirm(); // Call original onConfirm if needed
+            toast({
+                title: "Transfer Initiated!",
+                description: `Your transfer to ${transactionDetails.recipientName} is being processed.`,
+            });
+            
+            setIsConfirming(false);
+            setOpen(false); // Manually close the dialog on success
+            
+            // 5. Redirect to the new transaction details page
+            router.push(`/dashboard/transactions/${transactionId}`);
+
+        } catch (error: any) {
+            console.error("Final confirmation failed:", error);
+            toast({
+                title: "Transfer Failed",
+                description: error.message || "An unexpected error occurred.",
+                variant: "destructive"
+            });
+            setIsConfirming(false);
+        }
     }
     
     const onDialogOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
         if (!isOpen) {
             // Reset state when dialog is closed
-            setStep('review');
-            setOtp('');
+            setTimeout(() => {
+                setStep('review');
+                setOtp('');
+            }, 300);
         }
     }
 
@@ -95,22 +177,27 @@ export function PaymentConfirmationDialog({
                         <span className="text-muted-foreground">You send:</span>
                         <span className="font-semibold">{transactionDetails.sendAmount} {transactionDetails.sendCurrency}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Recipient gets:</span>
-                        <span className="font-semibold">{transactionDetails.recipientGets} {transactionDetails.recipientCurrency}</span>
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">Fee:</span>
+                        <span className="font-semibold">{feeAmount.toFixed(2)} {transactionDetails.sendCurrency}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Recipient:</span>
-                        <span className="font-semibold">{transactionDetails.recipientName}</span>
+                     <div className="flex justify-between font-bold border-t pt-2 mt-2">
+                        <span className="text-muted-foreground">Total to be debited:</span>
+                        <span>{totalDeducted.toFixed(2)} {transactionDetails.sendCurrency}</span>
                     </div>
-                    <div className="pt-2 border-t mt-2">
+
+                    <div className="pt-4 space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Recipient gets:</span>
+                            <span className="font-semibold">{transactionDetails.recipientGets} {transactionDetails.recipientCurrency}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Recipient:</span>
+                            <span className="font-semibold">{transactionDetails.recipientName}</span>
+                        </div>
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Exchange rate:</span>
                             <span>{transactionDetails.exchangeRate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Fee:</span>
-                            <span>{transactionDetails.fee}</span>
                         </div>
                     </div>
                 </div>

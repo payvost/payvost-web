@@ -29,6 +29,7 @@ export interface CustomerData {
   id: string;
   name: string;
   email: string;
+  photoURL?: string;
   phone: string;
   country: string;
   countryCode: string;

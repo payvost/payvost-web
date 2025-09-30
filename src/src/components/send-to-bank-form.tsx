@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -11,12 +12,22 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+const countryBankData: Record<string, string[]> = {
+    USA: ['Chase Bank', 'Bank of America', 'Wells Fargo'],
+    NGA: ['Guaranty Trust Bank', 'Zenith Bank', 'Access Bank'],
+    GBR: ['Barclays', 'HSBC', 'Lloyds Bank'],
+    GHA: ['GCB Bank', 'Ecobank Ghana', 'Fidelity Bank'],
+};
+
 export function SendToBankForm() {
+    const [selectedCountry, setSelectedCountry] = useState('');
+    const banks = selectedCountry ? countryBankData[selectedCountry] : [];
+
     return (
         <div className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="country">Recipient's Country</Label>
-                <Select>
+                <Select onValueChange={setSelectedCountry}>
                     <SelectTrigger id="country">
                         <SelectValue placeholder="Select a country" />
                     </SelectTrigger>
@@ -30,7 +41,16 @@ export function SendToBankForm() {
             </div>
             <div className="space-y-2">
                 <Label htmlFor="bank">Bank</Label>
-                <Input id="bank" placeholder="e.g. Guaranty Trust Bank" />
+                 <Select disabled={!selectedCountry}>
+                    <SelectTrigger id="bank">
+                        <SelectValue placeholder={selectedCountry ? "Select a bank" : "Select a country first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {banks.map(bank => (
+                            <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="account-number">Account Number</Label>
