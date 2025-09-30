@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -27,38 +27,67 @@ import { FundWalletDialog } from '@/components/fund-wallet-dialog';
 import { CurrencyExchangeDialog } from '@/components/currency-exchange-dialog';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CreateWalletDialog } from '@/components/create-wallet-dialog';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Placeholder data - in a real app, this would come from an API
-const wallets = [
-  { currency: 'USD', name: 'US Dollar', balance: 1250.75, flag: 'us', rate: 1 },
-  { currency: 'EUR', name: 'Euro', balance: 2500.50, flag: 'eu', rate: 1.08 },
-  { currency: 'GBP', name: 'British Pound', balance: 850.00, flag: 'gb', rate: 1.27 },
-  { currency: 'NGN', name: 'Nigerian Naira', balance: 1850000.00, flag: 'ng', rate: 0.00067 },
-  { currency: 'JPY', name: 'Japanese Yen', balance: 150000, flag: 'jp', rate: 0.0064 },
-  { currency: 'CAD', name: 'Canadian Dollar', balance: 1500.00, flag: 'ca', rate: 0.73 },
-  { currency: 'AUD', name: 'Australian Dollar', balance: 950.00, flag: 'au', rate: 0.66 },
-  { currency: 'GHS', name: 'Ghanaian Cedi', balance: 12500.00, flag: 'gh', rate: 0.067 },
-];
-
-const transactions = [
+// Placeholder data for recent transactions
+const initialTransactions = [
     { id: 'txn_1', type: 'Credit', currency: 'USD', amount: 500, date: '2024-08-15', description: 'From J. Smith' },
     { id: 'txn_2', type: 'Debit', currency: 'USD', amount: -50, date: '2024-08-14', description: 'Netflix Subscription' },
     { id: 'txn_3', type: 'Credit', currency: 'NGN', amount: 50000, date: '2024-08-13', description: 'From A. Adebayo' },
     { id: 'txn_4', type: 'Debit', currency: 'EUR', amount: -100, date: '2024-08-12', description: 'Amazon.de Purchase' },
 ];
 
+// Mock rates for demonstration
+const rates: Record<string, number> = {
+  USD: 1,
+  EUR: 1.08,
+  GBP: 1.27,
+  NGN: 0.00067,
+  JPY: 0.0064,
+  CAD: 0.73,
+  AUD: 0.66,
+  GHS: 0.067,
+};
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [selectedWallet, setSelectedWallet] = useState<(typeof wallets)[0] | null>(null);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [transactions, setTransactions] = useState(initialTransactions);
 
-  
+  useEffect(() => {
+    if (!user) {
+        if (!authLoading) setLoadingWallets(false);
+        return;
+    };
+
+    // In a real app, you would fetch transactions here as well.
+    // For now, we use the initialTransactions.
+    // To test the empty state, you can temporarily set:
+    // setTransactions([]);
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists()) {
+            setWallets(doc.data().wallets || []);
+        }
+        setLoadingWallets(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading]);
+
   const totalBalanceUSD = wallets.reduce((acc, wallet) => {
-    return acc + (wallet.balance * wallet.rate);
+    const rate = rates[wallet.currency] || 0;
+    return acc + (wallet.balance * rate);
   }, 0);
 
   const primaryWallet = wallets.find(w => w.currency === 'USD') || wallets[0];
-  const otherWallets = wallets.filter(w => w.currency !== primaryWallet.currency);
+  const otherWallets = primaryWallet ? wallets.filter(w => w.currency !== primaryWallet.currency) : [];
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -69,16 +98,47 @@ export default function WalletsPage() {
     }).format(amount);
   };
 
+  const handleWalletCreated = () => {
+    // Real-time listener will update the state automatically
+    console.log('A new wallet was created, the list will refresh.');
+  };
+
+  const isLoading = authLoading || loadingWallets;
+
+  if (isLoading) {
+    return (
+        <DashboardLayout language={language} setLanguage={setLanguage}>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                 <div className="flex items-center justify-between">
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-10 w-36" />
+                </div>
+                <Skeleton className="h-24 w-full" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <div className="lg:col-span-1 space-y-6">
+                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-80 w-full" />
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Skeleton className="h-[450px] w-full" />
+                    </div>
+                </div>
+            </main>
+        </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">My Wallets</h1>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New Wallet
-          </Button>
+          <CreateWalletDialog onWalletCreated={handleWalletCreated}>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add New Wallet
+            </Button>
+          </CreateWalletDialog>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -94,6 +154,17 @@ export default function WalletsPage() {
             </Card>
         </div>
 
+        {wallets.length === 0 ? (
+            <Card>
+                <CardContent className="h-96 flex flex-col items-center justify-center text-center">
+                    <h3 className="text-2xl font-bold tracking-tight">You haven't created any wallets yet.</h3>
+                    <p className="text-sm text-muted-foreground mt-2 mb-6">Click the button below to add your first currency wallet.</p>
+                    <CreateWalletDialog onWalletCreated={handleWalletCreated}>
+                        <Button><PlusCircle className="mr-2 h-4 w-4"/>Create Your First Wallet</Button>
+                    </CreateWalletDialog>
+                </CardContent>
+            </Card>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="lg:col-span-1 space-y-6">
                  <Card className="bg-primary text-primary-foreground">
@@ -172,31 +243,37 @@ export default function WalletsPage() {
                         <CardDescription>Latest transactions across all your wallets.</CardDescription>
                     </CardHeader>
                      <CardContent>
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {transactions.map(tx => (
-                                <TableRow key={tx.id}>
-                                    <TableCell className="text-muted-foreground text-xs">{tx.date}</TableCell>
-                                    <TableCell>
-                                        <div className="font-medium">{tx.description}</div>
-                                        <div className="text-xs text-muted-foreground">{tx.type}</div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono">
-                                        <span className={tx.type === 'Credit' ? 'text-green-500' : 'text-destructive'}>
-                                            {formatCurrency(tx.amount, tx.currency)}
-                                        </span>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                        </Table>
+                        {transactions.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {transactions.map(tx => (
+                                        <TableRow key={tx.id}>
+                                            <TableCell className="text-muted-foreground text-xs">{tx.date}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{tx.description}</div>
+                                                <div className="text-xs text-muted-foreground">{tx.type}</div>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono">
+                                                <span className={tx.type === 'Credit' ? 'text-green-500' : 'text-destructive'}>
+                                                    {formatCurrency(tx.amount, tx.currency)}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-16">
+                                <p>No Recent Activity Yet</p>
+                            </div>
+                        )}
                     </CardContent>
                     <CardFooter>
                         <Button variant="outline" className="w-full">View All Transactions</Button>
@@ -204,7 +281,7 @@ export default function WalletsPage() {
                 </Card>
             </div>
         </div>
-
+        )}
       </main>
     </DashboardLayout>
   );
