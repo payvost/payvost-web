@@ -31,9 +31,16 @@ const statusConfig = {
 // A small component to render time only on the client
 function ClientTime({ dateString }: { dateString: string }) {
     const [time, setTime] = React.useState('');
+    const [isMounted, setIsMounted] = React.useState(false);
+
     React.useEffect(() => {
+        setIsMounted(true);
         setTime(new Date(dateString).toLocaleTimeString());
     }, [dateString]);
+
+    if (!isMounted) {
+        return null;
+    }
 
     return <>{time}</>;
 }

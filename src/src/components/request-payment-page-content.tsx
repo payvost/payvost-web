@@ -1,9 +1,6 @@
 
 'use client';
 
-export const dynamic = "force-dynamic";
-
-
 import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -302,7 +299,7 @@ function PaymentLinkTab() {
   );
 }
 
-export default function RequestPaymentPage() {
+export default function RequestPaymentPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'payment-link';
