@@ -1,6 +1,9 @@
 
 'use client';
 
+export const dynamic = "force-dynamic";
+
+
 import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
