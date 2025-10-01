@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -114,6 +114,9 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     }
     if (href === '/dashboard/escrow') {
         return pathname.startsWith('/dashboard/escrow');
+    }
+     if (href === '/dashboard/notifications') {
+        return pathname.startsWith('/dashboard/notifications');
     }
     return pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
   }

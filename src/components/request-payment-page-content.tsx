@@ -37,6 +37,7 @@ function PaymentLinkTab() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const [currency, setCurrency] = useState('USD');
 
   useEffect(() => {
     if (!user) {
@@ -75,13 +76,12 @@ function PaymentLinkTab() {
     const amount = (form as any).amount.value;
     const description = (form as any).description.value;
     const payerEmail = (form as any)['payer-email'].value;
-    const currency = (form as any).currency.value;
 
     const newRequestData = {
         to: payerEmail || 'No email (Link)',
         amount: `${currency} ${amount}`,
         description,
-        status: 'Pending',
+        status: 'Active',
         date: new Date().toISOString().split('T')[0],
         createdAt: Timestamp.now(),
         userId: user.uid,
@@ -127,6 +127,7 @@ function PaymentLinkTab() {
       }
 
       form.reset();
+      setCurrency('USD');
       setGeneratedLink(link);
     } catch (err) {
       console.error('Error saving request:', err);
@@ -167,7 +168,7 @@ function PaymentLinkTab() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>
-                  <Select name="currency" defaultValue="USD">
+                  <Select name="currency" value={currency} onValueChange={setCurrency}>
                     <SelectTrigger id="currency">
                       <SelectValue />
                     </SelectTrigger>
@@ -265,7 +266,7 @@ function PaymentLinkTab() {
                             variant={
                             req.status === 'Paid'
                                 ? 'default'
-                                : req.status === 'Pending'
+                                : req.status === 'Pending' || req.status === 'Active'
                                 ? 'secondary'
                                 : 'destructive'
                             }
@@ -315,7 +316,7 @@ export default function RequestPaymentPageContent() {
     if (view === 'create') {
       return <CreateInvoicePage onBack={() => setView('list')} />;
     }
-    return <InvoiceTab onFabClick={() => setView('create')} />;
+    return <InvoiceTab onCreateClick={() => setView('create')} />;
   };
 
   return (
@@ -374,6 +375,7 @@ export default function RequestPaymentPageContent() {
           <TabsContent value="donations">
             <DonationsTab />
           </TabsContent>
+
         </Tabs>
       </main>
     </DashboardLayout>

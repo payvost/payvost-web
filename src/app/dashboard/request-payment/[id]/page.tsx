@@ -2,45 +2,75 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { useParams, useRouter } from 'next/navigation';
+import { doc, onSnapshot, DocumentData, collection, query, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BarChart2, CheckCircle, Copy, Eye, Users, FileDown } from 'lucide-react';
+import { ArrowLeft, BarChart2, CheckCircle, Copy, Eye, Users, FileDown, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LinkAnalyticsChart } from '@/components/link-analytics-chart';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { useToast } from '@/hooks/use-toast';
-
-const recentPayments = [
-    { id: 'txn_1', customer: 'liam@example.com', amount: 50.00, date: '2024-08-15' },
-    { id: 'txn_2', customer: 'olivia@example.com', amount: 50.00, date: '2024-08-15' },
-];
+import { format } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function PaymentLinkDetailsPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
     const params = useParams();
+    const router = useRouter();
     const id = params.id as string;
     const [linkDetails, setLinkDetails] = useState<DocumentData | null>(null);
+    const [payments, setPayments] = useState<DocumentData[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
         if (!id) return;
 
-        const unsub = onSnapshot(doc(db, "paymentRequests", id), (doc) => {
+        const linkUnsub = onSnapshot(doc(db, "paymentRequests", id), (doc) => {
             if (doc.exists()) {
-                setLinkDetails({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                if (data.status === 'Deleted') {
+                    setRequest(null);
+                } else {
+                    setLinkDetails({ id: doc.id, ...data });
+                }
+            } else {
+                setLinkDetails(null);
             }
             setLoading(false);
         });
 
-        return () => unsub();
+        const paymentsQuery = query(collection(db, "paymentRequests", id, "payments"), orderBy("createdAt", "desc"));
+        const paymentsUnsub = onSnapshot(paymentsQuery, (snapshot) => {
+            const fetchedPayments: DocumentData[] = [];
+            snapshot.forEach((doc) => {
+                fetchedPayments.push({ id: doc.id, ...doc.data() });
+            });
+            setPayments(fetchedPayments);
+        });
+
+        return () => {
+            linkUnsub();
+            paymentsUnsub();
+        };
     }, [id]);
 
     const copyLink = (link: string) => {
@@ -50,6 +80,39 @@ export default function PaymentLinkDetailsPage() {
           description: 'The payment link has been copied.',
         });
     };
+    
+    const handleDeactivate = async () => {
+        if (!id) return;
+        try {
+            const docRef = doc(db, 'paymentRequests', id);
+            await updateDoc(docRef, {
+                status: linkDetails?.status === 'Active' ? 'Inactive' : 'Active',
+            });
+            toast({
+                title: 'Status Updated',
+                description: `The payment link is now ${linkDetails?.status === 'Active' ? 'Inactive' : 'Active'}.`,
+            });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Could not update link status.', variant: 'destructive'});
+        }
+    }
+    
+    const handleDelete = async () => {
+        if (!id) return;
+        try {
+            const docRef = doc(db, 'paymentRequests', id);
+            await deleteDoc(docRef);
+            toast({
+                title: 'Link Deleted',
+                description: 'The payment link has been permanently deleted.',
+            });
+            router.push('/dashboard/request-payment');
+        } catch (error) {
+             toast({ title: 'Error', description: 'Could not delete the link.', variant: 'destructive'});
+        } finally {
+            setShowDeleteDialog(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -85,6 +148,8 @@ export default function PaymentLinkDetailsPage() {
         )
     }
 
+    const totalRevenue = payments.filter(p => p.status === 'Completed').reduce((sum, p) => sum + p.amount, 0);
+
     return (
         <DashboardLayout language={language} setLanguage={setLanguage}>
             <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -98,14 +163,44 @@ export default function PaymentLinkDetailsPage() {
                         <div>
                             <h1 className="text-lg font-semibold md:text-2xl">{linkDetails.description}</h1>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Badge variant={linkDetails.status === 'Paid' ? 'default' : 'secondary'}>{linkDetails.status}</Badge>
+                                <Badge variant={linkDetails.status === 'Paid' || linkDetails.status === 'Active' ? 'default' : 'secondary'}>{linkDetails.status}</Badge>
                                 <span>ID: {linkDetails.id}</span>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline">Deactivate Link</Button>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline">
+                                    {linkDetails.status === 'Active' ? 'Deactivate Link' : 'Activate Link'}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will {linkDetails.status === 'Active' ? 'deactivate' : 'activate'} the payment link. 
+                                        {linkDetails.status === 'Active' ? ' Users will no longer be able to make payments.' : ' Users will be able to make payments again.'}
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeactivate}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                         <Button>Edit Link</Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                            </DropdownMenuTrigger>
+                             <DropdownMenuContent align="end">
+                                <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/>Edit Campaign</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); setShowDeleteDialog(true);}}>
+                                    <Trash2 className="mr-2 h-4 w-4"/>Delete
+                                </DropdownMenuItem>
+                             </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
                 
@@ -126,7 +221,9 @@ export default function PaymentLinkDetailsPage() {
                             <BarChart2 className="h-4 w-4 text-muted-foreground"/>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">$0.00</div>
+                            <div className="text-2xl font-bold">
+                                {linkDetails.currency ? new Intl.NumberFormat('en-US', { style: 'currency', currency: linkDetails.currency }).format(totalRevenue) : totalRevenue.toFixed(2)}
+                            </div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -135,7 +232,7 @@ export default function PaymentLinkDetailsPage() {
                             <Eye className="h-4 w-4 text-muted-foreground"/>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">0</div>
+                            <div className="text-2xl font-bold">{linkDetails.views || 0}</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -144,7 +241,7 @@ export default function PaymentLinkDetailsPage() {
                             <CheckCircle className="h-4 w-4 text-muted-foreground"/>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">0</div>
+                            <div className="text-2xl font-bold">{payments.filter(p => p.status === 'Completed').length}</div>
                         </CardContent>
                     </Card>
                 </div>
@@ -172,7 +269,7 @@ export default function PaymentLinkDetailsPage() {
                                     <p className="font-medium">Page Views</p>
                                     <p className="text-sm text-muted-foreground">The link was viewed.</p>
                                 </div>
-                                <p className="font-bold text-lg">0</p>
+                                <p className="font-bold text-lg">{linkDetails.views || 0}</p>
                             </div>
                              <div className="flex items-center">
                                 <Users className="h-6 w-6 text-muted-foreground mr-4"/>
@@ -180,7 +277,7 @@ export default function PaymentLinkDetailsPage() {
                                     <p className="font-medium">Payments Initiated</p>
                                     <p className="text-sm text-muted-foreground">The payment form was submitted.</p>
                                 </div>
-                                <p className="font-bold text-lg">0</p>
+                                <p className="font-bold text-lg">{payments.length}</p>
                             </div>
                              <div className="flex items-center">
                                 <CheckCircle className="h-6 w-6 text-green-500 mr-4"/>
@@ -188,7 +285,7 @@ export default function PaymentLinkDetailsPage() {
                                     <p className="font-medium">Payments Successful</p>
                                     <p className="text-sm text-muted-foreground">Payment was successfully captured.</p>
                                 </div>
-                                <p className="font-bold text-lg">0</p>
+                                <p className="font-bold text-lg">{payments.filter(p => p.status === 'Completed').length}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -208,22 +305,53 @@ export default function PaymentLinkDetailsPage() {
                                 <TableRow>
                                     <TableHead>Customer</TableHead>
                                     <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {recentPayments.map(p => (
-                                    <TableRow key={p.id}>
-                                        <TableCell className="font-medium">{p.customer}</TableCell>
-                                        <TableCell>{p.date}</TableCell>
-                                        <TableCell className="text-right font-mono">${p.amount.toFixed(2)}</TableCell>
+                               {payments.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="h-24 text-center">No payments received yet.</TableCell>
                                     </TableRow>
-                                ))}
+                               ) : (
+                                payments.map(p => (
+                                    <TableRow key={p.id}>
+                                        <TableCell className="font-medium">{p.payerEmail}</TableCell>
+                                        <TableCell>{format(p.createdAt.toDate(), 'PPP')}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={p.status === 'Completed' ? 'default' : p.status === 'Pending Verification' ? 'secondary' : 'destructive'}>
+                                                {p.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                            {linkDetails.currency ? new Intl.NumberFormat('en-US', { style: 'currency', currency: linkDetails.currency }).format(p.amount) : p.amount.toFixed(2)}
+                                        </TableCell>
+                                    </TableRow>
+                                )))}
                             </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
+
+                 <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this payment link and all of its data.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
             </main>
         </DashboardLayout>
     );
 }
+
+    
