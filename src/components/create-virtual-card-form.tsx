@@ -4,7 +4,7 @@
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
+import { Card, CardContent, CardFooter } from './ui/card';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -13,10 +13,12 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { VirtualCardData } from '@/types/virtual-card';
 import { DollarSign } from 'lucide-react';
+import { Separator } from './ui/separator';
 
 
 const createCardSchema = z.object({
   cardLabel: z.string().min(3, 'Card label must be at least 3 characters'),
+  cardModel: z.enum(['debit', 'credit']),
   cardType: z.enum(['visa', 'mastercard']),
   theme: z.enum(['blue', 'purple', 'green', 'black']),
   spendingLimit: z.object({
@@ -38,7 +40,7 @@ const themes = [
 ];
 
 interface CreateVirtualCardFormProps {
-    onSubmit: (data: CreateCardFormValues) => void;
+    onSubmit: (data: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions' | 'last4' | 'expiry' | 'cvv'>) => void;
     onCancel: () => void;
 }
 
@@ -47,6 +49,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
     resolver: zodResolver(createCardSchema),
     defaultValues: {
       cardLabel: '',
+      cardModel: 'debit',
       cardType: 'visa',
       theme: 'blue',
       spendingLimit: {
@@ -65,6 +68,22 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
             <Input id="cardLabel" {...register('cardLabel')} placeholder="e.g., Online Subscriptions" />
             {errors.cardLabel && <p className="text-sm text-destructive">{errors.cardLabel.message}</p>}
           </div>
+
+           <div className="space-y-2">
+            <Label>Card Model</Label>
+             <Controller
+                name="cardModel"
+                control={control}
+                render={({ field }) => (
+                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4">
+                       <div><RadioGroupItem value="debit" id="debit" className="peer sr-only" /><Label htmlFor="debit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Debit</Label></div>
+                       <div><RadioGroupItem value="credit" id="credit" className="peer sr-only" /><Label htmlFor="credit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Credit</Label></div>
+                    </RadioGroup>
+                )}
+            />
+          </div>
+
+          <Separator />
 
           <div className="space-y-2">
             <Label>Card Network</Label>

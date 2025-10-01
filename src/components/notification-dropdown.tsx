@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from "react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,37 +13,25 @@ import {
   import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./ui/card";
   import { ScrollArea } from "./ui/scroll-area";
   import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+  import { useAuth } from "@/hooks/use-auth";
+  import { db } from "@/lib/firebase";
+  import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch, getDocs, where } from "firebase/firestore";
+  import { Skeleton } from "./ui/skeleton";
   
-  const notifications = [
-    {
-      icon: <Gift className="h-5 w-5 text-primary" />,
-      title: "You've got a reward!",
-      description: "You have received a $10 bonus for your recent activity.",
-      date: new Date(),
-      read: false,
-    },
-    {
-      icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
-      title: "Security Alert",
-      description: "A new device has logged into your account from an unknown location.",
-      date: new Date(),
-      read: false,
-    },
-    {
-      icon: <CheckCheck className="h-5 w-5 text-green-500" />,
-      title: "Transfer Complete",
-      description: "Your transfer of $250 to John Doe has been successfully completed.",
-      date: new Date(new Date().setDate(new Date().getDate() - 1)),
-      read: true,
-    },
-     {
-      icon: <CheckCheck className="h-5 w-5 text-green-500" />,
-      title: "Transfer Complete",
-      description: "Your transfer of $500 to Jane Smith has been successfully completed.",
-      date: new Date(new Date().setDate(new Date().getDate() - 2)),
-      read: true,
-    },
-  ];
+  interface Notification {
+    id: string;
+    icon: string;
+    title: string;
+    description: string;
+    date: Date;
+    read: boolean;
+  }
+  
+  const iconMap: { [key: string]: React.ReactNode } = {
+    gift: <Gift className="h-5 w-5 text-primary" />,
+    alert: <AlertTriangle className="h-5 w-5 text-destructive" />,
+    success: <CheckCheck className="h-5 w-5 text-green-500" />,
+  };
 
   function formatTimeAgo(date: Date) {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -60,15 +49,53 @@ import {
   }
 
 export function NotificationDropdown() {
+    const { user } = useAuth();
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const q = query(collection(db, "users", user.uid, "notifications"), orderBy("date", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedNotifications = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                date: doc.data().date.toDate(),
+            })) as Notification[];
+            setNotifications(fetchedNotifications);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const markAllAsRead = async () => {
+        if (!user) return;
+        const unreadNotifications = notifications.filter(n => !n.read);
+        if (unreadNotifications.length === 0) return;
+
+        const batch = writeBatch(db);
+        unreadNotifications.forEach(n => {
+            const notifRef = doc(db, "users", user.uid, "notifications", n.id);
+            batch.update(notifRef, { read: true });
+        });
+        await batch.commit();
+    };
+
+
     const unreadCount = notifications.filter(n => !n.read).length;
     const newNotifications = notifications.filter(n => !n.read);
     const earlierNotifications = notifications.filter(n => n.read);
 
     const renderNotificationList = (list: typeof notifications) => (
         <div className="divide-y divide-border">
-            {list.map((notification, index) => (
-                <div key={index} className="flex items-start gap-4 p-4 hover:bg-muted/50 cursor-pointer">
-                    <div className="mt-1">{notification.icon}</div>
+            {list.map((notification) => (
+                <div key={notification.id} className="flex items-start gap-4 p-4 hover:bg-muted/50 cursor-pointer">
+                    <div className="mt-1">{iconMap[notification.icon] || <Bell className="h-5 w-5"/>}</div>
                     <div className="flex-1">
                         <p className="font-semibold text-sm">{notification.title}</p>
                         <p className="text-xs text-muted-foreground">{notification.description}</p>
@@ -106,32 +133,46 @@ export function NotificationDropdown() {
                             <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
                         </TabsList>
                         <ScrollArea className="h-80">
-                            <TabsContent value="all">
-                                {newNotifications.length > 0 && (
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground px-4 py-2">New</h4>
-                                        {renderNotificationList(newNotifications)}
-                                    </div>
-                                )}
-                                {earlierNotifications.length > 0 && (
-                                    <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground px-4 py-2">Earlier</h4>
-                                        {renderNotificationList(earlierNotifications)}
-                                    </div>
-                                )}
-                            </TabsContent>
-                             <TabsContent value="unread">
-                                {newNotifications.length > 0 ? renderNotificationList(newNotifications) : (
-                                    <div className="text-center text-muted-foreground py-16">
-                                        <p>You're all caught up!</p>
-                                    </div>
-                                )}
-                             </TabsContent>
+                            {loading ? (
+                                <div className="p-4 space-y-4">
+                                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+                                </div>
+                            ) : (
+                                <>
+                                <TabsContent value="all">
+                                    {notifications.length === 0 ? (
+                                        <div className="text-center text-muted-foreground py-16"><p>No notifications yet.</p></div>
+                                    ) : (
+                                        <>
+                                            {newNotifications.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-muted-foreground px-4 py-2">New</h4>
+                                                    {renderNotificationList(newNotifications)}
+                                                </div>
+                                            )}
+                                            {earlierNotifications.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-muted-foreground px-4 py-2">Earlier</h4>
+                                                    {renderNotificationList(earlierNotifications)}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </TabsContent>
+                                <TabsContent value="unread">
+                                    {newNotifications.length > 0 ? renderNotificationList(newNotifications) : (
+                                        <div className="text-center text-muted-foreground py-16">
+                                            <p>You're all caught up!</p>
+                                        </div>
+                                    )}
+                                </TabsContent>
+                                </>
+                            )}
                         </ScrollArea>
                     </Tabs>
                 </CardContent>
                 <CardFooter className="border-t p-2">
-                    <Button size="sm" className="w-full" variant="ghost">
+                    <Button size="sm" className="w-full" variant="ghost" onClick={markAllAsRead} disabled={unreadCount === 0}>
                         <CheckCheck className="mr-2 h-4 w-4" />
                         Mark all as read
                     </Button>

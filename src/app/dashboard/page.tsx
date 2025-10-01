@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit } from 'firebase/firestore';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -31,19 +31,9 @@ const TransactionChart = dynamic(() => import('@/components/transaction-chart').
     loading: () => <Skeleton className="h-[250px]" />,
 });
 
-
-const sampleInvoices = [
-  { id: 'INV-1235', client: 'Stark Industries', amount: '$10,000.00', status: 'Pending' },
-  { id: 'INV-1236', client: 'Wayne Enterprises', amount: '$5,250.75', status: 'Overdue' },
-  { id: 'INV-1234', client: 'Acme Inc.', amount: '$2,500.00', status: 'Paid' },
-  { id: 'INV-1239', client: 'Gekko & Co', amount: '$8,750.00', status: 'Pending' },
-];
-
-const spendingData = [
-    { category: 'Transfers', amount: 850, total: 1585, icon: <ArrowRightLeft className="h-5 w-5 text-primary" /> },
-    { category: 'Bill Payments', amount: 85, total: 1585, icon: <Smartphone className="h-5 w-5 text-primary" /> },
-    { category: 'Card Spending', amount: 450, total: 1585, icon: <ShoppingCart className="h-5 w-5 text-primary" /> },
-    { category: 'Gift Cards', amount: 200, total: 1585, icon: <CreditCard className="h-5 w-5 text-primary" /> },
+const defaultSpendingData = [
+    { category: 'Transfers', amount: 0, total: 1, icon: <ArrowRightLeft className="h-5 w-5 text-primary" /> },
+    { category: 'Bill Payments', amount: 0, total: 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
 ];
 
 const kpiCards = [
@@ -59,36 +49,139 @@ interface GreetingState {
   icon: React.ReactNode;
 }
 
+interface MonthlyData {
+    month: string;
+    income: number;
+    expense: number;
+}
+
 export default function DashboardPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);
-  const [isKycVerified, setIsKycVerified] = useState(false);
+  const [isKycVerified, setIsKycVerified] = useState(true); // Default to true to avoid flash of banner
   const [greeting, setGreeting] = useState<GreetingState | null>(null);
+  const [chartData, setChartData] = useState<MonthlyData[]>([]);
+  const [spendingData, setSpendingData] = useState(defaultSpendingData);
+  const [hasTransactionData, setHasTransactionData] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
-  const hasTransactionData = true; // Placeholder
+
+  const processTransactionsForSpending = (transactions: any[]) => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+
+    const monthlySpending = transactions
+        .filter(tx => {
+            const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.date);
+            return tx.type !== 'inflow' && txDate.getMonth() === thisMonth && txDate.getFullYear() === thisYear;
+        })
+        .reduce((acc, tx) => {
+            const category = tx.type === 'Transfer' ? 'Transfers' : 'Bill Payments';
+            const amount = parseFloat(tx.sendAmount || tx.amount || '0');
+            acc[category] = (acc[category] || 0) + amount;
+            return acc;
+        }, {} as Record<string, number>);
+
+    const totalSpent = Object.values(monthlySpending).reduce((sum, amount) => sum + amount, 0);
+
+    const newSpendingData = [
+        { category: 'Transfers', amount: monthlySpending['Transfers'] || 0, total: totalSpent || 1, icon: <ArrowRightLeft className="h-5 w-5 text-primary" /> },
+        { category: 'Bill Payments', amount: monthlySpending['Bill Payments'] || 0, total: totalSpent || 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
+    ];
+    setSpendingData(newSpendingData);
+  }
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       setLoadingWallets(false);
+      setLoadingInvoices(false);
       return;
     }
 
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubUser = onSnapshot(userDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
         setWallets(data.wallets || []);
         setIsKycVerified(data.kycStatus === 'Verified');
+
+        const transactions = data.transactions || [];
+        if (transactions.length > 0) {
+            setHasTransactionData(true);
+            const monthlySummary = processTransactionsForChart(transactions);
+            setChartData(monthlySummary);
+            processTransactionsForSpending(transactions);
+        } else {
+            setHasTransactionData(false);
+            setChartData([]);
+            setSpendingData(defaultSpendingData);
+        }
       }
       setLoadingWallets(false);
     });
+    
+    const invoicesQuery = query(collection(userDocRef, "invoices"), orderBy("createdAt", "desc"), limit(4));
+    const unsubInvoices = onSnapshot(invoicesQuery, (snapshot) => {
+        const fetchedInvoices: any[] = [];
+        snapshot.forEach(doc => {
+            fetchedInvoices.push({ id: doc.id, ...doc.data() });
+        });
+        setInvoices(fetchedInvoices);
+        setLoadingInvoices(false);
+    });
 
-    return () => unsub();
+    return () => {
+        unsubUser();
+        unsubInvoices();
+    };
   }, [user, authLoading]);
+
+  const processTransactionsForChart = (transactions: any[]): MonthlyData[] => {
+        const now = new Date();
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        
+        const monthlyData: { [key: string]: { income: number; expense: number } } = {};
+
+        // Initialize last 6 months
+        for (let i = 0; i < 6; i++) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+            monthlyData[monthKey] = { income: 0, expense: 0 };
+        }
+
+        transactions.forEach(tx => {
+            const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.date);
+            if (txDate >= sixMonthsAgo) {
+                const monthKey = `${txDate.getFullYear()}-${txDate.getMonth()}`;
+                const amount = parseFloat(tx.sendAmount || tx.amount || '0');
+                if (tx.type === 'inflow') {
+                    monthlyData[monthKey].income += amount;
+                } else if (tx.type === 'outflow' || tx.type === 'Transfer' || tx.type === 'Bill Payment') {
+                    monthlyData[monthKey].expense += amount;
+                }
+            }
+        });
+
+        const chartData = Object.keys(monthlyData).map(key => {
+            const [year, month] = key.split('-').map(Number);
+            return {
+                month: monthNames[month],
+                income: monthlyData[key].income,
+                expense: monthlyData[key].expense,
+                date: new Date(year, month)
+            };
+        }).sort((a, b) => a.date.getTime() - b.date.getTime());
+
+        return chartData;
+  };
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -195,7 +288,7 @@ export default function DashboardPage() {
             </h1>
         </div>
 
-        {!isKycVerified && <KycNotification onDismiss={() => setIsKycVerified(true)} />}
+        {!isKycVerified && !isLoading && <KycNotification onDismiss={() => setIsKycVerified(true)} />}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {isLoading ? (
@@ -205,7 +298,7 @@ export default function DashboardPage() {
               ) : renderWalletCards()}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8 items-start">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
             <div className="lg:col-span-4 space-y-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -225,11 +318,11 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="pl-2">
                       {hasTransactionData ? (
-                        <TransactionChart />
+                        <TransactionChart data={chartData} />
                       ) : (
                         <div className="h-[250px] flex flex-col items-center justify-center text-center">
-                            <p className="text-muted-foreground">No data for now.</p>
-                            <p className="text-sm text-muted-foreground">Check back later once you've made some transactions.</p>
+                            <p className="text-muted-foreground">We are still propagating your data.</p>
+                            <p className="text-sm text-muted-foreground">Your transaction chart will appear here once you have enough activity.</p>
                         </div>
                       )}
                     </CardContent>
@@ -242,7 +335,7 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8 items-start">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
             <div className="lg:col-span-4 space-y-6">
                 <Card>
                     <CardHeader>
@@ -258,7 +351,7 @@ export default function DashboardPage() {
                                         <p className="text-sm font-medium">{item.category}</p>
                                         <p className="text-sm font-mono">${item.amount.toFixed(2)}</p>
                                     </div>
-                                    <Progress value={(item.amount / item.total) * 100} className="h-2" />
+                                    <Progress value={item.total > 0 ? (item.amount / item.total) * 100 : 0} className="h-2" />
                                 </div>
                             </div>
                         ))}
@@ -282,42 +375,52 @@ export default function DashboardPage() {
                         </Button>
                     </CardHeader>
                     <CardContent>
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Client</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                    <TableHead className="text-right">Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sampleInvoices.map((invoice) => (
-                                    <TableRow key={invoice.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{invoice.client}</div>
-                                            <div className="text-sm text-muted-foreground hidden md:inline">{invoice.id}</div>
-                                        </TableCell>
-                                        <TableCell className="text-right">{invoice.amount}</TableCell>
-                                        <TableCell className="text-right">
-                                             <Badge 
-                                                variant={
-                                                invoice.status === 'Paid' ? 'default' : 
-                                                invoice.status === 'Pending' ? 'secondary' : 'destructive'
-                                                }
-                                                className="capitalize"
-                                            >
-                                                {invoice.status}
-                                            </Badge>
-                                        </TableCell>
+                         {loadingInvoices ? (
+                            <div className="space-y-2">
+                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                            </div>
+                         ) : invoices.length === 0 ? (
+                            <div className="py-10 text-center text-muted-foreground text-sm">No recent invoices.</div>
+                         ) : (
+                             <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Client</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Status</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {invoices.map((invoice) => (
+                                        <TableRow key={invoice.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{invoice.toName}</div>
+                                                <div className="text-sm text-muted-foreground hidden md:inline">{invoice.invoiceNumber}</div>
+                                            </TableCell>
+                                            <TableCell className="text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge 
+                                                    variant={
+                                                    invoice.status === 'Paid' ? 'default' : 
+                                                    invoice.status === 'Pending' ? 'secondary' : 'destructive'
+                                                    }
+                                                    className="capitalize"
+                                                >
+                                                    {invoice.status}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                         )}
                     </CardContent>
                      <CardFooter className="justify-end">
-                         <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Create Invoice
+                         <Button asChild>
+                            <Link href="/dashboard/request-payment?tab=invoice&create=true">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Create Invoice
+                            </Link>
                         </Button>
                     </CardFooter>
                 </Card>
