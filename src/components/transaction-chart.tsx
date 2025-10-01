@@ -4,14 +4,13 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
-const chartData = [
-  { month: 'January', income: 1860, expense: 800 },
-  { month: 'February', income: 3050, expense: 2000 },
-  { month: 'March', income: 2370, expense: 1200 },
-  { month: 'April', income: 730, expense: 1900 },
-  { month: 'May', income: 2090, expense: 1300 },
-  { month: 'June', income: 2140, expense: 1100 },
-];
+interface TransactionChartProps {
+    data: {
+        month: string;
+        income: number;
+        expense: number;
+    }[];
+}
 
 const chartConfig = {
   income: {
@@ -24,11 +23,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function TransactionChart() {
+export function TransactionChart({ data }: TransactionChartProps) {
   return (
     <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
       <BarChart
-        data={chartData}
+        data={data}
         margin={{
             top: 20,
             right: 20,
@@ -42,7 +41,6 @@ export function TransactionChart() {
           tickLine={false}
           tickMargin={10}
           axisLine={false}
-          tickFormatter={(value) => value.slice(0, 3)}
         />
         <YAxis 
            tickLine={false}

@@ -1,136 +1,90 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ArrowLeft } from 'lucide-react';
+import { PlusCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { CreateVirtualCardForm } from '@/components/create-virtual-card-form';
 import { CardsTable } from '@/components/cards-table';
 import { CardDetails } from '@/components/card-details';
 import type { VirtualCardData } from '@/types/virtual-card';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
-
-const initialCards: VirtualCardData[] = [
-  {
-    id: 'vc_1',
-    cardLabel: 'Online Shopping',
-    last4: '4284',
-    cardType: 'visa',
-    expiry: '12/26',
-    cvv: '123',
-    balance: 250.75,
-    currency: 'USD',
-    theme: 'blue',
-    status: 'active',
-    fullNumber: '4012 3456 7890 4284',
-    transactions: [
-        { id: 'tx_1', description: 'Amazon.com', amount: -45.99, date: '2024-08-15' },
-        { id: 'tx_2', description: 'Netflix', amount: -15.49, date: '2024-08-10' },
-    ],
-    spendingLimit: { amount: 1000, interval: 'monthly' },
-    cardModel: 'debit',
-  },
-  {
-    id: 'vc_2',
-    cardLabel: 'Subscriptions',
-    last4: '8932',
-    cardType: 'mastercard',
-    expiry: '08/25',
-    cvv: '456',
-    balance: 50.20,
-    currency: 'USD',
-    theme: 'purple',
-    status: 'frozen',
-    fullNumber: '5123 4567 8901 8932',
-    transactions: [
-        { id: 'tx_3', description: 'Spotify', amount: -10.99, date: '2024-08-01' },
-    ],
-    spendingLimit: { amount: 100, interval: 'monthly' },
-    cardModel: 'debit',
-  },
-  {
-    id: 'vc_3',
-    cardLabel: 'Marketing Ads',
-    last4: '7766',
-    cardType: 'visa',
-    expiry: '11/27',
-    cvv: '789',
-    balance: -450.00, // Negative balance for credit cards represents amount owed
-    currency: 'USD',
-    theme: 'black',
-    status: 'active',
-    fullNumber: '4567 1234 5678 7766',
-    transactions: [
-        { id: 'tx_4', description: 'Google Ads', amount: -250.00, date: '2024-08-12' },
-        { id: 'tx_5', description: 'Facebook Ads', amount: -200.00, date: '2024-08-10' },
-    ],
-    spendingLimit: { amount: 2000, interval: 'monthly' },
-    cardModel: 'credit',
-    availableCredit: 1550.00,
-  },
-  {
-    id: 'vc_4',
-    cardLabel: 'European Trip',
-    last4: '3321',
-    cardType: 'mastercard',
-    expiry: '06/28',
-    cvv: '321',
-    balance: 850.50,
-    currency: 'EUR',
-    theme: 'green',
-    status: 'active',
-    fullNumber: '5555 1234 5678 3321',
-    transactions: [
-         { id: 'tx_6', description: 'Train Ticket', amount: -75.00, date: '2024-08-14' },
-    ],
-    spendingLimit: { amount: 2000, interval: 'all_time' },
-    cardModel: 'debit',
-  },
-   {
-    id: 'vc_5',
-    cardLabel: 'UK Expenses',
-    last4: '9876',
-    cardType: 'visa',
-    expiry: '09/25',
-    cvv: '654',
-    balance: -120.00,
-    currency: 'GBP',
-    theme: 'blue',
-    status: 'active',
-    fullNumber: '4000 5555 6666 9876',
-    transactions: [
-        { id: 'tx_7', description: 'Tesco', amount: -45.50, date: '2024-08-15' },
-        { id: 'tx_8', description: 'Transport for London', amount: -15.00, date: '2024-08-15' },
-    ],
-    spendingLimit: { amount: 1000, interval: 'monthly' },
-    cardModel: 'credit',
-    availableCredit: 880.00,
-  },
-];
 
 type View = 'list' | 'details' | 'create';
 
 export default function VirtualCardsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [cards, setCards] = useState<VirtualCardData[]>(initialCards);
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [cards, setCards] = useState<VirtualCardData[]>([]);
+  const [loadingCards, setLoadingCards] = useState(true);
   const [view, setView] = useState<View>('list');
   const [selectedCard, setSelectedCard] = useState<VirtualCardData | null>(null);
 
-  const handleCardCreated = (newCardData: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions'>) => {
+   useEffect(() => {
+    if (!user) {
+      if (!authLoading) setLoadingCards(false);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists()) {
+            setCards(doc.data().cards || []);
+        }
+        setLoadingCards(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading]);
+
+  const handleCardCreated = async (newCardData: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions' | 'last4' | 'expiry' | 'cvv'>) => {
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to create a card.", variant: "destructive" });
+        return;
+    }
+    
     const newCard: VirtualCardData = {
         ...newCardData,
         id: `vc_${Date.now()}`,
+        last4: Math.floor(1000 + Math.random() * 9000).toString(),
+        expiry: `${String(Math.floor(1 + Math.random() * 12)).padStart(2, '0')}/${new Date().getFullYear() % 100 + 3}`,
+        cvv: Math.floor(100 + Math.random() * 900).toString(),
         balance: 0,
         currency: 'USD',
         status: 'active',
-        fullNumber: `4012 3456 7890 ${Math.floor(1000 + Math.random() * 9000)}`,
+        fullNumber: `4${Math.floor(100 + Math.random() * 900)} ${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`.substring(0,19),
         transactions: [],
-        cardModel: newCardData.cardModel || 'debit',
     };
-    setCards(prev => [...prev, newCard]);
-    setView('list');
+    
+     if (newCard.cardModel === 'credit') {
+        newCard.availableCredit = newCard.spendingLimit?.amount || 5000; // Default credit limit
+    }
+
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+            cards: arrayUnion(newCard)
+        });
+        toast({
+            title: "Virtual Card Issued!",
+            description: `A new ${newCard.cardModel} card "${newCard.cardLabel}" has been issued.`,
+        });
+        setView('list');
+    } catch (error) {
+        console.error("Error creating card:", error);
+        toast({
+            title: "Error",
+            description: "Could not create the virtual card. Please try again.",
+            variant: "destructive"
+        });
+    }
   }
 
   const handleViewDetails = (card: VirtualCardData) => {
@@ -139,6 +93,10 @@ export default function VirtualCardsPage() {
   };
 
   const renderContent = () => {
+    if (authLoading || loadingCards) {
+        return <Skeleton className="h-[400px] w-full" />
+    }
+    
     switch (view) {
       case 'create':
         return <CreateVirtualCardForm onSubmit={handleCardCreated} onCancel={() => setView('list')} />;
