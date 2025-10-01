@@ -21,9 +21,22 @@ interface CardDetailsProps {
 }
 
 export function CardDetails({ card }: CardDetailsProps) {
-    const limit = card.spendingLimit?.amount ?? 0;
+    const isCredit = card.cardModel === 'credit';
     const spent = card.transactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-    const progress = limit > 0 ? (spent / limit) * 100 : 0;
+    const limit = card.spendingLimit?.amount ?? 0;
+    
+    // For credit cards, progress shows credit used. For debit, it shows balance spent from limit.
+    const progressValue = isCredit 
+        ? (card.balance / limit) * -100 // balance is negative for credit spent
+        : limit > 0 ? (spent / limit) * 100 : 0;
+    
+    const limitText = isCredit 
+        ? `Credit Limit: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(limit)}`
+        : `Monthly limit of ${new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(limit)}`;
+    
+    const spentText = isCredit
+        ? `${new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(Math.abs(card.balance))} used`
+        : `${new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(spent)} spent`;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -34,7 +47,7 @@ export function CardDetails({ card }: CardDetailsProps) {
                         <CardTitle>Card Actions</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
-                        <Button variant="outline"><DollarSign className="mr-2 h-4 w-4"/> Top Up</Button>
+                        <Button variant="outline"><DollarSign className="mr-2 h-4 w-4"/> {isCredit ? 'Pay Bill' : 'Top Up'}</Button>
                         <Button variant="outline"><Snowflake className="mr-2 h-4 w-4"/> Freeze</Button>
                         <Button variant="outline"><Settings className="mr-2 h-4 w-4"/> Settings</Button>
                         <Button variant="outline"><FileDown className="mr-2 h-4 w-4"/> Statement</Button>
@@ -45,13 +58,13 @@ export function CardDetails({ card }: CardDetailsProps) {
                         <CardHeader>
                             <CardTitle>Spending Limit</CardTitle>
                             <CardDescription>
-                                Monthly limit of {new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(limit)}
+                               {limitText}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                           <Progress value={progress} className="mb-2" />
+                           <Progress value={progressValue} className="mb-2" />
                            <p className="text-sm text-muted-foreground">
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(spent)} spent
+                            {spentText}
                            </p>
                         </CardContent>
                     </Card>
@@ -94,4 +107,3 @@ export function CardDetails({ card }: CardDetailsProps) {
         </div>
     );
 }
-

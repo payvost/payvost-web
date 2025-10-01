@@ -31,6 +31,6 @@ export interface VirtualCardData {
     fullNumber: string;
     transactions: CardTransaction[];
     spendingLimit?: SpendingLimit;
-    cardModel?: CardModel;
+    cardModel: CardModel;
     availableCredit?: number;
 }

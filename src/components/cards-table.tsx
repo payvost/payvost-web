@@ -51,7 +51,7 @@ const columns: ColumnDef<VirtualCardData>[] = [
       <div className="font-medium">
         <div>{row.original.cardLabel}</div>
         <div className="text-xs text-muted-foreground font-mono">
-            {row.original.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• {row.original.last4}
+            {row.original.cardModel === 'credit' ? 'Credit' : 'Debit'} • {row.original.cardType === 'visa' ? 'Visa' : 'Mastercard'} •••• {row.original.last4}
         </div>
       </div>
     ),
@@ -74,9 +74,10 @@ const columns: ColumnDef<VirtualCardData>[] = [
     cell: ({ row }) => {
       const isCredit = row.original.cardModel === 'credit';
       const amount = isCredit ? (row.original.availableCredit ?? 0) : row.original.balance;
+      const currency = row.original.currency || 'USD'; // Fallback to USD
       const formatted = new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: row.original.currency,
+        currency: currency,
       }).format(amount);
 
       return (
@@ -96,7 +97,7 @@ const columns: ColumnDef<VirtualCardData>[] = [
         
         const formatted = new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: row.original.currency,
+            currency: row.original.currency || 'USD', // Fallback to USD
         }).format(limit.amount);
         
         const intervalText = limit.interval.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -202,7 +203,7 @@ export function CardsTable({ data, onRowClick }: CardsTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                  No cards found.
                 </TableCell>
               </TableRow>
             )}

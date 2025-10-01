@@ -15,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -23,6 +23,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Link from 'next/link';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -31,6 +32,7 @@ const personalInfoSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Passwords must match'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
   country: z.string().min(1, 'Country is required'),
    photo: z.any()
@@ -39,6 +41,9 @@ const personalInfoSchema = z.object({
       (files) => !files || files?.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
       "Only .jpg, .jpeg, .png and .webp formats are supported."
     ).optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
 
 const addressSchema = z.object({
@@ -57,7 +62,6 @@ const verificationSchema = z.object({
   }),
 });
 
-// This can be simplified. Merging one by one is fine.
 const registrationSchema = z.intersection(
     personalInfoSchema,
     z.intersection(addressSchema, verificationSchema)
@@ -66,7 +70,7 @@ const registrationSchema = z.intersection(
 type FormValues = z.infer<typeof registrationSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal Information', fields: ['fullName', 'email', 'password', 'dateOfBirth', 'country', 'photo'] },
+  { id: 1, name: 'Personal Information', fields: ['fullName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo'] },
   { id: 2, name: 'Address Information', fields: ['street', 'city', 'state', 'zip'] },
   { id: 3, name: 'Identity Verification', fields: ['idType', 'idNumber', 'idExpiry', 'agreeTerms'] },
 ];
@@ -77,6 +81,9 @@ export function RegistrationForm() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -87,6 +94,7 @@ export function RegistrationForm() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(registrationSchema),
+    mode: 'onTouched',
     defaultValues: {
         agreeTerms: false
     }
@@ -245,10 +253,27 @@ export function RegistrationForm() {
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} disabled={isLoading} />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isLoading} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(p => !p)}>
+                    {showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                  </Button>
+                </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} {...register('confirmPassword')} disabled={isLoading} />
+                   <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(p => !p)}>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+                  </Button>
+                </div>
+                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -278,8 +303,9 @@ export function RegistrationForm() {
                                     onSelect={field.onChange}
                                     initialFocus
                                     captionLayout="dropdown-buttons"
-                                    fromYear={1950}
-                                    toYear={new Date().getFullYear()}
+                                    fromDate={new Date(new Date().setFullYear(new Date().getFullYear() - 100))}
+                                    toDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
+                                    defaultMonth={new Date(new Date().setFullYear(new Date().getFullYear() - 20))}
                                 />
                                 </PopoverContent>
                             </Popover>
@@ -390,8 +416,8 @@ export function RegistrationForm() {
                                     onSelect={field.onChange}
                                     initialFocus
                                     captionLayout="dropdown-buttons"
-                                    fromYear={new Date().getFullYear()}
-                                    toYear={new Date().getFullYear() + 10}
+                                    fromDate={new Date()}
+                                    toYear={new Date().getFullYear() + 15}
                                 />
                                 </PopoverContent>
                             </Popover>
@@ -413,7 +439,12 @@ export function RegistrationForm() {
                         />
                     )}
                 />
-              <Label htmlFor="agreeTerms">I agree to the terms and conditions</Label>
+              <Label htmlFor="agreeTerms">
+                I agree to the{" "}
+                <Link href="/terms" className="underline hover:text-primary" target="_blank">
+                  terms and conditions
+                </Link>
+              </Label>
             </div>
             {errors.agreeTerms && <p className="text-sm text-destructive">{errors.agreeTerms.message}</p>}
           </div>
