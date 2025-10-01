@@ -187,65 +187,80 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
             toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
             return;
         }
-
+    
         setIsSubmitting(true);
         try {
-            let bannerURL = isEditing ? bannerPreview : ''; // Keep existing URL if not changed
-            const bannerFile = data.bannerFile?.[0];
-
-            if (bannerFile) {
-                const bannerRef = ref(storage, `donation_media/${user.uid}/${Date.now()}_${bannerFile.name}`);
-                await uploadBytes(bannerRef, bannerFile);
-                bannerURL = await getDownloadURL(bannerRef);
-            }
-            
-            const galleryFiles = data.galleryFiles || [];
-            const galleryURLs = await Promise.all(
-                galleryFiles.map(async (file: File) => {
-                     const galleryRef = ref(storage, `donation_media/${user.uid}/${Date.now()}_${file.name}`);
-                     await uploadBytes(galleryRef, file);
-                     return getDownloadURL(galleryRef);
-                })
-            );
-
-
-            const campaignData = {
+            const campaignDataToSave = {
                 userId: user.uid,
                 title: data.title,
                 category: data.category,
                 tags: data.tags?.split(',').map(t => t.trim()) || [],
                 description: data.description,
                 mediaType: data.mediaType,
-                bannerImage: bannerURL,
-                gallery: galleryURLs,
                 goal: data.goal || 0,
                 currency: data.currency,
-                raisedAmount: isEditing ? (await getDoc(doc(db, "donations", campaignId!))).data()?.raisedAmount || 0 : 0,
                 suggestedAmounts: data.suggestedAmounts?.split(',').map(a => Number(a.trim())) || [],
                 allowCustomAmount: data.allowCustomAmount,
                 enableRecurring: data.enableRecurring,
-                recurringFrequency: data.recurringFrequency,
+                recurringFrequency: data.enableRecurring ? data.recurringFrequency : null,
                 endDate: data.endDate || null,
                 visibility: data.visibility,
                 status: 'Active',
                 updatedAt: serverTimestamp(),
             };
+    
+            let docRef;
+            let campaignIdToUse = campaignId;
 
             if (isEditing && campaignId) {
-                const docRef = doc(db, 'donations', campaignId);
-                await updateDoc(docRef, campaignData);
-                toast({ title: "Campaign Updated!", description: "Your changes have been saved." });
+                docRef = doc(db, 'donations', campaignId);
+                await updateDoc(docRef, campaignDataToSave);
             } else {
-                const docRef = await addDoc(collection(db, 'donations'), {
-                    ...campaignData,
+                const newDocRef = await addDoc(collection(db, 'donations'), {
+                    ...campaignDataToSave,
+                    raisedAmount: 0,
                     createdAt: serverTimestamp(),
                 });
-                const link = `${window.location.origin}/donate/${docRef.id}`;
-                await updateDoc(docRef, { link });
-                 toast({ title: "Campaign Created!", description: "Your new campaign is now live." });
+                docRef = newDocRef;
+                campaignIdToUse = newDocRef.id;
             }
-            onBack();
 
+            if (!campaignIdToUse) {
+                throw new Error("Campaign ID is not available.");
+            }
+    
+            let bannerURL = bannerPreview;
+            const bannerFile = data.bannerFile?.[0];
+            if (bannerFile) {
+                const bannerRef = ref(storage, `donation_media/${user.uid}/${campaignIdToUse}/banner_${bannerFile.name}`);
+                await uploadBytes(bannerRef, bannerFile);
+                bannerURL = await getDownloadURL(bannerRef);
+            }
+    
+            // This part for gallery needs adjustment for editing vs creating
+            const galleryFiles = data.galleryFiles || [];
+            const newGalleryUploads = await Promise.all(
+                galleryFiles.filter((file: any) => file instanceof File).map(async (file: File) => {
+                    const galleryRef = ref(storage, `donation_media/${user.uid}/${campaignIdToUse}/gallery_${Date.now()}_${file.name}`);
+                    await uploadBytes(galleryRef, file);
+                    return getDownloadURL(galleryRef);
+                })
+            );
+            
+            const existingGalleryUrls = galleryPreviews.filter(url => url.startsWith('https://'));
+
+            await updateDoc(docRef, {
+                bannerImage: bannerURL,
+                gallery: [...existingGalleryUrls, ...newGalleryUploads],
+                link: `${window.location.origin}/donate/${campaignIdToUse}`,
+            });
+    
+            toast({ 
+                title: isEditing ? "Campaign Updated!" : "Campaign Created!", 
+                description: `Your campaign "${data.title}" is now live.` 
+            });
+            onBack();
+    
         } catch (error) {
             console.error("Error saving campaign: ", error);
             toast({ title: "Error", description: "Failed to save the campaign.", variant: "destructive" });

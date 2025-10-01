@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { SendInvoiceDialog } from './send-invoice-dialog';
 
 const invoiceItemSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -31,7 +32,7 @@ const invoiceItemSchema = z.object({
   ),
 });
 
-const invoiceSchema = z.object({
+export const invoiceSchema = z.object({
   invoiceNumber: z.string().min(1, 'Invoice number is required'),
   issueDate: z.date({ required_error: 'Issue date is required' }),
   dueDate: z.date({ required_error: 'Due date is required' }),
@@ -39,6 +40,7 @@ const invoiceSchema = z.object({
   fromName: z.string().min(1, 'Your name is required'),
   fromAddress: z.string().min(1, 'Your address is required'),
   toName: z.string().min(1, 'Client name is required'),
+  toEmail: z.string().email('A valid client email is required'),
   toAddress: z.string().min(1, 'Client address is required'),
   items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
   notes: z.string().optional(),
@@ -48,7 +50,7 @@ const invoiceSchema = z.object({
   ),
 });
 
-type InvoiceFormValues = z.infer<typeof invoiceSchema>;
+export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
@@ -63,7 +65,9 @@ interface CreateInvoicePageProps {
 
 export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     const { toast } = useToast();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSendDialog, setShowSendDialog] = useState(false);
+    const [invoiceData, setInvoiceData] = useState<InvoiceFormValues | null>(null);
+    const [submittedInvoiceId, setSubmittedInvoiceId] = useState<string | null>(null);
 
     const {
         register,
@@ -79,6 +83,7 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
             fromName: 'Payvost Inc.',
             fromAddress: '123 Finance Street, Moneyville, USA',
             toName: '',
+            toEmail: '',
             toAddress: '',
             items: [{ description: '', quantity: 1, price: 0 }],
             notes: 'Thank you for your business. Please pay within 30 days.',
@@ -106,16 +111,8 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     }
 
     const onSubmit: SubmitHandler<InvoiceFormValues> = async (data) => {
-        setIsSubmitting(true);
-        console.log(data);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast({
-            title: "Invoice Sent!",
-            description: `Invoice ${data.invoiceNumber} has been sent to ${data.toName}.`,
-        });
-        setIsSubmitting(false);
-        onBack();
+        setInvoiceData(data);
+        setShowSendDialog(true); // This will now open the dialog on form submission
     };
 
     return (
@@ -221,6 +218,8 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                                 <Label className="font-semibold">To:</Label>
                                 <Input {...register('toName')} placeholder="Client's Name/Company" className="mt-1" />
                                 {errors.toName && <p className="text-sm text-destructive mt-1">{errors.toName.message}</p>}
+                                <Input {...register('toEmail')} placeholder="Client's Email" className="mt-2" />
+                                {errors.toEmail && <p className="text-sm text-destructive mt-1">{errors.toEmail.message}</p>}
                                 <Textarea {...register('toAddress')} placeholder="Client's Address" className="mt-2" />
                                 {errors.toAddress && <p className="text-sm text-destructive mt-1">{errors.toAddress.message}</p>}
                             </div>
@@ -298,12 +297,21 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
                          <Button type="button" variant="outline">Save as Draft</Button>
-                         <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Sending...' : <><Send className="mr-2 h-4 w-4" />Send Invoice</>}
+                         <Button type="submit">
+                            <Send className="mr-2 h-4 w-4" />Send Invoice
                          </Button>
                     </CardFooter>
                 </Card>
             </form>
+             {invoiceData && (
+                <SendInvoiceDialog
+                    isOpen={showSendDialog}
+                    setIsOpen={setShowSendDialog}
+                    invoiceData={invoiceData}
+                    grandTotal={grandTotal}
+                    onSuccessfulSend={onBack}
+                />
+            )}
         </div>
     );
 }

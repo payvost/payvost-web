@@ -14,8 +14,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-type Status = "Initiated" | "Processing" | "In Transit" | "Ready for Pickup" | "Completed";
+type Status = "Initiated" | "Processing" | "In Transit" | "Ready for Pickup" | "Completed" | "Pending" | "Paid" | "Failed";
+
+const statusMap: Record<string, Status> = {
+    Pending: "Processing",
+    Paid: "Completed",
+    Completed: "Completed",
+    Failed: "Failed"
+};
+
 
 const timelineSteps: { status: Status, icon: React.ReactNode, description: string }[] = [
     { status: 'Initiated', icon: <Package className="h-5 w-5" />, description: 'Your transfer has been successfully initiated.' },
@@ -31,7 +41,7 @@ export default function TrackTransferPage() {
     const [currentStatus, setCurrentStatus] = useState<Status | null>(null);
     const { toast } = useToast();
 
-    const handleTrack = (e: React.FormEvent) => {
+    const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!trackingId.trim()) {
             toast({ title: "Error", description: "Please enter a tracking ID.", variant: "destructive" });
@@ -40,13 +50,33 @@ export default function TrackTransferPage() {
 
         setIsLoading(true);
         setCurrentStatus(null);
-        // Simulate API call
-        setTimeout(() => {
-            const statuses: Status[] = ["Initiated", "Processing", "In Transit", "Ready for Pickup", "Completed"];
-            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-            setCurrentStatus(randomStatus);
+        
+        try {
+            const docRef = doc(db, "paymentRequests", trackingId.trim());
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Map Firestore status ('Pending', 'Paid') to timeline status ('Processing', 'Completed')
+                const timelineStatus = statusMap[data.status] || 'Initiated';
+                setCurrentStatus(timelineStatus);
+            } else {
+                 toast({
+                    title: "Not Found",
+                    description: "No transaction found with that tracking ID.",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching transaction:", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch transaction details. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
             setIsLoading(false);
-        }, 1500);
+        }
     }
     
     const currentStepIndex = currentStatus ? timelineSteps.findIndex(step => step.status === currentStatus) : -1;

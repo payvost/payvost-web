@@ -26,7 +26,7 @@ import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, 
 import { Skeleton } from '@/components/ui/skeleton';
 import { sendPaymentRequestEmail } from '@/services/emailService';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 function PaymentLinkTab() {
@@ -301,8 +301,15 @@ function PaymentLinkTab() {
 
 export default function RequestPaymentPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [activeTab, setActiveTab] = useState('payment-link');
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'payment-link';
+  
+  const [activeTab, setActiveTab] = useState(tab);
   const [view, setView] = useState('list');
+
+  useEffect(() => {
+    setActiveTab(tab);
+  }, [tab]);
 
   const renderInvoiceContent = () => {
     if (view === 'create') {
