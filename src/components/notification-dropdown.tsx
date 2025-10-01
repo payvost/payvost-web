@@ -17,6 +17,7 @@ import {
   import { db } from "@/lib/firebase";
   import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch, getDocs, where } from "firebase/firestore";
   import { Skeleton } from "./ui/skeleton";
+  import Link from "next/link";
   
   interface Notification {
     id: string;
@@ -124,7 +125,9 @@ export function NotificationDropdown() {
             <Card className="border-0">
                 <CardHeader className="flex-row items-center justify-between p-4 pb-0">
                     <CardTitle className="text-lg font-semibold">Notifications</CardTitle>
-                    <Button variant="link" size="sm" className="p-0 h-auto">View All</Button>
+                    <Button variant="link" size="sm" className="p-0 h-auto" asChild>
+                       <Link href="/dashboard/notifications">View All</Link>
+                    </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Tabs defaultValue="all">
