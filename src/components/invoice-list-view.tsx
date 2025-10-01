@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -9,14 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search } from 'lucide-react';
 import { Input } from './ui/input';
-
-const sampleInvoices = [
-  { id: 'INV-1234', customer: 'Acme Inc.', user: 'john.doe@acme.com', amount: '$2,500.00', dueDate: '2024-08-15', status: 'Paid' },
-  { id: 'INV-1235', customer: 'Stark Industries', user: 'tony.stark@stark.com', amount: '$10,000.00', dueDate: '2024-08-20', status: 'Pending' },
-  { id: 'INV-1236', customer: 'Wayne Enterprises', user: 'bruce.wayne@wayne.com', amount: '$5,250.75', dueDate: '2024-07-30', status: 'Overdue' },
-  { id: 'INV-1237', customer: 'Ollivanders Wand Shop', user: 'garick@ollivanders.co.uk', amount: '$350.00', dueDate: '2024-08-10', status: 'Draft' },
-  { id: 'INV-1238', customer: 'Cyberdyne Systems', user: 'miles.dyson@cyberdyne.com', amount: '$1,200.00', dueDate: '2024-08-25', status: 'Pending' },
-];
+import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, onSnapshot, DocumentData, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
+import Link from 'next/link';
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Paid: 'default',
@@ -30,7 +27,60 @@ interface InvoiceListViewProps {
 }
 
 export function InvoiceListView({ onCreateClick }: InvoiceListViewProps) {
-  const [invoices, setInvoices] = useState(sampleInvoices);
+  const { user } = useAuth();
+  const [invoices, setInvoices] = useState<DocumentData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+        setLoading(false);
+        return;
+    };
+
+    const q = query(
+        collection(db, "users", user.uid, "invoices"),
+        orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const invoicesData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+            invoicesData.push({ id: doc.id, ...doc.data() });
+        });
+        setInvoices(invoicesData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching invoices: ", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-4 w-64 mt-2" />
+                    </div>
+                    <Skeleton className="h-10 w-40" />
+                </div>
+                 <div className="relative mt-4">
+                    <Skeleton className="h-10 w-full md:w-[320px]" />
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                     {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
+
 
   if (invoices.length === 0) {
     return (
@@ -57,7 +107,7 @@ export function InvoiceListView({ onCreateClick }: InvoiceListViewProps) {
                 <CardDescription>Manage and track all your business invoices.</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-                <Button onClick={onCreateClick}><PlusCircle className="mr-2 h-4 w-4" />Create New Invoice</Button>
+                <Button onClick={onCreateClick}><PlusCircle className="mr-2 h-4 w-4"/>Create New Invoice</Button>
             </div>
         </div>
         <div className="relative mt-4">
@@ -84,10 +134,10 @@ export function InvoiceListView({ onCreateClick }: InvoiceListViewProps) {
           <TableBody>
             {invoices.map((invoice) => (
               <TableRow key={invoice.id}>
-                <TableCell className="font-medium">{invoice.id}</TableCell>
-                <TableCell>{invoice.customer}</TableCell>
-                <TableCell>{invoice.amount}</TableCell>
-                <TableCell>{invoice.dueDate}</TableCell>
+                <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                <TableCell>{invoice.toName}</TableCell>
+                <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
+                <TableCell>{invoice.dueDate.toDate().toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                     <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
                 </TableCell>
@@ -95,7 +145,9 @@ export function InvoiceListView({ onCreateClick }: InvoiceListViewProps) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View</DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/dashboard/request-payment/invoice/${invoice.id}`}>View</Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem>Edit</DropdownMenuItem>
                             <DropdownMenuItem>Download PDF</DropdownMenuItem>
                             <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
