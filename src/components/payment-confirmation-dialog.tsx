@@ -20,7 +20,7 @@ import { Label } from "./ui/label";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { doc, updateDoc, getDoc, arrayUnion, Timestamp, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 
 interface PaymentConfirmationDialogProps {
@@ -125,6 +125,16 @@ export function PaymentConfirmationDialog({
                 transactions: arrayUnion(newTransaction)
             });
 
+            // 5. Add a notification for the successful transaction
+            const notificationsColRef = collection(db, "users", user.uid, "notifications");
+            await addDoc(notificationsColRef, {
+                icon: 'success',
+                title: 'Transfer Successful',
+                description: `Your transfer of ${sendAmountNum.toFixed(2)} ${transactionDetails.sendCurrency} to ${transactionDetails.recipientName} was successful.`,
+                date: serverTimestamp(),
+                read: false,
+            });
+
             await onConfirm(); // Call original onConfirm if needed
             toast({
                 title: "Transfer Initiated!",
@@ -134,7 +144,7 @@ export function PaymentConfirmationDialog({
             setIsConfirming(false);
             setOpen(false); // Manually close the dialog on success
             
-            // 5. Redirect to the new transaction details page
+            // 6. Redirect to the new transaction details page
             router.push(`/dashboard/transactions/${transactionId}`);
 
         } catch (error: any) {

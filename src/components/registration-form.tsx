@@ -19,7 +19,7 @@ import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -174,6 +174,7 @@ export function RegistrationForm() {
         phone: '', // Not in form, add if needed
         wallets: [],
         transactions: [],
+        beneficiaries: [],
         joinedDate: serverTimestamp(),
       };
 
@@ -185,6 +186,16 @@ export function RegistrationForm() {
 
       // Create the user document in Firestore
       await setDoc(doc(db, "users", user.uid), firestoreData);
+      
+      // Add a welcome notification
+      const notificationsColRef = collection(db, "users", user.uid, "notifications");
+      await addDoc(notificationsColRef, {
+        icon: 'gift',
+        title: 'Welcome to Payvost!',
+        description: 'We are thrilled to have you with us. Explore the features and start transacting globally.',
+        date: serverTimestamp(),
+        read: false,
+      });
       
       // Send verification email
       await sendEmailVerification(user);

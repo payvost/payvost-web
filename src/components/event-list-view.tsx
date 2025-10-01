@@ -1,22 +1,31 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Ticket, Search, BarChart2, Edit, Link as LinkIcon } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Ticket, Search, BarChart2, Edit, Link as LinkIcon, Copy, Trash2, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
-
-const sampleEvents = [
-  { id: 'EVT-001', name: 'Summer Music Festival', date: '2024-09-15', ticketsSold: 782, totalTickets: 1000, status: 'Live' },
-  { id: 'EVT-002', name: 'Tech Conference 2024', date: '2024-10-20', ticketsSold: 450, totalTickets: 500, status: 'Live' },
-  { id: 'EVT-003', name: 'Charity Gala Dinner', date: '2024-08-30', ticketsSold: 150, totalTickets: 150, status: 'Sold Out' },
-  { id: 'EVT-004', name: 'Local Art Exhibition', date: '2024-09-05', ticketsSold: 0, totalTickets: 200, status: 'Draft' },
-  { id: 'EVT-005', name: 'Indie Film Screening', date: '2024-07-28', ticketsSold: 88, totalTickets: 100, status: 'Completed' },
-];
+import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, onSnapshot, DocumentData, deleteDoc, doc } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase';
+import { ref, deleteObject } from "firebase/storage";
+import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Live: 'default',
@@ -27,10 +36,98 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
 
 interface EventListViewProps {
     onFabClick: () => void;
+    onEditClick: (eventId: string) => void;
 }
 
-export function EventListView({ onFabClick }: EventListViewProps) {
-  const [events, setEvents] = useState(sampleEvents);
+export function EventListView({ onFabClick, onEditClick }: EventListViewProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [events, setEvents] = useState<DocumentData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<{id: string, title: string} | null>(null);
+  
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+
+    const q = query(collection(db, "events"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const eventsData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+            eventsData.push({ id: doc.id, ...doc.data() });
+        });
+        setEvents(eventsData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching events: ", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    toast({
+        title: "Link Copied",
+        description: "The public event link has been copied to your clipboard.",
+    });
+  }
+
+  const handleDelete = async () => {
+    if (!eventToDelete || !user) return;
+
+    setIsDeleting(eventToDelete.id);
+    
+    try {
+        const eventDoc = events.find(c => c.id === eventToDelete.id);
+        if (eventDoc && eventDoc.bannerImage) {
+            try {
+                const fileRef = ref(storage, eventDoc.bannerImage);
+                await deleteObject(fileRef);
+            } catch (storageError: any) {
+                if (storageError.code !== 'storage/object-not-found') {
+                    console.error(`Failed to delete banner image ${eventDoc.bannerImage}:`, storageError);
+                }
+            }
+        }
+        
+        await deleteDoc(doc(db, "events", eventToDelete.id));
+
+        toast({
+            title: "Event Deleted",
+            description: `"${eventToDelete.title}" has been permanently removed.`,
+        });
+
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        toast({
+            title: "Error",
+            description: "Failed to delete the event. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsDeleting(null);
+        setShowDeleteDialog(false);
+        setEventToDelete(null);
+    }
+  };
+
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
 
   if (events.length === 0) {
     return (
@@ -49,6 +146,7 @@ export function EventListView({ onFabClick }: EventListViewProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -81,19 +179,24 @@ export function EventListView({ onFabClick }: EventListViewProps) {
           <TableBody>
             {events.map((event) => (
               <TableRow key={event.id}>
-                <TableCell className="font-medium">{event.name}</TableCell>
-                <TableCell>{event.date}</TableCell>
-                <TableCell>{event.ticketsSold} / {event.totalTickets}</TableCell>
+                <TableCell className="font-medium">{event.eventName}</TableCell>
+                <TableCell>{event.eventDate.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>0 / {event.tickets.reduce((acc: number, t: any) => acc + t.quantity, 0)}</TableCell>
                 <TableCell className="text-right">
-                    <Badge variant={statusVariant[event.status]}>{event.status}</Badge>
+                    <Badge variant={statusVariant['Live']}>Live</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={isDeleting === event.id}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem><BarChart2 className="mr-2 h-4 w-4"/>View Dashboard</DropdownMenuItem>
-                            <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/>Edit Event</DropdownMenuItem>
-                            <DropdownMenuItem><LinkIcon className="mr-2 h-4 w-4"/>Copy Sales Link</DropdownMenuItem>
+                            <DropdownMenuItem asChild><Link href={`/event/${event.id}/stats`}><BarChart2 className="mr-2 h-4 w-4"/>View Stats</Link></DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEditClick(event.id)}><Edit className="mr-2 h-4 w-4"/>Edit Event</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleCopyLink(event.publicLink)}><Copy className="mr-2 h-4 w-4"/>Copy Public Sales Link</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); setEventToDelete({id: event.id, title: event.eventName}); setShowDeleteDialog(true);}}>
+                                {isDeleting === event.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                                Delete
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
@@ -108,5 +211,25 @@ export function EventListView({ onFabClick }: EventListViewProps) {
         </div>
       </CardFooter>
     </Card>
+
+     <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the event
+                <span className="font-semibold">"{eventToDelete?.title}"</span> and all of its associated data and media.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={!!isDeleting}>
+                 {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Confirm Deletion
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
