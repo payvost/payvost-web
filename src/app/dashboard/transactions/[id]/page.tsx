@@ -89,10 +89,17 @@ export default function TransactionDetailsPage() {
     const status = transaction.status as Status;
     const currentStatusInfo = statusInfo[status];
 
+    const formatCurrency = (amount: number, currency: string) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency,
+        }).format(amount);
+    }
+    
     const financials = {
         sent: { amount: parseFloat(transaction.sendAmount) || 0, currency: transaction.sendCurrency || 'USD' },
-        fee: { amount: parseFloat(transaction.fee?.replace('$', '')) || 0, currency: transaction.sendCurrency || 'USD' },
-        total: { amount: (parseFloat(transaction.sendAmount) || 0) + (parseFloat(transaction.fee?.replace('$', '')) || 0), currency: transaction.sendCurrency || 'USD' },
+        fee: { amount: parseFloat(transaction.fee) || 0, currency: transaction.sendCurrency || 'USD' },
+        total: { amount: (parseFloat(transaction.sendAmount) || 0) + (parseFloat(transaction.fee) || 0), currency: transaction.sendCurrency || 'USD' },
         exchangeRate: transaction.exchangeRate,
         received: { amount: parseFloat(transaction.recipientGets) || 0, currency: transaction.recipientCurrency || 'USD' },
     };
@@ -141,11 +148,11 @@ export default function TransactionDetailsPage() {
                                     <dl className="space-y-2">
                                         <div className="flex justify-between">
                                             <dt>Amount Sent</dt>
-                                            <dd className="font-mono">{financials.sent.amount.toFixed(2)} {financials.sent.currency}</dd>
+                                            <dd className="font-mono">{formatCurrency(financials.sent.amount, financials.sent.currency)}</dd>
                                         </div>
                                         <div className="flex justify-between">
                                             <dt>Fee</dt>
-                                            <dd className="font-mono">{financials.fee.amount.toFixed(2)} {financials.fee.currency}</dd>
+                                            <dd className="font-mono">{formatCurrency(financials.fee.amount, financials.fee.currency)}</dd>
                                         </div>
                                          <div className="flex justify-between text-muted-foreground text-sm">
                                             <dt>Exchange Rate</dt>
@@ -154,11 +161,11 @@ export default function TransactionDetailsPage() {
                                         <Separator />
                                         <div className="flex justify-between font-bold">
                                             <dt>Total Paid</dt>
-                                            <dd className="font-mono">{financials.total.amount.toFixed(2)} {financials.total.currency}</dd>
+                                            <dd className="font-mono">{formatCurrency(financials.total.amount, financials.total.currency)}</dd>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg text-primary">
                                             <dt>Recipient Received</dt>
-                                            <dd className="font-mono">{financials.received.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} {financials.received.currency}</dd>
+                                            <dd className="font-mono">{formatCurrency(financials.received.amount, financials.received.currency)}</dd>
                                         </div>
                                     </dl>
                                 </div>

@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, onSnapshot, DocumentData, collection, query, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -46,12 +45,12 @@ export default function InvoiceDetailsPage() {
             return;
         };
 
-        const docRef = doc(db, "users", user.uid, "invoices", id);
+        const docRef = doc(db, 'invoices', id);
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
+            if (docSnap.exists() && docSnap.data().userId === user.uid) {
                 setInvoice({ id: docSnap.id, ...docSnap.data() });
             } else {
-                console.log("No such document!");
+                console.log("No such document or insufficient permissions!");
                 setInvoice(null);
             }
             setLoading(false);
