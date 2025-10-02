@@ -69,13 +69,21 @@ export function EventListView({ onFabClick, onEditClick }: EventListViewProps) {
   }, [user]);
 
   const handleCopyLink = (link: string) => {
+    if (!link) {
+      toast({
+        title: "Link Not Available",
+        description: "This event does not have a public link yet.",
+        variant: "destructive",
+      });
+      return;
+    }
     navigator.clipboard.writeText(link);
     toast({
         title: "Link Copied",
         description: "The public event link has been copied to your clipboard.",
     });
   }
-
+  
   const handleDelete = async () => {
     if (!eventToDelete || !user) return;
 
