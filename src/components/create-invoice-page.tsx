@@ -13,12 +13,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2, Banknote, Landmark, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
+import { useAuth } from '@/hooks/use-auth';
+import { collection, onSnapshot, query, doc, addDoc, serverTimestamp, Timestamp, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Separator } from './ui/separator';
 
 const invoiceItemSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -37,8 +43,8 @@ export const invoiceSchema = z.object({
   issueDate: z.date({ required_error: 'Issue date is required' }),
   dueDate: z.date({ required_error: 'Due date is required' }),
   currency: z.string().min(1, 'Currency is required'),
-  fromName: z.string().min(1, 'Your name is required'),
-  fromAddress: z.string().min(1, 'Your address is required'),
+  fromName: z.string(),
+  fromAddress: z.string(),
   toName: z.string().min(1, 'Client name is required'),
   toEmail: z.string().email('A valid client email is required'),
   toAddress: z.string().min(1, 'Client address is required'),
@@ -48,9 +54,27 @@ export const invoiceSchema = z.object({
     (val) => (String(val) === '' ? 0 : Number(String(val))),
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
+  paymentMethod: z.enum(['payvost', 'manual']),
+  manualBankName: z.string().optional(),
+  manualAccountName: z.string().optional(),
+  manualAccountNumber: z.string().optional(),
+  manualOtherDetails: z.string().optional(),
+}).refine(data => {
+    if (data.paymentMethod === 'manual') {
+        return !!data.manualBankName && !!data.manualAccountName && !!data.manualAccountNumber;
+    }
+    return true;
+}, {
+    message: "Bank Name, Account Name, and Account Number are required for manual bank transfers.",
+    path: ["manualBankName"], // You can associate the error with one of the fields
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
+
+interface CreateInvoicePageProps {
+    onBack: () => void;
+    invoiceId?: string | null;
+}
 
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
@@ -59,29 +83,41 @@ const currencySymbols: { [key: string]: string } = {
   NGN: '₦',
 };
 
-interface CreateInvoicePageProps {
-    onBack: () => void;
-}
+const currencyOptions = [
+    { value: 'USD', label: 'USD ($)' },
+    { value: 'EUR', label: 'EUR (€)' },
+    { value: 'GBP', label: 'GBP (£)' },
+    { value: 'NGN', label: 'NGN (₦)' },
+];
 
-export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
+export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps) {
     const { toast } = useToast();
     const [showSendDialog, setShowSendDialog] = useState(false);
-    const [invoiceData, setInvoiceData] = useState<InvoiceFormValues | null>(null);
-    const [submittedInvoiceId, setSubmittedInvoiceId] = useState<string | null>(null);
+    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId);
+    const { user, loading: authLoading } = useAuth();
+    const [loadingUserData, setLoadingUserData] = useState(true);
+    const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+    const [isIssueDateOpen, setIsIssueDateOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const isEditing = !!invoiceId;
 
     const {
         register,
         control,
         handleSubmit,
         watch,
+        setValue,
+        getValues,
+        trigger,
+        reset,
         formState: { errors },
     } = useForm<InvoiceFormValues>({
         resolver: zodResolver(invoiceSchema),
+        mode: 'onTouched',
         defaultValues: {
-            invoiceNumber: `INV-${Math.floor(Math.random() * 10000)}`,
             issueDate: new Date(),
-            fromName: 'Payvost Inc.',
-            fromAddress: '123 Finance Street, Moneyville, USA',
+            fromName: '',
+            fromAddress: '',
             toName: '',
             toEmail: '',
             toAddress: '',
@@ -89,8 +125,57 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
             notes: 'Thank you for your business. Please pay within 30 days.',
             taxRate: 0,
             currency: 'USD',
+            paymentMethod: 'payvost',
+            invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
         },
     });
+
+     useEffect(() => {
+        if (isEditing && invoiceId) {
+            const fetchInvoice = async () => {
+                const docRef = doc(db, 'invoices', invoiceId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    reset({
+                        ...data,
+                        issueDate: data.issueDate.toDate(),
+                        dueDate: data.dueDate.toDate(),
+                    });
+                }
+            };
+            fetchInvoice();
+        }
+    }, [isEditing, invoiceId, reset]);
+    
+    useEffect(() => {
+        if (!user) {
+            if (!authLoading) {
+                 setLoadingUserData(false);
+            }
+            return;
+        }
+
+        if (isEditing) {
+            setLoadingUserData(false);
+            return;
+        }
+
+        const userDocUnsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setValue('fromName', data.name || user.displayName || '');
+                const address = `${data.street || ''}\n${data.city || ''}, ${data.state || ''} ${data.zip || ''}`;
+                setValue('fromAddress', address.trim());
+            }
+            setLoadingUserData(false);
+        });
+
+        return () => {
+            userDocUnsub();
+        };
+    }, [user, authLoading, setValue, isEditing]);
+
 
     const { fields, append, remove } = useFieldArray({
         control,
@@ -100,20 +185,97 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
     const watchedItems = watch('items');
     const watchedTaxRate = watch('taxRate') || 0;
     const selectedCurrency = watch('currency');
-    const currencySymbol = currencySymbols[selectedCurrency] || '$';
+    const paymentMethod = watch('paymentMethod');
     
     const subtotal = watchedItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = subtotal * (watchedTaxRate / 100);
     const grandTotal = subtotal + taxAmount;
 
-    const formatCurrency = (amount: number) => {
-        return `${currencySymbol}${amount.toFixed(2)}`;
-    }
-
-    const onSubmit: SubmitHandler<InvoiceFormValues> = async (data) => {
-        setInvoiceData(data);
-        setShowSendDialog(true); // This will now open the dialog on form submission
+    const formatCurrency = (amount: number, currency: string) => {
+        const symbol = currencySymbols[currency] || currency;
+        const formattedAmount = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount);
+        return `${symbol}${formattedAmount}`;
     };
+
+    const saveInvoice = async (status: 'Draft' | 'Pending') => {
+        if (!user) {
+            toast({ title: 'Not authenticated', variant: 'destructive'});
+            throw new Error('User not authenticated');
+        }
+
+        const data = getValues();
+        const firestoreData = {
+            ...data,
+            issueDate: Timestamp.fromDate(data.issueDate),
+            dueDate: Timestamp.fromDate(data.dueDate),
+            grandTotal,
+            userId: user.uid,
+            status,
+            updatedAt: serverTimestamp(),
+            isPublic: status !== 'Draft',
+        };
+
+        if (savedInvoiceId) {
+            // Update existing invoice
+            const docRef = doc(db, 'invoices', savedInvoiceId);
+            await updateDoc(docRef, firestoreData);
+            return savedInvoiceId;
+        } else {
+            // Create new invoice
+            const docRef = await addDoc(collection(db, 'invoices'), {
+                ...firestoreData,
+                createdAt: serverTimestamp(),
+            });
+            const newId = docRef.id;
+            const publicUrl = `${window.location.origin}/invoice/${newId}`;
+            await updateDoc(docRef, { publicUrl });
+            setSavedInvoiceId(newId);
+            return newId;
+        }
+    };
+
+
+    const onSubmit: SubmitHandler<InvoiceFormValues> = async () => {
+        setIsSaving(true);
+        try {
+            const finalInvoiceId = await saveInvoice('Pending');
+            setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
+            setShowSendDialog(true);
+        } catch (error) {
+            console.error("Error sending invoice:", error);
+            toast({ title: 'Error', description: 'Could not send the invoice.', variant: 'destructive'});
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleSaveAsDraft = async () => {
+        const isValid = await trigger();
+        if (!isValid) {
+            toast({
+                title: "Incomplete Form",
+                description: "Please fill out required fields before saving.",
+                variant: "destructive"
+            });
+            return;
+        }
+        
+        setIsSaving(true);
+        try {
+            await saveInvoice('Draft');
+            toast({ title: "Draft Saved", description: "Your invoice has been saved." });
+            onBack();
+        } catch (error) {
+            console.error("Error saving draft:", error);
+            toast({ title: 'Error', description: 'Could not save draft.', variant: 'destructive'});
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     return (
         <div>
@@ -124,7 +286,7 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                         <span className="sr-only">Back</span>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Create Invoice</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">{isEditing ? 'Edit Invoice' : 'Create Invoice'}</h1>
                         <p className="text-muted-foreground text-sm">Fill out the form below to create a new invoice.</p>
                     </div>
                 </div>
@@ -136,83 +298,91 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
 
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Card>
-                    <CardHeader className="flex flex-col md:flex-row justify-between gap-4">
-                        <div className="flex-1">
-                            <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-                            <div className="flex items-center gap-2 mt-2">
-                                <Label htmlFor="invoiceNumber" className="text-muted-foreground">#</Label>
-                                <Input id="invoiceNumber" {...register('invoiceNumber')} className="w-32 h-8" />
+                    <CardHeader className="flex flex-col md:flex-row justify-between gap-4 items-start">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start w-full">
+                            <div className="space-y-2 col-span-2 md:col-span-1">
+                                <Label htmlFor="invoiceNumber">Invoice #</Label>
+                                <Input id="invoiceNumber" {...register('invoiceNumber')} className="h-10" />
+                                <div className="h-4">
+                                  {errors.invoiceNumber && <p className="text-sm text-destructive">{errors.invoiceNumber.message}</p>}
+                                </div>
                             </div>
-                            {errors.invoiceNumber && <p className="text-sm text-destructive mt-1">{errors.invoiceNumber.message}</p>}
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div>
+                             <div className="space-y-2 col-span-2 md:col-span-1">
                                 <Label>Currency</Label>
                                 <Controller
                                     name="currency"
                                     control={control}
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger><SelectValue/></SelectTrigger>
+                                            <SelectTrigger>
+                                                <SelectValue>{currencyOptions.find(c => c.value === field.value)?.label || 'Select Currency'}</SelectValue>
+                                            </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="USD">USD ($)</SelectItem>
-                                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                                <SelectItem value="GBP">GBP (£)</SelectItem>
-                                                <SelectItem value="NGN">NGN (₦)</SelectItem>
+                                                {currencyOptions.map(c => (
+                                                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     )}
                                 />
-                                 {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
+                                <div className="h-4">
+                                 {errors.currency && <p className="text-sm text-destructive">{errors.currency.message}</p>}
+                                </div>
                             </div>
-                            <div>
+                            <div className="space-y-2 col-span-1">
                                 <Label>Invoice Date</Label>
                                 <Controller
                                     name="issueDate"
                                     control={control}
                                     render={({ field }) => (
-                                        <Popover>
+                                        <Popover open={isIssueDateOpen} onOpenChange={setIsIssueDateOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
+                                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(date) => {field.onChange(date); setIsIssueDateOpen(false);}} /></PopoverContent>
                                         </Popover>
                                     )}
                                 />
-                                {errors.issueDate && <p className="text-sm text-destructive mt-1">{errors.issueDate.message}</p>}
+                                 <div className="h-4">
+                                    {errors.issueDate && <p className="text-sm text-destructive">{errors.issueDate.message}</p>}
+                                 </div>
                             </div>
-                             <div>
+                            <div className="space-y-2 col-span-1">
                                 <Label>Due Date</Label>
                                 <Controller
                                     name="dueDate"
                                     control={control}
                                     render={({ field }) => (
-                                        <Popover>
+                                        <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
+                                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(date) => {field.onChange(date); setIsDueDateOpen(false);}} /></PopoverContent>
                                         </Popover>
                                     )}
                                 />
-                                {errors.dueDate && <p className="text-sm text-destructive mt-1">{errors.dueDate.message}</p>}
+                                 <div className="h-4">
+                                  {errors.dueDate && <p className="text-sm text-destructive">{errors.dueDate.message}</p>}
+                                 </div>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         <div className="grid grid-cols-2 gap-8">
-                            <div>
+                             <div>
                                 <Label className="font-semibold">From:</Label>
-                                <Input {...register('fromName')} placeholder="Your Name/Company" className="mt-1" />
-                                {errors.fromName && <p className="text-sm text-destructive mt-1">{errors.fromName.message}</p>}
-                                <Textarea {...register('fromAddress')} placeholder="Your Address" className="mt-2"/>
-                                 {errors.fromAddress && <p className="text-sm text-destructive mt-1">{errors.fromAddress.message}</p>}
+                                <div className="mt-1 p-3 border rounded-md bg-muted/50 min-h-[108px]">
+                                    <div className="font-semibold">{loadingUserData ? <Skeleton className="h-5 w-32" /> : getValues('fromName')}</div>
+                                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                        {loadingUserData ? <Skeleton className="h-10 w-48 mt-1" /> : getValues('fromAddress')}
+                                    </div>
+                                </div>
                             </div>
                              <div>
                                 <Label className="font-semibold">To:</Label>
@@ -221,7 +391,7 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                                 <Input {...register('toEmail')} placeholder="Client's Email" className="mt-2" />
                                 {errors.toEmail && <p className="text-sm text-destructive mt-1">{errors.toEmail.message}</p>}
                                 <Textarea {...register('toAddress')} placeholder="Client's Address" className="mt-2" />
-                                {errors.toAddress && <p className="text-sm text-destructive mt-1">{errors.toAddress.message}</p>}
+                                 {errors.toAddress && <p className="text-sm text-destructive mt-1">{errors.toAddress.message}</p>}
                             </div>
                         </div>
 
@@ -238,23 +408,29 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                                 </TableHeader>
                                 <TableBody>
                                     {fields.map((field, index) => (
-                                        <TableRow key={field.id}>
-                                            <TableCell>
+                                        <TableRow key={field.id} className="align-top">
+                                            <TableCell className="pt-2">
                                                 <Input {...register(`items.${index}.description`)} placeholder="Service or product description"/>
-                                                {errors.items?.[index]?.description && <p className="text-sm text-destructive mt-1">{errors.items[index]?.description?.message}</p>}
+                                                <div className="h-4 mt-1">
+                                                    {errors.items?.[index]?.description && <p className="text-sm text-destructive">{errors.items[index]?.description?.message}</p>}
+                                                </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="pt-2">
                                                 <Input type="number" {...register(`items.${index}.quantity`)} placeholder="1" className="w-20" />
-                                                {errors.items?.[index]?.quantity && <p className="text-sm text-destructive mt-1">{errors.items[index]?.quantity?.message}</p>}
+                                                <div className="h-4 mt-1">
+                                                    {errors.items?.[index]?.quantity && <p className="text-sm text-destructive">{errors.items[index]?.quantity?.message}</p>}
+                                                </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="pt-2">
                                                 <Input type="number" {...register(`items.${index}.price`)} placeholder="0.00" className="w-24" />
-                                                 {errors.items?.[index]?.price && <p className="text-sm text-destructive mt-1">{errors.items[index]?.price?.message}</p>}
+                                                <div className="h-4 mt-1">
+                                                    {errors.items?.[index]?.price && <p className="text-sm text-destructive">{errors.items[index]?.price?.message}</p>}
+                                                </div>
                                             </TableCell>
-                                            <TableCell className="text-right font-medium">
-                                                {formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.price || 0))}
+                                            <TableCell className="text-right pt-4 font-medium">
+                                                {formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.price || 0), selectedCurrency)}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-right pt-2">
                                                 <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -263,21 +439,21 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                                     ))}
                                 </TableBody>
                             </Table>
-                             {errors.items && <p className="text-sm text-destructive mt-2">{errors.items.message}</p>}
+                             {errors.items && typeof errors.items === 'object' && 'message' in errors.items && <p className="text-sm text-destructive mt-2">{errors.items.message}</p>}
                             <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ description: '', quantity: 1, price: 0 })}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Item
                             </Button>
                         </div>
                         
-                        <div className="flex justify-between gap-8">
-                             <div>
+                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start pt-4">
+                             <div className="lg:col-span-2 space-y-2">
                                 <Label htmlFor="notes">Notes</Label>
-                                <Textarea id="notes" {...register('notes')} placeholder="Additional information for the client" className="mt-1"/>
+                                <Textarea id="notes" {...register('notes')} placeholder="Additional information for the client" className="min-h-[120px]"/>
                             </div>
-                            <div className="w-full max-w-xs space-y-2">
+                            <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Subtotal</span>
-                                    <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                    <span className="font-medium">{formatCurrency(subtotal, selectedCurrency)}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <Label htmlFor="taxRate">Tax (%)</Label>
@@ -285,30 +461,68 @@ export function CreateInvoicePage({ onBack }: CreateInvoicePageProps) {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Tax Amount</span>
-                                    <span className="font-medium">{formatCurrency(taxAmount)}</span>
+                                    <span className="font-medium">{formatCurrency(taxAmount, selectedCurrency)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                                     <span>Grand Total</span>
-                                    <span>{formatCurrency(grandTotal)}</span>
+                                    <span>{formatCurrency(grandTotal, selectedCurrency)}</span>
                                 </div>
                             </div>
                         </div>
 
+                         <Separator />
+
+                        <div className="space-y-4">
+                            <Label className="font-semibold">Payment Method</Label>
+                            <Controller
+                                name="paymentMethod"
+                                control={control}
+                                render={({ field }) => (
+                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Label htmlFor="payvost" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'payvost' && 'border-primary')}>
+                                            <RadioGroupItem value="payvost" id="payvost" className="sr-only" />
+                                            <div className="flex items-center gap-2 font-semibold"><Wallet className="h-5 w-5"/>Payvost Checkout</div>
+                                            <p className="text-sm text-muted-foreground mt-1">Allow client to pay securely via Card, Bank Transfer, or their Payvost Wallet.</p>
+                                        </Label>
+                                         <Label htmlFor="manual" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'manual' && 'border-primary')}>
+                                            <RadioGroupItem value="manual" id="manual" className="sr-only" />
+                                            <div className="flex items-center gap-2 font-semibold"><Landmark className="h-5 w-5"/>Manual Bank Transfer</div>
+                                            <p className="text-sm text-muted-foreground mt-1">Provide your bank details for the client to transfer money to.</p>
+                                        </Label>
+                                    </RadioGroup>
+                                )}
+                            />
+                            {paymentMethod === 'manual' && (
+                                <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2"><Label>Bank Name</Label><Input {...register('manualBankName')} placeholder="e.g., Chase Bank" /></div>
+                                        <div className="space-y-2"><Label>Account Holder Name</Label><Input {...register('manualAccountName')} placeholder="e.g., John Doe" /></div>
+                                    </div>
+                                    <div className="space-y-2"><Label>Account Number</Label><Input {...register('manualAccountNumber')} placeholder="e.g., 1234567890" /></div>
+                                    <div className="space-y-2"><Label>Other Details (Optional)</Label><Textarea {...register('manualOtherDetails')} placeholder="e.g., SWIFT/BIC, Routing Number, IBAN" /></div>
+                                     {errors.manualBankName && <p className="text-sm text-destructive">{errors.manualBankName.message}</p>}
+                                </div>
+                            )}
+                        </div>
+
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button type="button" variant="outline">Save as Draft</Button>
-                         <Button type="submit">
-                            <Send className="mr-2 h-4 w-4" />Send Invoice
+                         <Button type="button" variant="outline" onClick={handleSaveAsDraft} disabled={isSaving}>
+                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                             Save as Draft
+                         </Button>
+                         <Button type="submit" disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            <Send className="mr-2 h-4 w-4" />{isEditing ? 'Update & Send' : 'Send Invoice'}
                          </Button>
                     </CardFooter>
                 </Card>
             </form>
-             {invoiceData && (
+             {showSendDialog && (
                 <SendInvoiceDialog
                     isOpen={showSendDialog}
                     setIsOpen={setShowSendDialog}
-                    invoiceData={invoiceData}
-                    grandTotal={grandTotal}
+                    invoiceId={savedInvoiceId}
                     onSuccessfulSend={onBack}
                 />
             )}

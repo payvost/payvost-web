@@ -1,8 +1,11 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { errorEmitter } from "./error-emitter";
+import { FirestorePermissionError } from "./errors";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -35,5 +38,22 @@ const app: FirebaseApp = getApps().length
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
+
+// Global error handling for Firestore permission errors
+if (typeof window !== 'undefined') {
+  errorEmitter.on('permission-error', (error: FirestorePermissionError) => {
+    // In a real app, you might send this to a logging service
+    console.error("Caught Firestore Permission Error:", error.toString());
+    
+    // We can re-throw it to have it caught by Next.js's dev overlay
+    // in development for better visibility.
+    if (process.env.NODE_ENV === 'development') {
+      setTimeout(() => {
+        throw error;
+      }, 0);
+    }
+  });
+}
+
 
 export { app, auth, db, storage };

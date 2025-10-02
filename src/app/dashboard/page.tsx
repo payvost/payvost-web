@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -23,7 +22,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { errorEmitter } from '@/lib/error-emitter';
+import { FirestorePermissionError } from '@/lib/errors';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -125,15 +126,37 @@ export default function DashboardPage() {
         }
       }
       setLoadingWallets(false);
+    },
+    (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoadingWallets(false);
     });
     
-    const invoicesQuery = query(collection(userDocRef, "invoices"), orderBy("createdAt", "desc"), limit(4));
+    const invoicesQuery = query(
+        collection(db, "invoices"), 
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"), 
+        limit(4)
+    );
+
     const unsubInvoices = onSnapshot(invoicesQuery, (snapshot) => {
         const fetchedInvoices: any[] = [];
         snapshot.forEach(doc => {
             fetchedInvoices.push({ id: doc.id, ...doc.data() });
         });
         setInvoices(fetchedInvoices);
+        setLoadingInvoices(false);
+    },
+    (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: '/invoices',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         setLoadingInvoices(false);
     });
 

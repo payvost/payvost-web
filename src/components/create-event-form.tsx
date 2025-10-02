@@ -22,6 +22,8 @@ import { db, storage } from '@/lib/firebase';
 import { addDoc, collection, serverTimestamp, doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
+import { RichTextEditor } from './rich-text-editor';
+import { Textarea } from './ui/textarea';
 
 
 const ticketTierSchema = z.object({
@@ -34,6 +36,7 @@ const eventSchema = z.object({
   eventName: z.string().min(3, 'Event name is required'),
   eventDate: z.date({ required_error: 'Event date is required' }),
   location: z.string().min(3, 'Location is required'),
+  description: z.string().optional(),
   currency: z.string().min(1, 'Currency is required'),
   tickets: z.array(ticketTierSchema).min(1, 'At least one ticket tier is required'),
   bannerFile: z.any().optional(),
@@ -65,6 +68,7 @@ export function CreateEventForm({ onBack, eventId }: CreateEventFormProps) {
     defaultValues: {
       eventName: '',
       location: '',
+      description: '',
       currency: 'USD',
       tickets: [{ name: 'General Admission', price: 0, quantity: 100 }],
     },
@@ -224,6 +228,21 @@ export function CreateEventForm({ onBack, eventId }: CreateEventFormProps) {
                 <Input id="location" {...register('location')} placeholder="e.g., Central Park, New York" />
                 {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
             </div>
+             <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                        <RichTextEditor
+                            value={field.value ?? ''}
+                            onChange={field.onChange}
+                            placeholder="Tell your attendees about the event..."
+                        />
+                    )}
+                />
+                {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+            </div>
           </div>
 
           <Separator />
@@ -294,3 +313,5 @@ export function CreateEventForm({ onBack, eventId }: CreateEventFormProps) {
     </Card>
   );
 }
+
+    
