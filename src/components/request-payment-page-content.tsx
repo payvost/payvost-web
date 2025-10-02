@@ -304,19 +304,43 @@ export default function RequestPaymentPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'payment-link';
+  const create = searchParams.get('create');
   
   const [activeTab, setActiveTab] = useState(tab);
-  const [view, setView] = useState('list');
-
+  
   useEffect(() => {
     setActiveTab(tab);
   }, [tab]);
+  
+  const [invoiceView, setInvoiceView] = useState(create === 'true' ? 'create' : 'list');
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+
+  const handleEditInvoice = (invoiceId: string) => {
+    setEditingInvoiceId(invoiceId);
+    setInvoiceView('create');
+  };
+
+  const handleCreateInvoice = () => {
+    setEditingInvoiceId(null);
+    setInvoiceView('create');
+  };
+
+  const handleBackToInvoiceList = () => {
+    setEditingInvoiceId(null);
+    setInvoiceView('list');
+    // Also update URL to remove create=true if present
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('create');
+    const newUrl = `${window.location.pathname}?${newSearchParams.toString()}`;
+    window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+  };
+
 
   const renderInvoiceContent = () => {
-    if (view === 'create') {
-      return <CreateInvoicePage onBack={() => setView('list')} />;
+    if (invoiceView === 'create') {
+      return <CreateInvoicePage onBack={handleBackToInvoiceList} invoiceId={editingInvoiceId} />;
     }
-    return <InvoiceTab onCreateClick={() => setView('create')} />;
+    return <InvoiceTab onCreateClick={handleCreateInvoice} onEditClick={handleEditInvoice} />;
   };
 
   return (
