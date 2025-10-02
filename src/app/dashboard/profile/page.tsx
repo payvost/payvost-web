@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -110,12 +110,21 @@ export default function ProfilePage() {
     if (!user) return;
     setIsSaving(true);
     try {
-        let photoURL = user.photoURL;
+        let photoURL = userData?.photoURL;
 
         if (imageFile) {
-            const storageRef = ref(storage, `profile_pictures/${user.uid}`);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            photoURL = await getDownloadURL(snapshot.ref);
+            const folderRef = ref(storage, `profile_pictures/${user.uid}/`);
+            
+            // Delete old files
+            const existingFiles = await listAll(folderRef);
+            for (const item of existingFiles.items) {
+                await deleteObject(item);
+            }
+            
+            // Upload new file
+            const fileRef = ref(storage, `profile_pictures/${user.uid}/${imageFile.name}`);
+            await uploadBytes(fileRef, imageFile);
+            photoURL = await getDownloadURL(fileRef);
         }
 
         await updateProfile(user, { displayName, photoURL });

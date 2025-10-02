@@ -127,9 +127,7 @@ export default function PublicEventPage() {
                                         <span>{event.location}</span>
                                     </div>
                                 </div>
-                                <div className="prose dark:prose-invert max-w-none">
-                                   <p>{event.description || "No description available."}</p>
-                                </div>
+                                <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: event.description || "<p>No description available.</p>" }} />
                             </CardContent>
                         </Card>
                     </div>
