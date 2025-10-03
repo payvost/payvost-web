@@ -36,13 +36,14 @@ export function Payvost() {
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
-  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [sendAmount, setSendAmount] = useState('0.00');
   const [fromWallet, setFromWallet] = useState<string | undefined>(undefined);
   const [amountError, setAmountError] = useState('');
   const [receiveCurrency, setReceiveCurrency] = useState('NGN');
   const [recipientGets, setRecipientGets] = useState('0.00');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<string | undefined>(undefined);
+  const [isKycVerified, setIsKycVerified] = useState(false);
 
   const exchangeRates: Record<string, Record<string, number>> = {
     USD: { NGN: 1450.5, GHS: 14.5, KES: 130.25 },
@@ -54,7 +55,7 @@ export function Payvost() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      setLoadingWallets(false);
+      setLoadingData(false);
       return;
     }
 
@@ -64,11 +65,12 @@ export function Payvost() {
         const userWallets = userData.wallets || [];
         setWallets(userWallets);
         setBeneficiaries(userData.beneficiaries || []);
+        setIsKycVerified(userData.kycStatus === 'Verified');
         if (userWallets.length > 0 && !fromWallet) {
           setFromWallet(userWallets[0].currency);
         }
       }
-      setLoadingWallets(false);
+      setLoadingData(false);
     });
 
     return () => unsub();
@@ -135,10 +137,12 @@ export function Payvost() {
   };
 
   const isButtonDisabled =
+    !isKycVerified ||
     isLoading ||
     !!amountError ||
     parseFloat(sendAmount) <= 0 ||
     !selectedBeneficiary;
+    
   const currentRate =
     fromWallet && receiveCurrency && exchangeRates[fromWallet]?.[receiveCurrency]
       ? `1 ${fromWallet} = ${exchangeRates[fromWallet][receiveCurrency]} ${receiveCurrency}`
@@ -176,6 +180,7 @@ export function Payvost() {
               <Select
                 value={selectedBeneficiary}
                 onValueChange={setSelectedBeneficiary}
+                disabled={!isKycVerified}
               >
                 <SelectTrigger id="recipient">
                   <SelectValue placeholder="Select a saved recipient" />
@@ -193,10 +198,10 @@ export function Payvost() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from-wallet">From Wallet</Label>
-                {loadingWallets ? (
+                {loadingData ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (
-                  <Select value={fromWallet} onValueChange={setFromWallet}>
+                  <Select value={fromWallet} onValueChange={setFromWallet} disabled={!isKycVerified}>
                     <SelectTrigger id="from-wallet">
                       <SelectValue placeholder="Select a wallet" />
                     </SelectTrigger>
@@ -222,6 +227,7 @@ export function Payvost() {
                   id="send-amount"
                   value={sendAmount}
                   onChange={(e) => setSendAmount(e.target.value)}
+                  disabled={!isKycVerified}
                 />
                 {amountError && (
                   <p className="text-sm text-destructive">{amountError}</p>
@@ -241,6 +247,7 @@ export function Payvost() {
                 <Select
                   value={receiveCurrency}
                   onValueChange={setReceiveCurrency}
+                  disabled={!isKycVerified}
                 >
                   <SelectTrigger id="recipient-currency">
                     <SelectValue />
@@ -258,13 +265,14 @@ export function Payvost() {
                   id="recipient-gets"
                   value={recipientGets}
                   readOnly
+                  disabled={!isKycVerified}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="note">Note / Reference (Optional)</Label>
-              <Input id="note" placeholder="e.g., For school fees" />
+              <Input id="note" placeholder="e.g., For school fees" disabled={!isKycVerified}/>
             </div>
 
             <div className="text-sm text-muted-foreground pt-2">
@@ -298,7 +306,7 @@ export function Payvost() {
               }}
               isLoading={isLoading}
             >
-              <Button className="w-full" disabled={isLoading}>
+              <Button className="w-full" disabled={isLoading || !isKycVerified}>
                 Continue to Transfer
               </Button>
             </PaymentConfirmationDialog>
@@ -317,7 +325,7 @@ export function Payvost() {
               }}
               isLoading={isLoading}
             >
-              <Button className="w-full" disabled={isLoading}>
+              <Button className="w-full" disabled={isLoading || !isKycVerified}>
                 Send to User
               </Button>
             </PaymentConfirmationDialog>

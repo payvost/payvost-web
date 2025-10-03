@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -274,8 +275,8 @@ export default function DashboardPage() {
                             <CardDescription className="text-xs">Get started by adding a currency wallet.</CardDescription>
                         </CardHeader>
                         <CardContent className="p-0 mt-4">
-                            <CreateWalletDialog onWalletCreated={handleWalletCreated}>
-                                <Button size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                            <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                <Button size="sm" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
                             </CreateWalletDialog>
                         </CardContent>
                     </Card>
@@ -290,8 +291,8 @@ export default function DashboardPage() {
                     <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
                     <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
-                     <CreateWalletDialog onWalletCreated={handleWalletCreated}>
-                        <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                        <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
                     </CreateWalletDialog>
                 </CardContent>
             </Card>
@@ -311,7 +312,7 @@ export default function DashboardPage() {
             </h1>
         </div>
 
-        {!isKycVerified && !isLoading && <KycNotification onDismiss={() => setIsKycVerified(true)} />}
+        {!isKycVerified && !isLoading && <KycNotification onDismiss={() => {}} />}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {isLoading ? (
@@ -390,7 +391,7 @@ export default function DashboardPage() {
                                 Recent invoices and their statuses.
                             </CardDescription>
                         </div>
-                         <Button asChild size="sm" className="ml-auto gap-1">
+                         <Button asChild size="sm" className="ml-auto gap-1" disabled={!isKycVerified}>
                             <Link href="/dashboard/request-payment?tab=invoice">
                                 View All
                                 <ArrowRight className="h-4 w-4" />
@@ -439,7 +440,7 @@ export default function DashboardPage() {
                          )}
                     </CardContent>
                      <CardFooter className="justify-end">
-                         <Button asChild>
+                         <Button asChild disabled={!isKycVerified}>
                             <Link href="/dashboard/request-payment?tab=invoice&create=true">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Create Invoice
