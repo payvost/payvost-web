@@ -3,13 +3,7 @@
 
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/hooks/use-auth';
-import { useAutoLogout } from '@/hooks/useAutoLogout';
 import type { ReactNode } from 'react';
-
-function AutoLogoutManager() {
-    useAutoLogout();
-    return null;
-}
 
 export function Providers({ children }: { children: ReactNode }) {
     return (
@@ -20,7 +14,6 @@ export function Providers({ children }: { children: ReactNode }) {
           disableTransitionOnChange
         >
             <AuthProvider>
-                <AutoLogoutManager />
                 {children}
             </AuthProvider>
         </ThemeProvider>
