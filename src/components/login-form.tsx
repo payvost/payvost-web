@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -72,9 +71,6 @@ export function LoginForm() {
         router.push('/verify-email');
         return;
       }
-      
-      const token = await user.getIdToken();
-      Cookies.set('firebase-auth-token', token, { expires: 1 }); // Set cookie for 1 day
 
       toast({
           title: "Login Successful!",
