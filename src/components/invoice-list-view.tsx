@@ -36,9 +36,10 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
 interface InvoiceListViewProps {
     onCreateClick: () => void;
     onEditClick: (invoiceId: string) => void;
+    isKycVerified: boolean;
 }
 
-export function InvoiceListView({ onCreateClick, onEditClick }: InvoiceListViewProps) {
+export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: InvoiceListViewProps) {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +179,7 @@ export function InvoiceListView({ onCreateClick, onEditClick }: InvoiceListViewP
             <FileText className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-2xl font-bold tracking-tight">You have no invoices</h3>
             <p className="text-sm text-muted-foreground mb-6">Create your first invoice to get started.</p>
-            <Button onClick={onCreateClick}>
+            <Button onClick={onCreateClick} disabled={!isKycVerified}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create First Invoice
             </Button>
@@ -197,7 +198,7 @@ export function InvoiceListView({ onCreateClick, onEditClick }: InvoiceListViewP
                 <CardDescription>Manage and track all your business invoices.</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-                <Button onClick={onCreateClick}><PlusCircle className="mr-2 h-4 w-4"/>Create New Invoice</Button>
+                <Button onClick={onCreateClick} disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/>Create New Invoice</Button>
             </div>
         </div>
         <div className="relative mt-4">

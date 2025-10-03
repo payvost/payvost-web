@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,17 @@ import { Badge } from '@/components/ui/badge';
 import { FileDown, ListFilter, MoreHorizontal, Search, ShieldQuestion, Target, CircleDollarSign, PlusCircle } from 'lucide-react';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Progress } from '@/components/ui/progress';
-import { RaiseDisputeForm } from '@/components/raise-dispute-form';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, DocumentData } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
 
-const disputes = [
-  { id: 'CASE-48292', customer: 'John Doe', email: 'john.d@example.com', amount: '$150.00', reason: 'Product not received', status: 'Needs response', dueBy: '2024-08-10' },
-  { id: 'CASE-48285', customer: 'Jane Smith', email: 'jane.s@example.com', amount: '$75.50', reason: 'Fraudulent', status: 'Under review', dueBy: '2024-08-12' },
-  { id: 'CASE-48279', customer: 'Pierre Dupont', email: 'pierre.d@example.com', amount: '$320.00', reason: 'Product unacceptable', status: 'Won', dueBy: '2024-07-25' },
-  { id: 'CASE-48271', customer: 'Adebayo Adekunle', email: 'adebayo.a@example.com', amount: '$50.00', reason: 'Duplicate', status: 'Lost', dueBy: '2024-07-22' },
-  { id: 'CASE-48263', customer: 'Emily White', email: 'emily.w@example.com', amount: '$500.00', reason: 'Credit not processed', status: 'Needs response', dueBy: '2024-08-15' },
-  { id: 'CASE-48250', customer: 'Satoshi Nakamoto', email: 'satoshi@gmx.com', amount: '$1,200.00', reason: 'Fraudulent', status: 'Under review', dueBy: '2024-08-18' },
-];
+const RaiseDisputeForm = dynamic(() => import('@/components/raise-dispute-form').then(mod => mod.RaiseDisputeForm), {
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+
 
 const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   'Needs response': 'destructive',
@@ -43,8 +44,30 @@ type View = 'list' | 'create';
 export default function DisputePage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [view, setView] = useState<View>('list');
+  const { user } = useAuth();
+  const [disputes, setDisputes] = useState<DocumentData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderDisputesTable = (filteredDisputes: typeof disputes) => (
+   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(collection(db, "disputes"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const disputesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setDisputes(disputesData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching disputes:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const renderDisputesTable = (filteredDisputes: DocumentData[]) => (
     <CardContent className="p-0">
         <Table>
           <TableHeader>
@@ -60,15 +83,20 @@ export default function DisputePage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDisputes.length > 0 ? filteredDisputes.map((dispute) => (
+            {loading ? (
+                [...Array(3)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell>
+                    </TableRow>
+                ))
+            ) : filteredDisputes.length > 0 ? filteredDisputes.map((dispute) => (
               <TableRow key={dispute.id}>
                 <TableCell>
-                  <div className="font-medium">{dispute.id}</div>
+                  <div className="font-medium">{dispute.caseId}</div>
                   <Badge variant={statusVariant[dispute.status]} className="capitalize mt-1 md:hidden">{dispute.status}</Badge>
                 </TableCell>
                 <TableCell>
-                    <div className="font-medium">{dispute.customer}</div>
-                    <div className="text-sm text-muted-foreground hidden md:inline">{dispute.email}</div>
+                    <div className="font-medium">{dispute.customerName}</div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                     <div className="flex flex-col">
@@ -77,7 +105,7 @@ export default function DisputePage() {
                     </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">{dispute.dueBy}</TableCell>
-                <TableCell className="text-right">{dispute.amount}</TableCell>
+                <TableCell className="text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: dispute.currency }).format(dispute.amount)}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -106,7 +134,13 @@ export default function DisputePage() {
       </CardContent>
   );
   
-  const renderListView = () => (
+  const renderListView = () => {
+    const needsResponseCount = disputes.filter(d => d.status === 'Needs response').length;
+    const amountUnderReview = disputes
+        .filter(d => d.status === 'Under review')
+        .reduce((sum, d) => sum + d.amount, 0);
+
+    return (
     <>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">Dispute Center</h1>
@@ -116,89 +150,107 @@ export default function DisputePage() {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Needs Response</CardTitle>
-                    <ShieldQuestion className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">2</div>
-                    <p className="text-xs text-muted-foreground">Disputes requiring your immediate attention.</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Amount Under Review</CardTitle>
-                    <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">$1,275.50</div>
-                    <p className="text-xs text-muted-foreground">Total value of all open disputes.</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Win Rate (Last 90d)</CardTitle>
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">50%</div>
-                    <Progress value={50} className="h-2 mt-2" />
-                </CardContent>
-            </Card>
-        </div>
+        {loading ? (
+             <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+            </div>
+        ) : disputes.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Needs Response</CardTitle>
+                        <ShieldQuestion className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{needsResponseCount}</div>
+                        <p className="text-xs text-muted-foreground">Disputes requiring your immediate attention.</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Amount Under Review</CardTitle>
+                        <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountUnderReview)}</div>
+                        <p className="text-xs text-muted-foreground">Total value of all open disputes.</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Win Rate (Last 90d)</CardTitle>
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">50%</div>
+                        <Progress value={50} className="h-2 mt-2" />
+                    </CardContent>
+                </Card>
+            </div>
+        ) : null}
 
-        <Tabs defaultValue="all">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <TabsList className="overflow-x-auto sm:overflow-visible">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="needs-response">Needs Response</TabsTrigger>
-                    <TabsTrigger value="under-review">Under Review</TabsTrigger>
-                    <TabsTrigger value="closed">Closed</TabsTrigger>
-                </TabsList>
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative flex-1 sm:flex-initial">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Search by case ID, email..."
-                            className="w-full rounded-lg bg-background pl-8 h-9"
-                        />
-                    </div>
-                     <DateRangePicker className="w-full sm:w-auto" />
-                    <Button size="sm" variant="outline" className="h-9 gap-1 w-full sm:w-auto">
-                        <FileDown className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Export
-                        </span>
-                    </Button>
-                </div>
-            </div>
-            <div className="mt-4">
-                 <Card>
-                    <TabsContent value="all">
-                        {renderDisputesTable(disputes)}
-                    </TabsContent>
-                    <TabsContent value="needs-response">
-                        {renderDisputesTable(disputes.filter(d => d.status === 'Needs response'))}
-                    </TabsContent>
-                    <TabsContent value="under-review">
-                        {renderDisputesTable(disputes.filter(d => d.status === 'Under review'))}
-                    </TabsContent>
-                    <TabsContent value="closed">
-                        {renderDisputesTable(disputes.filter(d => ['Won', 'Lost'].includes(d.status)))}
-                    </TabsContent>
-                     <CardFooter>
-                        <div className="text-xs text-muted-foreground">
-                            Showing <strong>1-6</strong> of <strong>{disputes.length}</strong> disputes
+        {!loading && disputes.length === 0 ? (
+            <Card className="mt-4">
+                <CardContent className="h-96 flex flex-col items-center justify-center text-center">
+                    <ShieldQuestion className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-2xl font-bold tracking-tight">You have no open disputes</h3>
+                    <p className="text-sm text-muted-foreground mb-6">Create a new dispute for a transaction if you have an issue.</p>
+                </CardContent>
+            </Card>
+        ) : (
+             <Tabs defaultValue="all">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <TabsList className="overflow-x-auto sm:overflow-visible">
+                        <TabsTrigger value="all">All</TabsTrigger>
+                        <TabsTrigger value="needs-response">Needs Response</TabsTrigger>
+                        <TabsTrigger value="under-review">Under Review</TabsTrigger>
+                        <TabsTrigger value="closed">Closed</TabsTrigger>
+                    </TabsList>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="relative flex-1 sm:flex-initial">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by case ID, email..."
+                                className="w-full rounded-lg bg-background pl-8 h-9"
+                            />
                         </div>
-                    </CardFooter>
-                 </Card>
-            </div>
-        </Tabs>
+                        <DateRangePicker className="w-full sm:w-auto" />
+                        <Button size="sm" variant="outline" className="h-9 gap-1 w-full sm:w-auto">
+                            <FileDown className="h-3.5 w-3.5" />
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            Export
+                            </span>
+                        </Button>
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <Card>
+                        <TabsContent value="all">
+                            {renderDisputesTable(disputes)}
+                        </TabsContent>
+                        <TabsContent value="needs-response">
+                            {renderDisputesTable(disputes.filter(d => d.status === 'Needs response'))}
+                        </TabsContent>
+                        <TabsContent value="under-review">
+                            {renderDisputesTable(disputes.filter(d => d.status === 'Under review'))}
+                        </TabsContent>
+                        <TabsContent value="closed">
+                            {renderDisputesTable(disputes.filter(d => ['Won', 'Lost'].includes(d.status)))}
+                        </TabsContent>
+                        <CardFooter>
+                            <div className="text-xs text-muted-foreground">
+                                Showing <strong>1-{disputes.length}</strong> of <strong>{disputes.length}</strong> disputes
+                            </div>
+                        </CardFooter>
+                    </Card>
+                </div>
+            </Tabs>
+        )}
     </>
-  );
+  )};
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>

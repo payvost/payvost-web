@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);
-  const [isKycVerified, setIsKycVerified] = useState(true); // Default to true to avoid flash of banner
+  const [isKycVerified, setIsKycVerified] = useState(false);
   const [greeting, setGreeting] = useState<GreetingState | null>(null);
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
   const [spendingData, setSpendingData] = useState(defaultSpendingData);

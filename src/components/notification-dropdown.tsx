@@ -8,16 +8,17 @@ import {
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
   import { Button } from "./ui/button"
-  import { Bell, CheckCheck, Gift, AlertTriangle } from "lucide-react"
+  import { Bell, CheckCheck, Gift, AlertTriangle, ShieldCheck } from "lucide-react"
   import { Badge } from "./ui/badge";
   import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./ui/card";
   import { ScrollArea } from "./ui/scroll-area";
   import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
   import { useAuth } from "@/hooks/use-auth";
   import { db } from "@/lib/firebase";
-  import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch, getDocs, where } from "firebase/firestore";
+  import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch } from "firebase/firestore";
   import { Skeleton } from "./ui/skeleton";
   import Link from "next/link";
+  import { cn } from "@/lib/utils";
   
   interface Notification {
     id: string;
@@ -26,12 +27,14 @@ import {
     description: string;
     date: Date;
     read: boolean;
+    href?: string;
   }
   
   const iconMap: { [key: string]: React.ReactNode } = {
     gift: <Gift className="h-5 w-5 text-primary" />,
     alert: <AlertTriangle className="h-5 w-5 text-destructive" />,
     success: <CheckCheck className="h-5 w-5 text-green-500" />,
+    kyc: <ShieldCheck className="h-5 w-5 text-blue-500" />,
   };
 
   function formatTimeAgo(date: Date) {
@@ -73,6 +76,12 @@ export function NotificationDropdown() {
 
         return () => unsubscribe();
     }, [user]);
+    
+    const markAsRead = async (id: string) => {
+        if (!user) return;
+        const notifRef = doc(db, "users", user.uid, "notifications", id);
+        await updateDoc(notifRef, { read: true });
+    };
 
     const markAllAsRead = async () => {
         if (!user) return;
@@ -92,20 +101,35 @@ export function NotificationDropdown() {
     const newNotifications = notifications.filter(n => !n.read);
     const earlierNotifications = notifications.filter(n => n.read);
 
+    const NotificationItem = ({ notification }: { notification: Notification }) => {
+        const content = (
+          <div 
+            className={cn("flex items-start gap-4 p-4 hover:bg-muted/50 cursor-pointer", !notification.read && "bg-blue-500/5")}
+            onClick={() => !notification.read && markAsRead(notification.id)}
+          >
+              <div className="mt-1">{iconMap[notification.icon] || <Bell className="h-5 w-5"/>}</div>
+              <div className="flex-1">
+                  <p className="font-semibold text-sm">{notification.title}</p>
+                  <p className="text-xs text-muted-foreground">{notification.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(notification.date)}</p>
+              </div>
+              {!notification.read && (
+                  <div className="h-2.5 w-2.5 rounded-full bg-primary mt-1 self-center shrink-0"></div>
+              )}
+          </div>
+        );
+
+        if (notification.href) {
+            return <Link href={notification.href}>{content}</Link>
+        }
+        
+        return content;
+    }
+
     const renderNotificationList = (list: typeof notifications) => (
         <div className="divide-y divide-border">
             {list.map((notification) => (
-                <div key={notification.id} className="flex items-start gap-4 p-4 hover:bg-muted/50 cursor-pointer">
-                    <div className="mt-1">{iconMap[notification.icon] || <Bell className="h-5 w-5"/>}</div>
-                    <div className="flex-1">
-                        <p className="font-semibold text-sm">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">{notification.description}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(notification.date)}</p>
-                    </div>
-                    {!notification.read && (
-                        <div className="h-2.5 w-2.5 rounded-full bg-primary mt-1 self-center shrink-0"></div>
-                    )}
-                </div>
+                <NotificationItem key={notification.id} notification={notification} />
             ))}
         </div>
     );

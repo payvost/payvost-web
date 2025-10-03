@@ -34,5 +34,3 @@ export function KycNotification({ onDismiss }: KycNotificationProps) {
     </Alert>
   );
 }
-
-    
