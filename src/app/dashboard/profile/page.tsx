@@ -25,6 +25,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import type { KycStatus } from '@/types/customer';
+
+const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    Verified: { color: 'text-green-700', variant: 'default' },
+    Pending: { color: 'text-yellow-700', variant: 'secondary' },
+    Unverified: { color: 'text-gray-700', variant: 'outline' },
+    Restricted: { color: 'text-orange-700', variant: 'destructive' },
+};
 
 
 const passwordSchema = z.object({
@@ -190,7 +199,9 @@ export default function ProfilePage() {
     setImageFile(null);
   }
   
-  const currentTier = userData?.kycTier || 'Tier 1';
+  const currentKycStatus: KycStatus = userData?.kycStatus || 'Unverified';
+  const kycStatusBadge = kycStatusConfig[currentKycStatus];
+  const userTier = userData?.userType || 'Pending';
 
 
   if (loading) {
@@ -259,12 +270,12 @@ export default function ProfilePage() {
 
                         <p className="text-sm text-muted-foreground">{user?.email}</p>
                         <div className="mt-4 flex items-center gap-2">
-                            <Badge variant={user?.emailVerified ? 'default' : 'destructive'} className={user?.emailVerified ? 'bg-green-500/20 text-green-700' : ''}>
+                            <Badge variant={kycStatusBadge.variant} className={cn('capitalize', kycStatusBadge.color, kycStatusBadge.color.replace('text-','bg-').replace('-700','-500/20'))}>
                                 <ShieldCheck className="mr-2 h-4 w-4" />
-                                {user?.emailVerified ? 'Verified' : 'Unverified'}
+                                {currentKycStatus}
                             </Badge>
                              <Badge variant="secondary">
-                                KYC {currentTier}
+                                {userTier}
                             </Badge>
                         </div>
                     </CardContent>
@@ -435,3 +446,5 @@ export default function ProfilePage() {
     </DashboardLayout>
   );
 }
+
+    
