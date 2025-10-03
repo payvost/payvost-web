@@ -37,9 +37,10 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
 interface EventListViewProps {
     onFabClick: () => void;
     onEditClick: (eventId: string) => void;
+    isKycVerified: boolean;
 }
 
-export function EventListView({ onFabClick, onEditClick }: EventListViewProps) {
+export function EventListView({ onFabClick, onEditClick, isKycVerified }: EventListViewProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [events, setEvents] = useState<DocumentData[]>([]);
@@ -144,7 +145,7 @@ export function EventListView({ onFabClick, onEditClick }: EventListViewProps) {
             <Ticket className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-2xl font-bold tracking-tight">You haven't created any events</h3>
             <p className="text-sm text-muted-foreground mb-6">Create your first event page to start selling tickets.</p>
-            <Button onClick={onFabClick}>
+            <Button onClick={onFabClick} disabled={!isKycVerified}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create First Event
             </Button>
@@ -162,7 +163,7 @@ export function EventListView({ onFabClick, onEditClick }: EventListViewProps) {
             <CardTitle>Manage Events</CardTitle>
             <CardDescription>View, edit, and track your ticket sales.</CardDescription>
           </div>
-          <Button onClick={onFabClick}><PlusCircle className="mr-2 h-4 w-4"/>Create New Event</Button>
+          <Button onClick={onFabClick} disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/>Create New Event</Button>
         </div>
         <div className="relative mt-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

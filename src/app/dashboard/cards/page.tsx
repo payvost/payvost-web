@@ -27,6 +27,8 @@ export default function VirtualCardsPage() {
   const [loadingCards, setLoadingCards] = useState(true);
   const [view, setView] = useState<View>('list');
   const [selectedCard, setSelectedCard] = useState<VirtualCardData | null>(null);
+  const [isKycVerified, setIsKycVerified] = useState(false);
+
 
    useEffect(() => {
     if (!user) {
@@ -36,7 +38,9 @@ export default function VirtualCardsPage() {
 
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
         if (doc.exists()) {
-            setCards(doc.data().cards || []);
+            const data = doc.data();
+            setCards(data.cards || []);
+            setIsKycVerified(data.kycStatus === 'Verified');
         }
         setLoadingCards(false);
     });
@@ -99,7 +103,7 @@ export default function VirtualCardsPage() {
     
     switch (view) {
       case 'create':
-        return <CreateVirtualCardForm onSubmit={handleCardCreated} onCancel={() => setView('list')} />;
+        return <CreateVirtualCardForm onSubmit={handleCardCreated} onCancel={() => setView('list')} isKycVerified={isKycVerified} />;
       case 'details':
         return selectedCard ? <CardDetails card={selectedCard} /> : null;
       case 'list':
@@ -125,7 +129,7 @@ export default function VirtualCardsPage() {
                 </h1>
             </div>
           {view === 'list' && (
-            <Button onClick={() => setView('create')}>
+            <Button onClick={() => setView('create')} disabled={!isKycVerified}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Create Card
             </Button>

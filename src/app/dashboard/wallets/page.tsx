@@ -51,6 +51,8 @@ export default function WalletsPage() {
   const { user, loading: authLoading } = useAuth();
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [isKycVerified, setIsKycVerified] = useState(false);
+
 
   useEffect(() => {
     if (!user) {
@@ -64,6 +66,7 @@ export default function WalletsPage() {
             setWallets(userData.wallets || []);
             const sortedTransactions = (userData.transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setTransactions(sortedTransactions);
+            setIsKycVerified(userData.kycStatus === 'Verified');
         }
         setLoadingWallets(false);
     });
@@ -123,8 +126,8 @@ export default function WalletsPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">My Wallets</h1>
-          <CreateWalletDialog onWalletCreated={handleWalletCreated}>
-            <Button>
+          <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+            <Button disabled={!isKycVerified}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add New Wallet
             </Button>
@@ -149,8 +152,8 @@ export default function WalletsPage() {
                 <CardContent className="h-96 flex flex-col items-center justify-center text-center">
                     <h3 className="text-2xl font-bold tracking-tight">You haven't created any wallets yet.</h3>
                     <p className="text-sm text-muted-foreground mt-2 mb-6">Click the button below to add your first currency wallet.</p>
-                    <CreateWalletDialog onWalletCreated={handleWalletCreated}>
-                        <Button><PlusCircle className="mr-2 h-4 w-4"/>Create Your First Wallet</Button>
+                    <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                        <Button disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/>Create Your First Wallet</Button>
                     </CreateWalletDialog>
                 </CardContent>
             </Card>

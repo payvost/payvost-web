@@ -1,15 +1,32 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PlusCircle, Users } from 'lucide-react';
 import { CreateSplitPaymentForm } from './create-split-payment-form';
+import { useAuth } from '@/hooks/use-auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export function SplitPaymentTab() {
   const [view, setView] = useState('list');
   const [hasSplitPayments, setHasSplitPayments] = useState(false); // Assume no payments initially
+  const { user } = useAuth();
+  const [isKycVerified, setIsKycVerified] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists()) {
+            setIsKycVerified(doc.data().kycStatus === 'Verified');
+            // Logic to check for existing split payments can be added here
+            // For now, we keep it simple
+        }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleCreateClick = () => {
     setView('create');
@@ -30,7 +47,7 @@ export function SplitPaymentTab() {
           <Users className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-2xl font-bold tracking-tight">Create Your First Split Payment</h3>
           <p className="text-sm text-muted-foreground mb-6">Easily divide payments among multiple recipients.</p>
-          <Button onClick={handleCreateClick}>
+          <Button onClick={handleCreateClick} disabled={!isKycVerified}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Create Split Payment
           </Button>

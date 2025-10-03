@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, QrCode, Link as LinkIcon, FileText, Repeat, Users, Ticket, Gift, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { InvoiceTab } from '@/components/invoice-tab';
-import { CreateInvoicePage } from '@/components/create-invoice-page';
-import { RecurringTab } from '@/components/recurring-tab';
-import { SplitPaymentTab } from '@/components/split-payment-tab';
-import { EventTicketsTab } from '@/components/event-tickets-tab';
-import { DonationsTab } from '@/components/donations-tab';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -27,6 +21,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { sendPaymentRequestEmail } from '@/services/emailService';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+
+const InvoiceTab = dynamic(() => import('@/components/invoice-tab').then(mod => mod.InvoiceTab), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+const CreateInvoicePage = dynamic(() => import('@/components/create-invoice-page').then(mod => mod.CreateInvoicePage), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+const RecurringTab = dynamic(() => import('@/components/recurring-tab').then(mod => mod.RecurringTab), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+const SplitPaymentTab = dynamic(() => import('@/components/split-payment-tab').then(mod => mod.SplitPaymentTab), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+const EventTicketsTab = dynamic(() => import('@/components/event-tickets-tab').then(mod => mod.EventTicketsTab), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
+const DonationsTab = dynamic(() => import('@/components/donations-tab').then(mod => mod.DonationsTab), { 
+    loading: () => <Skeleton className="h-96 w-full" />,
+});
 
 
 function PaymentLinkTab() {
@@ -341,7 +355,7 @@ export default function RequestPaymentPageContent() {
     setEditingInvoiceId(null);
     setInvoiceView('list');
     // Also update URL to remove create=true if present
-    const newSearchParams = new URLSearchParams(searchParams);
+    const newSearchParams = new URLSearchParams(searchParams.toString());
     newSearchParams.delete('create');
     const newUrl = `${window.location.pathname}?${newSearchParams.toString()}`;
     window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
@@ -391,25 +405,39 @@ export default function RequestPaymentPageContent() {
           </TabsList>
 
           <TabsContent value="payment-link">
-            <PaymentLinkTab />
+             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <PaymentLinkTab />
+             </Suspense>
           </TabsContent>
 
-          <TabsContent value="invoice">{renderInvoiceContent()}</TabsContent>
+          <TabsContent value="invoice">
+             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                {renderInvoiceContent()}
+             </Suspense>
+            </TabsContent>
 
           <TabsContent value="recurring">
-            <RecurringTab />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <RecurringTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="split-payment">
-            <SplitPaymentTab />
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <SplitPaymentTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="event-tickets">
-            <EventTicketsTab />
+             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <EventTicketsTab />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="donations">
-            <DonationsTab />
+             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <DonationsTab />
+            </Suspense>
           </TabsContent>
 
         </Tabs>
@@ -417,3 +445,5 @@ export default function RequestPaymentPageContent() {
     </DashboardLayout>
   );
 }
+
+    

@@ -2,7 +2,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { errorEmitter } from "./error-emitter";
 import { FirestorePermissionError } from "./errors";
@@ -56,4 +56,4 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, FirestoreError };
