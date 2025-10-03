@@ -30,6 +30,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#3CB371" />
+        <link rel="icon" href="/clay-logo.png" type="image/png" />
       </head>
       <body
         className={cn(
