@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,8 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
+import { format } from 'date-fns';
+
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -115,13 +117,11 @@ export default function ProfilePage() {
         if (imageFile) {
             const folderRef = ref(storage, `profile_pictures/${user.uid}/`);
             
-            // Delete old files
             const existingFiles = await listAll(folderRef);
             for (const item of existingFiles.items) {
                 await deleteObject(item);
             }
             
-            // Upload new file
             const fileRef = ref(storage, `profile_pictures/${user.uid}/${imageFile.name}`);
             await uploadBytes(fileRef, imageFile);
             photoURL = await getDownloadURL(fileRef);
@@ -333,7 +333,7 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-1">
+                            <div className="space-y-1">
                                 <Label className="text-muted-foreground flex items-center gap-2"><UserIcon className="h-4 w-4"/>Full Name</Label>
                                 {isEditing ? <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isSaving}/> : <p className="font-medium">{displayName || 'N/A'}</p>}
                             </div>
@@ -355,7 +355,7 @@ export default function ProfilePage() {
                         </div>
                          <Separator />
                          <div className="space-y-2">
-                             <Label className="text-muted-foreground flex items-center gap-2"><Home className="h-4 w-4"/>Address</Label>
+                             <Label className="text-muted-foreground flex items-center gap-2"><Building2 className="h-4 w-4"/>Address</Label>
                             {isEditing ? (
                                 <div className="space-y-2">
                                     <Input placeholder="Street Address" value={street} onChange={(e) => setStreet(e.target.value)} disabled={isSaving}/>
@@ -367,10 +367,29 @@ export default function ProfilePage() {
                                 </div>
                             ) : (
                                 <p className="font-medium">
-                                    {street && city && state && zip ? `${street}, ${city}, ${state} ${zip}` : 'No address provided'}
+                                    {userData?.street ? `${userData.street}, ${userData.city}, ${userData.state} ${userData.zip}` : 'No address provided'}
                                 </p>
                             )}
                         </div>
+                    </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Identity Verification</CardTitle>
+                        <CardDescription>Manage your identity verification documents.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Ticket className="h-4 w-4"/>ID Type</Label><p className="font-medium">{userData?.idType || 'N/A'}</p></div>
+                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Fingerprint className="h-4 w-4"/>ID Number</Label><p className="font-medium">{userData?.idNumber || 'N/A'}</p></div>
+                        </div>
+                         {userData?.bvn && (
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground flex items-center gap-2"><Fingerprint className="h-4 w-4"/>BVN</Label>
+                                <p className="font-medium">{userData.bvn}</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

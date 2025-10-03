@@ -19,6 +19,7 @@ import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 interface CreateWalletDialogProps {
   children: React.ReactNode;
   onWalletCreated: () => void;
+  disabled?: boolean;
 }
 
 const createWalletSchema = z.object({
@@ -38,7 +39,7 @@ const availableCurrencies = [
   { currency: 'GHS', name: 'Ghanaian Cedi', flag: 'gh' },
 ];
 
-export function CreateWalletDialog({ children, onWalletCreated }: CreateWalletDialogProps) {
+export function CreateWalletDialog({ children, onWalletCreated, disabled = false }: CreateWalletDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -197,7 +198,7 @@ export function CreateWalletDialog({ children, onWalletCreated }: CreateWalletDi
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogTrigger asChild disabled={disabled}>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
        {renderContent()}
       </DialogContent>
