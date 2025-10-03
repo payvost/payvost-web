@@ -5,7 +5,7 @@ export type DisputeReason = 'Product not received' | 'Fraudulent' | 'Product una
 
 interface DisputeEvidence {
     name: string;
-    url?: string;
+    url: string;
     uploadedBy: string; // 'Customer' or Agent Name
     date: string; // ISO 8601
 }

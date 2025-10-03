@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, Repeat, Search } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, onSnapshot, query, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, query, DocumentData, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -29,6 +29,7 @@ export function RecurringTab() {
     const [payments, setPayments] = useState<DocumentData[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
+    const [isKycVerified, setIsKycVerified] = useState(false);
 
 
     useEffect(() => {
@@ -36,6 +37,12 @@ export function RecurringTab() {
             setLoading(false);
             return;
         };
+
+        const userUnsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists()) {
+                setIsKycVerified(doc.data().kycStatus === 'Verified');
+            }
+        });
 
         const q = query(collection(db, "users", user.uid, "scheduledPayments"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -50,7 +57,10 @@ export function RecurringTab() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            userUnsub();
+        };
     }, [user]);
 
     if (view === 'create') {
@@ -80,7 +90,7 @@ export function RecurringTab() {
                     <Repeat className="h-16 w-16 text-muted-foreground mb-4" />
                     <h3 className="text-2xl font-bold tracking-tight">No recurring payments yet</h3>
                     <p className="text-sm text-muted-foreground mb-6">Set up automatic payments and never miss a due date.</p>
-                    <Button onClick={() => setView('create')}>
+                    <Button onClick={() => setView('create')} disabled={!isKycVerified}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Schedule First Payment
                     </Button>
@@ -97,7 +107,7 @@ export function RecurringTab() {
                         <CardTitle>Recurring Payments</CardTitle>
                         <CardDescription>Manage your scheduled and automatic payments.</CardDescription>
                     </div>
-                    <Button onClick={() => setView('create')}><PlusCircle className="mr-2 h-4 w-4" />Schedule New Payment</Button>
+                    <Button onClick={() => setView('create')} disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4" />Schedule New Payment</Button>
                 </div>
                 <div className="relative mt-4">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

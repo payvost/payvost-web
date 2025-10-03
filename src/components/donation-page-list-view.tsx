@@ -36,9 +36,10 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
 interface DonationPageListViewProps {
     onFabClick: () => void;
     onEditClick: (campaignId: string) => void;
+    isKycVerified: boolean;
 }
 
-export function DonationPageListView({ onFabClick, onEditClick }: DonationPageListViewProps) {
+export function DonationPageListView({ onFabClick, onEditClick, isKycVerified }: DonationPageListViewProps) {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,7 +146,7 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
             <Gift className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-2xl font-bold tracking-tight">You haven't created any campaigns</h3>
             <p className="text-sm text-muted-foreground mb-6">Create your first campaign to start accepting donations.</p>
-            <Button onClick={onFabClick}>
+            <Button onClick={onFabClick} disabled={!isKycVerified}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create Donation Campaign
             </Button>
@@ -163,7 +164,7 @@ export function DonationPageListView({ onFabClick, onEditClick }: DonationPageLi
             <CardTitle>Manage Campaigns</CardTitle>
             <CardDescription>View, edit, and track your fundraising campaigns.</CardDescription>
           </div>
-          <Button onClick={onFabClick}><PlusCircle className="mr-2 h-4 w-4"/>Create New Campaign</Button>
+          <Button onClick={onFabClick} disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/>Create New Campaign</Button>
         </div>
         <div className="relative mt-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

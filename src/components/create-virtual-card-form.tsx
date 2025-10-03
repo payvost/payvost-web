@@ -33,18 +33,19 @@ const createCardSchema = z.object({
 type CreateCardFormValues = z.infer<typeof createCardSchema>;
 
 const themes = [
-  { value: 'blue' as const, className: 'bg-gradient-to-br from-blue-500 to-indigo-600' },
-  { value: 'purple' as const, className: 'bg-gradient-to-br from-purple-500 to-violet-600' },
-  { value: 'green' as const, className: 'bg-gradient-to-br from-green-500 to-teal-600' },
-  { value: 'black' as const, className: 'bg-gradient-to-br from-gray-800 to-black' },
+  { value: 'blue' as const, className: 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white' },
+  { value: 'purple' as const, className: 'bg-gradient-to-br from-purple-500 to-violet-600 text-white' },
+  { value: 'green' as const, className: 'bg-gradient-to-br from-green-500 to-teal-600 text-white' },
+  { value: 'black' as const, className: 'bg-gradient-to-br from-gray-800 to-black text-white' },
 ];
 
 interface CreateVirtualCardFormProps {
     onSubmit: (data: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions' | 'last4' | 'expiry' | 'cvv'>) => void;
     onCancel: () => void;
+    isKycVerified: boolean;
 }
 
-export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardFormProps) {
+export function CreateVirtualCardForm({ onSubmit, onCancel, isKycVerified }: CreateVirtualCardFormProps) {
   const { register, handleSubmit, control, formState: { errors } } = useForm<CreateCardFormValues>({
     resolver: zodResolver(createCardSchema),
     defaultValues: {
@@ -65,7 +66,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
         <CardContent className="pt-6 space-y-6">
           <div className="space-y-2">
             <Label htmlFor="cardLabel">Card Label</Label>
-            <Input id="cardLabel" {...register('cardLabel')} placeholder="e.g., Online Subscriptions" />
+            <Input id="cardLabel" {...register('cardLabel')} placeholder="e.g., Online Subscriptions" disabled={!isKycVerified} />
             {errors.cardLabel && <p className="text-sm text-destructive">{errors.cardLabel.message}</p>}
           </div>
 
@@ -75,7 +76,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
                 name="cardModel"
                 control={control}
                 render={({ field }) => (
-                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4">
+                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4" disabled={!isKycVerified}>
                        <div><RadioGroupItem value="debit" id="debit" className="peer sr-only" /><Label htmlFor="debit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Debit</Label></div>
                        <div><RadioGroupItem value="credit" id="credit" className="peer sr-only" /><Label htmlFor="credit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Credit</Label></div>
                     </RadioGroup>
@@ -95,6 +96,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         className="grid grid-cols-2 gap-4"
+                        disabled={!isKycVerified}
                     >
                        <div>
                          <RadioGroupItem value="visa" id="visa" className="peer sr-only" />
@@ -118,13 +120,13 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="spendingLimit.amount" type="number" {...register('spendingLimit.amount')} placeholder="500" className="pl-8" />
+                    <Input id="spendingLimit.amount" type="number" {...register('spendingLimit.amount')} placeholder="500" className="pl-8" disabled={!isKycVerified} />
                 </div>
                  <Controller
                     name="spendingLimit.interval"
                     control={control}
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isKycVerified}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="daily">Per Day</SelectItem>
@@ -151,6 +153,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                        disabled={!isKycVerified}
                     >
                          {themes.map(theme => (
                              <div key={theme.value}>
@@ -176,7 +179,7 @@ export function CreateVirtualCardForm({ onSubmit, onCancel }: CreateVirtualCardF
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-            <Button type="submit">Create Card</Button>
+            <Button type="submit" disabled={!isKycVerified}>Create Card</Button>
         </CardFooter>
       </form>
     </Card>
