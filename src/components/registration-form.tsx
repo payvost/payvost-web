@@ -149,7 +149,7 @@ export function RegistrationForm() {
       const photoFile = data.photo?.[0];
 
       if (photoFile) {
-        const storageRef = ref(storage, `profile_pictures/${user.uid}`);
+        const storageRef = ref(storage, `profile_pictures/${user.uid}/${photoFile.name}`);
         const snapshot = await uploadBytes(storageRef, photoFile);
         photoURL = await getDownloadURL(snapshot.ref);
       }
