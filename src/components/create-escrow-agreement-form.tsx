@@ -15,6 +15,9 @@ import { ArrowLeft, Trash2, Plus, Send, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Separator } from './ui/separator';
+import { useAuth } from '@/hooks/use-auth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const milestoneSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -49,6 +52,7 @@ interface CreateEscrowAgreementFormProps {
 
 export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormProps) {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {
@@ -86,15 +90,36 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
     }
 
     const onSubmit: SubmitHandler<AgreementFormValues> = async (data) => {
+        if (!user) {
+            toast({ title: 'Authentication Error', description: 'You must be logged in to create an agreement.', variant: 'destructive' });
+            return;
+        }
+
         setIsSubmitting(true);
-        console.log(data);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast({
-            title: "Agreement Sent for Review",
-            description: "All parties have been notified to review and fund the agreement.",
-        });
-        setIsSubmitting(false);
-        onBack();
+        try {
+            await addDoc(collection(db, 'escrow'), {
+                ...data,
+                totalAmount,
+                userIds: [user.uid], // Link the agreement to the creator
+                status: 'Awaiting Funding',
+                createdAt: serverTimestamp(),
+            });
+
+            toast({
+                title: "Agreement Sent for Review",
+                description: "All parties have been notified to review and fund the agreement.",
+            });
+            onBack();
+        } catch (error) {
+            console.error("Error creating escrow agreement: ", error);
+            toast({
+                title: "Error",
+                description: "Could not create the agreement. Please try again.",
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
