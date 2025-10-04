@@ -35,6 +35,7 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { ThemeSwitcher } from './theme-switcher';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 
 
 interface DashboardLayoutProps {
@@ -200,10 +201,30 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
               )}>
                 <SidebarTrigger className="md:hidden" />
                 <div className="w-full flex-1">
-                   <div className="relative w-full max-w-sm">
+                  <div className="relative md:w-full md:max-w-sm">
+                    <div className="md:hidden">
+                       <Sheet>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <SearchIcon className="h-4 w-4" />
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent side="top">
+                          <SheetHeader>
+                            <SheetTitle>Search</SheetTitle>
+                          </SheetHeader>
+                          <div className="relative mt-4">
+                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input placeholder="Search features, settings..." className="pl-9" />
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                    </div>
+                    <div className="relative hidden md:block">
                         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input placeholder="Search features, settings..." className="pl-9 bg-muted/50" />
-                   </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="ml-auto flex items-center gap-1">
                     <Button variant="ghost" size="icon" asChild>
