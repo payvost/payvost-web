@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Payvost } from '@/components/Payvost';
@@ -26,6 +26,7 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
+import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -69,6 +70,9 @@ export default function DashboardPage() {
   const [hasTransactionData, setHasTransactionData] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [api, setApi] = React.useState<CarouselApi>();
+  const [current, setCurrent] = React.useState(0);
+  const [count, setCount] = React.useState(0);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
@@ -218,6 +222,17 @@ export default function DashboardPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!api) return;
+
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap() + 1);
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap() + 1);
+    });
+  }, [api]);
+
   const formatValue = (value: number, currency?: string) => {
     if (currency) {
         return `${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(value)}`;
@@ -234,12 +249,90 @@ export default function DashboardPage() {
   const showCreateWalletCTA = wallets.length < 4;
 
   const renderWalletCards = () => {
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+                 {[...Array(2)].map((_, i) => (
+                    <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                  ))}
+            </div>
+        )
+    }
+
+    if (!hasWallets) {
+        return (
+            <div className="relative">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 blur-sm pointer-events-none">
+                    <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                </div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <Card className="w-full max-w-sm text-center bg-background/80 backdrop-blur-sm p-4">
+                        <CardHeader className="p-0">
+                            <Wallet className="mx-auto h-8 w-8 text-primary" />
+                            <CardTitle className="text-base">Create Your First Wallet</CardTitle>
+                            <CardDescription className="text-xs">Get started by adding a currency wallet.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 mt-4">
+                            <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                <Button size="sm" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                            </CreateWalletDialog>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        )
+    }
+
+    const cards = wallets.map(wallet => (
+        <CarouselItem key={wallet.currency} className="md:basis-1/2 lg:basis-1/3">
+             <CurrencyCard currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={wallet.flag} />
+        </CarouselItem>
+    ));
+
+    if (showCreateWalletCTA) {
+        cards.push(
+             <CarouselItem key="create-wallet-cta" className="md:basis-1/2 lg:basis-1/3">
+                <Card className="flex flex-col justify-center items-center h-full border-dashed min-h-[220px]">
+                    <CardContent className="p-6 text-center">
+                        <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                        <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
+                        <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
+                         <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                            <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
+                        </CreateWalletDialog>
+                    </CardContent>
+                </Card>
+             </CarouselItem>
+        );
+    }
+    
+    return (
+        <div className="lg:hidden">
+            <Carousel setApi={setApi} className="w-full">
+                <CarouselContent>
+                    {cards}
+                </CarouselContent>
+            </Carousel>
+            <div className="py-2 flex justify-center gap-2">
+                {Array.from({ length: count }).map((_, i) => (
+                    <Button
+                        key={i}
+                        variant="ghost"
+                        size="icon"
+                        className={cn("h-2 w-2 rounded-full p-0", i === current -1 ? "bg-primary" : "bg-muted-foreground/50")}
+                        onClick={() => api?.scrollTo(i)}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+  }
+  
+  const renderDesktopWalletCards = () => {
     const cards = [];
-    // Render existing wallets (up to 4)
     wallets.slice(0, 4).forEach(wallet => {
         cards.push(<CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={wallet.flag} />);
     });
-    // Render "All Wallets" card if there are any wallets
     if (hasWallets) {
         cards.push(
             <Card key="all-wallets" className="flex flex-col justify-between h-full">
@@ -257,34 +350,7 @@ export default function DashboardPage() {
             </Card>
         );
     }
-     // Render "Create New Wallet" CTA if needed
-    if (showCreateWalletCTA && !hasWallets) {
-        // This is the blurred background version for zero wallets
-        return (
-            <div className="relative col-span-1 sm:col-span-2 lg:col-span-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 blur-sm pointer-events-none">
-                    {[...Array(5)].map((_, i) => (
-                        <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-                    ))}
-                </div>
-                 <div className="absolute inset-0 flex items-center justify-center">
-                    <Card className="w-full max-w-sm text-center bg-background/80 backdrop-blur-sm p-4">
-                        <CardHeader className="p-0">
-                            <Wallet className="mx-auto h-8 w-8 text-primary" />
-                            <CardTitle className="text-base">Create Your First Wallet</CardTitle>
-                            <CardDescription className="text-xs">Get started by adding a currency wallet.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 mt-4">
-                            <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
-                                <Button size="sm" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
-                            </CreateWalletDialog>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        );
-    }
-     if (showCreateWalletCTA && hasWallets) {
+    if (showCreateWalletCTA && hasWallets) {
         cards.push(
              <Card key="create-wallet-cta" className="flex flex-col justify-center items-center h-full border-dashed">
                 <CardContent className="p-6 text-center">
@@ -298,7 +364,6 @@ export default function DashboardPage() {
             </Card>
         )
     }
-
     return cards;
   }
 
@@ -314,60 +379,28 @@ export default function DashboardPage() {
 
         {!isKycVerified && !isLoading && <KycNotification onDismiss={() => {}} />}
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {renderWalletCards()}
+        <div className="hidden lg:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
                   ))
-              ) : renderWalletCards()}
+              ) : renderDesktopWalletCards()}
         </div>
+
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
             <div className="lg:col-span-4 space-y-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Overview</CardTitle>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-8">
-                                    {filter}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setFilter('Last 30 Days')}>Last 30 Days</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFilter('Last 60 Days')}>Last 60 Days</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFilter('Last 90 Days')}>Last 90 Days</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                      {hasTransactionData ? (
-                        <TransactionChart data={chartData} />
-                      ) : (
-                        <div className="h-[250px] flex flex-col items-center justify-center text-center">
-                            <p className="text-muted-foreground">We are still propagating your data.</p>
-                            <p className="text-sm text-muted-foreground">Your transaction chart will appear here once you have enough activity.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                </Card>
-                 <RecentTransactions />
-            </div>
-            <div className="lg:col-span-3 space-y-6">
-               <Payvost />
-               <AccountCompletion />
-            </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
-            <div className="lg:col-span-4 space-y-6">
+                <RecentTransactions />
                 <Card>
                     <CardHeader>
                         <CardTitle>Spending Breakdown</CardTitle>
                         <CardDescription>Overview of your spending this month.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {spendingData.map((item) => (
+                        {!hasTransactionData ? (
+                            <div className="text-center py-10 text-muted-foreground">No spending data for this month yet.</div>
+                        ) : spendingData.map((item) => (
                             <div key={item.category} className="flex items-center gap-4">
                                 <div className="p-3 bg-muted rounded-lg">{item.icon}</div>
                                 <div className="flex-1 space-y-1">
@@ -382,7 +415,9 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-             <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
+               <Payvost />
+               <AccountCompletion />
                  <Card>
                     <CardHeader className="flex flex-row items-center">
                         <div className="grid gap-2">
@@ -448,21 +483,54 @@ export default function DashboardPage() {
                         </Button>
                     </CardFooter>
                 </Card>
+            </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
+            <div className="lg:col-span-4 space-y-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Overview</CardTitle>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8">
+                                    {filter}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setFilter('Last 30 Days')}>Last 30 Days</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFilter('Last 60 Days')}>Last 60 Days</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFilter('Last 90 Days')}>Last 90 Days</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </CardHeader>
+                    <CardContent className="pl-2">
+                      {hasTransactionData ? (
+                        <TransactionChart data={chartData} />
+                      ) : (
+                        <div className="h-[250px] flex flex-col items-center justify-center text-center">
+                            <p className="text-muted-foreground">We are still propagating your data.</p>
+                            <p className="text-sm text-muted-foreground">Your transaction chart will appear here once you have enough activity.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="lg:col-span-3 space-y-6">
                  <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive" />Disputes</CardTitle>
-                            <CardDescription>Overview of transaction disputes.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <p><strong className="text-lg">2</strong> cases require your response.</p>
-                            <p className="text-sm text-muted-foreground">$1,275.50 is currently under review.</p>
-                        </CardContent>
-                        <CardFooter>
-                            <Button variant="outline" asChild>
-                                <Link href="/dashboard/dispute">View All Disputes</Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive" />Disputes</CardTitle>
+                        <CardDescription>Overview of transaction disputes.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <p><strong className="text-lg">2</strong> cases require your response.</p>
+                        <p className="text-sm text-muted-foreground">$1,275.50 is currently under review.</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button variant="outline" asChild>
+                            <Link href="/dashboard/dispute">View All Disputes</Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
              </div>
         </div>
       </div>
