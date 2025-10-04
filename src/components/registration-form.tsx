@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -25,6 +25,9 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Link from 'next/link';
 import { Textarea } from './ui/textarea';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
+import { Icons } from './icons';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -33,16 +36,19 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const registrationSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  phone: z.string().min(10, 'A valid phone number is required'),
+  username: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Passwords must match'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
   country: z.string().min(1, 'Country is required'),
    photo: z.any()
-    .refine((files) => !files || files?.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
+    .refine((files) => files?.length > 0, "A profile photo is required.")
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
     .refine(
-      (files) => !files || files?.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
       "Only .jpg, .jpeg, .png and .webp formats are supported."
-    ).optional(),
+    ),
   street: z.string().min(2, 'Street address is required'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State/Province is required'),
@@ -69,7 +75,7 @@ const registrationSchema = z.object({
 type FormValues = z.infer<typeof registrationSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal & Address', fields: ['fullName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
+  { id: 1, name: 'Personal & Address', fields: ['fullName', 'email', 'phone', 'username', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
   { id: 2, name: 'Identity Verification', fields: ['idType', 'idNumber', 'idDocument', 'bvn', 'agreeTerms'] },
 ];
 
@@ -82,6 +88,11 @@ export function RegistrationForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [username, setUsername] = useState('');
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
 
   const {
     register,
@@ -136,6 +147,53 @@ export function RegistrationForm() {
     }
     return name.substring(0, 2).toUpperCase();
   };
+  
+    const startCamera = async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            console.error("Error accessing camera:", err);
+            toast({ title: "Camera Error", description: "Could not access your device's camera.", variant: "destructive" });
+            setShowCamera(false);
+        }
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+    }
+  };
+  
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                
+                setPreviewImage(canvas.toDataURL('image/jpeg'));
+                setValue('photo', dataTransfer.files);
+                stopCamera();
+                setShowCamera(false);
+            }
+        }, 'image/jpeg');
+    }
+  };
 
   const fullName = watch('fullName');
   const selectedCountry = watch('country');
@@ -153,8 +211,19 @@ export function RegistrationForm() {
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep((step) => step - 1);
+      setCurrentStep((step) => step + 1);
     }
+  };
+  
+  const handleAuthenticate = (platform: 'x' | 'instagram') => {
+    // Simulate authentication
+    const mockUsername = `${platform}_user_${Math.floor(1000 + Math.random() * 9000)}`;
+    setUsername(mockUsername);
+    setValue('username', mockUsername);
+    toast({
+        title: "Authentication Simulated",
+        description: `Your username has been set to ${mockUsername}.`
+    })
   };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -185,6 +254,8 @@ export function RegistrationForm() {
         uid: user.uid,
         name: data.fullName,
         email: data.email,
+        username: data.username,
+        phone: data.phone,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
         country: data.country,
@@ -196,7 +267,6 @@ export function RegistrationForm() {
         userType: 'Pending' as const,
         riskScore: Math.floor(Math.random() * 30),
         totalSpend: 0,
-        phone: '',
         wallets: [],
         transactions: [],
         beneficiaries: [],
@@ -272,21 +342,28 @@ export function RegistrationForm() {
         {currentStep === 0 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Step 1: Personal & Address Information</h3>
-             <div className="flex justify-center">
-                <div className="flex flex-col items-center gap-4 sm:flex-row">
+             <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-24 w-24">
                     <AvatarImage src={previewImage || undefined} alt="Profile picture preview" />
                     <AvatarFallback>{fullName ? getInitials(fullName) : 'PIC'}</AvatarFallback>
                 </Avatar>
-                <div className="space-y-2 text-center sm:text-left">
-                    <Label htmlFor="photo-upload" className="cursor-pointer">
-                    <Button type="button" variant="outline" asChild>
-                        <span><UploadCloud className="mr-2 h-4 w-4" /> Upload Photo</span>
-                    </Button>
-                    </Label>
+                <div className="space-y-2 text-center">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button type="button" variant="default">Set Profile Photo</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
+                                <UploadCloud className="mr-2 h-4 w-4" /> Upload a file
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => setShowCamera(true)}>
+                                <Camera className="mr-2 h-4 w-4" /> Take a selfie
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={(e) => handleFileChange(e, 'photo')} disabled={isLoading} />
-                    <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB.</p>
-                </div>
+                    <p className="text-xs text-muted-foreground">Upload a clear photo of yourself. PNG, JPG up to 5MB.</p>
+                     {errors.photo && <p className="text-sm text-destructive">{errors.photo.message}</p>}
                 </div>
             </div>
 
@@ -300,6 +377,41 @@ export function RegistrationForm() {
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" type="email" {...register('email')} disabled={isLoading} />
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="+1 234 567 8900" />
+                    {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="username">Payment ID (Username)</Label>
+                    <div className="relative">
+                         <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                         <Input 
+                            id="username" 
+                            readOnly 
+                            {...register('username')} 
+                            value={username} 
+                            placeholder="Authenticate to get a Payment ID" 
+                            className="pl-8 pr-32 bg-muted/50"
+                        />
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" variant="outline" className="absolute right-1 top-1/2 -translate-y-1/2 h-8">Authenticate</Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                 <DropdownMenuItem onSelect={() => handleAuthenticate('x')}>
+                                    <Twitter className="mr-2 h-4 w-4 text-[#1DA1F2]" /> Authenticate with X
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleAuthenticate('instagram')}>
+                                    <Icons.instagram className="mr-2 h-4 w-4" /> Authenticate with Instagram
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                     {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -497,6 +609,26 @@ export function RegistrationForm() {
           )}
         </div>
       </form>
+       <Dialog open={showCamera} onOpenChange={(open) => {
+           if (!open) stopCamera();
+           setShowCamera(open);
+       }}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Take a Selfie</DialogTitle>
+                </DialogHeader>
+                <div className="relative">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-auto rounded-md" onCanPlay={startCamera}></video>
+                    <canvas ref={canvasRef} className="hidden"></canvas>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { stopCamera(); setShowCamera(false); }}>Cancel</Button>
+                    <Button onClick={handleCapture}>Capture</Button>
+                </DialogFooter>
+            </DialogContent>
+       </Dialog>
     </div>
   );
 }
+
+    
