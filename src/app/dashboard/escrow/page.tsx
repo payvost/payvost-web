@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -16,14 +16,10 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Progress } from '@/components/ui/progress';
 import { CreateEscrowAgreementForm } from '@/components/create-escrow-agreement-form';
 import Link from 'next/link';
-
-const escrowAgreements = [
-  { id: 'ESC-84321', title: 'Website Development for Acme Corp', parties: 'You & Acme Corp', amount: 5000, currency: 'USD', status: 'In Escrow', created: '2024-08-10' },
-  { id: 'ESC-84320', title: 'Vintage Camera Purchase', parties: 'You & John Smith', amount: 850, currency: 'GBP', status: 'Funds Released', created: '2024-08-05' },
-  { id: 'ESC-84319', title: 'Graphic Design Services', parties: 'You & DesignCo', amount: 1200, currency: 'EUR', status: 'Awaiting Funding', created: '2024-08-12' },
-  { id: 'ESC-84315', title: 'Domain Name Sale (qwibik.ai)', parties: 'You & BuyerX', amount: 15000, currency: 'USD', status: 'Disputed', created: '2024-07-28' },
-  { id: 'ESC-84311', title: 'Consulting Retainer - Q3', parties: 'You & ClientY', amount: 2500000, currency: 'NGN', status: 'Cancelled', created: '2024-07-25' },
-];
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, DocumentData, or } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   'In Escrow': 'default',
@@ -37,13 +33,35 @@ const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 
 export default function EscrowPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [view, setView] = useState<'list' | 'create'>('list');
+  const { user, loading: authLoading } = useAuth();
+  const [agreements, setAgreements] = useState<DocumentData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const activeAgreementsCount = escrowAgreements.filter(a => ['In Escrow', 'Awaiting Funding'].includes(a.status)).length;
-  // Note: For a real app, you'd convert currencies to a base currency for an accurate total.
-  // Here we're just summing up the USD amounts for simplicity.
-  const totalInEscrow = escrowAgreements
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+        setLoading(false);
+        return;
+    }
+
+    const escrowQuery = query(collection(db, 'escrow'), where('userIds', 'array-contains', user.uid));
+    
+    const unsubscribe = onSnapshot(escrowQuery, (snapshot) => {
+        const agreementsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setAgreements(agreementsData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching escrow agreements:", error);
+        setLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user, authLoading]);
+
+  const activeAgreementsCount = agreements.filter(a => ['In Escrow', 'Awaiting Funding'].includes(a.status)).length;
+  const totalInEscrow = agreements
     .filter(a => a.status === 'In Escrow' && a.currency === 'USD')
-    .reduce((sum, a) => sum + a.amount, 0);
+    .reduce((sum, a) => sum + a.totalAmount, 0);
 
 
   const renderListView = () => (
@@ -56,40 +74,46 @@ export default function EscrowPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
-          <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Agreements</CardTitle>
-                  <Handshake className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                  <div className="text-2xl font-bold">{activeAgreementsCount}</div>
-                  <p className="text-xs text-muted-foreground">Currently in progress or awaiting funding.</p>
-              </CardContent>
-          </Card>
+       {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28" />)}
+        </div>
+      ) : agreements.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Funds in Escrow (USD)</CardTitle>
-                  <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                  <div className="text-2xl font-bold">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalInEscrow)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total value secured across all active USD agreements.</p>
-              </CardContent>
-          </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Success Rate (Last 90d)</CardTitle>
-                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                  <div className="text-2xl font-bold">98%</div>
-                  <Progress value={98} className="h-2 mt-2" />
-              </CardContent>
-          </Card>
-      </div>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Agreements</CardTitle>
+                    <Handshake className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{activeAgreementsCount}</div>
+                    <p className="text-xs text-muted-foreground">In progress or awaiting funding.</p>
+                </CardContent>
+            </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Funds in Escrow (USD)</CardTitle>
+                    <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalInEscrow)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Total value secured in active USD agreements.</p>
+                </CardContent>
+            </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Success Rate (Last 90d)</CardTitle>
+                    <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">98%</div>
+                    <Progress value={98} className="h-2 mt-2" />
+                </CardContent>
+            </Card>
+        </div>
+      ) : null}
 
       <Tabs defaultValue="all">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -120,29 +144,29 @@ export default function EscrowPage() {
           <div className="mt-4">
                 <Card>
                   <TabsContent value="all">
-                      {renderAgreementsTable(escrowAgreements)}
+                      {renderAgreementsTable(agreements)}
                   </TabsContent>
                   <TabsContent value="active">
-                      {renderAgreementsTable(escrowAgreements.filter(d => ['In Escrow', 'Awaiting Funding'].includes(d.status)))}
+                      {renderAgreementsTable(agreements.filter(d => ['In Escrow', 'Awaiting Funding'].includes(d.status)))}
                   </TabsContent>
                   <TabsContent value="completed">
-                      {renderAgreementsTable(escrowAgreements.filter(d => ['Funds Released', 'Cancelled'].includes(d.status)))}
+                      {renderAgreementsTable(agreements.filter(d => ['Funds Released', 'Cancelled'].includes(d.status)))}
                   </TabsContent>
                   <TabsContent value="disputed">
-                      {renderAgreementsTable(escrowAgreements.filter(d => d.status === 'Disputed'))}
+                      {renderAgreementsTable(agreements.filter(d => d.status === 'Disputed'))}
                   </TabsContent>
                     <CardFooter>
                       <div className="text-xs text-muted-foreground">
-                          Showing <strong>1-{escrowAgreements.length}</strong> of <strong>{escrowAgreements.length}</strong> agreements
+                          Showing <strong>1-{agreements.length}</strong> of <strong>{agreements.length}</strong> agreements
                       </div>
-                  </CardFooter>
+                    </CardFooter>
                 </Card>
           </div>
       </Tabs>
     </>
   );
 
-  const renderAgreementsTable = (filteredAgreements: typeof escrowAgreements) => (
+  const renderAgreementsTable = (filteredAgreements: typeof agreements) => (
     <CardContent className="p-0">
         <Table>
           <TableHeader>
@@ -157,18 +181,24 @@ export default function EscrowPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAgreements.length > 0 ? filteredAgreements.map((agreement) => (
+             {loading ? (
+                [...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell colSpan={5}><Skeleton className="h-12 w-full" /></TableCell>
+                    </TableRow>
+                ))
+            ) : filteredAgreements.length > 0 ? filteredAgreements.map((agreement) => (
               <TableRow key={agreement.id}>
                 <TableCell>
                   <div className="font-medium">{agreement.title}</div>
                   <div className="text-sm text-muted-foreground">{agreement.id}</div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{agreement.parties}</TableCell>
+                <TableCell className="hidden md:table-cell">{agreement.buyerEmail}, {agreement.sellerEmail}</TableCell>
                 <TableCell className="hidden sm:table-cell">
                     <Badge variant={statusVariant[agreement.status]} className="capitalize">{agreement.status}</Badge>
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: agreement.currency }).format(agreement.amount)}
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: agreement.currency }).format(agreement.totalAmount)}
                 </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
@@ -194,8 +224,10 @@ export default function EscrowPage() {
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No agreements found.
+                <TableCell colSpan={5} className="h-48 text-center">
+                    <ShieldCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold">No Agreements Found</h3>
+                    <p className="text-sm text-muted-foreground">Get started by creating your first escrow agreement.</p>
                 </TableCell>
               </TableRow>
             )}
