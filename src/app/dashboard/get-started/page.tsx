@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -5,7 +6,7 @@ import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Briefcase, ArrowRight, Building, HeartHandshake, Rocket } from 'lucide-react';
+import { Briefcase, ArrowRight, Building, HeartHandshake, Rocket, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -24,6 +25,13 @@ export default function BusinessOnboardingPage() {
         title: 'Startup Founder',
         description: 'Tools tailored for early-stage companies to manage runway, investor relations, and growth.',
         icon: <Rocket className="h-10 w-10 text-primary" />,
+        href: '#',
+        status: 'coming-soon'
+    },
+    {
+        title: 'Creators',
+        description: 'Monetize your content and receive support from your fans worldwide.',
+        icon: <Sparkles className="h-10 w-10 text-primary" />,
         href: '#',
         status: 'coming-soon'
     },
