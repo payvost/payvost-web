@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -90,11 +91,20 @@ export default function InvoiceDetailsPage() {
 
     const currentStatus = invoice.status as Status;
     const currentStatusInfo = statusInfo[currentStatus];
-    const currencySymbol = currencySymbols[invoice.currency] || '$';
 
-    const formatCurrency = (amount: number) => {
-        return `${currencySymbol}${amount.toFixed(2)}`;
-    }
+    const formatCurrency = (amount: number, currency: string) => {
+        try {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(amount);
+        } catch (e) {
+            const symbol = currencySymbols[currency] || currency;
+            return `${symbol}${(amount || 0).toFixed(2)}`;
+        }
+    };
 
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = invoice.grandTotal - subtotal;
@@ -164,18 +174,18 @@ export default function InvoiceDetailsPage() {
                                 <TableRow key={index}>
                                     <TableCell className="font-medium">{item.description}</TableCell>
                                     <TableCell className="text-center">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(item.quantity * item.price)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.price, invoice.currency)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
                                 </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
                          <div className="flex justify-end">
                             <div className="w-full max-w-sm space-y-2">
-                                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount)}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
                                 <Separator className="my-2" />
-                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(invoice.grandTotal)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
                             </div>
                         </div>
                         {invoice.notes && (
