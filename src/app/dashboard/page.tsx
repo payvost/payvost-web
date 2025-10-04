@@ -27,6 +27,7 @@ import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, a
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { sendVerificationWelcomeEmail } from '@/services/emailService';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -106,7 +107,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!user || !user.email) {
       setLoadingWallets(false);
       setLoadingInvoices(false);
       return;
@@ -119,21 +120,28 @@ export default function DashboardPage() {
         setWallets(data.wallets || []);
         
         const newKycStatus = data.kycStatus;
+        const newTier = data.userType;
+        const previousTier = kycStatusRef.current;
         setIsKycVerified(newKycStatus === 'Verified');
 
-        // Check if status changed to 'Verified'
-        if (kycStatusRef.current && kycStatusRef.current !== 'Verified' && newKycStatus === 'Verified') {
-            const notificationsColRef = collection(db, "users", user.uid, "notifications");
-            await addDoc(notificationsColRef, {
-                icon: 'kyc',
-                title: 'Account Verified!',
-                description: 'Congratulations! Your account has been verified. You now have full access to all features.',
-                date: serverTimestamp(),
-                read: false,
-                href: '/dashboard/profile'
-            });
+        // Check if status changed to 'Verified' and tier is 'Tier 1', then send welcome email
+        if (previousTier !== 'Tier 1' && newTier === 'Tier 1' && newKycStatus === 'Verified' && user.displayName && user.email) {
+            console.log("User verified as Tier 1, sending welcome email.");
+            try {
+                await sendVerificationWelcomeEmail(user.email, user.displayName);
+                await addDoc(collection(db, "users", user.uid, "notifications"), {
+                    icon: 'kyc',
+                    title: 'Account Verified!',
+                    description: 'Congratulations! Your account has been verified. You now have full access to all features.',
+                    date: serverTimestamp(),
+                    read: false,
+                    href: '/dashboard/profile'
+                });
+            } catch (emailError) {
+                console.error("Failed to send welcome email:", emailError);
+            }
         }
-        kycStatusRef.current = newKycStatus;
+        kycStatusRef.current = newTier;
 
 
         const transactions = data.transactions || [];

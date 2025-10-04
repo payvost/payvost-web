@@ -62,3 +62,7 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: ONESIGNAL_APP_ID
+    secret: 639e0a93-41c5-4bb7-8cf1-3339447bdc9c
+  - variable: ONESIGNAL_API_KEY
+    secret: os_v2_org_mopave2byvf3pdhrgm4ui664tspomo2qcgmew4e6acqcpm7ypuxisnbxf7y72oby2ibjw4o47v6smznnr7eafj5hbryaq7j4l6xjxji

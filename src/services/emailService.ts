@@ -1,8 +1,18 @@
 
 'use server';
 
-// In a real application, you would install and import the SendGrid mail service
-// import sgMail from '@sendgrid/mail';
+import * as OneSignal from '@onesignal/node-onesignal';
+
+// --- OneSignal Client Initialization ---
+const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
+const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
+
+const configuration = OneSignal.createConfiguration({
+    userKey: ONESIGNAL_API_KEY,
+    appKey: ONESIGNAL_APP_ID,
+});
+const client = new OneSignal.DefaultApi(configuration);
+
 
 interface PaymentRequestEmail {
     to: string;
@@ -13,56 +23,80 @@ interface PaymentRequestEmail {
     paymentLink: string;
 }
 
-// This is a placeholder function. In a real application, you would use the
-// SendGrid SDK to send the email.
-export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
+
+// --- Email Sending Functions ---
+
+/**
+ * Sends a welcome email to a newly verified user.
+ * @param toEmail The recipient's email address.
+ * @param toName The recipient's name.
+ */
+export async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
+    const notification = new OneSignal.Notification();
+    notification.app_id = ONESIGNAL_APP_ID;
+    notification.include_email_tokens = [toEmail];
+    notification.email_subject = "Welcome to Payvost!";
     
-    // 1. Set the API key from environment variables
-    // sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
-
-    // 2. Construct the email message
-    const msg = {
-        to: details.to,
-        from: 'noreply@payvost.com', // Use a verified sender email
-        subject: `Payment Request from ${details.requesterName}`,
-        // You can use a pre-made SendGrid template and pass dynamic data,
-        // or construct the HTML directly here.
-        html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #333;">
-                <h2>You've Received a Payment Request</h2>
-                <p>Hello,</p>
-                <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
-                <p>
-                    <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                        Pay Securely Now
-                    </a>
-                </p>
-                <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
+    // Using a more visually appealing HTML template for the welcome email
+    notification.email_body = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Welcome to Payvost!</h1>
             </div>
-        `,
-    };
+            <div style="padding: 20px;">
+                <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
+                <p>On behalf of the entire team, I'd like to extend a warm welcome to Payvost. We're thrilled to have you with us!</p>
+                <p>Your account has been successfully verified, and you now have full access to our global remittance platform. We're committed to providing you with a fast, secure, and seamless experience for all your international transactions.</p>
+                <p>If you have any questions, our support team is always ready to assist you. Welcome aboard!</p>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Your Dashboard</a>
+                </div>
+                <p style="margin-top: 30px; font-size: 14px;">Best regards,</p>
+                <p style="font-size: 14px; font-weight: bold; margin: 0;">Alice Johnson</p>
+                <p style="font-size: 12px; color: #888; margin: 0;">CEO, Payvost</p>
+            </div>
+            <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
+                &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
+            </div>
+        </div>
+    `;
 
-    // 3. Send the email (currently commented out)
-    /*
     try {
-        await sgMail.send(msg);
-        console.log('Payment request email sent successfully to', details.to);
+        const response = await client.createNotification(notification);
+        console.log('Welcome email sent successfully:', response.id);
+        return { success: true, id: response.id };
+    } catch (e: any) {
+        console.error('Error sending welcome email with OneSignal:', e.body || e);
+        throw new Error('Failed to send welcome email.');
+    }
+}
+
+
+export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
+    const notification = new OneSignal.Notification();
+    notification.app_id = ONESIGNAL_APP_ID;
+    notification.include_email_tokens = [details.to];
+    notification.email_subject = `Payment Request from ${details.requesterName}`;
+    notification.email_body = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>You've Received a Payment Request</h2>
+            <p>Hello,</p>
+            <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
+            <p>
+                <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                    Pay Securely Now
+                </a>
+            </p>
+            <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
+        </div>
+    `;
+
+    try {
+        const response = await client.createNotification(notification);
+        console.log('Payment request email sent successfully to', details.to, 'with ID:', response.id);
         return { success: true };
-    } catch (error) {
-        console.error('Error sending email with SendGrid:', error);
-        // If the error object has more details, you might want to log them
-        if (error.response) {
-            console.error(error.response.body)
-        }
+    } catch (e: any) {
+        console.error('Error sending payment request email with OneSignal:', e.body || e);
         throw new Error('Failed to send payment request email.');
     }
-    */
-   
-    // For now, just simulate a success and log the action
-    console.log('--- EMAIL SIMULATION ---');
-    console.log(`An email would be sent to: ${msg.to}`);
-    console.log(`Subject: ${msg.subject}`);
-    console.log('--------------------------');
-    
-    return { success: true };
 }
