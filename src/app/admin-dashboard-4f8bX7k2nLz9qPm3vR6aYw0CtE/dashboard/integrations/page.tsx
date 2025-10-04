@@ -71,7 +71,7 @@ export default function IntegrationsPage() {
         </div>
         
         <Tabs defaultValue="marketplace">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <TabsList>
             <TabsTrigger value="marketplace"><Puzzle className="mr-2 h-4 w-4" /> Marketplace</TabsTrigger>
             <TabsTrigger value="api-keys"><KeyRound className="mr-2 h-4 w-4" /> API Keys</TabsTrigger>
             <TabsTrigger value="webhooks"><Webhook className="mr-2 h-4 w-4" /> Webhooks</TabsTrigger>
