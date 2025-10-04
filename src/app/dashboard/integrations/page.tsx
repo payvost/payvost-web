@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   PlusCircle,
   FileCode2,
+  ArrowRight,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -30,12 +31,12 @@ import Link from 'next/link';
 
 
 const integrations = [
-  { name: 'Shopify', slug: 'shopify', category: 'E-commerce', logo: 'https://placehold.co/40x40.png', hint: 'shopify logo', description: 'Sync payments from your Shopify store.' },
-  { name: 'WooCommerce', slug: 'woocommerce', category: 'E-commerce', logo: 'https://placehold.co/40x40.png', hint: 'woocommerce logo', description: 'Integrate with your WordPress e-commerce site.' },
-  { name: 'QuickBooks', slug: 'quickbooks', category: 'Accounting', logo: 'https://placehold.co/40x40.png', hint: 'quickbooks logo', description: 'Automate your bookkeeping and accounting.' },
-  { name: 'Xero', slug: 'xero', category: 'Accounting', logo: 'https://placehold.co/40x40.png', hint: 'xero logo', description: 'Connect your Xero account for easy reconciliation.' },
-  { name: 'Slack', slug: 'slack', category: 'Productivity', logo: 'https://placehold.co/40x40.png', hint: 'slack logo', description: 'Get notifications for payments and disputes in Slack.' },
-  { name: 'Google Analytics', slug: 'google-analytics', category: 'Analytics', logo: 'https://placehold.co/40x40.png', hint: 'analytics logo', description: 'Track payment events and conversions.' },
+  { name: 'Shopify', slug: 'shopify', category: 'E-commerce', logo: '/integrations/Shopify Integration.png', hint: 'shopify logo', description: 'Sync payments from your Shopify store.', featured: true },
+  { name: 'WooCommerce', slug: 'woocommerce', category: 'E-commerce', logo: '/integrations/Woo Integration.png', hint: 'woocommerce logo', description: 'Integrate with your WordPress e-commerce site.', featured: true },
+  { name: 'QuickBooks', slug: 'quickbooks', category: 'Accounting', logo: '/integrations/Quickbook Integration.png', hint: 'quickbooks logo', description: 'Automate your bookkeeping and accounting.' },
+  { name: 'Xero', slug: 'xero', category: 'Accounting', logo: '/integrations/Xero Integration.png', hint: 'xero logo', description: 'Connect your Xero account for easy reconciliation.' },
+  { name: 'Slack', slug: 'slack', category: 'Productivity', logo: '/integrations/Slack Integration.png', hint: 'slack logo', description: 'Get notifications for payments and disputes in Slack.' },
+  { name: 'Google Analytics', slug: 'google-analytics', category: 'Analytics', logo: '/integrations/Analytics Integration.png', hint: 'analytics logo', description: 'Track payment events and conversions.' },
 ];
 
 const webhooks = [
@@ -71,7 +72,7 @@ export default function IntegrationsPage() {
         </div>
         
         <Tabs defaultValue="marketplace">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <TabsList className="mb-6">
             <TabsTrigger value="marketplace"><Puzzle className="mr-2 h-4 w-4" /> Marketplace</TabsTrigger>
             <TabsTrigger value="api-keys"><KeyRound className="mr-2 h-4 w-4" /> API Keys</TabsTrigger>
             <TabsTrigger value="webhooks"><Webhook className="mr-2 h-4 w-4" /> Webhooks</TabsTrigger>
@@ -79,14 +80,13 @@ export default function IntegrationsPage() {
             <TabsTrigger value="docs"><Book className="mr-2 h-4 w-4" /> SDKs & Docs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="marketplace" className="mt-6">
+          <TabsContent value="marketplace">
             <Card>
                 <CardHeader>
                     <CardTitle>App Marketplace</CardTitle>
                     <CardDescription>Connect Payvost with your favorite tools and services.</CardDescription>
-                     <div className="relative pt-4">
-                        <Search className="absolute left-2.5 top-6.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search integrations..." className="pl-8 w-full md:w-1/3" />
+                     <div className="pt-4">
+                        <Input placeholder="Search integrations..." className="w-full md:w-1/3" />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -95,9 +95,12 @@ export default function IntegrationsPage() {
                             <Card key={app.name} className="flex flex-col">
                                 <CardHeader className="flex-row gap-4 items-center">
                                     <img src={app.logo} data-ai-hint={app.hint} alt={app.name} className="h-10 w-10 rounded-md" />
-                                    <div>
+                                    <div className="flex-1">
                                         <CardTitle className="text-lg">{app.name}</CardTitle>
-                                        <Badge variant="outline" className="mt-1">{app.category}</Badge>
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline" className="mt-1">{app.category}</Badge>
+                                          {app.featured && <Badge variant="secondary" className="mt-1">Featured</Badge>}
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="flex-grow">
@@ -112,6 +115,19 @@ export default function IntegrationsPage() {
                         ))}
                     </div>
                 </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                  <CardTitle>Build on Payvost</CardTitle>
+                  <CardDescription>Are you a developer? Build your own app and get featured on our marketplace.</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                  <Button variant="outline">
+                      Register Your App
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
 

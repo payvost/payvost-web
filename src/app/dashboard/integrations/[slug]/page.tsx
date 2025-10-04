@@ -20,7 +20,7 @@ import {
 const integrationData = {
     woocommerce: {
         name: 'WooCommerce',
-        logo: 'https://placehold.co/80x80.png',
+        logo: '/integrations/Woo Integration.png',
         hint: 'woocommerce logo',
         description: 'Integrate Payvost directly into your WooCommerce store to accept payments from customers worldwide. Our plugin offers a seamless checkout experience, automatic currency conversion, and robust security features.',
         features: [
@@ -137,3 +137,5 @@ export default function IntegrationDetailPage({ params }: { params: { slug: stri
     </DashboardLayout>
   );
 }
+
+    
