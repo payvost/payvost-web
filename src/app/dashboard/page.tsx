@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Payvost } from '@/components/Payvost';
@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
+  const kycStatusRef = useRef<string | null>(null);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
@@ -112,11 +113,28 @@ export default function DashboardPage() {
     }
 
     const userDocRef = doc(db, "users", user.uid);
-    const unsubUser = onSnapshot(userDocRef, (doc) => {
+    const unsubUser = onSnapshot(userDocRef, async (doc) => {
       if (doc.exists()) {
         const data = doc.data();
         setWallets(data.wallets || []);
-        setIsKycVerified(data.kycStatus === 'Verified');
+        
+        const newKycStatus = data.kycStatus;
+        setIsKycVerified(newKycStatus === 'Verified');
+
+        // Check if status changed to 'Verified'
+        if (kycStatusRef.current && kycStatusRef.current !== 'Verified' && newKycStatus === 'Verified') {
+            const notificationsColRef = collection(db, "users", user.uid, "notifications");
+            await addDoc(notificationsColRef, {
+                icon: 'kyc',
+                title: 'Account Verified!',
+                description: 'Congratulations! Your account has been verified. You now have full access to all features.',
+                date: serverTimestamp(),
+                read: false,
+                href: '/dashboard/profile'
+            });
+        }
+        kycStatusRef.current = newKycStatus;
+
 
         const transactions = data.transactions || [];
         if (transactions.length > 0) {
@@ -292,15 +310,19 @@ export default function DashboardPage() {
     if (showCreateWalletCTA) {
         cards.push(
              <CarouselItem key="create-wallet-cta" className="md:basis-1/2 lg:basis-1/3">
-                <Card className="flex flex-col justify-center items-center h-full border-dashed min-h-[220px]">
-                    <CardContent className="p-6 text-center">
-                        <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                        <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
-                        <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
-                         <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
-                            <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
-                        </CreateWalletDialog>
-                    </CardContent>
+                <Card className="flex flex-col justify-center items-center h-full min-h-[200px] border-dashed p-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-muted rounded-full">
+                           <Wallet className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 text-left">
+                            <CardTitle className="text-base mb-1">Add Wallet</CardTitle>
+                            <CardDescription className="text-xs">Add more currencies to hold.</CardDescription>
+                        </div>
+                    </div>
+                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                        <Button size="sm" variant="outline" className="w-full mt-4" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New</Button>
+                    </CreateWalletDialog>
                 </Card>
              </CarouselItem>
         );

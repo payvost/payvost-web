@@ -4,7 +4,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
-import { Providers } from '@/components/providers';
+import { AuthProvider } from '@/hooks/use-auth';
+import { ThemeProvider } from '@/components/theme-provider';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 
 const inter = Inter({
@@ -38,11 +39,18 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
             {children}
             <Toaster />
             <CookieConsentBanner />
-        </Providers>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
