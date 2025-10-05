@@ -29,7 +29,7 @@ const article = {
   excerpt: 'A brief summary of the blog post goes here. Catch the reader\'s interest and give them a reason to click and read more about this exciting topic.',
   featuredImage: '/Payvost Building.png',
   author: {
-    name: 'Alice Johnson',
+    name: 'Pamilerin Coker',
     role: 'Head of Product',
     avatar: 'https://picsum.photos/seed/a1/100/100',
     avatarHint: 'woman portrait',
@@ -49,7 +49,7 @@ const article = {
     <p>By integrating this technology, we are not just enhancing our security measures; we are building a smarter, more resilient financial ecosystem. Our users can send money with even greater confidence, knowing that their transactions are protected by one of the most advanced AI systems in the world.</p>
     <blockquote class="my-6 p-4 bg-muted/50 border-l-4 border-primary">
         "This partnership with Google allows us to proactively protect our users from financial crime at a scale and speed that was previously unimaginable. It's a game-changer for the remittance industry."
-        <cite class="block mt-2 text-sm font-semibold not-italic">- Alice Johnson, Head of Product at Payvost</cite>
+        <cite class="block mt-2 text-sm font-semibold not-italic">- Pamilerin Coker, Head of Product at Payvost</cite>
     </blockquote>
     <h3 class="font-bold text-xl my-4">What This Means for You</h3>
     <p>For our users, this means enhanced security without sacrificing convenience. The AI works silently in the background, making your international money transfers faster and safer. This move is part of our ongoing mission to build trust and transparency in the global financial landscape.</p>
@@ -148,8 +148,8 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
       
        <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-1 sm:col-span-2 space-y-4">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="w-full md:w-[30%] space-y-4">
               <Link href="#" className="flex items-center space-x-2">
                 <Icons.logo className="h-8" />
               </Link>
@@ -159,39 +159,48 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
                 <Button type="submit">Subscribe</Button>
               </form>
             </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Product</h4>
-              <ul className="space-y-2">
-                <li><Link href="/#features" className="hover:text-primary transition-colors">Features</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Company</h4>
-              <ul className="space-y-2">
-                <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
-                <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
-              </ul>
+            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Product</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/#features" className="hover:text-primary transition-colors">Features</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Company</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
+                    <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
+                    <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
+                    <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Resources</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
+                </ul>
+                </div>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Policies</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+                </ul>
+                </div>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
             <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
             <div className="flex space-x-4 mt-4 sm:mt-0">
-              <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
+              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
+              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
               <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
             </div>
           </div>
