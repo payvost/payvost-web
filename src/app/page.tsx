@@ -475,7 +475,10 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
+            <div className="text-sm text-center sm:text-left">
+                <p>&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
+                <p className="mt-1">Verification code: OS7K3L</p>
+            </div>
             <div className="flex space-x-4 mt-4 sm:mt-0">
               <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
               <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
