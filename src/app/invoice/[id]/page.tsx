@@ -64,7 +64,8 @@ export default function PublicInvoicePage() {
               body: JSON.stringify({
                 invoiceId: id,
                 amount: docSnap.data().grandTotal * 100, // convert to cents
-                currency: docSnap.data().currency.toLowerCase()
+                currency: docSnap.data().currency.toLowerCase(),
+                userId: docSnap.data().userId
               })
             });
             const data = await res.json();
