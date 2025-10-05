@@ -1,13 +1,13 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getAnalytics, isSupported, Analytics, logEvent } from "firebase/analytics"; // ✅ Added
 import { errorEmitter } from "./error-emitter";
 import { FirestorePermissionError } from "./errors";
 
-// Your web app's Firebase configuration
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,12 +15,12 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // ✅ Added for Analytics
 };
 
 // Validate that all required Firebase config values are present.
 Object.entries(firebaseConfig).forEach(([key, value]) => {
   if (!value) {
-    // Creates a friendlier key name like NEXT_PUBLIC_FIREBASE_API_KEY
     const envVarKey = `NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
     throw new Error(
       `Firebase config is missing a value for "${key}". Please check your environment variable ${envVarKey}.`
@@ -28,25 +28,31 @@ Object.entries(firebaseConfig).forEach(([key, value]) => {
   }
 });
 
-// --- Initialize Firebase and export services ---
-
-// This pattern prevents re-initializing the app on every hot-reload.
-const app: FirebaseApp = getApps().length
-  ? getApp()
-  : initializeApp(firebaseConfig);
+// --- Initialize Firebase ---
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
-// Global error handling for Firestore permission errors
+// --- Initialize Analytics (client-side only) ---
+let analytics: Analytics | null = null;
+
+if (typeof window !== "undefined") {
+  isSupported().then((supported) => {
+    if (supported) {
+      analytics = getAnalytics(app);
+      console.log("✅ Firebase Analytics initialized");
+    } else {
+      console.warn("⚠️ Firebase Analytics not supported in this environment.");
+    }
+  });
+}
+
+// --- Global Firestore Permission Error Handling ---
 if (typeof window !== 'undefined') {
   errorEmitter.on('permission-error', (error: FirestorePermissionError) => {
-    // In a real app, you might send this to a logging service
     console.error("Caught Firestore Permission Error:", error.toString());
-    
-    // We can re-throw it to have it caught by Next.js's dev overlay
-    // in development for better visibility.
     if (process.env.NODE_ENV === 'development') {
       setTimeout(() => {
         throw error;
@@ -55,5 +61,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-
-export { app, auth, db, storage, FirestoreError };
+export { app, auth, db, storage, analytics, logEvent, FirestoreError };
