@@ -56,20 +56,23 @@ export default function PublicInvoicePage() {
         if (docSnap.exists() && docSnap.data().isPublic) {
           setInvoice(docSnap.data());
 
-          // If online payment, fetch Stripe clientSecret
-          if (docSnap.data().paymentMethod === 'payvost') {
+          // If online payment via Payvost, fetch Stripe clientSecret
+          if (docSnap.data().paymentMethod === 'payvost' && docSnap.data().status !== 'Paid') {
             const res = await fetch(`${functionsUrl}/create-payment-intent`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 invoiceId: id,
                 amount: docSnap.data().grandTotal * 100, // convert to cents
-                currency: docSnap.data().currency.toLowerCase(),
-                userId: docSnap.data().userId
+                currency: docSnap.data().currency.toLowerCase()
               })
             });
             const data = await res.json();
-            setClientSecret(data.clientSecret);
+            if (data.clientSecret) {
+              setClientSecret(data.clientSecret);
+            } else {
+              console.error("Failed to get payment client secret.");
+            }
           }
         } else {
           setInvoice(null);
@@ -84,7 +87,7 @@ export default function PublicInvoicePage() {
     };
 
     fetchInvoice();
-  }, [id]);
+  }, [id, functionsUrl]);
 
   // Download invoice PDF
   const handleDownloadInvoice = () => {
@@ -112,7 +115,7 @@ export default function PublicInvoicePage() {
         title: "Payment Form Loaded",
         description: "Complete your payment below.",
       });
-      // The StripeCheckout component is already rendered below, so we just guide the user.
+      // The Checkout component is already rendered below, so we just guide the user.
     } else {
       toast({
         title: "Payment not available",
@@ -238,7 +241,7 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
-            {/* ---------------- Stripe Payment Form ---------------- */}
+            {/* ---------------- Payvost Checkout Form ---------------- */}
             {invoice.paymentMethod === 'payvost' && clientSecret && invoice.status !== 'Paid' && (
               <div className="mt-8">
                 <StripeCheckout clientSecret={clientSecret} />
@@ -246,8 +249,8 @@ export default function PublicInvoicePage() {
             )}
           </CardContent>
 
-          <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
-            <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
+          <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between items-center">
+            <p className="text-sm text-muted-foreground text-center md:text-left">Pay with Payvost for a secure and seamless experience.</p>
             {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'payvost') && invoice.status !== 'Paid' && (
               <Button size="lg" onClick={handlePayNow}>
                 Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
