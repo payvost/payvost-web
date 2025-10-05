@@ -230,7 +230,8 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                 createdAt: serverTimestamp(),
             });
             const newId = docRef.id;
-            const publicUrl = `${window.location.origin}/invoice/${newId}`;
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+            const publicUrl = `${siteUrl}/invoice/${newId}`;
             await updateDoc(docRef, { publicUrl });
             setSavedInvoiceId(newId);
             return newId;
