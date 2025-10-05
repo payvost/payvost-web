@@ -6,7 +6,8 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/components/theme-provider';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
-import { SpeedInsights } from "@vercel/speed-insights/next"; // ✅ Added import
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next"; // ✅ Added import
 
 const inter = Inter({
   subsets: ['latin'],
@@ -49,7 +50,8 @@ export default function RootLayout({
             {children}
             <Toaster />
             <CookieConsentBanner />
-            <SpeedInsights /> {/* ✅ Added here */}
+            <SpeedInsights />  {/* ✅ Performance metrics */}
+            <Analytics />       {/* ✅ Visitor & page view tracking */}
           </AuthProvider>
         </ThemeProvider>
       </body>
