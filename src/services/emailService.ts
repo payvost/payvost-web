@@ -52,7 +52,7 @@ export async function sendVerificationWelcomeEmail(toEmail: string, toName: stri
                     <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Your Dashboard</a>
                 </div>
                 <p style="margin-top: 30px; font-size: 14px;">Best regards,</p>
-                <p style="font-size: 14px; font-weight: bold; margin: 0;">Alice Johnson</p>
+                <p style="font-size: 14px; font-weight: bold; margin: 0;">Pamilerin Coker</p>
                 <p style="font-size: 12px; color: #888; margin: 0;">CEO, Payvost</p>
             </div>
             <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">

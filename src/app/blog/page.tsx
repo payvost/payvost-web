@@ -167,15 +167,15 @@ export default function BlogArchivePage() {
                         <ul className="space-y-2">
                             <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
                             <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                            <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                            <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                            <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
+                            <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
                         </ul>
                         </div>
                         <div className="space-y-4">
                         <h4 className="font-semibold text-foreground">Resources</h4>
                         <ul className="space-y-2">
                             <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                            <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                            <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                             <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                         </ul>
@@ -192,8 +192,8 @@ export default function BlogArchivePage() {
                 <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
                     <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
                     <div className="flex space-x-4 mt-4 sm:mt-0">
-                    <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-                    <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
+                    <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
+                    <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
                     <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
                     </div>
                 </div>
