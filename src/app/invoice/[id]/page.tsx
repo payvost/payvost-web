@@ -106,11 +106,12 @@ export default function PublicInvoicePage() {
 
     if (invoice.paymentMethod === 'manual') {
       setIsManualPaymentDialogOpen(true);
-    } else if (invoice.paymentMethod === 'stripe' && clientSecret) {
+    } else if (invoice.paymentMethod === 'stripe') {
       toast({
         title: "Payment Form Loaded",
         description: "Complete your payment below.",
       });
+      // The StripeCheckout component is already rendered below, so we just guide the user.
     } else {
       toast({
         title: "Payment not available",
@@ -246,11 +247,12 @@ export default function PublicInvoicePage() {
 
           <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
             <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-            {invoice.paymentMethod === 'manual' && (
-              <Button size="lg" onClick={handlePayNow} disabled={invoice.status === 'Paid'}>
-                {invoice.status === 'Paid' ? 'Paid' : `Pay ${formatCurrency(invoice.grandTotal, invoice.currency)} Now`}
+            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+              <Button size="lg" onClick={handlePayNow}>
+                Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
               </Button>
             )}
+            {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
           </CardFooter>
         </Card>
 
