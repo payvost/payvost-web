@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-jpcbatlqpa-uc.a.run.app';
 
 export const register = async (email: string, password: string, name?: string) => {
   return axios.post(`${API_URL}/user/register`, { email, password, name });

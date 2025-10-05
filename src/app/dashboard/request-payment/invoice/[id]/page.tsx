@@ -39,7 +39,7 @@ export default function InvoiceDetailsPage() {
     const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
-    const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/qwibil-remit/us-central1/api';
+    const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-jpcbatlqpa-uc.a.run.app';
 
 
     useEffect(() => {
