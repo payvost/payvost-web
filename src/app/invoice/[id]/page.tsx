@@ -57,7 +57,7 @@ export default function PublicInvoicePage() {
           setInvoice(docSnap.data());
 
           // If online payment, fetch Stripe clientSecret
-          if (docSnap.data().paymentMethod === 'stripe') {
+          if (docSnap.data().paymentMethod === 'payvost') {
             const res = await fetch(`${functionsUrl}/create-payment-intent`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -106,7 +106,7 @@ export default function PublicInvoicePage() {
 
     if (invoice.paymentMethod === 'manual') {
       setIsManualPaymentDialogOpen(true);
-    } else if (invoice.paymentMethod === 'stripe') {
+    } else if (invoice.paymentMethod === 'payvost') {
       toast({
         title: "Payment Form Loaded",
         description: "Complete your payment below.",
@@ -238,7 +238,7 @@ export default function PublicInvoicePage() {
             )}
 
             {/* ---------------- Stripe Payment Form ---------------- */}
-            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && (
+            {invoice.paymentMethod === 'payvost' && clientSecret && invoice.status !== 'Paid' && (
               <div className="mt-8">
                 <StripeCheckout clientSecret={clientSecret} />
               </div>
@@ -247,7 +247,7 @@ export default function PublicInvoicePage() {
 
           <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
             <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'payvost') && invoice.status !== 'Paid' && (
               <Button size="lg" onClick={handlePayNow}>
                 Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
               </Button>
