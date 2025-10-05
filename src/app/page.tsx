@@ -398,9 +398,9 @@ export default function LandingPage() {
         {/* App Download CTA */}
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="bg-primary text-primary-foreground rounded-[15px] p-8 md:p-12">
+            <div className="relative bg-[#002f70] text-primary-foreground rounded-[15px] p-8 md:p-12 overflow-hidden">
               <div className="grid lg:grid-cols-2 gap-8 items-center">
-                  <div className="text-center lg:text-left">
+                  <div className="text-center lg:text-left z-10">
                       <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Download the mobile app</h2>
                       <p className="mt-4 max-w-xl text-lg text-primary-foreground/80 mx-auto lg:mx-0">
                           Send money locally, pay bills globally, receive money, save, pay bills and do more with the Payvost app.
@@ -414,10 +414,15 @@ export default function LandingPage() {
                           </Link>
                       </div>
                   </div>
-                   <div className="hidden lg:flex justify-center">
-                      <div className="bg-primary-foreground/10 p-4 rounded-xl">
-                          <Image src="/Dashboard.png" alt="Payvost App Dashboard" width={400} height={300} data-ai-hint="app dashboard" className="rounded-lg shadow-2xl" />
-                      </div>
+                  <div className="absolute -right-24 -bottom-24 opacity-20 lg:opacity-100 lg:static flex justify-center items-end">
+                    <Image
+                      src="/Payvost mockup.png"
+                      alt="Payvost App Dashboard"
+                      width={400}
+                      height={300}
+                      data-ai-hint="app dashboard"
+                      className="rounded-lg shadow-2xl"
+                    />
                   </div>
               </div>
             </div>
@@ -452,15 +457,15 @@ export default function LandingPage() {
                 <ul className="space-y-2">
                     <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
                     <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                    <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
+                    <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
                 </ul>
                 </div>
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Resources</h4>
                 <ul className="space-y-2">
                     <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
@@ -480,8 +485,8 @@ export default function LandingPage() {
                 <p className="mt-1">Verification code: OS7K3L</p>
             </div>
             <div className="flex space-x-4 mt-4 sm:mt-0">
-              <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
+              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
+              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
               <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
             </div>
           </div>

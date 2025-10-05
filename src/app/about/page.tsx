@@ -13,10 +13,10 @@ import { SiteHeader } from "@/components/site-header";
 import { Icons } from "@/components/icons";
 
 const teamMembers = [
-    { name: 'Alice Johnson', role: 'CEO & Founder', image: 'https://placehold.co/200x200.png', hint: 'woman portrait' },
-    { name: 'Bob Williams', role: 'CTO', image: 'https://placehold.co/200x200.png', hint: 'man portrait' },
-    { name: 'Charlie Brown', role: 'Head of Operations', image: 'https://placehold.co/200x200.png', hint: 'person portrait' },
-    { name: 'Diana Miller', role: 'Lead Designer', image: 'https://placehold.co/200x200.png', hint: 'woman smiling' },
+    { name: 'Pamilerin Coker', role: 'CEO & Founder', image: '/founder.jpg', hint: 'woman portrait' },
+    { name: 'Tyler Grant', role: 'CTO', image: '/CTO - Tyler Grant.png', hint: 'man portrait' },
+    { name: 'Erica Johnson', role: 'COO', image: '/COO- Erica Johnson.png', hint: 'person portrait' },
+    { name: 'Kendra Allen', role: 'Global CFO', image: '/Global CFO - Kendra Allen.png', hint: 'woman smiling' },
 ];
 
 const companyValues = [
@@ -75,16 +75,17 @@ export default function AboutPage() {
                             The passionate individuals driving the Payvost vision forward.
                         </p>
                     </div>
-                    <div className="grid items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-4 lg:gap-16">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {teamMembers.map((member) => (
-                            <div key={member.name} className="grid gap-2 text-center">
-                                <Avatar className="mx-auto h-24 w-24">
-                                    <AvatarImage src={member.image} data-ai-hint={member.hint} alt={member.name} />
-                                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <h3 className="text-lg font-bold">{member.name}</h3>
-                                <p className="text-sm text-muted-foreground">{member.role}</p>
-                            </div>
+                            <Card key={member.name} className="overflow-hidden text-center hover:shadow-xl transition-shadow">
+                                <div className="relative aspect-square">
+                                    <img src={member.image} alt={member.name} data-ai-hint={member.hint} className="object-cover h-full w-full" />
+                                </div>
+                                <CardContent className="p-4">
+                                    <h3 className="text-lg font-bold">{member.name}</h3>
+                                    <p className="text-sm text-primary">{member.role}</p>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 </div>
@@ -135,17 +136,18 @@ export default function AboutPage() {
 
       <footer className="bg-muted text-muted-foreground py-12">
         <div className="container mx-auto px-4 md:px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-                <div className="lg:col-span-2 space-y-4">
-                    <Link href="/" className="flex items-center space-x-2">
-                        <Icons.logo className="h-8" />
-                    </Link>
-                    <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
-                    <form className="flex w-full max-w-sm space-x-2">
-                        <Input type="email" placeholder="Enter your email" />
-                        <Button type="submit">Subscribe</Button>
-                    </form>
-                </div>
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="w-full md:w-[30%] space-y-4">
+              <Link href="#" className="flex items-center space-x-2">
+                <Icons.logo className="h-8" />
+              </Link>
+              <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
+              <form className="flex w-full max-w-sm space-x-2">
+                <Input type="email" placeholder="Enter your email" />
+                <Button type="submit">Subscribe</Button>
+              </form>
+            </div>
+            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Product</h4>
                 <ul className="space-y-2">
@@ -160,28 +162,36 @@ export default function AboutPage() {
                 <ul className="space-y-2">
                     <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
                     <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Press</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                    <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
+                    <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
                 </ul>
                 </div>
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Resources</h4>
                 <ul className="space-y-2">
                     <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
                 </div>
-            </div>
-            <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-                <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
-                <div className="flex space-x-4 mt-4 sm:mt-0">
-                <Link href="#" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-                <Link href="#" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
-                <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
+                <div className="space-y-4">
+                <h4 className="font-semibold text-foreground">Policies</h4>
+                <ul className="space-y-2">
+                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+                </ul>
                 </div>
             </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
+            <div className="flex space-x-4 mt-4 sm:mt-0">
+              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
+              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
+              <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
