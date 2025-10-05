@@ -39,6 +39,8 @@ export default function InvoiceDetailsPage() {
     const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
+    const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/qwibil-remit/us-central1/api';
+
 
     useEffect(() => {
         if (!user || !id) {
@@ -125,7 +127,9 @@ export default function InvoiceDetailsPage() {
                     </div>
                      <div className="flex gap-2">
                         <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                        <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+                        <a href={`${functionsUrl}/download/invoice/${id}`} download>
+                            <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+                        </a>
                         <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>
                     </div>
                 </div>
