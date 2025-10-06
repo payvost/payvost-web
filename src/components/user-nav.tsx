@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
   DropdownMenuGroup,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CreditCard, LogOut, Settings, User as UserIcon, ChevronDown } from "lucide-react"
 import { Button } from "./ui/button";
@@ -23,9 +23,10 @@ import { Badge } from "./ui/badge";
 
 interface UserNavProps {
     user: User | null;
+    businessLogoUrl?: string | null;
 }
 
-export function UserNav({ user }: UserNavProps) {
+export function UserNav({ user, businessLogoUrl }: UserNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -60,13 +61,18 @@ export function UserNav({ user }: UserNavProps) {
     return name.substring(0, 2).toUpperCase();
   }
 
+  const avatarSrc = businessLogoUrl || user?.photoURL || "";
+  const avatarAlt = businessLogoUrl ? "Business Logo" : user?.displayName || "User";
+  const avatarFallback = businessLogoUrl ? getInitials(avatarAlt) : getInitials(user?.displayName);
+
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <div className="relative flex items-center gap-1 cursor-pointer">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={user?.photoURL || ""} data-ai-hint="person portrait" alt={user?.displayName || "User"} />
-              <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
+              <AvatarImage src={avatarSrc} data-ai-hint="person portrait" alt={avatarAlt} />
+              <AvatarFallback>{avatarFallback}</AvatarFallback>
             </Avatar>
             <ChevronDown className="h-4 w-4 text-muted-foreground transition-colors hover:text-primary" />
           </div>

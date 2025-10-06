@@ -2,7 +2,7 @@
 import type { Timestamp } from "firebase/firestore";
 
 export type KycStatus = 'Verified' | 'Pending' | 'Unverified' | 'Restricted';
-export type UserType = 'Pending' | 'Tier 1' | 'Tier 2' | 'Business Owner';
+export type UserType = 'Pending' | 'Tier 1' | 'Tier 2' | 'Business Owner' | 'Business Pending';
 
 interface WalletBalance {
     currency: string;
