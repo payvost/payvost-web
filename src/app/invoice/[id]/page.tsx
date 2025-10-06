@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import StripeCheckout from '@/components/StripeCheckout';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -37,10 +38,10 @@ export default function PublicInvoicePage() {
   const id = params.id as string;
   const [invoice, setInvoice] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
-  // Make sure this env variable points to your deployed Firebase Functions
   const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-jpcbatlqpa-uc.a.run.app';
 
   useEffect(() => {
@@ -54,6 +55,21 @@ export default function PublicInvoicePage() {
 
         if (docSnap.exists() && docSnap.data().isPublic) {
           setInvoice(docSnap.data());
+
+          // If online payment, fetch Stripe clientSecret
+          if (docSnap.data().paymentMethod === 'stripe') {
+            const res = await fetch(`${functionsUrl}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoiceId: id,
+                amount: docSnap.data().grandTotal * 100, // convert to cents
+                currency: docSnap.data().currency.toLowerCase()
+              })
+            });
+            const data = await res.json();
+            setClientSecret(data.clientSecret);
+          }
         } else {
           setInvoice(null);
           console.log("Invoice not found or not public.");
@@ -69,15 +85,11 @@ export default function PublicInvoicePage() {
     fetchInvoice();
   }, [id]);
 
-  // -----------------------------
   // Download invoice PDF
-  // -----------------------------
   const handleDownloadInvoice = () => {
     if (!id) return;
 
     const downloadUrl = `${functionsUrl}/download/invoice/${id}`;
-
-    // Open in new tab for safe download
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.target = "_blank";
@@ -88,27 +100,24 @@ export default function PublicInvoicePage() {
     document.body.removeChild(link);
   };
 
+  // Pay Now button handler
   const handlePayNow = () => {
-    if (invoice?.paymentMethod === 'manual') {
+    if (!invoice) return;
+
+    if (invoice.paymentMethod === 'manual') {
       setIsManualPaymentDialogOpen(true);
+    } else if (invoice.paymentMethod === 'stripe') {
+      toast({
+        title: "Payment Form Loaded",
+        description: "Complete your payment below.",
+      });
+      // The StripeCheckout component is already rendered below, so we just guide the user.
     } else {
       toast({
-        title: "Redirecting to Payment...",
-        description: "You will be redirected to a secure payment page.",
+        title: "Payment not available",
+        description: "Unable to process online payment at this time.",
       });
-      // Example redirect to payment processor:
-      // router.push(`/checkout?invoiceId=${id}`);
     }
-  };
-
-  const handleCopyDetails = () => {
-    if (!invoice) return;
-    const details = `Bank Name: ${invoice.manualBankName}\nAccount Name: ${invoice.manualAccountName}\nAccount Number: ${invoice.manualAccountNumber}\n${invoice.manualOtherDetails || ''}`;
-    navigator.clipboard.writeText(details.trim());
-    toast({
-      title: "Copied to Clipboard!",
-      description: "Bank transfer details have been copied.",
-    });
   };
 
   if (loading) {
@@ -227,16 +236,27 @@ export default function PublicInvoicePage() {
                 <p className="text-sm text-muted-foreground">{invoice.notes}</p>
               </div>
             )}
+
+            {/* ---------------- Stripe Payment Form ---------------- */}
+            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && (
+              <div className="mt-8">
+                <StripeCheckout clientSecret={clientSecret} />
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
             <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-            <Button size="lg" onClick={handlePayNow} disabled={invoice.status === 'Paid'}>
-              {invoice.status === 'Paid' ? 'Paid' : `Pay ${formatCurrency(invoice.grandTotal, invoice.currency)} Now`}
-            </Button>
+            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+              <Button size="lg" onClick={handlePayNow}>
+                Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
+              </Button>
+            )}
+            {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
           </CardFooter>
         </Card>
 
+        {/* ---------------- Manual Payment Dialog ---------------- */}
         <Dialog open={isManualPaymentDialogOpen} onOpenChange={setIsManualPaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -254,7 +274,9 @@ export default function PublicInvoicePage() {
               <p className="text-xs text-center text-muted-foreground">Once payment is made, the sender will be notified to confirm receipt.</p>
             </div>
             <DialogFooter>
-              <Button onClick={handleCopyDetails} variant="secondary"><Copy className="mr-2 h-4 w-4"/>Copy Details</Button>
+              <Button onClick={() => navigator.clipboard.writeText(`Bank: ${invoice.manualBankName}\nAccount Name: ${invoice.manualAccountName}\nAccount Number: ${invoice.manualAccountNumber}`)} variant="secondary">
+                <Copy className="mr-2 h-4 w-4"/>Copy Details
+              </Button>
               <Button onClick={() => setIsManualPaymentDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>

@@ -11,10 +11,11 @@ import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2,
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { collection, query, where, onSnapshot, DocumentData, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref, deleteObject } from "firebase/storage";
 import { Skeleton } from './ui/skeleton';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -237,7 +238,10 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/request-payment/invoice/${invoice.id}`}>View Details</Link>
+                                <Link href={`/dashboard/request-payment/invoice/${invoice.id}`}>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  View Details
+                                </Link>
                             </DropdownMenuItem>
                             {invoice.status === 'Draft' && (
                                 <DropdownMenuItem onClick={() => onEditClick(invoice.id)}>

@@ -1,129 +1,193 @@
 
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Building, UploadCloud, FileUp, Loader2, Save } from 'lucide-react';
-import { Separator } from './ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import type { BusinessProfile } from '@/types/business-settings';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/use-auth';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { db, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Skeleton } from './ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, UploadCloud } from 'lucide-react';
+import Image from 'next/image';
 
-
-const profileSchema = z.object({
-    legalName: z.string().min(2, 'Legal name is required'),
-    industry: z.string().min(1, 'Industry is required'),
-    businessType: z.string().min(1, 'Business type is required'),
-    registrationNumber: z.string().optional(),
-    taxId: z.string().optional(),
-    businessAddress: z.string().min(5, 'Address is required'),
-    website: z.string().url('Must be a valid URL').optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
-const mockProfile: BusinessProfile = {
-    legalName: 'Payvost Inc.',
-    industry: 'Financial Technology',
-    businessType: 'Corporation',
-    registrationNumber: 'RC123456',
-    taxId: 'TIN987654',
-    businessAddress: '123 Finance Street, Moneyville, USA',
-    website: 'https://qwibik.remit',
-    logoUrl: 'https://placehold.co/100x100.png',
-    kycStatus: 'Verified'
+const businessTypeMap: { [key: string]: string } = {
+    'sole-prop': 'Sole Proprietorship',
+    'llc': 'LLC',
+    'corporation': 'Corporation',
+    'non-profit': 'Non-Profit',
 };
 
-export function BusinessProfileSettings() {
-    const { toast } = useToast();
-    const {
-        register,
-        handleSubmit,
-        control,
-        formState: { errors, isSubmitting },
-    } = useForm<ProfileFormValues>({
-        resolver: zodResolver(profileSchema),
-        defaultValues: {
-            ...mockProfile,
-        }
-    });
+const documentTypeMap: { [key: string]: string } = {
+    'incorporation': 'Certificate of Incorporation',
+    'address_proof': 'Proof of Address',
+    'owner_id': "Owner's ID",
+};
 
-    const onSubmit = async (data: ProfileFormValues) => {
-        console.log(data);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast({
-            title: 'Profile Updated',
-            description: 'Your business profile has been successfully saved.',
+function InfoField({ label, value }: { label: string; value: string | undefined | null }) {
+    return (
+        <div className="space-y-1">
+            <Label className="text-muted-foreground">{label}</Label>
+            <p className="font-medium">{value || 'N/A'}</p>
+        </div>
+    );
+}
+
+export function BusinessProfileSettings() {
+    const { user, loading: authLoading } = useAuth();
+    const [loadingData, setLoadingData] = useState(true);
+    const [profile, setProfile] = useState<BusinessProfile | null>(null);
+    const [kycDocuments, setKycDocuments] = useState<any[]>([]);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [isSavingLogo, setIsSavingLogo] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (!user) return;
+        setLoadingData(true);
+        const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists()) {
+                const userData = doc.data();
+                const businessProfile = userData.businessProfile || {};
+                setProfile(businessProfile);
+                setKycDocuments(userData.kycDocuments || []);
+                 if (businessProfile.logoUrl) {
+                    setLogoPreview(businessProfile.logoUrl);
+                }
+            }
+            setLoadingData(false);
         });
+        return () => unsub();
+    }, [user]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                toast({ title: 'File too large', description: 'Logo should be less than 2MB.', variant: 'destructive' });
+                return;
+            }
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+        }
     };
+    
+    const handleSaveLogo = async () => {
+        if (!user || !logoFile) return;
+
+        setIsSavingLogo(true);
+        try {
+            const storageRef = ref(storage, `business_logos/${user.uid}/${logoFile.name}`);
+            await uploadBytes(storageRef, logoFile);
+            const downloadURL = await getDownloadURL(storageRef);
+
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, {
+                'businessProfile.logoUrl': downloadURL
+            });
+            
+            setProfile(prev => prev ? { ...prev, logoUrl: downloadURL } : null);
+
+            toast({ title: 'Logo Updated', description: 'Your new business logo has been saved.' });
+        } catch (error) {
+            console.error("Error updating logo:", error);
+            toast({ title: 'Upload Failed', description: 'Could not save your new logo.', variant: 'destructive' });
+        } finally {
+            setIsSavingLogo(false);
+        }
+    };
+    
+    if (loadingData || authLoading) {
+        return <Skeleton className="h-96 w-full" />;
+    }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Business Profile</CardTitle>
-                    <CardDescription>Manage your legal business name, address, and other identifying information.</CardDescription>
+                    <CardDescription>This information has been verified and cannot be changed. Contact support for any modifications.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label htmlFor="legalName">Legal Business Name</Label><Input id="legalName" {...register('legalName')} />{errors.legalName && <p className="text-sm text-destructive">{errors.legalName.message}</p>}</div>
-                        <div className="space-y-2"><Label htmlFor="industry">Industry</Label><Input id="industry" {...register('industry')} />{errors.industry && <p className="text-sm text-destructive">{errors.industry.message}</p>}</div>
+                        <InfoField label="Legal Business Name" value={profile?.name} />
+                        <InfoField label="Industry" value={profile?.industry} />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2"><Label htmlFor="businessType">Business Type</Label><Controller name="businessType" control={control} render={({field}) => (<Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="Corporation">Corporation</SelectItem><SelectItem value="LLC">LLC</SelectItem><SelectItem value="Non-Profit">Non-Profit</SelectItem></SelectContent></Select>)}/>{errors.businessType && <p className="text-sm text-destructive">{errors.businessType.message}</p>}</div>
-                        <div className="space-y-2"><Label htmlFor="registrationNumber">Registration Number</Label><Input id="registrationNumber" {...register('registrationNumber')} /></div>
-                        <div className="space-y-2"><Label htmlFor="taxId">Tax ID</Label><Input id="taxId" {...register('taxId')} /></div>
+                        <InfoField label="Business Type" value={profile?.type ? businessTypeMap[profile.type] : 'N/A'} />
+                        <InfoField label="Registration Number" value={profile?.registrationNumber} />
+                        <InfoField label="Tax ID" value={profile?.taxId} />
                     </div>
-                     <div className="space-y-2"><Label htmlFor="businessAddress">Business Address</Label><Input id="businessAddress" {...register('businessAddress')} />{errors.businessAddress && <p className="text-sm text-destructive">{errors.businessAddress.message}</p>}</div>
+                     <InfoField label="Business Address" value={profile?.address} />
+                     <InfoField label="Website" value={profile?.website} />
                 </CardContent>
-                <CardFooter className="justify-end">
-                    <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Save Changes</Button>
-                </CardFooter>
             </Card>
 
             <Card>
                 <CardHeader>
                     <CardTitle>Brand Identity</CardTitle>
-                    <CardDescription>Manage your logo and other branding elements.</CardDescription>
+                    <CardDescription>Upload your business logo for invoices and payment pages.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-6 p-4 border rounded-lg">
-                        <Avatar className="h-20 w-20"><AvatarImage src={mockProfile.logoUrl} /><AvatarFallback>QI</AvatarFallback></Avatar>
+                        <Avatar className="h-20 w-20">
+                            <AvatarImage src={logoPreview || undefined} />
+                            <AvatarFallback>
+                                {profile?.name ? profile.name.substring(0, 2).toUpperCase() : 'QI'}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1">
                             <h4 className="font-semibold">Business Logo</h4>
-                            <p className="text-sm text-muted-foreground">Upload a logo to personalize your invoices and payment pages. Recommended size: 200x200px.</p>
+                             <Label htmlFor="logo-upload" className="inline-flex items-center justify-center h-9 px-4 py-2 mt-2 text-sm font-medium transition-colors bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 cursor-pointer">
+                                <UploadCloud className="mr-2 h-4 w-4" />
+                                {logoFile ? 'Change Logo' : 'Upload Logo'}
+                             </Label>
+                             <input id="logo-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg"/>
+                            <p className="text-xs text-muted-foreground mt-2">Recommended: 200x200px, PNG or JPG, max 2MB.</p>
                         </div>
-                        <Button variant="outline"><UploadCloud className="mr-2 h-4 w-4"/>Upload New Logo</Button>
                     </div>
                 </CardContent>
+                {logoFile && (
+                     <CardFooter className="justify-end">
+                        <Button onClick={handleSaveLogo} disabled={isSavingLogo}>
+                            {isSavingLogo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Logo
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
             
             <Card>
                  <CardHeader>
                     <CardTitle>KYC/AML Verification</CardTitle>
-                    <CardDescription>Manage required documents for business verification.</CardDescription>
+                    <CardDescription>Your business verification status and documents.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 border rounded-lg bg-green-500/10 border-green-500/20 text-green-700">
-                        <p className="font-semibold">Your business is currently verified.</p>
+                        <p className="font-semibold">Your business is currently {profile?.status || 'Pending'}.</p>
                     </div>
                      <div className="space-y-2">
                         <h4 className="font-medium">Uploaded Documents</h4>
-                        <div className="flex items-center justify-between p-4 border rounded-lg"><div><p className="font-semibold">Certificate of Incorporation</p><p className="text-xs text-muted-foreground">Uploaded on 2024-08-10</p></div><Button variant="outline" size="sm">View</Button></div>
-                        <div className="flex items-center justify-between p-4 border rounded-lg"><div><p className="font-semibold">Proof of Address</p><p className="text-xs text-muted-foreground">Uploaded on 2024-08-10</p></div><Button variant="outline" size="sm">View</Button></div>
+                        {kycDocuments.map((doc, index) => (
+                             <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                                <div>
+                                    <p className="font-semibold">{documentTypeMap[doc.type] || doc.type}</p>
+                                    <p className="text-xs text-muted-foreground">Uploaded: {doc.name}</p>
+                                </div>
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="outline" size="sm">View</Button>
+                                </a>
+                            </div>
+                        ))}
                     </div>
                 </CardContent>
-                <CardFooter>
-                    <Button variant="secondary"><FileUp className="mr-2 h-4 w-4"/>Upload New Document</Button>
-                </CardFooter>
             </Card>
-
-        </form>
+        </div>
     );
 }

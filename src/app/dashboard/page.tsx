@@ -23,11 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { sendVerificationWelcomeEmail } from '@/services/emailService';
+import { sendBusinessApprovalEmail } from '@/services/emailService';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -74,7 +75,9 @@ export default function DashboardPage() {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
-  const kycStatusRef = useRef<string | null>(null);
+  const userStatusRef = useRef<{ kyc: string | null; business: string | null }>({ kyc: null, business: null });
+  const [disputes, setDisputes] = useState<DocumentData[]>([]);
+  const [loadingDisputes, setLoadingDisputes] = useState(true);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
@@ -106,10 +109,10 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !user.email) {
+    if (authLoading || !user || !user.email) {
       setLoadingWallets(false);
       setLoadingInvoices(false);
+      setLoadingDisputes(false);
       return;
     }
 
@@ -120,28 +123,40 @@ export default function DashboardPage() {
         setWallets(data.wallets || []);
         
         const newKycStatus = data.kycStatus;
-        const newTier = data.userType;
-        const previousTier = kycStatusRef.current;
-        setIsKycVerified(newKycStatus === 'Verified');
+        const newBusinessStatus = data.businessProfile?.status;
 
-        // Check if status changed to 'Verified' and tier is 'Tier 1', then send welcome email
-        if (previousTier !== 'Tier 1' && newTier === 'Tier 1' && newKycStatus === 'Verified' && user.displayName && user.email) {
-            console.log("User verified as Tier 1, sending welcome email.");
+        // Welcome email for personal KYC
+        if (userStatusRef.current.kyc !== 'Verified' && newKycStatus === 'Verified' && user.displayName && user.email) {
+            console.log("User KYC verified, sending welcome email.");
             try {
                 await sendVerificationWelcomeEmail(user.email, user.displayName);
                 await addDoc(collection(db, "users", user.uid, "notifications"), {
-                    icon: 'kyc',
-                    title: 'Account Verified!',
+                    icon: 'kyc', title: 'Account Verified!',
                     description: 'Congratulations! Your account has been verified. You now have full access to all features.',
-                    date: serverTimestamp(),
-                    read: false,
-                    href: '/dashboard/profile'
+                    date: serverTimestamp(), read: false, href: '/dashboard/profile'
                 });
             } catch (emailError) {
                 console.error("Failed to send welcome email:", emailError);
             }
         }
-        kycStatusRef.current = newTier;
+        
+        // Welcome notification for Business Approval
+        if (userStatusRef.current.business !== 'Approved' && newBusinessStatus === 'Approved' && user.displayName && user.email) {
+            console.log("Business profile approved, sending notification.");
+            try {
+                await sendBusinessApprovalEmail(user.email, user.displayName, data.businessProfile.name);
+                 await addDoc(collection(db, "users", user.uid, "notifications"), {
+                    icon: 'success', title: 'Business Account Approved!',
+                    description: `Congratulations! Your business "${data.businessProfile.name}" has been approved. You can now switch to your business dashboard.`,
+                    date: serverTimestamp(), read: false, href: '/dashboard/business'
+                });
+            } catch (error) {
+                console.error("Failed to send business approval notification:", error);
+            }
+        }
+        
+        userStatusRef.current = { kyc: newKycStatus, business: newBusinessStatus };
+        setIsKycVerified(newKycStatus === 'Verified');
 
 
         const transactions = data.transactions || [];
@@ -191,9 +206,21 @@ export default function DashboardPage() {
         setLoadingInvoices(false);
     });
 
+    const disputesQuery = query(collection(db, "disputes"), where("userId", "==", user.uid));
+    const unsubDisputes = onSnapshot(disputesQuery, (snapshot) => {
+        const fetchedDisputes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setDisputes(fetchedDisputes);
+        setLoadingDisputes(false);
+    }, (error) => {
+        console.error("Error fetching disputes:", error);
+        setLoadingDisputes(false);
+    });
+
+
     return () => {
         unsubUser();
         unsubInvoices();
+        unsubDisputes();
     };
   }, [user, authLoading]);
 
@@ -270,7 +297,7 @@ export default function DashboardPage() {
     // Real-time listener will update the state automatically
   }
 
-  const isLoading = authLoading || loadingWallets;
+  const isLoading = authLoading || loadingWallets || loadingDisputes;
   const hasWallets = wallets.length > 0;
   const showCreateWalletCTA = wallets.length < 4;
 
@@ -397,6 +424,12 @@ export default function DashboardPage() {
     return cards;
   }
 
+  const disputesRequiringResponse = disputes.filter(d => d.status === 'Needs response').length;
+  const amountUnderReview = disputes
+    .filter(d => ['Needs response', 'Under review'].includes(d.status))
+    .reduce((sum, d) => sum + d.amount, 0);
+
+
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <div className="flex-1 space-y-4 p-8 pt-6">
@@ -418,9 +451,35 @@ export default function DashboardPage() {
               ) : renderDesktopWalletCards()}
         </div>
 
-
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
-            <div className="lg:col-span-4 space-y-6">
+             <div className="lg:col-span-4 space-y-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Overview</CardTitle>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8">
+                                    {filter}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setFilter('Last 30 Days')}>Last 30 Days</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFilter('Last 60 Days')}>Last 60 Days</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFilter('Last 90 Days')}>Last 90 Days</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </CardHeader>
+                    <CardContent className="pl-2">
+                      {hasTransactionData ? (
+                        <TransactionChart data={chartData} />
+                      ) : (
+                        <div className="h-[250px] flex flex-col items-center justify-center text-center">
+                            <p className="text-muted-foreground">We are still propagating your data.</p>
+                            <p className="text-sm text-muted-foreground">Your transaction chart will appear here once you have enough activity.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                </Card>
                 <RecentTransactions />
                 <Card>
                     <CardHeader>
@@ -513,47 +572,23 @@ export default function DashboardPage() {
                         </Button>
                     </CardFooter>
                 </Card>
-            </div>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
-            <div className="lg:col-span-4 space-y-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Overview</CardTitle>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-8">
-                                    {filter}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setFilter('Last 30 Days')}>Last 30 Days</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFilter('Last 60 Days')}>Last 60 Days</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFilter('Last 90 Days')}>Last 90 Days</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                      {hasTransactionData ? (
-                        <TransactionChart data={chartData} />
-                      ) : (
-                        <div className="h-[250px] flex flex-col items-center justify-center text-center">
-                            <p className="text-muted-foreground">We are still propagating your data.</p>
-                            <p className="text-sm text-muted-foreground">Your transaction chart will appear here once you have enough activity.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                </Card>
-            </div>
-             <div className="lg:col-span-3 space-y-6">
                  <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-destructive" />Disputes</CardTitle>
                         <CardDescription>Overview of transaction disputes.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        <p><strong className="text-lg">2</strong> cases require your response.</p>
-                        <p className="text-sm text-muted-foreground">$1,275.50 is currently under review.</p>
+                        {loadingDisputes ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-6 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                            </div>
+                        ) : (
+                            <>
+                                <p><strong className="text-lg">{disputesRequiringResponse}</strong> cases require your response.</p>
+                                <p className="text-sm text-muted-foreground">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountUnderReview)} is currently under review.</p>
+                            </>
+                        )}
                     </CardContent>
                     <CardFooter>
                         <Button variant="outline" asChild>
@@ -561,7 +596,7 @@ export default function DashboardPage() {
                         </Button>
                     </CardFooter>
                 </Card>
-             </div>
+            </div>
         </div>
       </div>
     </DashboardLayout>

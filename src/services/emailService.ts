@@ -100,3 +100,45 @@ export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
         throw new Error('Failed to send payment request email.');
     }
 }
+
+
+/**
+ * Sends a business account approval email.
+ * @param toEmail The recipient's email address.
+ * @param toName The recipient's name.
+ * @param businessName The name of the approved business.
+ */
+export async function sendBusinessApprovalEmail(toEmail: string, toName: string, businessName: string) {
+    const notification = new OneSignal.Notification();
+    notification.app_id = ONESIGNAL_APP_ID;
+    notification.include_email_tokens = [toEmail];
+    notification.email_subject = `Congratulations! Your Business Account is Approved`;
+    
+    notification.email_body = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Business Account Approved!</h1>
+            </div>
+            <div style="padding: 20px;">
+                <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
+                <p>Great news! Your business, <strong>${businessName}</strong>, has been verified and approved on Payvost.</p>
+                <p>You can now access our full suite of business tools, including invoicing, team management, and advanced reporting. To get started, you can now switch to your business dashboard.</p>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="${process.env.FRONTEND_URL}/dashboard/business" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Business Dashboard</a>
+                </div>
+            </div>
+            <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
+                &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
+            </div>
+        </div>
+    `;
+
+    try {
+        const response = await client.createNotification(notification);
+        console.log('Business approval email sent successfully:', response.id);
+        return { success: true, id: response.id };
+    } catch (e: any) {
+        console.error('Error sending business approval email with OneSignal:', e.body || e);
+        throw new Error('Failed to send business approval email.');
+    }
+}
