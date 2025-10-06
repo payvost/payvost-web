@@ -3,10 +3,11 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -133,5 +134,46 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
       )
     }
   
+    return <>{children}</>;
+};
+
+export const ProtectBusinessRoute = ({ children }: { children: ReactNode }) => {
+    const { user, loading: authLoading } = useAuth();
+    const [businessStatus, setBusinessStatus] = useState<'loading' | 'approved' | 'unapproved'>('loading');
+    const router = useRouter();
+
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (!user) {
+            router.push('/login');
+            return;
+        }
+
+        const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+            if (doc.exists() && doc.data().businessProfile?.status === 'Approved') {
+                setBusinessStatus('approved');
+            } else {
+                setBusinessStatus('unapproved');
+            }
+        });
+
+        return () => unsub();
+    }, [user, authLoading, router]);
+
+    useEffect(() => {
+        if (businessStatus === 'unapproved') {
+            router.push('/dashboard');
+        }
+    }, [businessStatus, router]);
+
+    if (authLoading || businessStatus !== 'approved') {
+        return (
+             <div className="flex h-screen w-full items-center justify-center">
+                <p>Loading Business Dashboard...</p>
+            </div>
+        );
+    }
+
     return <>{children}</>;
 };

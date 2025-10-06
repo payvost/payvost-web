@@ -2,7 +2,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import React, from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -27,7 +27,7 @@ import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
 import { Button } from './ui/button';
 import { NotificationDropdown } from './notification-dropdown';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ProtectRoute, useAuth } from '@/hooks/use-auth';
@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { ThemeSwitcher } from './theme-switcher';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 
 interface DashboardLayoutProps {
@@ -51,9 +52,10 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   const { user } = useAuth();
   const mainContentRef = React.useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = React.useState(false);
+  const [isBusinessApproved, setIsBusinessApproved] = useState(false);
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     const mainEl = mainContentRef.current;
     if (!mainEl) return;
 
@@ -64,6 +66,21 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     mainEl.addEventListener('scroll', handleScroll, { passive: true });
     return () => mainEl.removeEventListener('scroll', handleScroll);
   }, []);
+  
+   useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+      if (doc.exists()) {
+        const businessProfile = doc.data().businessProfile;
+        if (businessProfile && businessProfile.status === 'Approved') {
+          setIsBusinessApproved(true);
+        } else {
+          setIsBusinessApproved(false);
+        }
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -227,6 +244,11 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                   </div>
                 </div>
                 <div className="ml-auto flex items-center gap-1">
+                    {isBusinessApproved && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/business">Switch to Business</Link>
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" asChild>
                     <Link href="/dashboard/support">
                         <HelpCircle className="h-[1.2rem] w-[1.2rem]" />
