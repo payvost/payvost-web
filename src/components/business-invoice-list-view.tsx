@@ -1,22 +1,32 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign, Edit, Trash2, Send, Copy, Eye, CheckCircle, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
+import { useAuth } from '@/hooks/use-auth';
+import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const sampleInvoices = [
-  { id: 'INV-B123', customer: 'Acme Inc.', amount: '$2,500.00', dueDate: '2024-08-15', status: 'Paid' },
-  { id: 'INV-B124', customer: 'Stark Industries', amount: '$10,000.00', dueDate: '2024-08-20', status: 'Pending' },
-  { id: 'INV-B125', customer: 'Wayne Enterprises', amount: '$5,250.75', dueDate: '2024-07-30', status: 'Overdue' },
-  { id: 'INV-B126', customer: 'Ollivanders Wand Shop', amount: '$350.00', dueDate: '2024-08-10', status: 'Draft' },
-  { id: 'INV-B127', customer: 'Cyberdyne Systems', amount: '$1,200.00', dueDate: '2024-08-25', status: 'Pending' },
-];
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Paid: 'default',
@@ -32,6 +42,81 @@ interface BusinessInvoiceListViewProps {
 }
 
 export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerified }: BusinessInvoiceListViewProps) {
+    const { user } = useAuth();
+    const router = useRouter();
+    const { toast } = useToast();
+    const [invoices, setInvoices] = useState<DocumentData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [invoiceToDelete, setInvoiceToDelete] = useState<DocumentData | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const q = query(collection(db, "businessInvoices"), where("createdBy", "==", user.uid));
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const invoicesData: DocumentData[] = [];
+            querySnapshot.forEach((doc) => {
+                invoicesData.push({ id: doc.id, ...doc.data() });
+            });
+            invoicesData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+            setInvoices(invoicesData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching business invoices: ", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleCopyLink = (link: string) => {
+        if (!link) {
+            toast({
+                title: "Link Not Available",
+                description: "This invoice doesn't have a public link yet (it might be a draft).",
+                variant: "destructive"
+            });
+            return;
+        }
+        navigator.clipboard.writeText(link);
+        toast({ title: "Copied!", description: "Public invoice link copied to clipboard." });
+    };
+
+    const handleSendReminder = (invoice: DocumentData) => {
+        toast({
+            title: "Reminder Sent",
+            description: `An email reminder has been sent to ${invoice.toEmail}.`
+        });
+    };
+    
+    const handleMarkAsPaid = async (invoiceId: string) => {
+        try {
+            const docRef = doc(db, 'businessInvoices', invoiceId);
+            await updateDoc(docRef, { status: 'Paid' });
+            toast({ title: 'Success', description: 'Invoice marked as paid.' });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to update invoice status.', variant: 'destructive' });
+        }
+    };
+    
+    const handleDeleteInvoice = async () => {
+        if (!invoiceToDelete) return;
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(db, 'businessInvoices', invoiceToDelete.id));
+            toast({ title: 'Invoice Deleted', description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.` });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to delete invoice.', variant: 'destructive' });
+        } finally {
+            setIsDeleting(false);
+            setInvoiceToDelete(null);
+        }
+    };
     
     return (
         <>
@@ -105,23 +190,45 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sampleInvoices.map((invoice) => (
+                        {loading ? (
+                            [...Array(3)].map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : invoices.map((invoice) => (
                         <TableRow key={invoice.id}>
-                            <TableCell className="font-medium">{invoice.id}</TableCell>
-                            <TableCell>{invoice.customer}</TableCell>
-                            <TableCell>{invoice.amount}</TableCell>
-                            <TableCell>{invoice.dueDate}</TableCell>
+                            <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                            <TableCell>{invoice.toName}</TableCell>
+                            <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
+                            <TableCell>{invoice.dueDate.toDate().toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">
                                 <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <DropdownMenu>
+                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                                        <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                                        <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive">Void Invoice</DropdownMenuItem>
+                                        <DropdownMenuItem asChild><Link href={`/business/invoices/${invoice.id}`}><FileText className="mr-2 h-4 w-4" />View Details</Link></DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => window.open(invoice.publicUrl, '_blank')}>
+                                            <Eye className="mr-2 h-4 w-4" />View Public Page
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => onEditClick(invoice.id)} disabled={invoice.status !== 'Draft'}>
+                                            <Edit className="mr-2 h-4 w-4" />Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleSendReminder(invoice)}>
+                                            <Send className="mr-2 h-4 w-4" />Send Reminder
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleCopyLink(invoice.publicUrl)}>
+                                            <Copy className="mr-2 h-4 w-4" />Copy Public Link
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                         <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)} disabled={invoice.status === 'Paid'}>
+                                            <CheckCircle className="mr-2 h-4 w-4" />Mark as Paid
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => {e.preventDefault(); setInvoiceToDelete(invoice);}}>
+                                            <Trash2 className="mr-2 h-4 w-4"/>Void Invoice
+                                        </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>
@@ -132,10 +239,29 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
             </CardContent>
             <CardFooter>
                  <div className="text-xs text-muted-foreground">
-                    Showing <strong>1-{sampleInvoices.length}</strong> of <strong>{sampleInvoices.length}</strong> invoices
+                    Showing <strong>1-{invoices.length}</strong> of <strong>{invoices.length}</strong> invoices
                 </div>
             </CardFooter>
         </Card>
+
+         <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to void this invoice?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone and will permanently delete invoice <strong>#{invoiceToDelete?.invoiceNumber}</strong>.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteInvoice} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Void Invoice
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         </>
     );
 }

@@ -149,12 +149,12 @@ export default function OnboardingFormPage() {
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="registration-number">Registration Number (Optional)</Label>
-                            <Input id="registration-number" name="registration-number" />
+                            <Label htmlFor="registration-number">Registration Number</Label>
+                            <Input id="registration-number" name="registration-number" required />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="tax-id">Tax ID (Optional)</Label>
-                            <Input id="tax-id" name="tax-id" />
+                            <Label htmlFor="tax-id">Tax ID</Label>
+                            <Input id="tax-id" name="tax-id" required />
                         </div>
                     </div>
                      <div className="space-y-2">

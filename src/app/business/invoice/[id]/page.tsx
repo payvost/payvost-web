@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import StripeCheckout from '@/components/StripeCheckout';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -36,7 +35,7 @@ const currencySymbols: { [key: string]: string } = {
   NGN: '₦',
 };
 
-export default function PublicInvoicePage() {
+export default function PublicBusinessInvoicePage() {
   const params = useParams();
   const id = params.id as string;
   const [invoice, setInvoice] = useState<DocumentData | null>(null);
@@ -53,32 +52,17 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        const docRef = doc(db, "invoices", id);
+        const docRef = doc(db, "businessInvoices", id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists() && docSnap.data().isPublic) {
           setInvoice(docSnap.data());
-
-          // If online payment, fetch Stripe clientSecret
-          if (docSnap.data().paymentMethod === 'stripe') {
-            const res = await fetch(`${functionsUrl}/create-payment-intent`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                invoiceId: id,
-                amount: docSnap.data().grandTotal * 100, // convert to cents
-                currency: docSnap.data().currency.toLowerCase()
-              })
-            });
-            const data = await res.json();
-            setClientSecret(data.clientSecret);
-          }
         } else {
           setInvoice(null);
-          console.log("Invoice not found or not public.");
+          console.log("Business invoice not found or not public.");
         }
       } catch (error) {
-        console.error("Error fetching invoice:", error);
+        console.error("Error fetching business invoice:", error);
         setInvoice(null);
       } finally {
         setLoading(false);
@@ -88,37 +72,15 @@ export default function PublicInvoicePage() {
     fetchInvoice();
   }, [id]);
 
-  // Download invoice PDF
-  const handleDownloadInvoice = () => {
-    if (!id) return;
-
-    const downloadUrl = `${functionsUrl}/download/invoice/${id}`;
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.download = `invoice-${id}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Pay Now button handler
   const handlePayNow = () => {
     if (!invoice) return;
 
     if (invoice.paymentMethod === 'manual') {
       setIsManualPaymentDialogOpen(true);
-    } else if (invoice.paymentMethod === 'stripe') {
-      toast({
-        title: "Payment Form Loaded",
-        description: "Complete your payment below.",
-      });
-      // The StripeCheckout component is already rendered below, so we just guide the user.
     } else {
       toast({
-        title: "Payment not available",
-        description: "Unable to process online payment at this time.",
+        title: "Payment method not available",
+        description: "This invoice cannot be paid online directly at this moment.",
       });
     }
   };
@@ -142,7 +104,7 @@ export default function PublicInvoicePage() {
           <div className="flex flex-col items-center gap-4">
             <AlertTriangle className="h-16 w-16 text-destructive"/>
             <h1 className="text-3xl font-bold">Invoice Not Found</h1>
-            <p className="text-muted-foreground">The requested invoice could not be found or is no longer available.</p>
+            <p className="text-muted-foreground">The requested invoice could not be found or is not public.</p>
           </div>
         </main>
       </div>
@@ -165,10 +127,9 @@ export default function PublicInvoicePage() {
     <div className="flex flex-col min-h-screen bg-muted/10">
       <SiteHeader />
       <main className="flex-1 py-12 px-4">
-        <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2">
+         <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2">
           <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-          <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
-          <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+          <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
         </div>
 
         <Card className="max-w-4xl mx-auto w-full">
@@ -185,7 +146,7 @@ export default function PublicInvoicePage() {
           </CardHeader>
 
           <CardContent className="p-6 md:p-8 space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
               <div className="space-y-1">
                 <h3 className="font-semibold">Billed To</h3>
                 <p className="text-sm">{invoice.toName}</p>
@@ -232,42 +193,20 @@ export default function PublicInvoicePage() {
                 <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
               </div>
             </div>
-
-            {invoice.notes && (
-              <div>
-                <h4 className="font-semibold">Notes</h4>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
-              </div>
-            )}
-
-            {/* ---------------- Stripe Payment Form ---------------- */}
-            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && (
-              <div className="mt-8">
-                <StripeCheckout clientSecret={clientSecret} />
-              </div>
-            )}
+            
           </CardContent>
 
           <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
             <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+            {invoice.status !== 'Paid' && (
               <Button size="lg" onClick={handlePayNow}>
                 Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
               </Button>
             )}
-            {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
+             {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
           </CardFooter>
         </Card>
 
-         <div className="text-center mt-8 text-sm text-muted-foreground">
-            Powered by{' '}
-            <Link href="/" className="font-semibold text-primary hover:underline flex items-center justify-center gap-1">
-                <Icons.logo className="h-6" />
-            </Link>
-            <Link href="/register" className="underline hover:text-primary">Create your own invoices for free</Link>.
-        </div>
-
-        {/* ---------------- Manual Payment Dialog ---------------- */}
         <Dialog open={isManualPaymentDialogOpen} onOpenChange={setIsManualPaymentDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -285,7 +224,7 @@ export default function PublicInvoicePage() {
               <p className="text-xs text-center text-muted-foreground">Once payment is made, the sender will be notified to confirm receipt.</p>
             </div>
             <DialogFooter>
-              <Button onClick={() => navigator.clipboard.writeText(`Bank: ${invoice.manualBankName}\nAccount Name: ${invoice.manualAccountName}\nAccount Number: ${invoice.manualAccountNumber}`)} variant="secondary">
+               <Button onClick={() => navigator.clipboard.writeText(`Bank: ${invoice.manualBankName}\nAccount Name: ${invoice.manualAccountName}\nAccount Number: ${invoice.manualAccountNumber}`)} variant="secondary">
                 <Copy className="mr-2 h-4 w-4"/>Copy Details
               </Button>
               <Button onClick={() => setIsManualPaymentDialogOpen(false)}>Close</Button>

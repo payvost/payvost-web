@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -9,52 +9,78 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Briefcase, ArrowRight, Building, HeartHandshake, Rocket, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
 
 export default function BusinessOnboardingPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const { user } = useAuth();
+  const [isBusinessApproved, setIsBusinessApproved] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        if (doc.exists() && doc.data().businessProfile?.status === 'Approved') {
+            setIsBusinessApproved(true);
+        } else {
+            setIsBusinessApproved(false);
+        }
+    });
+
+    return () => unsub();
+  }, [user]);
 
   const profileTypes = [
     {
         title: 'Business Owner',
         description: 'Manage day-to-day operations, invoicing, and global payments for your established business.',
         icon: <Briefcase className="h-10 w-10 text-primary" />,
-        href: '/dashboard/get-started/onboarding/business',
-        status: 'default'
+        href: isBusinessApproved ? '/business' : '/dashboard/get-started/onboarding/business',
+        status: isBusinessApproved ? 'approved' : 'default',
+        buttonText: isBusinessApproved ? 'Visit Dashboard' : 'Get Started',
     },
     {
         title: 'Startup Founder',
         description: 'Tools tailored for early-stage companies to manage runway, investor relations, and growth.',
         icon: <Rocket className="h-10 w-10 text-primary" />,
         href: '#',
-        status: 'coming-soon'
+        status: 'coming-soon',
+        buttonText: 'Get Started'
     },
     {
         title: 'Creators',
         description: 'Monetize your content and receive support from your fans worldwide.',
         icon: <Sparkles className="h-10 w-10 text-primary" />,
         href: '#',
-        status: 'coming-soon'
+        status: 'coming-soon',
+        buttonText: 'Get Started'
     },
     {
         title: 'Venture Capitalist',
         description: 'Oversee and manage finances for your entire portfolio of companies from a single dashboard.',
         icon: <Briefcase className="h-10 w-10 text-primary" />,
         href: '#',
-        status: 'coming-soon'
+        status: 'coming-soon',
+        buttonText: 'Get Started'
     },
     {
         title: 'NGO / Non-Profit',
         description: 'Collect donations, manage grants, and track spending with specialized, low-fee tools.',
         icon: <HeartHandshake className="h-10 w-10 text-primary" />,
         href: '#',
-        status: 'coming-soon'
+        status: 'coming-soon',
+        buttonText: 'Get Started'
     },
     {
         title: 'Government',
         description: 'Manage disbursements, grants, and public funds with full transparency and security.',
         icon: <Building className="h-10 w-10 text-primary" />,
         href: '#',
-        status: 'coming-soon'
+        status: 'coming-soon',
+        buttonText: 'Get Started'
     },
   ]
 
@@ -85,8 +111,9 @@ export default function BusinessOnboardingPage() {
                             </CardContent>
                             <CardFooter className="flex-col items-start">
                                 {profile.status === 'coming-soon' && <Badge variant="secondary" className="mb-4">Coming Soon</Badge>}
-                                <Button variant="outline" className="w-full">
-                                    Get Started
+                                {profile.status === 'approved' && <Badge variant="default" className="mb-4 bg-green-500/20 text-green-700">Approved</Badge>}
+                                <Button variant={profile.status === 'approved' ? 'default' : 'outline'} className="w-full">
+                                    {profile.buttonText}
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
                             </CardFooter>
