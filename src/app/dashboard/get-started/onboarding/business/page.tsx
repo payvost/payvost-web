@@ -1,74 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Building, Loader2, Clock } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { toast } from '@/components/ui/use-toast';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 
-export default function OnboardingFormPage() {
-  const [language, setLanguage] =
-    useState<GenerateNotificationInput['languagePreference']>('en');
+export default function BusinessOnboardingPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
   const [businessType, setBusinessType] = useState('');
   const [industry, setIndustry] = useState('');
 
-  const { toast } = useToast();
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-
-  // ✅ Load user data
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoadingUser(false);
-      return;
-    }
-
-    const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        setUserData(docSnap.data());
-      }
-      setLoadingUser(false);
-    });
-
-    return () => unsub();
-  }, [user, authLoading]);
-
-  // ✅ Handle form submit
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!user) {
       toast({
         title: 'Not authenticated',
-        description: 'You must be logged in.',
+        description: 'You must be logged in to submit business details.',
         variant: 'destructive',
       });
       return;
@@ -78,6 +34,7 @@ export default function OnboardingFormPage() {
 
     try {
       const formData = new FormData(e.currentTarget);
+
       const businessData = {
         name: formData.get('business-name'),
         type: businessType,
@@ -87,19 +44,34 @@ export default function OnboardingFormPage() {
         address: formData.get('business-address'),
         email: formData.get('contact-email'),
         website: formData.get('website'),
+        createdAt: new Date().toISOString(),
+        status: 'pending',
       };
 
-      // Store temporarily for next step
+      // ✅ Save locally for verification page
       if (typeof window !== 'undefined') {
         localStorage.setItem('businessOnboardingData', JSON.stringify(businessData));
       }
 
+      // ✅ Save to Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(
+        userRef,
+        { businessProfile: businessData },
+        { merge: true } // merge ensures we don't overwrite existing user data
+      );
+
+      toast({
+        title: 'Business profile submitted',
+        description: 'Your business information has been saved successfully.',
+      });
+
       router.push('/dashboard/get-started/verify');
     } catch (error: any) {
-      console.error('Error submitting form:', error);
+      console.error('Error submitting business info:', error);
       toast({
         title: 'Submission failed',
-        description: error.message || 'Something went wrong.',
+        description: error.message || 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -107,167 +79,84 @@ export default function OnboardingFormPage() {
     }
   };
 
-  // ✅ Loading skeleton
-  const renderContent = () => {
-    if (loadingUser) {
-      return <Skeleton className="h-96 w-full max-w-2xl mx-auto" />;
-    }
-
-    // ✅ Already has business profile
-    if (userData?.businessProfile) {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit">
-                <Clock className="h-10 w-10 text-primary" />
-              </div>
-              <CardTitle className="mt-4">Review in Progress</CardTitle>
-              <CardDescription>
-                We have received your business information and our team is
-                currently reviewing it. We’ll notify you once the review is
-                complete, typically within 4 business hours.
-              </CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <Button className="w-full" asChild>
-                <Link href="/dashboard">Back to Dashboard</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      );
-    }
-
-    // ✅ Business onboarding form
-    return (
-      <div className="max-w-2xl mx-auto">
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Building className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Tell us about your business</CardTitle>
-                  <CardDescription>
-                    This information helps us tailor your experience.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="business-name">Business Name</Label>
-                <Input
-                  id="business-name"
-                  name="business-name"
-                  placeholder="Your Company LLC"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="business-type">Business Type</Label>
-                  <Select onValueChange={setBusinessType}>
-                    <SelectTrigger id="business-type">
-                      <SelectValue placeholder="Select business type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sole-prop">Sole Proprietorship</SelectItem>
-                      <SelectItem value="llc">LLC</SelectItem>
-                      <SelectItem value="corporation">Corporation</SelectItem>
-                      <SelectItem value="non-profit">Non-Profit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="industry">Industry</Label>
-                  <Select onValueChange={setIndustry}>
-                    <SelectTrigger id="industry">
-                      <SelectValue placeholder="Select industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tech">Technology</SelectItem>
-                      <SelectItem value="ecommerce">E-commerce</SelectItem>
-                      <SelectItem value="freelance">Freelance/Consulting</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="registration-number">Registration Number</Label>
-                  <Input id="registration-number" name="registration-number" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tax-id">Tax ID</Label>
-                  <Input id="tax-id" name="tax-id" required />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="business-address">Business Address</Label>
-                <Input
-                  id="business-address"
-                  name="business-address"
-                  placeholder="123 Main St, San Francisco, CA 94105"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contact-email">Business Contact Email</Label>
-                <Input
-                  id="contact-email"
-                  name="contact-email"
-                  type="email"
-                  placeholder="contact@company.com"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="website">Website (Optional)</Label>
-                <Input
-                  id="website"
-                  name="website"
-                  placeholder="https://yourcompany.com"
-                />
-              </div>
-            </CardContent>
-
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit & Continue
-              </Button>
-            </CardFooter>
-          </Card>
-        </form>
-      </div>
-    );
-  };
-
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
-      <main className="flex-1 p-4 lg:p-6 flex flex-col justify-center">
-        <div className="flex items-center gap-4 mb-6 self-start max-w-2xl w-full mx-auto">
-          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-            <Link href="/dashboard/get-started">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-lg font-semibold md:text-2xl">Business Onboarding</h1>
-        </div>
-        {renderContent()}
-      </main>
-    </DashboardLayout>
+    <div className="max-w-3xl mx-auto py-10">
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium mb-1">Business Name</label>
+              <Input name="business-name" placeholder="e.g. Payvost Technologies Ltd" required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Business Type</label>
+              <Select onValueChange={setBusinessType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select business type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sole-proprietorship">Sole Proprietorship</SelectItem>
+                  <SelectItem value="partnership">Partnership</SelectItem>
+                  <SelectItem value="llc">Limited Liability Company (LLC)</SelectItem>
+                  <SelectItem value="corporation">Corporation</SelectItem>
+                  <SelectItem value="nonprofit">Nonprofit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Industry</label>
+              <Select onValueChange={setIndustry}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="technology">Technology</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                  <SelectItem value="retail">Retail</SelectItem>
+                  <SelectItem value="healthcare">Healthcare</SelectItem>
+                  <SelectItem value="construction">Construction</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Registration Number</label>
+              <Input name="registration-number" placeholder="e.g. RC1234567" required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Tax Identification Number (TIN)</label>
+              <Input name="tax-id" placeholder="e.g. TIN00112233" required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Business Address</label>
+              <Input name="business-address" placeholder="e.g. 24B, Allen Avenue, Ikeja, Lagos" required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Contact Email</label>
+              <Input name="contact-email" placeholder="e.g. hello@payvost.com" type="email" required />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Website</label>
+              <Input name="website" placeholder="e.g. https://payvost.com" />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Submitting...' : 'Submit Business Information'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
