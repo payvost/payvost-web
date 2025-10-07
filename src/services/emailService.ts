@@ -7,10 +7,19 @@ import * as OneSignal from '@onesignal/node-onesignal';
 const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
 const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
 
+// Correctly initialize the OneSignal client with authentication
 const configuration = OneSignal.createConfiguration({
-    userKey: ONESIGNAL_API_KEY,
-    appKey: ONESIGNAL_APP_ID,
+    authMethods: {
+        app_key: {
+            tokenProvider: {
+                getToken(): string {
+                    return ONESIGNAL_API_KEY;
+                }
+            }
+        }
+    }
 });
+
 const client = new OneSignal.DefaultApi(configuration);
 
 

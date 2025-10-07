@@ -98,15 +98,15 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="w-full py-20 md:py-28 lg:py-32 rounded-b-[15px] bg-card">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 xl:items-center">
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-6">
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
               <div className="flex flex-col justify-center space-y-4 text-center lg:text-left">
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
                     Send money instantly, securely — anywhere in the world
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl mx-auto lg:mx-0">
-                    Join thousands of satisfied customers who trust Payvost for their international money transfers.
+                    We integrated all your financial needs in one place. Joint thousands of satisfied customers across the globe using Payvost.
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
@@ -122,8 +122,8 @@ export default function LandingPage() {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <Card className="w-full max-w-md">
+              <div className="flex items-center">
+                <Card className="w-full">
                   <CardHeader>
                     <CardTitle>Check Live Rates</CardTitle>
                     <CardDescription>Get the best exchange rates in real-time.</CardDescription>
@@ -464,8 +464,8 @@ export default function LandingPage() {
                 <div className="space-y-4">
                 <h4 className="font-semibold text-foreground">Resources</h4>
                 <ul className="space-y-2">
-                    <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                    <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
@@ -474,7 +474,7 @@ export default function LandingPage() {
                 <h4 className="font-semibold text-foreground">Policies</h4>
                 <ul className="space-y-2">
                     <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
+                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
                 </ul>
                 </div>
             </div>

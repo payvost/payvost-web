@@ -39,7 +39,7 @@ export default function InvoiceDetailsPage() {
     const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
-    const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-jpcbatlqpa-uc.a.run.app';
+    const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
 
 
     useEffect(() => {
@@ -200,7 +200,7 @@ export default function InvoiceDetailsPage() {
                         )}
                     </CardContent>
                     <CardFooter className="bg-muted/50 p-6 text-center text-sm text-muted-foreground">
-                        <p>Thank you for your business! If you have any questions, please contact us at {user?.email}.</p>
+                        <p>Thank you for your business! If you have any questions, please contact me at {user?.email}.</p>
                     </CardFooter>
                 </Card>
             </main>
