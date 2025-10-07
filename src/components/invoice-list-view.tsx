@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2, Trash2, Loader2, Copy, Edit } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2, Trash2, Loader2, Copy, Edit, CheckCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, DocumentData, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { ref, deleteObject } from "firebase/storage";
 import { Skeleton } from './ui/skeleton';
@@ -158,6 +158,25 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     }
   }
 
+  const handleMarkAsPaid = async (invoiceId: string) => {
+    try {
+        const docRef = doc(db, 'invoices', invoiceId);
+        await updateDoc(docRef, {
+            status: 'Paid',
+        });
+        toast({
+            title: "Invoice Updated",
+            description: "The invoice has been marked as paid.",
+        });
+    } catch (error) {
+         toast({
+            title: "Error",
+            description: "Could not update the invoice status.",
+            variant: "destructive",
+        });
+    }
+  }
+
 
   if (loading) {
     return (
@@ -254,6 +273,11 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                             <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                 <Share2 className="mr-2 h-4 w-4"/>Share Invoice
                             </DropdownMenuItem>
+                            {invoice.status !== 'Paid' && (
+                                <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4"/>Mark as Paid
+                                </DropdownMenuItem>
+                            )}
                              <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(invoice)}>
                                 <Trash2 className="mr-2 h-4 w-4"/>Delete Invoice
