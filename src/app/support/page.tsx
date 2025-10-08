@@ -22,6 +22,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Support Center',
+  description: 'Find answers to your questions in our Help Center. Browse articles, read FAQs, or contact our 24/7 support team to get help with your Payvost account.',
+};
 
 
 const supportCategories = [

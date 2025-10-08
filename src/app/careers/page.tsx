@@ -13,7 +13,12 @@ import { Icons } from "@/components/icons";
 import { ArrowRight, BrainCircuit, Globe, Handshake, Briefcase, Search, HeartPulse, Laptop, Coffee, Plane, BookOpen, Clock, Users, Twitter, Facebook, Linkedin } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import React from 'react';
+import type { Metadata } from 'next';
 
+export const metadata: Metadata = {
+  title: 'Careers',
+  description: 'Join the Payvost team and help shape the future of global finance. Explore open positions in engineering, product, design, and more.',
+};
 
 const jobOpenings = [
     { department: 'Engineering', title: 'Senior Frontend Engineer', location: 'Remote', type: 'Full-time' },

@@ -17,6 +17,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Icons } from "@/components/icons";
 import { Mail, Phone, MapPin, Send, Twitter, Facebook, Linkedin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Contact Us',
+  description: 'Get in touch with the Payvost support team. Whether you have a question about our services, a technical issue, or feedback, we are here to help 24/7.',
+};
 
 const contactFormSchema = z.object({
   name: z.string().min(2, 'Name is required'),
