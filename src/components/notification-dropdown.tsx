@@ -15,7 +15,7 @@ import {
   import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
   import { useAuth } from "@/hooks/use-auth";
   import { db } from "@/lib/firebase";
-  import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch } from "firebase/firestore";
+  import { collection, query, orderBy, onSnapshot, doc, updateDoc, writeBatch, where } from "firebase/firestore";
   import { Skeleton } from "./ui/skeleton";
   import Link from "next/link";
   import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ import {
     date: Date;
     read: boolean;
     href?: string;
+    context?: 'personal' | 'business';
   }
   
   const iconMap: { [key: string]: React.ReactNode } = {
@@ -52,7 +53,11 @@ import {
     return Math.floor(seconds) + "s ago";
   }
 
-export function NotificationDropdown() {
+interface NotificationDropdownProps {
+    context: 'personal' | 'business';
+}
+
+export function NotificationDropdown({ context }: NotificationDropdownProps) {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,7 +68,9 @@ export function NotificationDropdown() {
             return;
         }
 
-        const q = query(collection(db, "users", user.uid, "notifications"), orderBy("date", "desc"));
+        const notificationsRef = collection(db, "users", user.uid, "notifications");
+        const q = query(notificationsRef, where("context", "==", context), orderBy("date", "desc"));
+        
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedNotifications = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -75,7 +82,7 @@ export function NotificationDropdown() {
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [user, context]);
     
     const markAsRead = async (id: string) => {
         if (!user) return;

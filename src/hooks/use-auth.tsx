@@ -8,6 +8,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 interface AuthContextType {
   user: User | null;
@@ -169,9 +170,36 @@ export const ProtectBusinessRoute = ({ children }: { children: ReactNode }) => {
 
     if (authLoading || businessStatus !== 'approved') {
         return (
-             <div className="flex h-screen w-full items-center justify-center">
-                <p>Loading Business Dashboard...</p>
-            </div>
+            <DashboardLayout language="en" setLanguage={() => {}}>
+                 <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
+                    <div className="flex items-center justify-between space-y-2 mb-6">
+                        <Skeleton className="h-10 w-64" />
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        {[...Array(4)].map((_, i) => (
+                           <Card key={i}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <Skeleton className="h-5 w-3/4" />
+                                    <Skeleton className="h-6 w-6" />
+                                </CardHeader>
+                                <CardContent>
+                                    <Skeleton className="h-8 w-1/2 mb-1" />
+                                    <Skeleton className="h-4 w-full" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                        <div className="lg:col-span-2 space-y-6">
+                             <Skeleton className="h-80 w-full" />
+                             <Skeleton className="h-64 w-full" />
+                        </div>
+                        <div className="lg:col-span-1">
+                             <Skeleton className="h-96 w-full" />
+                        </div>
+                    </div>
+                </main>
+            </DashboardLayout>
         );
     }
 

@@ -133,7 +133,7 @@ export default function DashboardPage() {
                 await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'kyc', title: 'Account Verified!',
                     description: 'Congratulations! Your account has been verified. You now have full access to all features.',
-                    date: serverTimestamp(), read: false, href: '/dashboard/profile'
+                    date: serverTimestamp(), read: false, href: '/dashboard/profile', context: 'personal'
                 });
             } catch (emailError) {
                 console.error("Failed to send welcome email:", emailError);
@@ -148,7 +148,7 @@ export default function DashboardPage() {
                  await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'success', title: 'Business Account Approved!',
                     description: `Congratulations! Your business "${data.businessProfile.name}" has been approved. You can now switch to your business dashboard.`,
-                    date: serverTimestamp(), read: false, href: '/dashboard/business'
+                    date: serverTimestamp(), read: false, href: '/business', context: 'business'
                 });
             } catch (error) {
                 console.error("Failed to send business approval notification:", error);

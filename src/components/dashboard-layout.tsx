@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -37,6 +36,7 @@ import { Input } from './ui/input';
 import { ThemeSwitcher } from './theme-switcher';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { DashboardSwitcher } from './dashboard-switcher';
 
 
 interface DashboardLayoutProps {
@@ -243,21 +243,17 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     </div>
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-1">
-                    {isBusinessApproved && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/business">Switch to Business</Link>
-                      </Button>
-                    )}
+                <div className="ml-auto flex items-center gap-2">
+                    {isBusinessApproved && <DashboardSwitcher />}
                     <Button variant="ghost" size="icon" asChild>
                     <Link href="/dashboard/support">
-                        <HelpCircle className="h-[1.2rem] w-[1.2rem]" />
+                        <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
                         <span className="sr-only">Support</span>
                     </Link>
                     </Button>
                     <ThemeSwitcher />
                     <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
-                    <NotificationDropdown />
+                    <NotificationDropdown context="personal" />
                     <UserNav user={user} />
                 </div>
             </header>

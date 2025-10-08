@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, PanelLeft } from 'lucide-react';
+import { Search, PanelLeft, LifeBuoy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -16,6 +15,8 @@ import { usePathname } from 'next/navigation';
 import { menuItems } from './business-sidebar';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { DashboardSwitcher } from './dashboard-switcher';
+import { NotificationDropdown } from './notification-dropdown';
 
 export function BusinessHeader() {
     const { user } = useAuth();
@@ -96,11 +97,18 @@ export function BusinessHeader() {
               </div>
             </form>
           </div>
-          <ThemeSwitcher />
-           <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard">Switch to Personal</Link>
-           </Button>
-          <UserNav user={user} businessLogoUrl={logoUrl} />
+          <div className="ml-auto flex items-center gap-2">
+            <DashboardSwitcher />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/business/support">
+                <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
+                <span className="sr-only">Support</span>
+              </Link>
+            </Button>
+            <ThemeSwitcher />
+            <NotificationDropdown context="business" />
+            <UserNav user={user} businessLogoUrl={logoUrl} />
+          </div>
         </header>
     )
 }
