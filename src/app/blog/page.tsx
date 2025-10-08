@@ -12,6 +12,12 @@ import { ArrowRight, Twitter, Facebook, Linkedin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Blog',
+  description: 'Stay up-to-date with the latest news, product updates, and insights from the Payvost team. Explore articles on fintech, security, and global finance.',
+};
 
 const articles = [
   {
