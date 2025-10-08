@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -234,9 +233,6 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem asChild><Link href={`/business/invoices/${invoice.id}`}><FileText className="mr-2 h-4 w-4" />View Details</Link></DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => window.open(invoice.publicUrl, '_blank')}>
-                                            <Eye className="mr-2 h-4 w-4" />View Public Page
-                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => onEditClick(invoice.id)} disabled={invoice.status !== 'Draft'}>
                                             <Edit className="mr-2 h-4 w-4" />Edit
                                         </DropdownMenuItem>
