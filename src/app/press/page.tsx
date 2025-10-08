@@ -10,12 +10,6 @@ import { ArrowRight, Download, Mail, Rss, Newspaper, Image as ImageIcon } from '
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Twitter, Facebook, Linkedin } from "lucide-react";
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Press & Media',
-  description: 'Find the latest news, announcements, and media assets from Payvost. Access our press releases, media kit, and contact information for inquiries.',
-};
 
 const pressReleases = [
     {
