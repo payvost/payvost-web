@@ -17,7 +17,8 @@ import {
   UserCog,
   Shield,
   Puzzle,
-  Briefcase
+  Briefcase,
+  HeartPulse,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
@@ -28,7 +29,8 @@ export const menuItems = [
         group: 'Overview', 
         items: [
           { href: '/business', icon: <LineChart />, label: 'Dashboard' },
-          { href: '/business/analytics', icon: <LineChart />, label: 'Analytics' },
+          { href: '/business/analytics', icon: <LineChart />, label: 'Revenue Summary' },
+          { href: '/business/health-score', icon: <HeartPulse />, label: 'Health Score' },
         ]
       },
       {
@@ -40,7 +42,7 @@ export const menuItems = [
         ]
       },
        {
-        group: 'Team & Customers',
+        group: 'Customers',
         items: [
           { href: '/business/customers', icon: <Users />, label: 'Customers' },
           { href: '/business/team', icon: <UserCog />, label: 'Team Management' },

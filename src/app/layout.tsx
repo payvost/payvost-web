@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -15,8 +16,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Payvost',
-  description: 'Fast and secure global remittance.',
+  title: {
+    default: 'Payvost | Fast, Secure Global Remittance',
+    template: '%s | Payvost',
+  },
+  description: 'Payvost offers fast, secure, and low-cost global money transfers. Send and receive money internationally with competitive exchange rates and track your transfers in real-time.',
   manifest: '/manifest.json',
   icons: {
     icon: '/clay-logo.png',
