@@ -73,6 +73,10 @@ export default function VerifyBusinessPage() {
             businessProfile: {
                 name: businessData.name,
                 type: businessData.type,
+                industry: businessData.industry,
+                registrationNumber: businessData.registrationNumber,
+                taxId: businessData.taxId,
+                address: businessData.address,
                 email: businessData.email,
                 website: businessData.website,
                 status: 'Pending',

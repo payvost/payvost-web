@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign, Edit, Trash2, Send, Copy, Eye, CheckCircle, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -97,7 +97,10 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
     const handleMarkAsPaid = async (invoiceId: string) => {
         try {
             const docRef = doc(db, 'businessInvoices', invoiceId);
-            await updateDoc(docRef, { status: 'Paid' });
+            await updateDoc(docRef, { 
+                status: 'Paid',
+                paidAt: serverTimestamp(),
+            });
             toast({ title: 'Success', description: 'Invoice marked as paid.' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to update invoice status.', variant: 'destructive' });
@@ -117,6 +120,27 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
             setInvoiceToDelete(null);
         }
     };
+
+    const outstandingInvoices = invoices.filter(inv => inv.status === 'Pending' || inv.status === 'Overdue');
+    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+    const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue');
+    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+
+    const paidInvoices = invoices.filter(inv => inv.status === 'Paid' && inv.paidAt && inv.issueDate);
+    const totalPaymentTime = paidInvoices.reduce((sum, inv) => {
+        const issueDate = inv.issueDate.toDate();
+        const paidAt = inv.paidAt.toDate();
+        const diffTime = Math.abs(paidAt.getTime() - issueDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return sum + diffDays;
+    }, 0);
+    const avgPaymentTime = paidInvoices.length > 0 ? Math.round(totalPaymentTime / paidInvoices.length) : 0;
+
+
+    const formatCurrency = (amount: number, currency: string) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    }
     
     return (
         <>
@@ -140,8 +164,8 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                     <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">$16,450.75</div>
-                    <p className="text-xs text-muted-foreground">From 3 pending/overdue invoices</p>
+                    <div className="text-2xl font-bold">{formatCurrency(totalOutstanding, 'USD')}</div>
+                    <p className="text-xs text-muted-foreground">From {outstandingInvoices.length} pending/overdue invoices</p>
                 </CardContent>
             </Card>
             <Card>
@@ -150,8 +174,8 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                     <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">$5,250.75</div>
-                    <p className="text-xs text-muted-foreground">From 1 overdue invoice</p>
+                    <div className="text-2xl font-bold">{formatCurrency(totalOverdue, 'USD')}</div>
+                    <p className="text-xs text-muted-foreground">From {overdueInvoices.length} overdue invoice(s)</p>
                 </CardContent>
             </Card>
             <Card>
@@ -160,8 +184,8 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                     <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">12 Days</div>
-                    <p className="text-xs text-muted-foreground">-2 days from last month</p>
+                    <div className="text-2xl font-bold">{avgPaymentTime} Days</div>
+                    <p className="text-xs text-muted-foreground">Based on paid invoices</p>
                 </CardContent>
             </Card>
         </div>

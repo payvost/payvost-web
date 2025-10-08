@@ -27,12 +27,16 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { KycStatus } from '@/types/customer';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 
-const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Verified: { color: 'text-green-700', variant: 'default' },
     Pending: { color: 'text-yellow-700', variant: 'secondary' },
     Unverified: { color: 'text-gray-700', variant: 'outline' },
     Restricted: { color: 'text-orange-700', variant: 'destructive' },
+    Default: { color: 'text-gray-700', variant: 'outline' },
 };
 
 
@@ -200,7 +204,7 @@ export default function ProfilePage() {
   }
   
   const currentKycStatus: KycStatus = userData?.kycStatus || 'Unverified';
-  const kycStatusBadge = kycStatusConfig[currentKycStatus];
+  const kycStatusBadge = kycStatusConfig[currentKycStatus] || kycStatusConfig.Default;
   const userTier = userData?.userType || 'Pending';
 
 
@@ -446,5 +450,3 @@ export default function ProfilePage() {
     </DashboardLayout>
   );
 }
-
-    
