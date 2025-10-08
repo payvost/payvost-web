@@ -11,12 +11,6 @@ import { Twitter, Facebook, Linkedin } from "lucide-react";
 import React from "react";
 import { SiteHeader } from "@/components/site-header";
 import { Icons } from "@/components/icons";
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'About Us',
-  description: 'Learn about the mission, vision, and the team behind Payvost. Discover how we are making global finance more accessible and secure for everyone.',
-};
 
 const teamMembers = [
     { name: 'Pamilerin Coker', role: 'CEO & Founder', image: '/founder.jpg', hint: 'woman portrait' },
