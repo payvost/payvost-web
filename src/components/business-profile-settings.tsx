@@ -31,9 +31,9 @@ const documentTypeMap: { [key: string]: string } = {
 
 function InfoField({ label, value }: { label: string; value: string | undefined | null }) {
     return (
-        <div className="space-y-1">
-            <Label className="text-muted-foreground">{label}</Label>
-            <p className="font-medium">{value || 'N/A'}</p>
+        <div className="p-3 border rounded-lg bg-muted/30">
+            <Label className="text-xs text-muted-foreground">{label}</Label>
+            <p className="font-medium text-sm break-words">{value || 'N/A'}</p>
         </div>
     );
 }
@@ -71,6 +71,10 @@ export function BusinessProfileSettings() {
         if (file) {
             if (file.size > 2 * 1024 * 1024) { // 2MB limit
                 toast({ title: 'File too large', description: 'Logo should be less than 2MB.', variant: 'destructive' });
+                return;
+            }
+            if(!file.type.startsWith('image/')) {
+                toast({ title: 'Invalid File Type', description: 'Please upload a PNG or JPG file.', variant: 'destructive' });
                 return;
             }
             setLogoFile(file);
@@ -115,17 +119,17 @@ export function BusinessProfileSettings() {
                     <CardDescription>This information has been verified and cannot be changed. Contact support for any modifications.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <InfoField label="Legal Business Name" value={profile?.name} />
                         <InfoField label="Industry" value={profile?.industry} />
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <InfoField label="Business Type" value={profile?.type ? businessTypeMap[profile.type] : 'N/A'} />
                         <InfoField label="Registration Number" value={profile?.registrationNumber} />
                         <InfoField label="Tax ID" value={profile?.taxId} />
+                        <InfoField label="Website" value={profile?.website} />
+                        <div className="sm:col-span-2">
+                             <InfoField label="Business Address" value={profile?.address} />
+                        </div>
                     </div>
-                     <InfoField label="Business Address" value={profile?.address} />
-                     <InfoField label="Website" value={profile?.website} />
                 </CardContent>
             </Card>
 

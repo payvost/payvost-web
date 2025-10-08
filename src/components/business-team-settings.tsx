@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, UserCog, UserPlus } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { TeamMember, MemberRole, MemberStatus } from '@/types/team-member';
 import { cn } from '@/lib/utils';
-
-const sampleMembers: TeamMember[] = [
-    { id: 'tm_1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', status: 'Active', lastActive: '2024-08-15 10:30 AM' },
-    { id: 'tm_2', name: 'Bob Williams', email: 'bob@example.com', role: 'Finance', status: 'Active', lastActive: '2024-08-15 11:00 AM' },
-    { id: 'tm_3', name: 'Charlie Brown', email: 'charlie@example.com', role: 'Support', status: 'Invited', lastActive: 'Never' },
-    { id: 'tm_4', name: 'Diana Miller', email: 'diana@example.com', role: 'Admin', status: 'Suspended', lastActive: '2024-08-14 05:00 PM' },
-];
+import { Separator } from './ui/separator';
+import { useAuth } from '@/hooks/use-auth';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Skeleton } from './ui/skeleton';
 
 const roles = [
     { id: 'role_1', name: 'Admin', description: 'Can manage team members and business settings.', members: 2 },
@@ -35,7 +33,39 @@ const statusConfig: Record<MemberStatus, { color: string, variant: 'default' | '
 };
 
 export function BusinessTeamSettings() {
+    const { user, loading: authLoading } = useAuth();
+    const [members, setMembers] = useState<TeamMember[]>([]);
+    const [loadingData, setLoadingData] = useState(true);
+
+
+    useEffect(() => {
+        if (authLoading || !user) {
+            if (!authLoading) setLoadingData(false);
+            return;
+        }
+
+        // Assuming team members are in a subcollection. This can be adjusted.
+        const teamMembersRef = collection(db, 'users', user.uid, 'teamMembers');
+        const q = query(teamMembersRef);
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const membersData: TeamMember[] = [];
+            querySnapshot.forEach((doc) => {
+                membersData.push({ id: doc.id, ...doc.data() } as TeamMember);
+            });
+            setMembers(membersData);
+            setLoadingData(false);
+        }, (error) => {
+            console.error("Error fetching team members: ", error);
+            setLoadingData(false);
+        });
+
+        return () => unsubscribe();
+    }, [user, authLoading]);
+
+
     const getInitials = (name: string) => {
+        if (!name) return "";
         const names = name.split(' ');
         if (names.length > 1 && names[1]) return `${names[0][0]}${names[1][0]}`;
         return name.substring(0, 2).toUpperCase();
@@ -63,50 +93,62 @@ export function BusinessTeamSettings() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Last Active</TableHead>
-                                    <TableHead><span className="sr-only">Actions</span></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sampleMembers.map((member) => {
-                                    const status = statusConfig[member.status];
-                                    return (
-                                    <TableRow key={member.id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar>
-                                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
-                                                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <div className="font-medium">{member.name}</div>
-                                                    <div className="text-sm text-muted-foreground">{member.email}</div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell><Badge variant={status.variant} className={cn('capitalize', status.color.replace('text-','bg-').replace('-600','-500/20'))}>{member.status}</Badge></TableCell>
-                                        <TableCell><Badge variant="outline">{member.role}</Badge></TableCell>
-                                        <TableCell>{member.lastActive}</TableCell>
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>Edit Role</DropdownMenuItem>
-                                                    <DropdownMenuItem>Resend Invitation</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive">Remove User</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
+                       {loadingData ? (
+                           <div className="space-y-4">
+                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                           </div>
+                       ) : members.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead>Last Active</TableHead>
+                                        <TableHead><span className="sr-only">Actions</span></TableHead>
                                     </TableRow>
-                                )})}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {members.map((member) => {
+                                        const status = statusConfig[member.status];
+                                        return (
+                                        <TableRow key={member.id}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar>
+                                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${member.email}`} />
+                                                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <div className="font-medium">{member.name}</div>
+                                                        <div className="text-sm text-muted-foreground">{member.email}</div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell><Badge variant={status.variant} className={cn('capitalize', status.color.replace('text-','bg-').replace('-600','-500/20'))}>{member.status}</Badge></TableCell>
+                                            <TableCell><Badge variant="outline">{member.role}</Badge></TableCell>
+                                            <TableCell>{member.lastActive}</TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Toggle menu</span></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                                                        <DropdownMenuItem>Edit Role</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive">Remove User</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    )})}
+                                </TableBody>
+                            </Table>
+                       ) : (
+                           <div className="h-60 flex flex-col items-center justify-center text-center">
+                                <UserPlus className="h-12 w-12 text-muted-foreground mb-4" />
+                                <h3 className="text-xl font-semibold">No team members yet</h3>
+                                <p className="text-sm text-muted-foreground mt-2">Invite team members and assign them roles with our advanced permission rules.</p>
+                           </div>
+                       )}
                     </CardContent>
                 </Card>
             </TabsContent>
