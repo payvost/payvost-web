@@ -129,7 +129,7 @@ export default function DashboardPage() {
         if (userStatusRef.current.kyc !== 'Verified' && newKycStatus === 'Verified' && user.displayName && user.email) {
             console.log("User KYC verified, sending welcome email.");
             try {
-                await sendVerificationWelcomeEmail(user.email, user.displayName);
+                // await sendVerificationWelcomeEmail(user.email, user.displayName);
                 await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'kyc', title: 'Account Verified!',
                     description: 'Congratulations! Your account has been verified. You now have full access to all features.',
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         if (userStatusRef.current.business !== 'Approved' && newBusinessStatus === 'Approved' && user.displayName && user.email) {
             console.log("Business profile approved, sending notification.");
             try {
-                await sendBusinessApprovalEmail(user.email, user.displayName, data.businessProfile.name);
+                // await sendBusinessApprovalEmail(user.email, user.displayName, data.businessProfile.name);
                  await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'success', title: 'Business Account Approved!',
                     description: `Congratulations! Your business "${data.businessProfile.name}" has been approved. You can now switch to your business dashboard.`,

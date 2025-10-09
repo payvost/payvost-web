@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { Icons } from '@/components/icons';
+import Image from 'next/image';
 
 type Status = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
 
@@ -40,6 +40,7 @@ export default function PublicInvoicePage() {
   const params = useParams();
   const id = params.id as string;
   const [invoice, setInvoice] = useState<DocumentData | null>(null);
+  const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { toast } = useToast();
@@ -57,17 +58,27 @@ export default function PublicInvoicePage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists() && docSnap.data().isPublic) {
-          setInvoice(docSnap.data());
+          const invoiceData = docSnap.data();
+          setInvoice(invoiceData);
+
+          // Fetch associated business profile
+          if (invoiceData.businessId) {
+            const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
+            const bizSnap = await getDocs(bizQuery);
+            if (!bizSnap.empty) {
+                setBusinessProfile(bizSnap.docs[0].data().businessProfile);
+            }
+          }
 
           // If online payment, fetch Stripe clientSecret
-          if (docSnap.data().paymentMethod === 'stripe') {
+          if (invoiceData.paymentMethod === 'stripe') {
             const res = await fetch(`${functionsUrl}/create-payment-intent`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 invoiceId: id,
-                amount: docSnap.data().grandTotal * 100, // convert to cents
-                currency: docSnap.data().currency.toLowerCase()
+                amount: invoiceData.grandTotal * 100, // convert to cents
+                currency: invoiceData.currency.toLowerCase()
               })
             });
             const data = await res.json();
@@ -173,9 +184,14 @@ export default function PublicInvoicePage() {
 
         <Card className="max-w-4xl mx-auto w-full">
           <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-              <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
+            <div className="flex-1 flex items-center gap-4">
+                {businessProfile?.invoiceLogoUrl && (
+                    <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
+                )}
+                 <div>
+                    <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
+                    <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
+                 </div>
             </div>
             <div className="text-right">
               <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-lg">

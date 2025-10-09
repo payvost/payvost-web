@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 type Status = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
 
@@ -35,8 +35,9 @@ const currencySymbols: { [key: string]: string } = {
 export default function BusinessInvoiceDetailsPage() {
     const params = useParams();
     const id = params.id as string;
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
+    const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
     const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
 
@@ -48,7 +49,7 @@ export default function BusinessInvoiceDetailsPage() {
         };
 
         const docRef = doc(db, 'businessInvoices', id);
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        const unsubscribeInvoice = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists() && docSnap.data().createdBy === user.uid) {
                 setInvoice({ id: docSnap.id, ...docSnap.data() });
             } else {
@@ -60,7 +61,18 @@ export default function BusinessInvoiceDetailsPage() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setBusinessProfile(docSnap.data().businessProfile || null);
+            }
+        });
+
+
+        return () => {
+            unsubscribeInvoice();
+            unsubscribeProfile();
+        };
     }, [user, id]);
     
     if (loading) {
@@ -103,7 +115,8 @@ export default function BusinessInvoiceDetailsPage() {
     };
 
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
-    const taxAmount = invoice.grandTotal - subtotal;
+    const grandTotal = invoice.grandTotal || 0;
+    const taxAmount = grandTotal - subtotal;
 
     return (
         <div className="space-y-4">
@@ -120,16 +133,23 @@ export default function BusinessInvoiceDetailsPage() {
                 </div>
                  <div className="flex gap-2">
                     <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                    <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+                    <a href={`${functionsUrl}/download/invoice/${id}`} download>
+                        <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+                    </a>
                     <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>
                 </div>
             </div>
 
             <Card className="max-w-5xl mx-auto w-full">
                  <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
-                    <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-                        <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
+                    <div className="flex-1 flex items-center gap-4">
+                        {businessProfile?.invoiceLogoUrl && (
+                            <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
+                        )}
+                        <div>
+                            <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
+                            <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
+                        </div>
                     </div>
                     <div className="text-right">
                          <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-lg">
@@ -180,7 +200,7 @@ export default function BusinessInvoiceDetailsPage() {
                             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
                             <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
                             <Separator className="my-2" />
-                            <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
+                            <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(grandTotal, invoice.currency)}</span></div>
                         </div>
                     </div>
                     {invoice.notes && (
@@ -191,7 +211,7 @@ export default function BusinessInvoiceDetailsPage() {
                     )}
                 </CardContent>
                 <CardFooter className="bg-muted/50 p-6 text-center text-sm text-muted-foreground">
-                    <p>Thank you for your business! If you have any questions, please contact me at {user?.email}.</p>
+                    <p>Thank you for your business! If you have any questions, please contact us at {businessProfile?.email || user?.email}.</p>
                 </CardFooter>
             </Card>
         </div>

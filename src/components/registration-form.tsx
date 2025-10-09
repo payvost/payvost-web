@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera, ChevronsUpDown, Check, ShieldCheckIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -28,6 +28,16 @@ import { Textarea } from './ui/textarea';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 import { Icons } from './icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import Image from 'next/image';
+
+const allCountries = [
+    { name: "United States", code: "US", phone: "1", flag: "US" },
+    { name: "United Kingdom", code: "GB", phone: "44", flag: "GB" },
+    { name: "Nigeria", code: "NG", phone: "234", flag: "NG" },
+    { name: "Canada", code: "CA", phone: "1", flag: "CA" },
+    // Add more countries as needed
+];
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -36,7 +46,8 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const registrationSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'A valid phone number is required'),
+  countryCode: z.string().min(1, 'Country code is required'),
+  phone: z.string().min(5, 'A valid phone number is required'),
   username: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Passwords must match'),
@@ -92,6 +103,7 @@ export function RegistrationForm() {
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
 
 
   const {
@@ -109,6 +121,19 @@ export function RegistrationForm() {
         agreeTerms: false
     }
   });
+
+  useEffect(() => {
+    fetch('https://ip-api.com/json/?fields=countryCode,country')
+        .then(res => res.json())
+        .then(data => {
+            const detectedCountry = allCountries.find(c => c.code === data.countryCode);
+            if (detectedCountry) {
+                setValue('countryCode', detectedCountry.phone);
+                setValue('country', detectedCountry.code);
+            }
+        })
+        .catch(err => console.error("Could not fetch user location", err));
+  }, [setValue]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'idDocument') => {
     const file = e.target.files?.[0];
@@ -151,6 +176,7 @@ export function RegistrationForm() {
     const startCamera = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
+            setShowCamera(true);
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
@@ -215,8 +241,12 @@ export function RegistrationForm() {
     }
   };
   
-  const handleAuthenticate = (platform: 'x' | 'instagram') => {
-    // Simulate authentication
+  const handleAuthenticate = (platform: 'x' | 'instagram' | 'skip') => {
+    if (platform === 'skip') {
+        setUsername('');
+        setValue('username', '');
+        return;
+    }
     const mockUsername = `${platform}_user_${Math.floor(1000 + Math.random() * 9000)}`;
     setUsername(mockUsername);
     setValue('username', mockUsername);
@@ -255,7 +285,7 @@ export function RegistrationForm() {
         name: data.fullName,
         email: data.email,
         username: data.username,
-        phone: data.phone,
+        phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
         country: data.country,
@@ -356,7 +386,9 @@ export function RegistrationForm() {
                             <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
                                 <UploadCloud className="mr-2 h-4 w-4" /> Upload a file
                             </DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => setShowCamera(true)}>
+                             <DropdownMenuItem onSelect={() => {
+                               startCamera();
+                             }}>
                                 <Camera className="mr-2 h-4 w-4" /> Take a selfie
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -380,37 +412,82 @@ export function RegistrationForm() {
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                 <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="+1 234 567 8900" />
+                    <div className="flex items-center rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring">
+                         <Controller
+                            name="countryCode"
+                            control={control}
+                            render={({ field }) => (
+                                <Popover open={countryDropdownOpen} onOpenChange={setCountryDropdownOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" role="combobox" className="w-[120px] justify-between h-9 rounded-r-none">
+                                            {field.value ? `+${field.value}` : "Select..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[250px] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search country..." />
+                                            <CommandList>
+                                                <CommandEmpty>No country found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {allCountries.map((country) => (
+                                                        <CommandItem
+                                                            key={country.code}
+                                                            value={country.name}
+                                                            onSelect={() => {
+                                                                setValue("countryCode", country.phone);
+                                                                setCountryDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            <Check className={cn("mr-2 h-4 w-4", field.value === country.phone ? "opacity-100" : "opacity-0")} />
+                                                            {country.name} (+{country.phone})
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                        />
+                        <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="Your number" className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                    </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="username">Payment ID (Username)</Label>
-                    <div className="relative">
-                         <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                         <Input 
-                            id="username" 
-                            readOnly 
-                            {...register('username')} 
-                            value={username} 
-                            placeholder="Authenticate to get a Payment ID" 
-                            className="pl-8 pr-32 bg-muted/50"
-                        />
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button type="button" variant="outline" className="absolute right-1 top-1/2 -translate-y-1/2 h-8">Authenticate</Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                 <DropdownMenuItem onSelect={() => handleAuthenticate('x')}>
-                                    <Twitter className="mr-2 h-4 w-4 text-[#1DA1F2]" /> Authenticate with X
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleAuthenticate('instagram')}>
-                                    <Icons.instagram className="mr-2 h-4 w-4" /> Authenticate with Instagram
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+                    <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                             <div className="relative">
+                                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                                <Input 
+                                    id="username" 
+                                    readOnly 
+                                    {...register('username')} 
+                                    value={username} 
+                                    placeholder="Authenticate to get a Payment ID" 
+                                    className="pl-8 bg-muted/50 cursor-pointer"
+                                />
+                            </div>
+                         </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                            <div className="p-2">
+                                <p className="font-semibold text-sm flex items-center gap-2"><ShieldCheckIcon className="h-4 w-4 text-primary" /> Username Integrity</p>
+                                <p className="text-xs text-muted-foreground mt-1">Claim a unique username to securely receive payments without sharing your personal details.</p>
+                            </div>
+                             <DropdownMenuItem onSelect={() => handleAuthenticate('x')}>
+                                <Twitter className="mr-2 h-4 w-4 text-[#1DA1F2]" /> Authenticate with X
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAuthenticate('instagram')}>
+                                <Icons.instagram className="mr-2 h-4 w-4" /> Authenticate with Instagram
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAuthenticate('skip')}>
+                                Continue without username
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                      {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
                 </div>
             </div>
@@ -618,7 +695,7 @@ export function RegistrationForm() {
                     <DialogTitle>Take a Selfie</DialogTitle>
                 </DialogHeader>
                 <div className="relative">
-                    <video ref={videoRef} autoPlay playsInline className="w-full h-auto rounded-md" onCanPlay={startCamera}></video>
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-auto rounded-md" ></video>
                     <canvas ref={canvasRef} className="hidden"></canvas>
                 </div>
                 <DialogFooter>

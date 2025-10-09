@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint, BadgeInfo } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ import type { KycStatus } from '@/types/customer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Verified: { color: 'text-green-700', variant: 'default' },
@@ -49,7 +50,16 @@ const passwordSchema = z.object({
   path: ['confirmPassword']
 });
 
+const pinSchema = z.object({
+  pin: z.string().length(4, "PIN must be 4 digits."),
+  confirmPin: z.string().length(4, "PIN must be 4 digits."),
+}).refine(data => data.pin === data.confirmPin, {
+    message: "PINs do not match.",
+    path: ["confirmPin"],
+});
+
 type PasswordFormValues = z.infer<typeof passwordSchema>;
+type PinFormValues = z.infer<typeof pinSchema>;
 
 export default function ProfilePage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -62,11 +72,16 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, formState: { errors: passwordErrors }, reset: resetPasswordForm } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema)
+  });
+
+  const { control: pinControl, handleSubmit: handlePinSubmit, formState: { errors: pinErrors }, reset: resetPinForm } = useForm<PinFormValues>({
+    resolver: zodResolver(pinSchema)
   });
 
   const [displayName, setDisplayName] = useState('');
@@ -190,6 +205,28 @@ export default function ProfilePage() {
         setIsSaving(false);
     }
   };
+
+  const onPinSubmit: SubmitHandler<PinFormValues> = async (data) => {
+    if (!user) {
+        toast({ title: 'Error', description: 'Not authenticated.', variant: 'destructive' });
+        return;
+    }
+    setIsSaving(true);
+    try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, {
+            transactionPin: data.pin
+        });
+         toast({ title: 'Transaction PIN Set', description: 'Your PIN has been updated successfully.' });
+        resetPinForm();
+        setIsPinDialogOpen(false);
+    } catch (error) {
+        console.error("PIN update error:", error);
+        toast({ title: 'Error setting PIN', description: 'Could not update your PIN. Please try again.', variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
+    }
+  }
 
   const handleCancelEdit = () => {
     setIsEditing(false);
@@ -336,6 +373,66 @@ export default function ProfilePage() {
                                 </form>
                             </DialogContent>
                         </Dialog>
+                         <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="w-full justify-start"><Fingerprint className="mr-2 h-4 w-4"/>Set/Change Transaction PIN</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <form onSubmit={handlePinSubmit(onPinSubmit)}>
+                                    <DialogHeader>
+                                        <DialogTitle>{userData?.transactionPin ? 'Change' : 'Set'} Transaction PIN</DialogTitle>
+                                        <DialogDescription>
+                                            Your 4-digit PIN is used to authorize all transactions.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                     <div className="flex flex-col items-center gap-4 py-8">
+                                         <div className="space-y-2 text-center">
+                                            <Label htmlFor="pin">Enter New 4-Digit PIN</Label>
+                                            <Controller
+                                                name="pin"
+                                                control={pinControl}
+                                                render={({ field }) => (
+                                                     <InputOTP maxLength={4} {...field}>
+                                                        <InputOTPGroup>
+                                                            <InputOTPSlot index={0} />
+                                                            <InputOTPSlot index={1} />
+                                                            <InputOTPSlot index={2} />
+                                                            <InputOTPSlot index={3} />
+                                                        </InputOTPGroup>
+                                                    </InputOTP>
+                                                )}
+                                            />
+                                            {pinErrors.pin && <p className="text-sm text-destructive">{pinErrors.pin.message}</p>}
+                                        </div>
+                                         <div className="space-y-2 text-center">
+                                            <Label htmlFor="confirmPin">Confirm New PIN</Label>
+                                            <Controller
+                                                name="confirmPin"
+                                                control={pinControl}
+                                                render={({ field }) => (
+                                                     <InputOTP maxLength={4} {...field}>
+                                                        <InputOTPGroup>
+                                                            <InputOTPSlot index={0} />
+                                                            <InputOTPSlot index={1} />
+                                                            <InputOTPSlot index={2} />
+                                                            <InputOTPSlot index={3} />
+                                                        </InputOTPGroup>
+                                                    </InputOTP>
+                                                )}
+                                            />
+                                            {pinErrors.confirmPin && <p className="text-sm text-destructive">{pinErrors.confirmPin.message}</p>}
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="ghost" onClick={() => setIsPinDialogOpen(false)}>Cancel</Button>
+                                        <Button type="submit" disabled={isSaving}>
+                                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                            Save PIN
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
                          <Button variant="outline" className="w-full justify-start"><ShieldCheck className="mr-2 h-4 w-4"/>Enable Two-Factor Auth</Button>
                     </CardContent>
                 </Card>
@@ -404,6 +501,17 @@ export default function ProfilePage() {
                                 <Label className="text-muted-foreground flex items-center gap-2"><Fingerprint className="h-4 w-4"/>BVN</Label>
                                 <p className="font-medium">{userData.bvn}</p>
                             </div>
+                        )}
+                         {currentKycStatus !== 'Verified' && (
+                             <div className="border bg-yellow-500/10 border-yellow-500/20 text-yellow-800 dark:text-yellow-300 rounded-lg p-4 flex items-start gap-4 mt-4">
+                                <BadgeInfo className="h-5 w-5 mt-0.5 text-yellow-600"/>
+                                <div>
+                                    <h4 className="font-semibold">Verification Pending</h4>
+                                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                                        Your identity documents are currently under review. This usually takes a few hours. You can track the status here.
+                                    </p>
+                                </div>
+                             </div>
                         )}
                     </CardContent>
                 </Card>

@@ -8,7 +8,8 @@ import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/components/theme-provider';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next"; // ✅ Added import
+import { Analytics } from "@vercel/analytics/next";
+import { LocationPermissionBanner } from '@/components/location-permission-banner'; // Added import
 
 const inter = Inter({
   subsets: ['latin'],
@@ -53,6 +54,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <Toaster />
+            <LocationPermissionBanner /> {/* Added component */}
             <CookieConsentBanner />
             <SpeedInsights />  {/* ✅ Performance metrics */}
             <Analytics />       {/* ✅ Visitor & page view tracking */}

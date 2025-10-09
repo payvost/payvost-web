@@ -39,6 +39,7 @@ import {
   };
 
   function formatTimeAgo(date: Date) {
+    if (!date) return 'Just now';
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
     if (interval > 1) return Math.floor(interval) + "y ago";
@@ -72,11 +73,14 @@ export function NotificationDropdown({ context }: NotificationDropdownProps) {
         const q = query(notificationsRef, where("context", "==", context), orderBy("date", "desc"));
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedNotifications = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                date: doc.data().date.toDate(),
-            })) as Notification[];
+            const fetchedNotifications = snapshot.docs.map(doc => {
+                 const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    date: data.date ? data.date.toDate() : new Date(),
+                } as Notification;
+            });
             setNotifications(fetchedNotifications);
             setLoading(false);
         });
