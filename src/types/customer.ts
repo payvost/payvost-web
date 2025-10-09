@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from "firebase/firestore";
 
 export type KycStatus = 'Verified' | 'Pending' | 'Unverified' | 'Restricted';
@@ -40,4 +41,6 @@ export interface CustomerData {
   transactions: Transaction[];
   joinedDate?: string | Timestamp;
   associatedAccounts?: AssociatedAccount[];
+  transactionPin?: string;
+  pinSetupNotified?: boolean;
 }

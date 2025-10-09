@@ -1,6 +1,7 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics, logEvent } from "firebase/analytics"; // ✅ Added
@@ -15,7 +16,7 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // ✅ Added for Analytics
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // ✅ Added
 };
 
 // Validate that all required Firebase config values are present.
@@ -61,4 +62,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { app, auth, db, storage, analytics, logEvent, FirestoreError };
+export { app, auth, db, storage, analytics, logEvent, FirestoreError, signInWithCustomToken };

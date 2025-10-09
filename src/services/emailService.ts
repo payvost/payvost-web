@@ -40,51 +40,53 @@ interface PaymentRequestEmail {
  * @param toEmail The recipient's email address.
  * @param toName The recipient's name.
  */
-export async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
-    const notification = new OneSignal.Notification();
-    notification.app_id = ONESIGNAL_APP_ID;
-    notification.include_email_tokens = [toEmail];
-    notification.email_subject = "Welcome to Payvost!";
+// export async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
+//     const notification = new OneSignal.Notification();
+//     notification.app_id = ONESIGNAL_APP_ID;
+//     notification.email_to = [toEmail];
+//     notification.name = "Welcome Email";
+//     notification.email_subject = "Welcome to Payvost!";
     
-    // Using a more visually appealing HTML template for the welcome email
-    notification.email_body = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">Welcome to Payvost!</h1>
-            </div>
-            <div style="padding: 20px;">
-                <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
-                <p>On behalf of the entire team, I'd like to extend a warm welcome to Payvost. We're thrilled to have you with us!</p>
-                <p>Your account has been successfully verified, and you now have full access to our global remittance platform. We're committed to providing you with a fast, secure, and seamless experience for all your international transactions.</p>
-                <p>If you have any questions, our support team is always ready to assist you. Welcome aboard!</p>
-                <div style="text-align: center; margin-top: 30px;">
-                    <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Your Dashboard</a>
-                </div>
-                <p style="margin-top: 30px; font-size: 14px;">Best regards,</p>
-                <p style="font-size: 14px; font-weight: bold; margin: 0;">Pamilerin Coker</p>
-                <p style="font-size: 12px; color: #888; margin: 0;">CEO, Payvost</p>
-            </div>
-            <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
-                &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
-            </div>
-        </div>
-    `;
+//     // Using a more visually appealing HTML template for the welcome email
+//     notification.email_body = `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+//             <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
+//                 <h1 style="margin: 0; font-size: 24px;">Welcome to Payvost!</h1>
+//             </div>
+//             <div style="padding: 20px;">
+//                 <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
+//                 <p>On behalf of the entire team, I'd like to extend a warm welcome to Payvost. We're thrilled to have you with us!</p>
+//                 <p>Your account has been successfully verified, and you now have full access to our global remittance platform. We're committed to providing you with a fast, secure, and seamless experience for all your international transactions.</p>
+//                 <p>If you have any questions, our support team is always ready to assist you. Welcome aboard!</p>
+//                 <div style="text-align: center; margin-top: 30px;">
+//                     <a href="${process.env.FRONTEND_URL}/dashboard" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Your Dashboard</a>
+//                 </div>
+//                 <p style="margin-top: 30px; font-size: 14px;">Best regards,</p>
+//                 <p style="font-size: 14px; font-weight: bold; margin: 0;">Pamilerin Coker</p>
+//                 <p style="font-size: 12px; color: #888; margin: 0;">CEO, Payvost</p>
+//             </div>
+//             <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
+//                 &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
+//             </div>
+//         </div>
+//     `;
 
-    try {
-        const response = await client.createNotification(notification);
-        console.log('Welcome email sent successfully:', response.id);
-        return { success: true, id: response.id };
-    } catch (e: any) {
-        console.error('Error sending welcome email with OneSignal:', e.body || e);
-        throw new Error('Failed to send welcome email.');
-    }
-}
+//     try {
+//         const response = await client.createNotification(notification);
+//         console.log('Welcome email sent successfully:', response.id);
+//         return { success: true, id: response.id };
+//     } catch (e: any) {
+//         console.error('Error sending welcome email with OneSignal:', e.body || e);
+//         throw new Error('Failed to send welcome email.');
+//     }
+// }
 
 
 export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
     const notification = new OneSignal.Notification();
     notification.app_id = ONESIGNAL_APP_ID;
-    notification.include_email_tokens = [details.to];
+    notification.email_to = [details.to];
+    notification.name = "Payment Request";
     notification.email_subject = `Payment Request from ${details.requesterName}`;
     notification.email_body = `
         <div style="font-family: sans-serif; padding: 20px; color: #333;">
@@ -117,37 +119,38 @@ export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
  * @param toName The recipient's name.
  * @param businessName The name of the approved business.
  */
-export async function sendBusinessApprovalEmail(toEmail: string, toName: string, businessName: string) {
-    const notification = new OneSignal.Notification();
-    notification.app_id = ONESIGNAL_APP_ID;
-    notification.include_email_tokens = [toEmail];
-    notification.email_subject = `Congratulations! Your Business Account is Approved`;
+// export async function sendBusinessApprovalEmail(toEmail: string, toName: string, businessName: string) {
+//     const notification = new OneSignal.Notification();
+//     notification.app_id = ONESIGNAL_APP_ID;
+//     notification.email_to = [toEmail];
+//     notification.name = "Business Account Approval";
+//     notification.email_subject = `Congratulations! Your Business Account is Approved`;
     
-    notification.email_body = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">Business Account Approved!</h1>
-            </div>
-            <div style="padding: 20px;">
-                <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
-                <p>Great news! Your business, <strong>${businessName}</strong>, has been verified and approved on Payvost.</p>
-                <p>You can now access our full suite of business tools, including invoicing, team management, and advanced reporting. To get started, you can now switch to your business dashboard.</p>
-                <div style="text-align: center; margin-top: 30px;">
-                    <a href="${process.env.FRONTEND_URL}/dashboard/business" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Business Dashboard</a>
-                </div>
-            </div>
-            <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
-                &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
-            </div>
-        </div>
-    `;
+//     notification.email_body = `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+//             <div style="background-color: #3CB371; color: white; padding: 20px; text-align: center;">
+//                 <h1 style="margin: 0; font-size: 24px;">Business Account Approved!</h1>
+//             </div>
+//             <div style="padding: 20px;">
+//                 <h2 style="font-size: 20px; color: #3CB371;">Hello ${toName},</h2>
+//                 <p>Great news! Your business, <strong>${businessName}</strong>, has been verified and approved on Payvost.</p>
+//                 <p>You can now access our full suite of business tools, including invoicing, team management, and advanced reporting. To get started, you can now switch to your business dashboard.</p>
+//                 <div style="text-align: center; margin-top: 30px;">
+//                     <a href="${process.env.FRONTEND_URL}/business" style="background-color: #3CB371; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Business Dashboard</a>
+//                 </div>
+//             </div>
+//             <div style="background-color: #f7f7f7; color: #888; padding: 15px; text-align: center; font-size: 12px;">
+//                 &copy; ${new Date().getFullYear()} Payvost Inc. All Rights Reserved.
+//             </div>
+//         </div>
+//     `;
 
-    try {
-        const response = await client.createNotification(notification);
-        console.log('Business approval email sent successfully:', response.id);
-        return { success: true, id: response.id };
-    } catch (e: any) {
-        console.error('Error sending business approval email with OneSignal:', e.body || e);
-        throw new Error('Failed to send business approval email.');
-    }
-}
+//     try {
+//         const response = await client.createNotification(notification);
+//         console.log('Business approval email sent successfully:', response.id);
+//         return { success: true, id: response.id };
+//     } catch (e: any) {
+//         console.error('Error sending business approval email with OneSignal:', e.body || e);
+//         throw new Error('Failed to send business approval email.');
+//     }
+// }
