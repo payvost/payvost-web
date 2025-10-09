@@ -39,6 +39,7 @@ export const menuItems = [
           { href: '/business/transactions', icon: <DollarSign />, label: 'Transactions' },
           { href: '/business/invoices', icon: <FileText />, label: 'Invoices' },
           { href: '/business/payouts', icon: <ArrowRightLeft />, label: 'Payouts' },
+          { href: '/business/quote-builder', icon: <FileText />, label: 'Quote Builder' },
         ]
       },
        {

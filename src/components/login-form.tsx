@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  emailOrUsername: z.string().min(1, 'Email or Username is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -50,6 +51,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -58,7 +60,15 @@ export function LoginForm() {
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      // Use custom backend endpoint for login
+      const response = await axios.post(`${apiUrl}/user/login`, {
+        credential: data.emailOrUsername,
+        password: data.password,
+      });
+
+      // Custom token login with Firebase
+      const { token: customToken } = response.data;
+      const userCredential = await auth.signInWithCustomToken(customToken);
       const user = userCredential.user;
 
       if (!user.emailVerified) {
@@ -79,7 +89,9 @@ export function LoginForm() {
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = "An unknown error occurred.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+       if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
       }
       toast({
@@ -97,9 +109,9 @@ export function LoginForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
-             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            <Label htmlFor="emailOrUsername">Email or Username</Label>
+            <Input id="emailOrUsername" type="text" placeholder="m@example.com or @username" {...register('emailOrUsername')} />
+             {errors.emailOrUsername && <p className="text-sm text-destructive">{errors.emailOrUsername.message}</p>}
           </div>
           <div className="grid gap-2">
             <div className="flex items-center">
