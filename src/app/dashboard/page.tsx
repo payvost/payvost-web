@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -75,7 +75,6 @@ export default function DashboardPage() {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
-  const userStatusRef = useRef<{ kyc: string | null; business: string | null }>({ kyc: null, business: null });
   const [disputes, setDisputes] = useState<DocumentData[]>([]);
   const [loadingDisputes, setLoadingDisputes] = useState(true);
   
@@ -115,7 +114,7 @@ export default function DashboardPage() {
       setLoadingDisputes(false);
       return;
     }
-
+  
     const userDocRef = doc(db, "users", user.uid);
     const unsubUser = onSnapshot(userDocRef, async (doc) => {
       if (doc.exists()) {
@@ -124,41 +123,40 @@ export default function DashboardPage() {
         
         const newKycStatus = data.kycStatus;
         const newBusinessStatus = data.businessProfile?.status;
-
-        // Welcome email for personal KYC
-        if (userStatusRef.current.kyc !== 'Verified' && newKycStatus === 'Verified' && user.displayName && user.email) {
-            console.log("User KYC verified, sending welcome email.");
+        const welcomeNotificationSent = data.welcomeNotificationSent || {};
+  
+        // Welcome notification for personal KYC
+        if (newKycStatus === 'Verified' && !welcomeNotificationSent.personal && user.displayName) {
+            console.log("User KYC verified, sending welcome notification.");
             try {
-                // await sendVerificationWelcomeEmail(user.email, user.displayName);
                 await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'kyc', title: 'Account Verified!',
                     description: 'Congratulations! Your account has been verified. You now have full access to all features.',
                     date: serverTimestamp(), read: false, href: '/dashboard/profile', context: 'personal'
                 });
-            } catch (emailError) {
-                console.error("Failed to send welcome email:", emailError);
+                await updateDoc(userDocRef, { 'welcomeNotificationSent.personal': true });
+            } catch (error) {
+                console.error("Failed to send welcome notification:", error);
             }
         }
         
         // Welcome notification for Business Approval
-        if (userStatusRef.current.business !== 'Approved' && newBusinessStatus === 'Approved' && user.displayName && user.email) {
+        if (newBusinessStatus === 'Approved' && !welcomeNotificationSent.business && user.displayName) {
             console.log("Business profile approved, sending notification.");
             try {
-                // await sendBusinessApprovalEmail(user.email, user.displayName, data.businessProfile.name);
                  await addDoc(collection(db, "users", user.uid, "notifications"), {
                     icon: 'success', title: 'Business Account Approved!',
                     description: `Congratulations! Your business "${data.businessProfile.name}" has been approved. You can now switch to your business dashboard.`,
                     date: serverTimestamp(), read: false, href: '/business', context: 'business'
                 });
+                await updateDoc(userDocRef, { 'welcomeNotificationSent.business': true });
             } catch (error) {
                 console.error("Failed to send business approval notification:", error);
             }
         }
         
-        userStatusRef.current = { kyc: newKycStatus, business: newBusinessStatus };
         setIsKycVerified(newKycStatus === 'Verified');
-
-
+  
         const transactions = data.transactions || [];
         if (transactions.length > 0) {
             setHasTransactionData(true);
