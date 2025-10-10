@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, PanelLeft, LifeBuoy } from 'lucide-react';
+import { Search, PanelLeft, LifeBuoy, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { NotificationDropdown } from './notification-dropdown';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 export function BusinessHeader() {
     const { user } = useAuth();
@@ -37,31 +39,41 @@ export function BusinessHeader() {
         if (href === '/business') return pathname === href;
         return pathname.startsWith(href);
     };
+    
+    const defaultActiveGroup = menuItems.find(group => group.items.some(item => isActive(item.href)))?.group;
 
     const renderNav = () => (
-        <nav className="grid items-start text-sm font-medium">
-         {menuItems.map((group) => (
-           <div key={group.group} className="py-2">
-             <h4 className="mb-2 px-2 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-               {group.group}
-             </h4>
-             {group.items.map(item => (
-               <Link
-                 key={item.label}
-                 href={item.href}
-                 className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                   isActive(item.href)
-                     ? 'bg-primary text-primary-foreground'
-                     : 'text-muted-foreground hover:text-primary'
-                 }`}
-               >
-                 {React.cloneElement(item.icon as React.ReactElement, { className: 'h-4 w-4' })}
-                 {item.label}
-               </Link>
-             ))}
-           </div>
-         ))}
-       </nav>
+       <nav className="grid items-start text-sm font-medium">
+         <Accordion type="multiple" defaultValue={[defaultActiveGroup].filter(Boolean) as string[]} className="w-full">
+              {menuItems.map((group) => (
+                  <AccordionItem value={group.group} key={group.group} className="border-b-0">
+                      <AccordionTrigger className="py-2 hover:no-underline text-muted-foreground hover:text-primary [&[data-state=open]>svg]:rotate-180">
+                         <span className="flex items-center gap-2 flex-1 text-left font-semibold text-sm">
+                           {React.cloneElement(group.icon as React.ReactElement, { className: 'h-4 w-4' })}
+                           {group.group}
+                         </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-2">
+                          <div className="flex flex-col gap-1 ml-4 border-l pl-4">
+                          {group.items.map(item => (
+                              <Link
+                              key={item.label}
+                              href={item.href}
+                              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+                                  isActive(item.href)
+                                  ? 'bg-primary/10 text-primary font-semibold'
+                                  : 'text-muted-foreground hover:text-primary'
+                              }`}
+                              >
+                              {item.label}
+                              </Link>
+                          ))}
+                          </div>
+                      </AccordionContent>
+                  </AccordionItem>
+              ))}
+          </Accordion>
+      </nav>
      );
 
     return (

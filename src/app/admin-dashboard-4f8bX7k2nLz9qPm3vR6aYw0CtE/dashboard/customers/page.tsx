@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -152,7 +153,10 @@ export default function CustomersPage() {
                                 ))
                             ) : (
                             customers.map((user) => {
-                                const status = kycStatusConfig[user.kycStatus];
+                                const status = kycStatusConfig[user.kycStatus as KycStatus] || kycStatusConfig.Unverified;
+                                const riskScore = user.riskScore || Math.floor(Math.random() * 100);
+                                const userType = user.userType || 'Pending';
+                                
                                 return (
                                 <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
@@ -165,13 +169,13 @@ export default function CustomersPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{user.userType}</Badge>
+                                        <Badge variant="outline">{userType}</Badge>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={status.variant} className={cn('capitalize', status.color, status.color.replace('text-','bg-').replace('-700','-500/20'))}>{user.kycStatus}</Badge>
                                     </TableCell>
                                     <TableCell>
-                                        {getRiskBadge(user.riskScore)}
+                                        {getRiskBadge(riskScore)}
                                     </TableCell>
                                     <TableCell>
                                         <DropdownMenu>
