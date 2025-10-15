@@ -4,12 +4,11 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
-import { AuthProvider } from '@/hooks/use-auth';
-import { ThemeProvider } from '@/components/theme-provider';
+import { Providers } from '@/components/providers';
 import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
-import { LocationPermissionBanner } from '@/components/location-permission-banner'; // Added import
+import { LocationPermissionBanner } from '@/components/location-permission-banner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -45,21 +44,14 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
+        <Providers>
             {children}
             <Toaster />
-            <LocationPermissionBanner /> {/* Added component */}
+            <LocationPermissionBanner />
             <CookieConsentBanner />
-            <SpeedInsights />  {/* ✅ Performance metrics */}
-            <Analytics />       {/* ✅ Visitor & page view tracking */}
-          </AuthProvider>
-        </ThemeProvider>
+            <SpeedInsights />
+            <Analytics />
+        </Providers>
       </body>
     </html>
   );

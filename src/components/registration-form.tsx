@@ -48,7 +48,6 @@ const registrationSchema = z.object({
   email: z.string().email('Invalid email address'),
   countryCode: z.string().min(1, 'Country code is required'),
   phone: z.string().min(5, 'A valid phone number is required'),
-  username: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Passwords must match'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
@@ -86,7 +85,7 @@ const registrationSchema = z.object({
 type FormValues = z.infer<typeof registrationSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal & Address', fields: ['fullName', 'email', 'phone', 'username', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
+  { id: 1, name: 'Personal & Address', fields: ['fullName', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
   { id: 2, name: 'Identity Verification', fields: ['idType', 'idNumber', 'idDocument', 'bvn', 'agreeTerms'] },
 ];
 
@@ -99,12 +98,10 @@ export function RegistrationForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [username, setUsername] = useState('');
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
-
 
   const {
     register,
@@ -121,6 +118,7 @@ export function RegistrationForm() {
         agreeTerms: false
     }
   });
+
 
   useEffect(() => {
     fetch('https://ip-api.com/json/?fields=countryCode,country')
@@ -237,25 +235,10 @@ export function RegistrationForm() {
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep((step) => step + 1);
+      setCurrentStep((step) => step - 1);
     }
   };
   
-  const handleAuthenticate = (platform: 'x' | 'instagram' | 'skip') => {
-    if (platform === 'skip') {
-        setUsername('');
-        setValue('username', '');
-        return;
-    }
-    const mockUsername = `${platform}_user_${Math.floor(1000 + Math.random() * 9000)}`;
-    setUsername(mockUsername);
-    setValue('username', mockUsername);
-    toast({
-        title: "Authentication Simulated",
-        description: `Your username has been set to ${mockUsername}.`
-    })
-  };
-
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsLoading(true);
     try {
@@ -284,7 +267,6 @@ export function RegistrationForm() {
         uid: user.uid,
         name: data.fullName,
         email: data.email,
-        username: data.username,
         phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
@@ -456,40 +438,7 @@ export function RegistrationForm() {
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="username">Payment ID (Username)</Label>
-                    <DropdownMenu>
-                         <DropdownMenuTrigger asChild>
-                             <div className="relative">
-                                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                                <Input 
-                                    id="username" 
-                                    readOnly 
-                                    {...register('username')} 
-                                    value={username} 
-                                    placeholder="Authenticate to get a Payment ID" 
-                                    className="pl-8 bg-muted/50 cursor-pointer"
-                                />
-                            </div>
-                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                            <div className="p-2">
-                                <p className="font-semibold text-sm flex items-center gap-2"><ShieldCheckIcon className="h-4 w-4 text-primary" /> Username Integrity</p>
-                                <p className="text-xs text-muted-foreground mt-1">Claim a unique username to securely receive payments without sharing your personal details.</p>
-                            </div>
-                             <DropdownMenuItem onSelect={() => handleAuthenticate('x')}>
-                                <Twitter className="mr-2 h-4 w-4 text-[#1DA1F2]" /> Authenticate with X
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAuthenticate('instagram')}>
-                                <Icons.instagram className="mr-2 h-4 w-4" /> Authenticate with Instagram
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAuthenticate('skip')}>
-                                Continue without username
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                     {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
-                </div>
+                 
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
