@@ -74,6 +74,33 @@ const steps = [
     { id: 5, name: 'Publish', fields: ['endDate', 'visibility'] },
 ];
 
+// Helper function to clean object of undefined values
+const cleanObject = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (typeof obj !== 'object') return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(cleanObject).filter(v => v !== null);
+  }
+
+  const cleaned: { [key: string]: any } = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value !== undefined) {
+        const cleanedValue = cleanObject(value);
+        if (cleanedValue !== undefined && cleanedValue !== null) {
+          cleaned[key] = cleanedValue;
+        }
+      }
+    }
+  }
+
+  if (Object.keys(cleaned).length === 0) return null; // Return null for empty objects
+  return cleaned;
+};
+
+
 export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPageFormProps) {
     const { toast } = useToast();
     const [currentStep, setCurrentStep] = useState(0);
@@ -196,7 +223,9 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
     
         setIsSubmitting(true);
         try {
-            const campaignDataToSave = {
+            const cleanedManualDetails = cleanObject(data.manualPaymentDetails);
+
+            const campaignDataToSave: Record<string, any> = {
                 userId: user.uid,
                 title: data.title,
                 category: data.category,
@@ -213,8 +242,11 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                 visibility: data.visibility,
                 status: 'Active',
                 updatedAt: serverTimestamp(),
-                manualPaymentDetails: data.manualPaymentDetails,
             };
+
+            if (cleanedManualDetails) {
+              campaignDataToSave.manualPaymentDetails = cleanedManualDetails;
+            }
     
             let docRef;
             let campaignIdToUse = campaignId;
@@ -244,7 +276,6 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                 bannerURL = await getDownloadURL(bannerRef);
             }
     
-            // This part for gallery needs adjustment for editing vs creating
             const galleryFiles = data.galleryFiles || [];
             const newGalleryUploads = await Promise.all(
                 galleryFiles.filter((file: any) => file instanceof File).map(async (file: File) => {
