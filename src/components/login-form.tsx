@@ -17,7 +17,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 const loginSchema = z.object({
-  emailOrUsername: z.string().min(1, 'Email or Username is required'),
+  email: z.string().email('A valid email is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -51,8 +51,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
+  
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
   });
@@ -60,15 +59,7 @@ export function LoginForm() {
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
     try {
-      // Use custom backend endpoint for login
-      const response = await axios.post(`${apiUrl}/user/login`, {
-        credential: data.emailOrUsername,
-        password: data.password,
-      });
-
-      // Custom token login with Firebase
-      const { token: customToken } = response.data;
-      const userCredential = await auth.signInWithCustomToken(customToken);
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       if (!user.emailVerified) {
@@ -89,10 +80,10 @@ export function LoginForm() {
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = "An unknown error occurred.";
-       if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later."
       }
       toast({
         title: "Login Failed",
@@ -109,9 +100,9 @@ export function LoginForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="emailOrUsername">Email or Username</Label>
-            <Input id="emailOrUsername" type="text" placeholder="m@example.com or @username" {...register('emailOrUsername')} />
-             {errors.emailOrUsername && <p className="text-sm text-destructive">{errors.emailOrUsername.message}</p>}
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="text" placeholder="m@example.com" {...register('email')} />
+             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
           <div className="grid gap-2">
             <div className="flex items-center">

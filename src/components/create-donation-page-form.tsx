@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Video, Youtube, Loader2, CalendarIcon, FileUp, Check, Users, X } from 'lucide-react';
+import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Video, Youtube, Loader2, CalendarIcon, FileUp, Check, Users, X, Banknote, Landmark, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useRef } from 'react';
 import { Separator } from './ui/separator';
@@ -48,6 +48,12 @@ const campaignSchema = z.object({
   visibility: z.enum(['public', 'private']),
   supportingDocs: z.any().optional(),
   impactItems: z.array(z.object({ description: z.string() })).optional(),
+  manualPaymentDetails: z.object({
+    NGN: z.object({ bankName: z.string().optional(), accountName: z.string().optional(), accountNumber: z.string().optional(), accountType: z.string().optional(), bankAddress: z.string().optional() }).optional(),
+    USD: z.object({ bankName: z.string().optional(), accountName: z.string().optional(), accountNumber: z.string().optional(), routingNumber: z.string().optional(), accountType: z.string().optional(), bankAddress: z.string().optional() }).optional(),
+    EUR: z.object({ bankName: z.string().optional(), accountName: z.string().optional(), accountNumber: z.string().optional(), iban: z.string().optional(), bic: z.string().optional(), accountType: z.string().optional(), bankAddress: z.string().optional() }).optional(),
+    GBP: z.object({ bankName: z.string().optional(), accountName: z.string().optional(), accountNumber: z.string().optional(), sortCode: z.string().optional(), accountType: z.string().optional(), bankAddress: z.string().optional() }).optional(),
+  }).optional(),
 }).refine(data => data.enableRecurring ? !!data.recurringFrequency : true, {
     message: "Please select a frequency for recurring donations.",
     path: ["recurringFrequency"],
@@ -64,7 +70,7 @@ const steps = [
     { id: 1, name: 'Campaign Basics', fields: ['title', 'category', 'tags', 'description'] },
     { id: 2, name: 'Media', fields: ['mediaType', 'bannerFile', 'bannerUrl', 'galleryFiles'] },
     { id: 3, name: 'Donations', fields: ['goal', 'currency', 'suggestedAmounts', 'allowCustomAmount', 'enableRecurring', 'recurringFrequency'] },
-    { id: 4, name: 'Transparency', fields: ['supportingDocs', 'impactItems'] },
+    { id: 4, name: 'Transparency & Payouts', fields: ['supportingDocs', 'impactItems', 'manualPaymentDetails'] },
     { id: 5, name: 'Publish', fields: ['endDate', 'visibility'] },
 ];
 
@@ -135,7 +141,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
 
         const currentFilesCount = galleryPreviews.length + files.length;
         if (currentFilesCount > 5) {
-            toast({ title: "Limit Exceeded", description: "You can upload a maximum of 5 gallery images.", variant: "destructive" });
+            toast({ title: "Limit Exceeded", description: `You can upload a maximum of 5 gallery images.`, variant: "destructive" });
             return;
         }
 
@@ -207,6 +213,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                 visibility: data.visibility,
                 status: 'Active',
                 updatedAt: serverTimestamp(),
+                manualPaymentDetails: data.manualPaymentDetails,
             };
     
             let docRef;
@@ -337,7 +344,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                                     <TabsList><TabsTrigger value="image"><ImageIcon className="mr-2"/>Image</TabsTrigger><TabsTrigger value="video"><Video className="mr-2"/>Video Upload</TabsTrigger><TabsTrigger value="embed"><Youtube className="mr-2"/>Video Embed</TabsTrigger></TabsList>
                                      <TabsContent value="image">
                                         <Label htmlFor="banner-upload" className="mt-2 block cursor-pointer">
-                                            <div className="relative border-2 border-dashed rounded-lg text-center aspect-[2.5/1] flex flex-col justify-center items-center hover:bg-muted/50 transition-colors">
+                                            <div className="relative border-2 border-dashed rounded-lg text-center aspect-video flex flex-col justify-center items-center hover:bg-muted/50 transition-colors">
                                                 {bannerPreview ? (
                                                     <Image src={bannerPreview} alt="Banner preview" layout="fill" objectFit="cover" className="rounded-md" />
                                                 ) : (
@@ -350,7 +357,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                                         </Label>
                                         <Input id="banner-upload" type="file" className="hidden" accept="image/*" onChange={handleBannerFileChange} />
                                     </TabsContent>
-                                    <TabsContent value="video"><div className="p-4 mt-2 border-2 border-dashed rounded-lg text-center aspect-[2.5/1] flex flex-col justify-center items-center"><Upload className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Click to upload video (MP4, &lt;100MB)</p></div></TabsContent>
+                                    <TabsContent value="video"><div className="p-4 mt-2 border-2 border-dashed rounded-lg text-center aspect-video flex flex-col justify-center items-center"><Upload className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Click to upload video (MP4, &lt;100MB)</p></div></TabsContent>
                                     <TabsContent value="embed"><div className="space-y-2 mt-2"><Label htmlFor="bannerUrl">YouTube or Vimeo URL</Label><Input id="bannerUrl" {...register('bannerUrl')} placeholder="https://www.youtube.com/watch?v=..." /></div></TabsContent>
                                 </Tabs>
                             </div>
@@ -395,16 +402,81 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                                <div className="space-y-2"><Label>Currency</Label><Controller name="currency" control={control} render={({ field }) => (<Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="GBP">GBP</SelectItem><SelectItem value="NGN">NGN</SelectItem></SelectContent></Select>)} /></div>
                            </div>
                            <div className="space-y-2"><Label>Suggested Amounts</Label><Input {...register('suggestedAmounts')} placeholder="e.g., 10, 25, 50, 100" /></div>
-                           <div className="flex items-center space-x-2"><Controller name="allowCustomAmount" control={control} render={({field}) => (<Switch id="allowCustomAmount" checked={field.value} onCheckedChange={field.onChange}/>)} /><Label htmlFor="allowCustomAmount">Allow custom donation amounts</Label></div>
-                           <div className="flex items-center space-x-2"><Controller name="enableRecurring" control={control} render={({field}) => (<Switch id="enableRecurring" checked={field.value} onCheckedChange={field.onChange}/>)} /><Label htmlFor="enableRecurring">Enable recurring donations</Label></div>
+                            <div className="flex items-center space-x-2">
+                                <Controller name="allowCustomAmount" control={control} render={({ field }) => (<Switch id="allowCustomAmount" checked={field.value} onCheckedChange={field.onChange} />)} />
+                                <Label htmlFor="allowCustomAmount">Allow custom donation amounts</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Controller name="enableRecurring" control={control} render={({ field }) => (<Switch id="enableRecurring" checked={field.value} onCheckedChange={field.onChange} />)} />
+                                <Label htmlFor="enableRecurring">Enable recurring donations</Label>
+                            </div>
                            {watch('enableRecurring') && <div className="space-y-2"><Label>Recurring Frequency</Label><Controller name="recurringFrequency" control={control} render={({field}) => (<Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue placeholder="Select frequency..." /></SelectTrigger><SelectContent><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="quarterly">Quarterly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent></Select>)}/>{errors.recurringFrequency && <p className="text-sm text-destructive">{errors.recurringFrequency.message}</p>}</div>}
                         </div>
                     )}
                      {currentStep === 3 && (
-                        <div className="space-y-4">
-                           <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex items-center gap-2"><Check className="h-5 w-5"/>Your account is KYC verified.</div>
-                           <div className="space-y-2"><Label>Supporting Documents</Label><div className="p-4 border-2 border-dashed rounded-lg text-center"><FileUp className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Upload receipts, bills, etc. (PDF, Word)</p></div></div>
-                           <div className="space-y-2"><Label>Impact Breakdown</Label><div className="flex items-center gap-2"><Input placeholder="e.g., $25 feeds a child for a week" /><Button variant="outline" size="icon"><Plus className="h-4 w-4"/></Button></div></div>
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="text-lg font-medium">Payouts</h4>
+                                <p className="text-sm text-muted-foreground">Configure how you'll receive the donated funds.</p>
+                            </div>
+                           <div className="p-4 border rounded-lg bg-green-500/10 text-green-700 flex items-center gap-2"><Check className="h-5 w-5"/>Your account is KYC verified for payouts.</div>
+                           
+                           <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2"><Banknote className="h-5 w-5"/>Manual Payout Account Details</CardTitle>
+                                    <CardDescription className="text-xs">Provide these details if you want donors to be able to pay via manual bank transfer.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                     <Tabs defaultValue='NGN' className='w-full'>
+                                        <TabsList className="grid w-full grid-cols-4">
+                                            <TabsTrigger value="NGN">NGN</TabsTrigger>
+                                            <TabsTrigger value="USD">USD</TabsTrigger>
+                                            <TabsTrigger value="EUR">EUR</TabsTrigger>
+                                            <TabsTrigger value="GBP">GBP</TabsTrigger>
+                                        </TabsList>
+                                        <TabsContent value="NGN">
+                                            <div className='mt-4 space-y-2 rounded-md border p-4 text-sm'>
+                                                <div className="space-y-1"><Label>Bank Name</Label><Input {...register('manualPaymentDetails.NGN.bankName')} placeholder="e.g. Providus Bank" /></div>
+                                                <div className="space-y-1"><Label>Account Name</Label><Input {...register('manualPaymentDetails.NGN.accountName')} placeholder="e.g. Your Legal Name" /></div>
+                                                <div className="space-y-1"><Label>Account Number</Label><Input {...register('manualPaymentDetails.NGN.accountNumber')} placeholder="e.g. 9876543210" /></div>
+                                                <div className="space-y-1"><Label>Account Type</Label><Input {...register('manualPaymentDetails.NGN.accountType')} placeholder="e.g. Savings" /></div>
+                                                <div className="space-y-1"><Label>Bank Address</Label><Input {...register('manualPaymentDetails.NGN.bankAddress')} placeholder="e.g. 123 Finance Street, Lagos" /></div>
+                                            </div>
+                                        </TabsContent>
+                                        <TabsContent value="USD">
+                                             <div className='mt-4 space-y-2 rounded-md border p-4 text-sm'>
+                                                <div className="space-y-1"><Label>Bank Name</Label><Input {...register('manualPaymentDetails.USD.bankName')} placeholder="e.g. Global Citizen Bank" /></div>
+                                                <div className="space-y-1"><Label>Account Name</Label><Input {...register('manualPaymentDetails.USD.accountName')} placeholder="e.g. Your Legal Name" /></div>
+                                                <div className="space-y-1"><Label>Account Number</Label><Input {...register('manualPaymentDetails.USD.accountNumber')} /></div>
+                                                <div className="space-y-1"><Label>Routing Number</Label><Input {...register('manualPaymentDetails.USD.routingNumber')} /></div>
+                                                <div className="space-y-1"><Label>Account Type</Label><Input {...register('manualPaymentDetails.USD.accountType')} placeholder="e.g. Checking" /></div>
+                                                <div className="space-y-1"><Label>Bank Address</Label><Input {...register('manualPaymentDetails.USD.bankAddress')} /></div>
+                                            </div>
+                                        </TabsContent>
+                                        <TabsContent value="EUR">
+                                            <div className='mt-4 space-y-2 rounded-md border p-4 text-sm'>
+                                                <div className="space-y-1"><Label>Bank Name</Label><Input {...register('manualPaymentDetails.EUR.bankName')} placeholder="e.g. Commerzbank" /></div>
+                                                <div className="space-y-1"><Label>Account Name</Label><Input {...register('manualPaymentDetails.EUR.accountName')} /></div>
+                                                <div className="space-y-1"><Label>Account Number</Label><Input {...register('manualPaymentDetails.EUR.accountNumber')} /></div>
+                                                <div className="space-y-1"><Label>IBAN</Label><Input {...register('manualPaymentDetails.EUR.iban')} /></div>
+                                                <div className="space-y-1"><Label>BIC/SWIFT</Label><Input {...register('manualPaymentDetails.EUR.bic')} /></div>
+                                                <div className="space-y-1"><Label>Account Type</Label><Input {...register('manualPaymentDetails.EUR.accountType')} /></div>
+                                                <div className="space-y-1"><Label>Bank Address</Label><Input {...register('manualPaymentDetails.EUR.bankAddress')} /></div>
+                                            </div>
+                                        </TabsContent>
+                                         <TabsContent value="GBP">
+                                            <div className='mt-4 space-y-2 rounded-md border p-4 text-sm'>
+                                                <div className="space-y-1"><Label>Bank Name</Label><Input {...register('manualPaymentDetails.GBP.bankName')} placeholder="e.g. Barclays UK" /></div>
+                                                <div className="space-y-1"><Label>Account Name</Label><Input {...register('manualPaymentDetails.GBP.accountName')} /></div>
+                                                <div className="space-y-1"><Label>Account Number</Label><Input {...register('manualPaymentDetails.GBP.accountNumber')} /></div>
+                                                <div className="space-y-1"><Label>Sort Code</Label><Input {...register('manualPaymentDetails.GBP.sortCode')} /></div>
+                                                <div className="space-y-1"><Label>Account Type</Label><Input {...register('manualPaymentDetails.GBP.accountType')} /></div>
+                                                <div className="space-y-1"><Label>Bank Address</Label><Input {...register('manualPaymentDetails.GBP.bankAddress')} /></div>
+                                            </div>
+                                        </TabsContent>
+                                    </Tabs>
+                                </CardContent>
+                           </Card>
                         </div>
                     )}
 
@@ -423,8 +495,8 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                     )}
                 </CardContent>
                 <CardFooter className="justify-between">
-                     <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
-                        Cancel
+                     <Button type="button" variant="outline" onClick={currentStep === 0 ? onBack : handlePrev} disabled={isSubmitting}>
+                        Back
                     </Button>
                     {currentStep < steps.length - 1 ? (
                         <Button type="button" onClick={handleNext}>Next</Button>
@@ -439,3 +511,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
         </Card>
     );
 }
+
+    
+
+    
