@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint, BadgeInfo } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint, BadgeInfo, Camera, Copy, Landmark, Banknote } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,9 @@ import type { KycStatus } from '@/types/customer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Verified: { color: 'text-green-700', variant: 'default' },
@@ -86,6 +89,9 @@ export default function ProfilePage() {
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, formState: { errors: passwordErrors }, reset: resetPasswordForm } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema)
@@ -258,6 +264,53 @@ export default function ProfilePage() {
         }
     };
 
+    const startCamera = async () => {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                setShowCamera(true);
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                toast({ title: "Camera Error", description: "Could not access your device's camera.", variant: "destructive" });
+                setShowCamera(false);
+            }
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+        }
+    };
+    
+    const handleCapture = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    
+                    setPreviewImage(canvas.toDataURL('image/jpeg'));
+                    setValue('photo', dataTransfer.files); // Update RHF state
+                    stopCamera();
+                    setShowCamera(false);
+                }
+            }, 'image/jpeg');
+        }
+    };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
@@ -275,6 +328,20 @@ export default function ProfilePage() {
   const kycStatusBadge = kycStatusConfig[currentKycStatus] || kycStatusConfig.Default;
   const userTier = userData?.userType || 'Pending';
   const hasPin = !!userData?.transactionPin;
+  
+  const accountDetails = userData?.accountDetails || {};
+  const activeWallets = userData?.wallets?.map((w: any) => w.currency) || [];
+
+
+  const copyAccountDetails = (details: object) => {
+    const detailsText = Object.entries(details)
+        .map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}: ${value}`)
+        .join('\n');
+    navigator.clipboard.writeText(detailsText);
+    toast({
+        title: "Account Details Copied!",
+    });
+  }
 
 
   if (loading) {
@@ -326,13 +393,23 @@ export default function ProfilePage() {
                                 <AvatarFallback>{getInitials(displayName || user?.displayName)}</AvatarFallback>
                             </Avatar>
                              {isEditing && (
-                                <>
-                                 <Label htmlFor="photo-upload" className="absolute -bottom-2 -right-2 cursor-pointer p-2 bg-primary text-primary-foreground rounded-full border-2 border-background hover:bg-primary/90">
-                                    <UploadCloud className="h-4 w-4" />
-                                </Label>
-                                <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isSaving} />
-                                </>
-                            )}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="icon" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">
+                                            <Camera className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
+                                            <UploadCloud className="mr-2 h-4 w-4"/> Upload
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={startCamera}>
+                                            <Camera className="mr-2 h-4 w-4"/> Take Selfie
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                             )}
+                            <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isSaving} />
                         </div>
 
                         {isEditing ? (
@@ -497,6 +574,43 @@ export default function ProfilePage() {
                     </CardContent>
                 </Card>
 
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5"/>Account Details</CardTitle>
+                        <CardDescription>Your details for receiving local payments into your wallets.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue={activeWallets[0] || ''} className="w-full">
+                            <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${Math.max(1, activeWallets.length)}, minmax(0, 1fr))` }}>
+                                {activeWallets.map((currency: string) => (
+                                    <TabsTrigger key={currency} value={currency}>{currency}</TabsTrigger>
+                                ))}
+                            </TabsList>
+                            {activeWallets.map((currency: string) => (
+                                <TabsContent key={currency} value={currency}>
+                                <div className="mt-4 space-y-3 rounded-md border p-4">
+                                    {accountDetails[currency] ? (
+                                    <>
+                                        {Object.entries(accountDetails[currency]).map(([key, value]) => (
+                                            <div key={key} className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">{key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}</span>
+                                                <span className="font-semibold">{String(value)}</span>
+                                            </div>
+                                        ))}
+                                        <Button size="sm" variant="outline" className="w-full mt-4" onClick={() => copyAccountDetails(accountDetails[currency])}>
+                                            <Copy className="mr-2 h-4 w-4" /> Copy {currency} Details
+                                        </Button>
+                                    </>
+                                    ) : (
+                                    <p className="text-center text-muted-foreground py-4">Account details for {currency} are not yet available.</p>
+                                    )}
+                                </div>
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </CardContent>
+                </Card>
+
                  <Card>
                     <CardHeader>
                         <CardTitle>Identity Verification</CardTitle>
@@ -565,6 +679,24 @@ export default function ProfilePage() {
                 </Card>
             </div>
         </div>
+        <Dialog open={showCamera} onOpenChange={(open) => {
+           if (!open) stopCamera();
+           setShowCamera(open);
+       }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Take a Selfie</DialogTitle>
+                </DialogHeader>
+                <div className="relative aspect-square w-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" ></video>
+                    <canvas ref={canvasRef} className="hidden"></canvas>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { stopCamera(); setShowCamera(false); }}>Cancel</Button>
+                    <Button onClick={handleCapture}>Capture</Button>
+                </DialogFooter>
+            </DialogContent>
+       </Dialog>
       </main>
     </DashboardLayout>
   );

@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import admin from 'firebase-admin';
+import admin from '../../../firebase';
 import type { User } from '../models/user';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
@@ -12,12 +12,12 @@ const usersCollection = firestore.collection('users');
 export const getAllUsers = async (_req: Request, res: Response) => {
   try {
     const usersSnapshot = await usersCollection.get();
-    const users = usersSnapshot.docs.map(doc => {
-        const data = doc.data();
-        // Ensure we don't send back password hashes
-        const { password, ...userWithoutPassword } = data;
-        return { id: doc.id, ...userWithoutPassword };
-    });
+  const users = usersSnapshot.docs.map(doc => {
+    const data = doc.data();
+    // Ensure we don't send back password hashes
+    const { passwordHash, ...userWithoutPassword } = data;
+    return { id: doc.id, ...userWithoutPassword };
+  });
     return res.status(200).json(users);
   } catch (error) {
     console.error("Error fetching all users:", error);
@@ -38,31 +38,32 @@ export const register = async (req: Request, res: Response) => {
         return res.status(409).json({ error: 'User already exists.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    // Use Firebase Auth to create the user for authentication
-    const userRecord = await admin.auth().createUser({
-        email: email,
-        password: password,
-        displayName: name,
-    });
-    
-    const newUser: Omit<User, 'id'> = {
-        name,
-        email,
-        password: passwordHash,
-        role: 'user',
-        kycStatus: 'Unverified',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-    };
+  const passwordHash = await bcrypt.hash(password, 10);
 
-    // Use the Firebase Auth UID as the document ID in Firestore
-    await usersCollection.doc(userRecord.uid).set(newUser);
-    
-    const { password: _, ...userResponse } = newUser;
+  // Use Firebase Auth to create the user for authentication
+  const userRecord = await admin.auth().createUser({
+    email: email,
+    password: password,
+    displayName: name,
+  });
 
-    return res.status(201).json({ id: userRecord.uid, ...userResponse });
+  const newUser: Omit<User, 'id'> = {
+    name,
+    email,
+    passwordHash,
+    role: 'user',
+    kycStatus: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  // Use the Firebase Auth UID as the document ID in Firestore
+  await usersCollection.doc(userRecord.uid).set(newUser);
+
+  // Remove passwordHash from response
+  const { passwordHash: _, ...userResponse } = newUser;
+
+  return res.status(201).json({ id: userRecord.uid, ...userResponse });
 
   } catch (err) {
     console.error("Registration Error:", err);
@@ -88,7 +89,7 @@ export const login = async (req: Request, res: Response) => {
     const userDoc = userQuery.docs[0];
     const user = userDoc.data() as User;
     
-    const valid = await bcrypt.compare(password, user.password);
+  const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
@@ -121,11 +122,11 @@ export const getProfile = async (req: Request, res: Response) => {
         return res.status(404).json({ error: 'User not found.' });
     }
 
-    const userData = userDoc.data();
-    // Exclude password from response
-    const { password, ...profileData } = userData as User;
+  const userData = userDoc.data();
+  // Exclude passwordHash and id from response
+  const { passwordHash, id, ...profileData } = userData as User;
 
-    return res.json({ id: userDoc.id, ...profileData });
+  return res.json({ id: userDoc.id, ...profileData });
   } catch (err) {
     console.error("Get Profile Error:", err);
     return res.status(500).json({ error: 'Failed to fetch profile.' });
