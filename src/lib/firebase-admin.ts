@@ -9,7 +9,7 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccountPath),
-      databaseURL: "https://qwibil-remit-default-rtdb.firebaseio.com"
+      databaseURL: "https://payvost-default-rtdb.firebaseio.com"
     });
     console.log("Firebase Admin SDK initialized successfully for API routes.");
   } catch (error) {
