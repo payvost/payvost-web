@@ -9,6 +9,7 @@ import { CookieConsentBanner } from '@/components/cookie-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { LocationPermissionBanner } from '@/components/location-permission-banner';
+import PWARegister from '../components/pwa-register';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -36,6 +37,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#3CB371" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/clay-logo.png" />
+        <link rel="apple-touch-icon" href="/clay-logo.png" />
       </head>
       <body
         className={cn(
@@ -44,8 +48,9 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <Providers>
-            {children}
+    <Providers>
+      {children}
+      <PWARegister />
             <Toaster />
             <LocationPermissionBanner />
             <CookieConsentBanner />
