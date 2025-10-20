@@ -1,6 +1,7 @@
 {
   "name": "payvost-global-pay-backend",
   "private": true,
+  "type": "commonjs",
   "workspaces": [
     "services/*"
   ],

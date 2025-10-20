@@ -1,6 +1,13 @@
 import { Router } from 'express';
-import { register, login, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } from '../controllers/userController';
-import { authenticateJWT } from '../middleware/authMiddleware';
+import path from 'path';
+import { createRequire } from 'module';
+
+// Use createRequire rooted at the backend folder so controller imports resolve reliably
+const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'routes', 'userRoutes.js'));
+const controllersMod = localRequire('../controllers/userController');
+const { register, login, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } = controllersMod && controllersMod.default ? controllersMod.default : controllersMod;
+const authMod = localRequire('../middleware/authMiddleware');
+const { authenticateJWT } = authMod && authMod.default ? authMod.default : authMod;
 
 
 const router = Router();

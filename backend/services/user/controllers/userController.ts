@@ -2,7 +2,13 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import admin from '../../../firebase';
+import path from 'path';
+import { createRequire } from 'module';
+
+// Use createRequire to load the firebase initializer so resolution works when running from project root
+const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'controllers', 'userController.js'));
+const adminMod = localRequire('../../../firebase');
+const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 import type { User } from '../models/user';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
@@ -12,7 +18,7 @@ const usersCollection = firestore.collection('users');
 export const getAllUsers = async (_req: Request, res: Response) => {
   try {
     const usersSnapshot = await usersCollection.get();
-  const users = usersSnapshot.docs.map(doc => {
+    const users = usersSnapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
     const data = doc.data();
     // Ensure we don't send back password hashes
     const { passwordHash, ...userWithoutPassword } = data;

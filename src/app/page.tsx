@@ -25,8 +25,8 @@ const popularCountries = [
     { name: 'Kenya', currency: 'Shilling (KES)', flag: 'KE.png', hint: 'Nairobi park' },
     { name: 'Canada', currency: 'Dollar (CAD)', flag: 'CA.png', hint: 'Toronto city' },
     { name: 'Australia', currency: 'Dollar (AUD)', flag: 'AU.png', hint: 'Sydney opera' },
-    { name: 'Germany', currency: 'Euro (EUR)', flag: 'DE.png', hint: 'Berlin city' },
-    { name: 'South Africa', currency: 'Rand (ZAR)', flag: 'ZA.png', hint: 'Cape Town' },
+  { name: 'Germany', currency: 'Euro (EUR)', flag: 'GE.png', hint: 'Berlin city' },
+  { name: 'South Africa', currency: 'Rand (ZAR)', flag: 'SA.png', hint: 'Cape Town' },
 ];
 
 const testimonials = [
@@ -132,7 +132,7 @@ export default function LandingPage() {
                     <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="send-amount">You send</Label>
-                        <Input id="send-amount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} placeholder="0.00"/>
+                        <Input id="send-amount" value={sendAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSendAmount(e.target.value)} placeholder="0.00"/>
                       </div>
                       <div className="flex items-center justify-center">
                         <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
