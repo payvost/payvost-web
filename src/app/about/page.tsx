@@ -14,9 +14,9 @@ import { Icons } from "@/components/icons";
 
 const teamMembers = [
     { name: 'Pamilerin Coker', role: 'CEO & Founder', image: '/founder.jpg', hint: 'woman portrait' },
-    { name: 'Tyler Grant', role: 'CTO', image: '/CTO - Tyler Grant.png', hint: 'man portrait' },
-    { name: 'Erica Johnson', role: 'COO', image: '/COO- Erica Johnson.png', hint: 'person portrait' },
-    { name: 'Kendra Allen', role: 'Global CFO', image: '/Global CFO - Kendra Allen.png', hint: 'woman smiling' },
+    { name: 'Tyler Grant', role: 'CTO', image: '/optimized/CTO - Tyler Grant.jpg', hint: 'man portrait' },
+    { name: 'Erica Johnson', role: 'COO', image: '/optimized/COO- Erica Johnson.jpg', hint: 'person portrait' },
+    { name: 'Kendra Allen', role: 'Global CFO', image: '/optimized/Global CFO - Kendra Allen.jpg', hint: 'woman smiling' },
 ];
 
 const companyValues = [

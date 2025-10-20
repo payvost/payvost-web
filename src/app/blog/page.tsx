@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -18,7 +17,7 @@ const articles = [
     slug: 'payvost-partners-with-google',
     title: 'Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management',
     excerpt: 'A brief summary of the blog post goes here. Catch the reader\'s interest and give them a reason to click and read more about this exciting topic.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     category: 'Partnership',
     featured: true,
   },
@@ -26,7 +25,7 @@ const articles = [
     slug: 'ai-in-remittance',
     title: 'The Future of Remittances: How AI is Changing the Game',
     excerpt: 'Discover the revolutionary impact of artificial intelligence on cross-border payments.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     imageHint: 'finance technology',
     category: 'Technology',
   },
@@ -34,7 +33,7 @@ const articles = [
     slug: 'secure-transfers',
     title: '5 Tips for Secure International Money Transfers',
     excerpt: 'Protect your money and personal information with these essential security tips.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     imageHint: 'digital security',
     category: 'Security',
   },
@@ -42,7 +41,7 @@ const articles = [
     slug: 'expanding-to-africa',
     title: 'Expanding Our Reach: Payvost Launches in Three New African Markets',
     excerpt: 'We are excited to bring our fast and secure remittance services to more people across Africa.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     imageHint: 'africa map',
     category: 'Company News',
   },
@@ -50,7 +49,7 @@ const articles = [
     slug: 'understanding-fx-rates',
     title: 'Understanding FX Rates: A Guide for Smart Transfers',
     excerpt: 'Learn how foreign exchange rates work and how to get the most value from your money.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     imageHint: 'currency exchange chart',
     category: 'Finance',
   },
@@ -58,7 +57,7 @@ const articles = [
     slug: 'virtual-cards-guide',
     title: 'The Ultimate Guide to Using Virtual Cards for Online Shopping',
     excerpt: 'Enhance your online security with Payvost\'s disposable virtual cards.',
-    featuredImage: '/Payvost Building.png',
+    featuredImage: '/optimized/Payvost Building.jpg',
     imageHint: 'online shopping',
     category: 'Security',
   },

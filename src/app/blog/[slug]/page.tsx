@@ -27,7 +27,7 @@ const article = {
   slug: 'payvost-partners-with-google',
   title: 'Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management',
   excerpt: 'A brief summary of the blog post goes here. Catch the reader\'s interest and give them a reason to click and read more about this exciting topic.',
-  featuredImage: '/Payvost Building.png',
+  featuredImage: '/optimized/Payvost Building.jpg',
   author: {
     name: 'Pamilerin Coker',
     role: 'Head of Product',
