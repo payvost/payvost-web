@@ -1,0 +1,18 @@
+## Exclude very large images from Vercel deployments to reduce upload size / prevent transient deploy failures
+# These images are still kept in the repo locally but won't be uploaded to Vercel builds.
+public/CTO - Tyler Grant.png
+public/Dashboard.png
+public/Global CFO - Kendra Allen.png
+public/COO- Erica Johnson.png
+public/Payvost Building.png
+public/dashboard mockup.png
+public/Payment option 2.png
+public/Payvost mockup.png
+
+# If you produce optimized versions, keep them inside public/optimized/ and they will be uploaded
+!public/optimized/**
+
+# Node modules, build output
+node_modules/
+.next/
+backend/dist/
