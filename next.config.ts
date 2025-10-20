@@ -34,7 +34,7 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { webpack }) => {
+  webpack: (config: any, { webpack }: { webpack: any }) => {
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^@opentelemetry\/exporter-jaeger$/,
