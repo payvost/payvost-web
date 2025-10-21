@@ -482,7 +482,6 @@ export default function LandingPage() {
           <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
             <div className="text-sm text-center sm:text-left">
                 <p>&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
-                
             </div>
             <div className="flex space-x-4 mt-4 sm:mt-0">
               <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
