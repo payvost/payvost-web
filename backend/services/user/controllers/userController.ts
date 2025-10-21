@@ -1,8 +1,8 @@
 
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import path from 'path';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import * as path from 'path';
 import { createRequire } from 'module';
 
 // Use createRequire to load the firebase initializer so resolution works when running from project root
@@ -18,7 +18,7 @@ const usersCollection = firestore.collection('users');
 export const getAllUsers = async (_req: Request, res: Response) => {
   try {
     const usersSnapshot = await usersCollection.get();
-    const users = usersSnapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
+  const users = usersSnapshot.docs.map((doc: any) => {
     const data = doc.data();
     // Ensure we don't send back password hashes
     const { passwordHash, ...userWithoutPassword } = data;
@@ -112,18 +112,11 @@ export const login = async (req: Request, res: Response) => {
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token provided.' });
-    
-    const token = authHeader.replace('Bearer ', '');
-    let payload;
-    try {
-      payload = jwt.verify(token, JWT_SECRET) as { userId: string };
-    } catch {
-      return res.status(401).json({ error: 'Invalid token.' });
-    }
+    // The authentication middleware now verifies Firebase ID tokens and attaches `user` to the request.
+    const userPayload = (req as any).user;
+    if (!userPayload?.uid) return res.status(401).json({ error: 'No authenticated user.' });
 
-    const userDoc = await usersCollection.doc(payload.userId).get();
+    const userDoc = await usersCollection.doc(userPayload.uid).get();
     if (!userDoc.exists) {
         return res.status(404).json({ error: 'User not found.' });
     }

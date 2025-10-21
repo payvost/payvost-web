@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-01-27' });
+// Cast options to any to avoid a strict type mismatch with installed Stripe types
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY! as string, { apiVersion: '2025-01-27' } as any);
 
 export async function POST(req: Request) {
   try {
     const { amount, currency, invoiceId, userId } = await req.json();
 
-    if (!amount || !currency || !invoiceId || !userId) {
-      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+    // userId is optional; require amount, currency and invoiceId only
+    if (!amount || !currency || !invoiceId) {
+      return NextResponse.json({ error: 'Missing parameters: amount, currency and invoiceId are required' }, { status: 400 });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({

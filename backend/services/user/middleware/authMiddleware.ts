@@ -1,19 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import * as path from 'path';
+import { createRequire } from 'module';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+// Use createRequire to reliably load the project's firebase admin initializer
+const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'middleware', 'authMiddleware.js'));
+const adminMod = localRequire('../../../firebase');
+const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 
-export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
+export const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: 'No token provided.' });
   }
+
   const token = authHeader.replace('Bearer ', '');
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    // Verify Firebase ID token
+    const payload = await admin.auth().verifyIdToken(token);
+    // Attach verified token payload (contains uid and claims)
     (req as any).user = payload;
     next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid token.' });
+  } catch (err) {
+    console.error('Firebase token verification failed:', err instanceof Error ? err.message : String(err));
+    return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 };
