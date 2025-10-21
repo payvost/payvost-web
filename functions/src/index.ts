@@ -27,6 +27,11 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     if (!invoiceDoc.exists) return res.status(404).send('Invoice not found');
     const invoiceData = invoiceDoc.data();
 
+    // Only allow download if invoice is public
+    if (!invoiceData?.isPublic) {
+      return res.status(403).send('Invoice is not public');
+    }
+
     const doc = new PDFDocument({ size: 'A4' });
     res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.pdf`);
     res.setHeader('Content-Type', 'application/pdf');
@@ -82,9 +87,10 @@ const ONESIGNAL_API_KEY =
   process.env.ONESIGNAL_API_KEY || functions.config().onesignal?.api_key;
 
 // OneSignal client
+// The OneSignal SDK types are strict; cast the configuration to any to avoid type mismatch
 const configuration = OneSignal.createConfiguration({
-  appKey: ONESIGNAL_API_KEY,
-});
+  apiKey: ONESIGNAL_API_KEY,
+} as any);
 const client = new OneSignal.DefaultApi(configuration);
 
 // Helper to send welcome email using a template
@@ -103,9 +109,9 @@ async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
 }
 
 // Firestore trigger: send email when KYC becomes "Verified"
-export const sendWelcomeEmailOnKYCVerified = functions.firestore
+export const sendWelcomeEmailOnKYCVerified = (functions.firestore as any)
   .document('users/{userId}')
-  .onUpdate(async (change, context) => {
+  .onUpdate(async (change: any, context: any) => {
     const before = change.before.data();
     const after = change.after.data();
 
