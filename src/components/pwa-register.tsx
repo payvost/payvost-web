@@ -12,7 +12,10 @@ export default function PWARegister() {
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstall(true);
+      const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+      if (isChrome) {
+        setShowInstall(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handler as EventListener);
