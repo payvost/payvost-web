@@ -50,6 +50,7 @@ export default function RootLayout({
       >
     <Providers>
       {children}
+      
       <PWARegister />
             <Toaster />
             <LocationPermissionBanner />
