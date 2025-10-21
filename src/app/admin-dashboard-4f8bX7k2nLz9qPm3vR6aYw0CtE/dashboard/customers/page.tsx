@@ -38,7 +38,10 @@ export default function CustomersPage() {
                     throw new Error("API URL is not configured. Please set NEXT_PUBLIC_API_URL environment variable.");
                 }
                 const response = await axios.get(`${apiUrl}/user/all`);
-                setCustomers(response.data);
+                // backend returns { customers: [...] } — normalize to an array
+                const payload = response.data;
+                const list = Array.isArray(payload) ? payload : (payload?.customers ?? []);
+                setCustomers(list);
             } catch (error) {
                 console.error("Error fetching customers:", error);
             } finally {
