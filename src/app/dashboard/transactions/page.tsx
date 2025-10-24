@@ -32,7 +32,8 @@ export default function TransactionsPage() {
     }
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
         if (doc.exists()) {
-            setTransactions(doc.data().transactions || []);
+            const sortedTransactions = (doc.data().transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setTransactions(sortedTransactions);
         }
         setLoading(false);
     });
@@ -131,7 +132,7 @@ export default function TransactionsPage() {
                     <DateRangePicker className="w-full sm:w-auto" />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-1 w-full sm:w-auto">
+                            <Button variant="outline" size="sm" className="h-9 gap-1 w-full sm:w-auto">
                                 <ListFilter className="h-3.5 w-3.5" />
                                 <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                                 Filter
@@ -152,13 +153,13 @@ export default function TransactionsPage() {
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button size="sm" variant="outline" className="h-8 gap-1 w-full sm:w-auto">
+                    <Button size="sm" variant="outline" className="h-9 gap-1 w-full sm:w-auto">
                         <FileDown className="h-3.5 w-3.5" />
                         <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                         Export
                         </span>
                     </Button>
-                     <Button size="sm" className="h-8 gap-1 w-full sm:w-auto">
+                     <Button size="sm" className="h-9 gap-1 w-full sm:w-auto">
                         Download Statement
                     </Button>
                 </div>
