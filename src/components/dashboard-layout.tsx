@@ -109,9 +109,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   
   const collectPaymentItems = [
     { href: '/dashboard/request-payment', icon: <HandCoins />, label: 'Request' },
-    { href: '/dashboard/terminal', icon: <Store />, label: 'Terminal', comingSoon: true },
     { href: '/dashboard/dispute', icon: <ShieldAlert />, label: 'Dispute Center' },
-    { href: '/dashboard/integrations', icon: <Puzzle />, label: 'Integrations' },
     { href: '/dashboard/escrow', icon: <ShieldCheck />, label: 'Escrow', comingSoon: false, isNew: true },
   ];
 

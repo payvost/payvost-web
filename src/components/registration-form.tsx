@@ -15,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera, ChevronsUpDown, Check, ShieldCheckIcon } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera, ChevronsUpDown, Check, ShieldCheckIcon, ShieldX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -43,12 +43,27 @@ const allCountries = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
+const checkPasswordStrength = (password: string): number => {
+    let score = 0;
+    if (password.length >= 8) score += 20;
+    if (password.length >= 12) score += 20;
+    if (/[A-Z]/.test(password)) score += 20;
+    if (/[a-z]/.test(password)) score += 20;
+    if (/\d/.test(password)) score += 20;
+    if (/[^A-Za-z0-9]/.test(password)) score += 20; // Special characters
+    return Math.min(100, score);
+}
+
 const registrationSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
   email: z.string().email('Invalid email address'),
   countryCode: z.string().min(1, 'Country code is required'),
   phone: z.string().min(5, 'A valid phone number is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters').refine(
+      (password) => checkPasswordStrength(password) >= 80,
+      { message: "Password is not strong enough. Aim for at least 80% strength." }
+  ),
   confirmPassword: z.string().min(8, 'Passwords must match'),
   dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
   country: z.string().min(1, 'Country is required'),
@@ -85,7 +100,7 @@ const registrationSchema = z.object({
 type FormValues = z.infer<typeof registrationSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal & Address', fields: ['fullName', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
+  { id: 1, name: 'Personal & Address', fields: ['fullName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
   { id: 2, name: 'Identity Verification', fields: ['idType', 'idNumber', 'idDocument', 'bvn', 'agreeTerms'] },
 ];
 
@@ -221,6 +236,20 @@ export function RegistrationForm() {
 
   const fullName = watch('fullName');
   const selectedCountry = watch('country');
+  const password = watch('password', '');
+  const passwordStrength = checkPasswordStrength(password);
+  
+  const getStrengthColor = (strength: number) => {
+    if (strength < 40) return 'bg-red-500';
+    if (strength < 80) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+  
+  const getStrengthText = (strength: number) => {
+    if (strength < 40) return 'Weak';
+    if (strength < 80) return 'Medium';
+    return 'Strong';
+  };
 
   const handleNext = async () => {
     const fields = steps[currentStep].fields;
@@ -266,6 +295,7 @@ export function RegistrationForm() {
       const firestoreData = {
         uid: user.uid,
         name: data.fullName,
+        username: data.username,
         email: data.email,
         phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
@@ -382,22 +412,28 @@ export function RegistrationForm() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" {...register('fullName')} disabled={isLoading} />
-                {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
+                 <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input id="fullName" {...register('fullName')} disabled={isLoading} />
+                    {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" {...register('email')} disabled={isLoading} />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input id="email" type="email" {...register('email')} disabled={isLoading} />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input id="username" {...register('username')} disabled={isLoading} />
+                    {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
+                </div>
+                <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <div className="flex items-center rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring">
-                         <Controller
+                            <Controller
                             name="countryCode"
                             control={control}
                             render={({ field }) => (
@@ -438,8 +474,8 @@ export function RegistrationForm() {
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                 </div>
-                 
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -449,6 +485,19 @@ export function RegistrationForm() {
                     {showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                   </Button>
                 </div>
+                 {password && (
+                    <div className="space-y-1">
+                        <Progress value={passwordStrength} className={cn("h-1", getStrengthColor(passwordStrength))} />
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium" style={{ color: getStrengthColor(passwordStrength).replace('bg-', 'text-') }}>
+                                {getStrengthText(passwordStrength)}
+                            </span>
+                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                {password.length >= 8 ? <Check className="h-3 w-3 text-green-500" /> : <ShieldX className="h-3 w-3 text-red-500" />} Min 8 characters
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
               <div className="space-y-2">
@@ -509,10 +558,10 @@ export function RegistrationForm() {
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                       <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USA">United States</SelectItem>
-                        <SelectItem value="CAN">Canada</SelectItem>
-                        <SelectItem value="GBR">United Kingdom</SelectItem>
-                        <SelectItem value="NGA">Nigeria</SelectItem>
+                        <SelectItem value="US">United States</SelectItem>
+                        <SelectItem value="CA">Canada</SelectItem>
+                        <SelectItem value="GB">United Kingdom</SelectItem>
+                        <SelectItem value="NG">Nigeria</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -588,7 +637,7 @@ export function RegistrationForm() {
                  {errors.idDocument && <p className="text-sm text-destructive">{errors.idDocument.message}</p>}
             </div>
 
-            {selectedCountry === 'NGA' && (
+            {selectedCountry === 'NG' && (
                  <div className="space-y-2">
                     <Label htmlFor="bvn">Bank Verification Number (BVN)</Label>
                     <Input id="bvn" {...register('bvn')} disabled={isLoading} />

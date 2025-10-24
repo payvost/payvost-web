@@ -158,8 +158,8 @@ export function Payvost() {
       </CardHeader>
       <Tabs defaultValue="beneficiary">
         <CardContent className="pb-0">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="beneficiary">
+             <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="beneficiary">
               <Users className="mr-2 h-4 w-4" />
               To Beneficiary
             </TabsTrigger>
@@ -183,14 +183,20 @@ export function Payvost() {
                 disabled={!isKycVerified}
               >
                 <SelectTrigger id="recipient">
-                  <SelectValue placeholder="Select a saved recipient" />
+                  <SelectValue placeholder={beneficiaries.length > 0 ? "Select a saved recipient" : "No saved recipients"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {beneficiaries.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name} ({b.bank} ••••{b.accountLast4})
+                  {beneficiaries.length > 0 ? (
+                    beneficiaries.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} ({b.bank} ••••{b.accountLast4})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-recipients" disabled>
+                        No saved recipients
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -317,19 +323,10 @@ export function Payvost() {
             <SendToUserForm />
           </CardContent>
           <CardFooter>
-            <PaymentConfirmationDialog
-              onConfirm={handleSendMoney}
-              transactionDetails={{
-                ...transactionDetails,
-                recipientName: 'Payvost User',
-              }}
-              isLoading={isLoading}
-            >
-              <Button className="w-full" disabled={isLoading || !isKycVerified}>
-                Send to User
-              </Button>
-            </PaymentConfirmationDialog>
-          </CardFooter>
+                 <PaymentConfirmationDialog onConfirm={handleSendMoney} transactionDetails={{...transactionDetails, recipientName: "Payvost User"}} isLoading={isLoading}>
+                    <Button className="w-full" disabled={isLoading || !isKycVerified}>Send to User</Button>
+                 </PaymentConfirmationDialog>
+            </CardFooter>
         </TabsContent>
       </Tabs>
     </Card>
