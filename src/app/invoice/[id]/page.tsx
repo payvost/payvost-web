@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, DocumentData, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { doc, getDoc, DocumentData } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import StripeCheckout from '@/components/StripeCheckout';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
@@ -78,8 +78,7 @@ export default function PublicInvoicePage() {
               body: JSON.stringify({
                 invoiceId: id,
                 amount: invoiceData.grandTotal * 100, // convert to cents
-                currency: invoiceData.currency.toLowerCase(),
-                userId: auth.currentUser?.uid || undefined
+                currency: invoiceData.currency.toLowerCase()
               })
             });
             const data = await res.json();

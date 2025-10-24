@@ -21,6 +21,9 @@ import {
   HeartPulse,
   ChevronDown,
   Activity,
+  Receipt,
+  Smartphone,
+  BookOpen,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
@@ -47,7 +50,32 @@ export const menuItems = [
           { href: '/business/quote-builder', label: 'Quote Builder' },
           { href: '/business/refunds', label: 'Refunds' },
           { href: '/business/payment-links', label: 'Payment Links' },
-          { href: '/business/pos-terminal', label: 'Virtual POS' },
+        ]
+      },
+       {
+        group: 'Bookkeeping',
+        icon: <BookOpen />,
+        items: [
+            { href: '/business/general-ledger', label: 'General Ledger' },
+            { href: '/business/expenses', label: 'Expenses & Bills' },
+            { href: '/business/accounting-automation', label: 'Accounting Automation' },
+            { href: '/business/financial-reports', label: 'Financial Reports' },
+            { href: '/business/tax-compliance', label: 'Tax & Compliance' },
+        ]
+      },
+      {
+        group: 'Sales & Commerce',
+        icon: <Receipt />,
+        items: [
+            { href: '/business/orders', label: 'Orders' },
+            { href: '/business/subscriptions', label: 'Subscriptions' },
+            { href: '/business/inventory', label: 'Inventory' },
+            { href: '/business/product-catalog', label: 'Product Catalog' },
+            { href: '/business/pricing-plans', label: 'Pricing Plans' },
+            { href: '/business/promotions', label: 'Promotions & Discounts' },
+            { href: '/business/affiliates', label: 'Affiliate Programs' },
+            { href: '/business/marketplace', label: 'Marketplace' },
+            { href: '/business/pos-terminal', label: 'Virtual POS' },
         ]
       },
        {
@@ -55,7 +83,6 @@ export const menuItems = [
         icon: <Users />,
         items: [
           { href: '/business/customers', label: 'Customers' },
-          { href: '/business/team', label: 'Team Management' },
         ]
       },
        {
@@ -63,6 +90,7 @@ export const menuItems = [
         icon: <Puzzle />,
         items: [
           { href: '/business/integrations', label: 'Integrations' },
+          { href: '/business/support', label: 'Support' },
         ]
       },
 ];
