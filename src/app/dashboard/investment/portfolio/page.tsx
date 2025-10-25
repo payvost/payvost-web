@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,26 +14,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { SavingsGoal } from '@/types/savings-goal';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const mockUserInvestments: (UserInvestment & { title: string, category: string })[] = [
-    { id: 'ui1', listingId: 're1', amountInvested: 5000, startDate: new Date('2023-01-15'), status: 'Active', currentValue: 5450, title: 'Luxury Apartments in Lagos', category: 'Real Estate' },
-    { id: 'ui2', listingId: 'c1', amountInvested: 1000, startDate: new Date('2023-06-20'), status: 'Active', currentValue: 1250, title: 'Diversified Crypto Portfolio', category: 'Crypto' },
-    { id: 'ui3', listingId: 'b1', amountInvested: 10000, startDate: new Date('2022-11-01'), status: 'Active', currentValue: 10800, title: 'U.S. Treasury Bonds', category: 'Bonds' },
-];
-
 export default function InvestmentPortfolioPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [goals, setGoals] = useState<SavingsGoal[]>([]);
+    const [investments, setInvestments] = useState<(UserInvestment & { title: string, category: string })[]>([]);
     const [loading, setLoading] = useState(true);
     
     useEffect(() => {
-        if (!user) {
-            setLoading(false);
+        if (authLoading || !user) {
+            if (!authLoading) setLoading(false);
             return;
         }
 
@@ -40,28 +36,63 @@ export default function InvestmentPortfolioPage() {
         const unsubGoals = onSnapshot(goalsQuery, (snapshot) => {
             const fetchedGoals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal));
             setGoals(fetchedGoals);
-            setLoading(false);
+            if(!loading) setLoading(false);
+        }, (error) => {
+            console.error("Error fetching savings goals:", error);
         });
 
-        return () => unsubGoals();
-    }, [user]);
+        const investmentsQuery = query(collection(db, `users/${user.uid}/user_investments`));
+        const unsubInvestments = onSnapshot(investmentsQuery, (snapshot) => {
+             const fetchedInvestments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as (UserInvestment & { title: string, category: string })));
+            setInvestments(fetchedInvestments);
+            if(!loading) setLoading(false);
+        }, (error) => {
+            console.error("Error fetching investments:", error);
+        });
 
-    const totalInvested = mockUserInvestments.reduce((sum, i) => sum + i.amountInvested, 0);
-    const totalCurrentValue = mockUserInvestments.reduce((sum, i) => sum + i.currentValue, 0);
+        // Combine loading state logic
+        const allDataLoaded = () => {
+            setLoading(false);
+        }
+        
+        const timer = setTimeout(allDataLoaded, 1500);
+
+
+        return () => {
+            unsubGoals();
+            unsubInvestments();
+            clearTimeout(timer);
+        };
+    }, [user, authLoading]);
+
+    const totalInvested = investments.reduce((sum, i) => sum + i.amountInvested, 0);
+    const totalCurrentValue = investments.reduce((sum, i) => sum + i.currentValue, 0);
     const totalSavings = goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
     const totalAssets = totalCurrentValue + totalSavings;
     const totalReturns = totalCurrentValue - totalInvested;
+
+    if (loading) {
+        return (
+             <DashboardLayout language={language} setLanguage={setLanguage}>
+                 <main className="flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                     <Skeleton className="h-8 w-1/3 mb-6" />
+                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+                     </div>
+                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        <div className="lg:col-span-3"><Skeleton className="h-96 w-full" /></div>
+                        <div className="lg:col-span-2 space-y-6"><Skeleton className="h-48 w-full" /><Skeleton className="h-48 w-full" /></div>
+                     </div>
+                 </main>
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout language={language} setLanguage={setLanguage}>
              <main className="flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
                  <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
-                        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                            <Link href="/dashboard">
-                               <ChevronLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
                         <div>
                             <h1 className="text-lg font-semibold md:text-2xl">My Portfolio</h1>
                             <p className="text-muted-foreground text-sm">A complete overview of your savings and investments.</p>
@@ -118,7 +149,7 @@ export default function InvestmentPortfolioPage() {
                                 <CardTitle>Savings Goals</CardTitle>
                             </CardHeader>
                              <CardContent>
-                                {loading ? <Skeleton className="h-24 w-full"/> : <SavingsGoalList goals={goals.slice(0, 2)} onEditGoal={() => {}}/>}
+                                <SavingsGoalList goals={goals.slice(0, 2)} onEditGoal={() => {}}/>
                             </CardContent>
                              <CardFooter>
                                 <Button variant="outline" className="w-full" asChild>
@@ -145,9 +176,9 @@ export default function InvestmentPortfolioPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {mockUserInvestments.map(inv => {
+                                {investments.length > 0 ? investments.map(inv => {
                                     const returns = inv.currentValue - inv.amountInvested;
-                                    const roi = (returns / inv.amountInvested) * 100;
+                                    const roi = inv.amountInvested > 0 ? (returns / inv.amountInvested) * 100 : 0;
                                     return (
                                         <TableRow key={inv.id}>
                                             <TableCell>
@@ -173,7 +204,11 @@ export default function InvestmentPortfolioPage() {
                                             </TableCell>
                                         </TableRow>
                                     )
-                                })}
+                                }) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center">You have not made any investments yet.</TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>

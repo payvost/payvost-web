@@ -5,6 +5,9 @@ import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Ca
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { SavingsGoal } from '@/types/savings-goal';
+import { Button } from '@/components/ui/button';
+import { PiggyBank } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 
 interface SavingsChartProps {
     goals: SavingsGoal[];
@@ -41,6 +44,7 @@ const chartConfig = {
 
 export function SavingsChart({ goals }: SavingsChartProps) {
   const chartData = generateChartData(goals);
+  const hasData = goals && goals.length > 0;
 
   return (
     <Card>
@@ -49,31 +53,45 @@ export function SavingsChart({ goals }: SavingsChartProps) {
         <CardDescription>Your total savings progress over the last 6 months.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-          <AreaChart data={chartData}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-             <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => `$${Number(value) / 1000}k`}
-            />
-            <Tooltip content={<ChartTooltipContent indicator="dot" />} />
-            <Area
-              dataKey="saved"
-              type="natural"
-              fill="var(--color-saved)"
-              fillOpacity={0.4}
-              stroke="var(--color-saved)"
-            />
-          </AreaChart>
-        </ChartContainer>
+        {hasData ? (
+            <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+            <AreaChart data={chartData}>
+                <defs>
+                    <linearGradient id="colorSaved" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-saved)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--color-saved)" stopOpacity={0}/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                dataKey="month"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                />
+                <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => `$${Number(value) / 1000}k`}
+                />
+                <Tooltip content={<ChartTooltipContent indicator="dot" />} />
+                <Area
+                dataKey="saved"
+                type="natural"
+                fill="url(#colorSaved)"
+                fillOpacity={0.4}
+                stroke="var(--color-saved)"
+                />
+            </AreaChart>
+            </ChartContainer>
+        ) : (
+            <div className="min-h-[300px] w-full flex flex-col items-center justify-center text-center p-4">
+                <PiggyBank className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg">Start your savings journey</h3>
+                <p className="text-muted-foreground text-sm mt-1 mb-4">Create a goal to see your savings grow over time.</p>
+            </div>
+        )}
       </CardContent>
     </Card>
   );

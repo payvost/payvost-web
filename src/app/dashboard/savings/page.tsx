@@ -15,6 +15,8 @@ import { CreateGoalForm } from '@/components/savings/create-goal-form';
 import { SavingsGoalList } from '@/components/savings/savings-goal-list';
 import { LineChart, DollarSign, Target, PlusCircle } from 'lucide-react';
 import type { SavingsGoal } from '@/types/savings-goal';
+import { AutoSaveSettings } from '@/components/savings/auto-save-settings';
+import { RoundUpSettings } from '@/components/savings/round-up-settings';
 
 type SavingsView = 'dashboard' | 'createGoal';
 
@@ -86,9 +88,8 @@ export default function SavingsPage() {
                         <SavingsGoalList goals={goals} onEditGoal={(id) => { /* Logic to edit */ }}/>
                     </div>
                     <div className="lg:col-span-1 space-y-6">
-                        {/* Placeholder for AutoSave and Round-up components */}
-                        <Skeleton className="h-48 w-full" />
-                        <Skeleton className="h-64 w-full" />
+                        <AutoSaveSettings />
+                        <RoundUpSettings />
                     </div>
                 </div>
             </div>
