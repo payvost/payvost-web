@@ -31,6 +31,7 @@ import { auth, db } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ProtectRoute, useAuth } from '@/hooks/use-auth';
+import useAutoLogout from '@/hooks/use-auto-logout';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
@@ -99,6 +100,16 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
       })
     }
   };
+
+  // Auto-logout after 3 minutes of inactivity (180000 ms).
+  // We only enable it when there's an authenticated user.
+  useAutoLogout({
+    timeoutMs: 3 * 60 * 1000,
+    onTimeout: () => {
+      if (user) handleLogout();
+    },
+    enabled: Boolean(user),
+  });
 
   const mainNavItems = [
     { href: '/dashboard', icon: <Home />, label: 'Dashboard' },
@@ -203,14 +214,14 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
            <SidebarFooter className="p-2 mt-auto flex-col gap-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">
             <div className="flex w-full items-center justify-between p-1 rounded-md group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1">
                 <div className="flex gap-1 group-data-[collapsible=icon]:flex-col">
-                    <SidebarMenuButton asChild size="sm" variant="ghost" className="group-data-[collapsible=icon]:size-8" tooltip="Settings">
+                    <SidebarMenuButton asChild size="sm" variant="outline" className="group-data-[collapsible=icon]:size-8" tooltip="Settings">
                         <Link href="/dashboard/settings">
                             <Settings />
                             <span className="group-data-[collapsible=icon]:hidden">Settings</span>
                         </Link>
                     </SidebarMenuButton>
                 </div>
-                 <SidebarMenuButton size="sm" variant="ghost" className="group-data-[collapsible=icon]:size-8" onClick={handleLogout} tooltip="Logout">
+                 <SidebarMenuButton size="sm" variant="outline" className="group-data-[collapsible=icon]:size-8" onClick={handleLogout} tooltip="Logout">
                     <LogOut />
                     <span className="group-data-[collapsible=icon]:hidden">Logout</span>
                 </SidebarMenuButton>

@@ -38,13 +38,8 @@ export default function PWARegister() {
     console.log('PWA install choice', choice);
   };
 
+  // Install button removed — keep prompt/sw logic but don't render the install UI
   if (!showInstall) return null;
 
-  return (
-    <div style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 9999 }}>
-      <button onClick={onInstallClick} style={{ padding: '10px 14px', borderRadius: 8 }}>
-        Install Payvost
-      </button>
-    </div>
-  );
+  return null;
 }
