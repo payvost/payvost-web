@@ -21,7 +21,7 @@ const EMAIL_TEMPLATES = {
   },
   KYC: {
     SUBMISSION_RECEIVED: 'template_id_for_kyc_submission',
-    APPROVED: 'template_id_for_kyc_approved',
+    APPROVED: '541ae0b3-f36e-4788-8e12-de07a6a714a6', // <- Update this line
     REJECTED: 'template_id_for_kyc_rejected',
   },
   BUSINESS: {
