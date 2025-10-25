@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy, PiggyBank, BarChart, LineChart, TrendingUp } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -113,28 +114,18 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     { href: '/dashboard/escrow', icon: <ShieldCheck />, label: 'Escrow', comingSoon: false, isNew: true },
   ];
 
+  const saveAndInvestItems = [
+    { href: '/dashboard/investment/portfolio', label: 'Portfolio', icon: <BarChart strokeWidth={2.5} /> },
+    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank strokeWidth={2.5} /> },
+    { href: '/dashboard/investment', label: 'Investment', icon: <TrendingUp strokeWidth={2.5} /> },
+];
+
   const isActive = (href: string) => {
-    // Special handling for request-payment and its sub-routes if any in future
-    if (href === '/dashboard/request-payment') {
-        return pathname.startsWith('/dashboard/request-payment');
+    // Exact match for parent routes, prefix match for others.
+    if (href === '/dashboard' || href === '/dashboard/investment') {
+        return pathname === href;
     }
-     if (href === '/dashboard/support') {
-        return pathname.startsWith('/dashboard/support');
-    }
-     if (href === '/dashboard/profile') {
-        return pathname.startsWith('/dashboard/profile');
-    }
-    // Updated logic to handle the dispute page correctly
-    if (href === '/dashboard/dispute') {
-        return pathname.startsWith('/dashboard/dispute');
-    }
-    if (href === '/dashboard/escrow') {
-        return pathname.startsWith('/dashboard/escrow');
-    }
-     if (href === '/dashboard/notifications') {
-        return pathname.startsWith('/dashboard/notifications');
-    }
-    return pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
+    return pathname.startsWith(href);
   }
 
   return (
@@ -183,6 +174,24 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                         </SidebarMenuItem>
                     ))}
                  </SidebarMenu>
+                 </SidebarGroup>
+                 <SidebarGroup>
+                    <SidebarGroupLabel>Save & Invest</SidebarGroupLabel>
+                    <SidebarMenu>
+                        {saveAndInvestItems.map(item => (
+                             <SidebarMenuItem key={item.label}>
+                                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                                    <Link href={item.href} className="flex justify-between items-center w-full">
+                                        <div className="flex items-center gap-2">
+                                            {item.icon}
+                                            {item.label}
+                                        </div>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                 </SidebarGroup>
                  <div className="mt-4 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
                     <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
@@ -190,7 +199,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                       <Link href="/dashboard/get-started">Get Started</Link>
                     </Button>
                  </div>
-            </SidebarGroup>
           </SidebarContent>
            <SidebarFooter className="p-2 mt-auto flex-col gap-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">
             <div className="flex w-full items-center justify-between p-1 rounded-md group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1">
