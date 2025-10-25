@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ❌ Default: deny all
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+// 🏢 Business verification documents (matches your current upload path)
+match /business_verification/{userId}/{docType}/{fileName} {
+  // Authenticated user can upload
+  allow create: if request.auth != null
+                && request.auth.uid == userId
+                && request.resource.size < 10 * 1024 * 1024
+                && request.resource.contentType.matches('image/.*|application/pdf');
+
+  // User can read their own uploaded documents
+  allow read: if request.auth != null && request.auth.uid == userId;
+
+  // Admins can read for verification
+  allow read: if request.auth != null && request.auth.token.admin == true;
+
+  // Prevent updates/deletes by user
+  allow update, delete: if false;
+}
+
+// 🏢 Business logos
+match /business_logos/{userId}/{fileName} {
+  // Authenticated user can upload their logo
+  allow create: if request.auth != null
+                && request.auth.uid == userId
+                && request.resource.size < 5 * 1024 * 1024
+                && request.resource.contentType.matches('image/.*');
+
+  // User can read their own logo
+  allow read: if request.auth != null && request.auth.uid == userId;
+
+  // Admins can read for verification if needed
+  allow read: if request.auth != null && request.auth.token.admin == true;
+
+  // Prevent updates/deletes by user
+  allow update, delete: if false;
+}
+
+// 🧾 Invoice logos (for branding on invoices)
+match /invoice_logos/{userId}/{fileName} {
+  // Authenticated user can upload their invoice logo
+  allow create: if request.auth != null
+                && request.auth.uid == userId
+                && request.resource.size < 5 * 1024 * 1024
+                && request.resource.contentType.matches('image/.*');
+
+  // User can read their own logo
+  allow read: if request.auth != null && request.auth.uid == userId;
+
+  // Admins can read if needed for invoice verification
+  allow read: if request.auth != null && request.auth.token.admin == true;
+
+  // Prevent updates/deletes by user
+  allow update, delete: if false;
+}
+
+
+    // 👤 Profile pictures
+    match /profile_pictures/{userId}/{fileName} {
+      // Everyone can view, but only the user can upload/update
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // 🪪 ID Documents (KYC)
+    match /id_documents/{userId}/{fileName} {
+      // Only the authenticated user can upload
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*|application/pdf');
+
+      // User can read their own uploads
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // 🔐 Admins can also read for verification
+      allow read: if request.auth != null && request.auth.token.admin == true;
+
+      // Prevent tampering or deletion
+      allow update, delete: if false;
+    }
+
+    // 🎁 Donation campaign media
+    match /donation_media/{userId}/{allPaths=**} {
+      allow read;
+      
+      // Allow upload & replace
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*|video/.*');
+
+      // Allow delete of their own media
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+
+    // 🧾 Invoices (strictly private)
+    match /invoices/{userId}/{allPaths=**} {
+      // Only the owner can upload/read their invoices
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId
+                         && request.resource.size < 10 * 1024 * 1024
+                         && request.resource.contentType.matches('application/pdf|image/.*');
+    }
+    
+    // 📸 Event banners
+    match /event_banners/{userId}/{allPaths=**} {
+      allow read: if true; // public can see banners
+
+      // Only event creator (owner) can upload images
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      // Allow delete by the owner
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 📂 Disputes evidence
+match /disputes/{userId}/{fileName} {
+  allow create: if request.auth != null
+                && request.auth.uid == userId
+                && request.resource.size < 5 * 1024 * 1024
+                && request.resource.contentType.matches('image/.*|application/pdf');
+
+  allow read: if request.auth != null && request.auth.uid == userId;
+  allow delete: if request.auth != null && request.auth.uid == userId;
+}
+
+    
+  }
+}
