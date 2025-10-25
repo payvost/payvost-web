@@ -21,6 +21,54 @@ model User {
   name        String?
   role        String   @default("user")
   kycStatus   String   @default("pending")
+  accounts    Account[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Account {
+  id         String        @id @default(uuid())
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String
+  currency   String
+  balance    Decimal       @default(0) @db.Decimal(20, 8)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  ledgerEntries LedgerEntry[]
+  fromTransfers  Transfer[]  @relation("fromAccount")
+  toTransfers    Transfer[]  @relation("toAccount")
+
+  @@index([userId])
+}
+
+model LedgerEntry {
+  id           String   @id @default(uuid())
+  account      Account  @relation(fields: [accountId], references: [id])
+  accountId    String
+  amount       Decimal  @db.Decimal(20, 8)
+  balanceAfter Decimal  @db.Decimal(20, 8)
+  type         String
+  description  String?
+  referenceId  String?
+  createdAt    DateTime @default(now())
+
+  @@index([accountId])
+}
+
+model Transfer {
+  id              String   @id @default(uuid())
+  fromAccount     Account  @relation("fromAccount", fields: [fromAccountId], references: [id])
+  fromAccountId   String
+  toAccount       Account  @relation("toAccount", fields: [toAccountId], references: [id])
+  toAccountId     String
+  amount          Decimal  @db.Decimal(20, 8)
+  currency        String
+  status          String
+  idempotencyKey  String?  @unique
+  description     String?
+  createdAt       DateTime @default(now())
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
 }
