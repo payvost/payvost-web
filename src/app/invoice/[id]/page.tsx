@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, DocumentData, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StripeCheckout from '@/components/StripeCheckout';
 import { SiteHeader } from '@/components/site-header';
@@ -54,23 +54,30 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        const docRef = doc(db, "invoices", id);
-        const docSnap = await getDoc(docRef);
+        // Try the legacy/public invoices collection first
+        let docRef = doc(db, "invoices", id);
+        let docSnap = await getDoc(docRef);
+
+        // If not found in `invoices`, try the business invoices collection (created by business UI)
+        if (!docSnap.exists()) {
+          docRef = doc(db, "businessInvoices", id);
+          docSnap = await getDoc(docRef);
+        }
 
         if (docSnap.exists() && docSnap.data().isPublic) {
           const invoiceData = docSnap.data();
           setInvoice(invoiceData);
 
-          // Fetch associated business profile
+          // Fetch associated business profile (if there is a businessId)
           if (invoiceData.businessId) {
             const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
             const bizSnap = await getDocs(bizQuery);
             if (!bizSnap.empty) {
-                setBusinessProfile(bizSnap.docs[0].data().businessProfile);
+              setBusinessProfile(bizSnap.docs[0].data().businessProfile);
             }
           }
 
-          // If online payment, fetch Stripe clientSecret
+          // If online payment (stripe), fetch Stripe clientSecret
           if (invoiceData.paymentMethod === 'stripe') {
             const res = await fetch(`${functionsUrl}/create-payment-intent`, {
               method: 'POST',
