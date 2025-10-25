@@ -32,7 +32,7 @@ export async function transferFunds(
       }
     }
 
-    const transfer = await prisma.$transaction(async (tx) => {
+    const transfer = await prisma.$transaction(async (tx: { $queryRaw: any; transfer: { create: (arg0: { data: { fromAccountId: string; toAccountId: string; amount: string; currency: string; status: string; idempotencyKey: string | null; description: string | null; }; }) => any; }; account: { update: (arg0: { where: { id: string; } | { id: string; }; data: { balance: string; } | { balance: string; }; }) => any; }; ledgerEntry: { create: (arg0: { data: { accountId: string; amount: string; balanceAfter: string; type: string; description: string; referenceId: any; } | { accountId: string; amount: string; balanceAfter: string; type: string; description: string; referenceId: any; }; }) => any; }; }) => {
       // Lock the two accounts to perform safe balance checks and updates
       const lockedRows: Array<{ id: string; balance: string }> = await tx.$queryRaw`
         SELECT id, balance
