@@ -18,7 +18,7 @@ export interface UserInvestment {
   id: string;
   listingId: string;
   amountInvested: number;
-  startDate: Date;
+  startDate: any; // Using any to accommodate Firestore Timestamps
   status: 'Active' | 'Matured';
   currentValue: number;
 }
