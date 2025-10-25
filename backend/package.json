@@ -18,6 +18,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@prisma/client": "^6.18.0",
     "@supabase/ssr": "^0.6.1",
     "@types/express": "^5.0.3",
     "admin": "^1.4.1",
@@ -26,6 +27,7 @@
     "express": "^5.1.0",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.4.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.18.0"
   }
 }
