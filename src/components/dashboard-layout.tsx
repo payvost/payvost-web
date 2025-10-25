@@ -127,7 +127,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   const saveAndInvestItems = [
     { href: '/dashboard/investment/portfolio', label: 'Portfolio', icon: <BarChart strokeWidth={2.5} /> },
-    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank strokeWidth={2.5} /> },
+    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank /> },
     { href: '/dashboard/investment', label: 'Investment', icon: <TrendingUp strokeWidth={2.5} /> },
 ];
 
@@ -203,7 +203,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                         ))}
                     </SidebarMenu>
                  </SidebarGroup>
-                 <div className="mt-4 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
+                 <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
                     <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
                     <Button size="sm" className="w-full" asChild>
@@ -211,21 +211,25 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     </Button>
                  </div>
           </SidebarContent>
-           <SidebarFooter className="p-2 mt-auto flex-col gap-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:items-center">
-            <div className="flex w-full items-center justify-between p-1 rounded-md group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1">
-                <div className="flex gap-1 group-data-[collapsible=icon]:flex-col">
-                    <SidebarMenuButton asChild size="sm" variant="outline" className="group-data-[collapsible=icon]:size-8" tooltip="Settings">
-                        <Link href="/dashboard/settings">
-                            <Settings />
-                            <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                        </Link>
-                    </SidebarMenuButton>
+           <SidebarFooter className="p-2 mt-auto">
+            <SidebarMenu className="w-full">
+                <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuItem className="w-full">
+                        <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
+                            <Link href="/dashboard/settings">
+                                <Settings />
+                                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton size="default" className="justify-start gap-2" onClick={handleLogout} tooltip="Logout">
+                            <LogOut />
+                            <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                 </div>
-                 <SidebarMenuButton size="sm" variant="outline" className="group-data-[collapsible=icon]:size-8" onClick={handleLogout} tooltip="Logout">
-                    <LogOut />
-                    <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-                </SidebarMenuButton>
-            </div>
+            </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
         <SidebarInset ref={mainContentRef}>
