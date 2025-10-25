@@ -6,6 +6,16 @@ import PDFDocument from 'pdfkit';
 import { Parser } from 'json2csv';
 import * as OneSignal from '@onesignal/node-onesignal';
 
+// Import notification triggers
+import {
+  onNewLogin,
+  onBusinessStatusChange,
+  onTransactionStatusChange,
+  onPaymentLinkCreated,
+  onInvoiceStatusChange,
+  sendInvoiceReminders
+} from './notificationTriggers';
+
 admin.initializeApp();
 const db = admin.firestore();
 const storage = admin.storage();
@@ -109,16 +119,13 @@ async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
 }
 
 // Firestore trigger: send email when KYC becomes "Verified"
-export const sendWelcomeEmailOnKYCVerified = (functions.firestore as any)
-  .document('users/{userId}')
-  .onUpdate(async (change: any, context: any) => {
-    const before = change.before.data();
-    const after = change.after.data();
-
-    if (before.kycStatus !== 'Verified' && after.kycStatus === 'Verified') {
-      const email = after.email;
-      const name = after.fullName || after.displayName || 'Valued User';
-      console.log(`🎉 Sending welcome email to ${email}`);
-      await sendVerificationWelcomeEmail(email, name);
-    }
-  });
+// Export notification triggers
+// Export notification triggers
+export {
+  onNewLogin,
+  onBusinessStatusChange,
+  onTransactionStatusChange,
+  onPaymentLinkCreated,
+  onInvoiceStatusChange,
+  sendInvoiceReminders
+};
