@@ -43,6 +43,7 @@ export default function PublicInvoicePage() {
   const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [foundInCollection, setFoundInCollection] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
@@ -70,6 +71,9 @@ export default function PublicInvoicePage() {
         if (docSnap.exists() && docSnap.data().isPublic) {
           const invoiceData = docSnap.data();
           setInvoice(invoiceData);
+          // record which collection returned the doc for debugging
+          // docRef.path looks like 'invoices/<id>' or 'businessInvoices/<id>'
+          setFoundInCollection(docRef.parent.id || (docRef.path.includes('businessInvoices') ? 'businessInvoices' : 'invoices'));
 
           // Fetch associated business profile (if there is a businessId)
           if (invoiceData.businessId) {
@@ -167,6 +171,12 @@ export default function PublicInvoicePage() {
             <AlertTriangle className="h-16 w-16 text-destructive"/>
             <h1 className="text-3xl font-bold">Invoice Not Found</h1>
             <p className="text-muted-foreground">The requested invoice could not be found or is no longer available.</p>
+            {fetchError && (
+              <p className="text-sm text-destructive">Error: {fetchError}</p>
+            )}
+            {foundInCollection && (
+              <p className="text-sm text-muted-foreground">Document exists in collection: {foundInCollection}</p>
+            )}
           </div>
         </main>
       </div>

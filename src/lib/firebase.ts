@@ -36,6 +36,21 @@ const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
+// Debug: print project id at runtime to help confirm client is using the expected Firebase project
+try {
+  if (typeof window !== 'undefined') {
+    // In client, print the app options (project id) to the console
+    // eslint-disable-next-line no-console
+    console.log('Firebase initialized (client) projectId:', app.options?.projectId || firebaseConfig.projectId);
+  } else {
+    // Server-side log
+    // eslint-disable-next-line no-console
+    console.log('Firebase initialized (server) projectId:', app.options?.projectId || firebaseConfig.projectId);
+  }
+} catch (err) {
+  // ignore
+}
+
 // --- Initialize Analytics (client-side only) ---
 let analytics: Analytics | null = null;
 
