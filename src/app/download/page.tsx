@@ -24,21 +24,31 @@ export default function DownloadPage() {
         <SiteHeader />
         <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
            <div className="flex flex-col items-center">
-                
-                <h1 className="mt-8 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+                 <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
                     Get the Full Payvost Experience
                 </h1>
                 <p className="mt-4 max-w-xl text-lg text-muted-foreground">
                     For the best performance, security, and features, please download our mobile app. The web version is optimized for desktop use.
                 </p>
 
-                <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-                    <Link href="#">
-                        <Image src="/App Store.png" alt="Download on the App Store" width={180} height={60} />
+                <div className="mt-8 flex flex-wrap justify-center items-center gap-4">
+                    <Link href="#" className="inline-block">
+                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={54} className="h-12 w-auto sm:h-14" />
                     </Link>
-                    <Link href="#">
-                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={180} height={60} />
+                    <Link href="#" className="inline-block">
+                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={54} className="h-12 w-auto sm:h-14" />
                     </Link>
+                </div>
+
+                <div className="mt-12">
+                    <Image 
+                        src="/optimized/dashboard mockup.jpg"
+                        alt="Payvost Dashboard Mockup"
+                        width={600}
+                        height={450}
+                        className="rounded-lg shadow-2xl"
+                        data-ai-hint="app dashboard"
+                    />
                 </div>
                 
             </div>
