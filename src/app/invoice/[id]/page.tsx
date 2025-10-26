@@ -42,6 +42,7 @@ export default function PublicInvoicePage() {
   const [invoice, setInvoice] = useState<DocumentData | null>(null);
   const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
@@ -57,11 +58,13 @@ export default function PublicInvoicePage() {
         // Try the legacy/public invoices collection first
         let docRef = doc(db, "invoices", id);
         let docSnap = await getDoc(docRef);
+        console.log('[invoice] checked collection: invoices, exists:', docSnap.exists());
 
         // If not found in `invoices`, try the business invoices collection (created by business UI)
         if (!docSnap.exists()) {
           docRef = doc(db, "businessInvoices", id);
           docSnap = await getDoc(docRef);
+          console.log('[invoice] checked collection: businessInvoices, exists:', docSnap.exists());
         }
 
         if (docSnap.exists() && docSnap.data().isPublic) {
@@ -97,6 +100,9 @@ export default function PublicInvoicePage() {
         }
       } catch (error) {
         console.error("Error fetching invoice:", error);
+        // Surface a friendlier message in the UI so we can tell if it's a permission error
+        const code = (error as any)?.code || (error as any)?.message || String(error);
+        setFetchError(String(code));
         setInvoice(null);
       } finally {
         setLoading(false);
