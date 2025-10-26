@@ -60,6 +60,33 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
   }
 });
 
+// --- Public JSON invoice endpoint (bypasses client Firestore rules) ---
+// Use this for public invoice pages to avoid client-side permission issues.
+app.get('/public/invoice/:invoiceId', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+
+    // Try the legacy invoices collection first
+    let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
+
+    // If not found, try businessInvoices
+    if (!invoiceDoc.exists) {
+      invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
+    }
+
+    if (!invoiceDoc.exists) return res.status(404).json({ error: 'Invoice not found' });
+
+    const invoiceData = invoiceDoc.data();
+    if (!invoiceData?.isPublic) return res.status(403).json({ error: 'Invoice is not public' });
+
+    // Return the invoice data as JSON (sanitize sensitive fields if needed)
+    return res.status(200).json({ id: invoiceDoc.id, ...invoiceData });
+  } catch (err) {
+    console.error('Error in public invoice endpoint:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // --- Download transactions as CSV ---
 app.get('/download/transactions/:userId', async (req, res) => {
   try {

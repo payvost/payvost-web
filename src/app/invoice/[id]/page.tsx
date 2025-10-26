@@ -108,6 +108,56 @@ export default function PublicInvoicePage() {
         const code = (error as any)?.code || (error as any)?.message || String(error);
         setFetchError(String(code));
         setInvoice(null);
+
+        // If this is a rules/permission error, attempt server-side fallback endpoint
+        if (String(code).toLowerCase().includes('permission-denied')) {
+          try {
+            const tryUrls = [
+              `${functionsUrl}/api/public/invoice/${id}`,
+              `${functionsUrl}/public/invoice/${id}`,
+            ];
+            let fallbackData: any = null;
+            for (const url of tryUrls) {
+              try {
+                const resp = await fetch(url);
+                if (!resp.ok) continue;
+                fallbackData = await resp.json();
+                break;
+              } catch (e) {
+                // continue to next url
+                continue;
+              }
+            }
+
+            if (fallbackData) {
+              // Normalize server timestamps (which may be plain objects) to objects with toDate()
+              const normalizeDates = (data: any) => {
+                const tsFields = ['issueDate', 'dueDate', 'paidAt', 'createdAt', 'updatedAt'];
+                const out = { ...data };
+                tsFields.forEach((f) => {
+                  const v = out[f];
+                  if (!v) return;
+                  if (typeof v === 'string') {
+                    out[f] = { toDate: () => new Date(v) };
+                  } else if (typeof v === 'object') {
+                    const secs = (v._seconds ?? v.seconds) as number | undefined;
+                    if (typeof secs === 'number') {
+                      out[f] = { toDate: () => new Date(secs * 1000) };
+                    }
+                  }
+                });
+                return out;
+              };
+
+              const normalized = normalizeDates(fallbackData);
+              setInvoice(normalized as DocumentData);
+              setFoundInCollection('server-endpoint');
+              setFetchError(null);
+            }
+          } catch (err) {
+            console.error('Server fallback failed:', err);
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -208,9 +258,9 @@ export default function PublicInvoicePage() {
         <Card className="max-w-4xl mx-auto w-full">
           <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
             <div className="flex-1 flex items-center gap-4">
-                {businessProfile?.invoiceLogoUrl && (
-                    <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
-                )}
+        {typeof businessProfile?.invoiceLogoUrl === 'string' && businessProfile.invoiceLogoUrl.length > 0 && (
+          <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
+        )}
                  <div>
                     <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
                     <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>

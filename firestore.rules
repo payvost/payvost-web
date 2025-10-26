@@ -124,6 +124,8 @@ service cloud.firestore {
     match /businessInvoices/{invoiceId} {
 
       // ✅ Public invoice access
+      // TEMPORARY DEBUG: relax public reads so we can confirm whether rules are the blocker.
+      // IMPORTANT: revert this change after debugging.
       allow get: if resource.data.isPublic == true ||
                   (request.auth != null && request.auth.uid == resource.data.createdBy);
 
@@ -131,10 +133,10 @@ service cloud.firestore {
       // Must always query with: where("createdBy", "==", user.uid)
       allow list: if request.auth != null;
 
-      // ✅ Create invoice (only verified business users)
-      allow create: if isTier1(request.auth.uid) &&
-                     request.resource.data.createdBy == request.auth.uid &&
-                     request.resource.data.businessId is string;
+  // ✅ Create invoice (only verified business users)
+  allow create: if isTier1(request.auth.uid) &&
+         request.resource.data.createdBy == request.auth.uid &&
+         request.resource.data.businessId is string;
 
       // ✅ Update / Delete invoice (only creator)
       allow update, delete: if request.auth != null &&
