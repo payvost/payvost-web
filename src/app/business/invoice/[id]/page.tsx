@@ -44,8 +44,6 @@ export default function PublicBusinessInvoicePage() {
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
-  const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
-
   useEffect(() => {
     if (!id) return;
 
