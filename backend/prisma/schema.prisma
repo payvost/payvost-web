@@ -22,22 +22,27 @@ model User {
   role        String   @default("user")
   kycStatus   String   @default("pending")
   accounts    Account[]
+  activities  AccountActivity[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  country     String?
+  userTier    String   @default("STANDARD")
 }
 
 model Account {
-  id         String        @id @default(uuid())
-  user       User          @relation(fields: [userId], references: [id])
-  userId     String
-  currency   String
-  balance    Decimal       @default(0) @db.Decimal(20, 8)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
+  id            String           @id @default(uuid())
+  user          User             @relation(fields: [userId], references: [id])
+  userId        String
+  currency      String
+  balance       Decimal          @default(0) @db.Decimal(20, 8)
+  type          String          @default("PERSONAL")
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  activities    AccountActivity[]
   ledgerEntries LedgerEntry[]
-  fromTransfers  Transfer[]  @relation("fromAccount")
-  toTransfers    Transfer[]  @relation("toAccount")
+  fromTransfers Transfer[]       @relation("fromAccount")
+  toTransfers   Transfer[]       @relation("toAccount")
+  appliedFees   AppliedFee[]
 
   @@index([userId])
 }
@@ -57,18 +62,111 @@ model LedgerEntry {
 }
 
 model Transfer {
-  id              String   @id @default(uuid())
-  fromAccount     Account  @relation("fromAccount", fields: [fromAccountId], references: [id])
+  id              String        @id @default(uuid())
+  fromAccount     Account       @relation("fromAccount", fields: [fromAccountId], references: [id])
   fromAccountId   String
-  toAccount       Account  @relation("toAccount", fields: [toAccountId], references: [id])
+  toAccount       Account       @relation("toAccount", fields: [toAccountId], references: [id])
   toAccountId     String
-  amount          Decimal  @db.Decimal(20, 8)
+  amount          Decimal       @db.Decimal(20, 8)
   currency        String
   status          String
-  idempotencyKey  String?  @unique
+  type            TransactionType
+  idempotencyKey  String?       @unique
   description     String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime      @default(now())
+  appliedFees     AppliedFee[]
 
   @@index([fromAccountId])
   @@index([toAccountId])
+}
+
+// New models for Reporting Engine
+model AccountActivity {
+  id          String   @id @default(uuid())
+  account     Account  @relation(fields: [accountId], references: [id])
+  accountId   String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  action      String
+  ipAddress   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([accountId])
+  @@index([userId])
+}
+
+model ComplianceAlert {
+  id          String   @id @default(uuid())
+  type        String
+  severity    String
+  status      String   @default("PENDING")
+  accountId   String?
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// New models for Fee Engine
+enum FeeType {
+  FIXED
+  PERCENTAGE
+  HYBRID
+}
+
+enum TransactionType {
+  INTERNAL_TRANSFER
+  EXTERNAL_TRANSFER
+  CARD_PAYMENT
+  ATM_WITHDRAWAL
+  DEPOSIT
+  CURRENCY_EXCHANGE
+}
+
+model FeeRule {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  feeType         FeeType
+  transactionType TransactionType
+  currency        String
+  fixedAmount     Decimal?  @db.Decimal(20, 8)
+  percentageRate  Decimal?  @db.Decimal(10, 4)
+  minAmount       Decimal?  @db.Decimal(20, 8)
+  maxAmount       Decimal?  @db.Decimal(20, 8)
+  country         String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  appliedRules    AppliedRuleInstance[]
+}
+
+model AppliedFee {
+  id             String    @id @default(uuid())
+  transaction    Transfer  @relation(fields: [transactionId], references: [id])
+  transactionId  String
+  account        Account   @relation(fields: [accountId], references: [id])
+  accountId      String
+  amount         Decimal   @db.Decimal(20, 8)
+  breakdownJson  String
+  createdAt      DateTime  @default(now())
+  appliedRules   AppliedRuleInstance[]
+
+  @@index([transactionId])
+  @@index([accountId])
+}
+
+model AppliedRuleInstance {
+  id          String     @id @default(uuid())
+  appliedFee  AppliedFee @relation(fields: [appliedFeeId], references: [id])
+  appliedFeeId String
+  feeRule     FeeRule    @relation(fields: [feeRuleId], references: [id])
+  feeRuleId   String
+  amount      Decimal    @db.Decimal(20, 8)
+  percentageRate Decimal @db.Decimal(10, 4)
+  createdAt   DateTime   @default(now())
+
+  @@index([appliedFeeId])
+  @@index([feeRuleId])
 }
