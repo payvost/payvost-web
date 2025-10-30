@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
@@ -295,8 +295,15 @@ app.get('/download/transactions/:userId', async (req, res) => {
   }
 });
 
-// --- Export Express app as Firebase Function ---
-export const api = functions.https.onRequest(app);
+// --- Export Express app as Firebase Function with cost-optimized scaling ---
+export const api = functions
+  .runWith({
+    minInstances: 1,        // Keep 1 instance warm to reduce cold starts
+    maxInstances: 20,       // Allow scaling up to 20 instances under high load
+    memory: '512MB',        // Sufficient for PDF generation and API calls
+    timeoutSeconds: 60,     // 60 seconds for PDF/CSV generation
+  })
+  .https.onRequest(app);
 
 
 
