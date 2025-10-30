@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { createHash } from 'crypto';
+import crypto from 'crypto';
 import { Decimal } from 'decimal.js';
 
 export class TransactionManager {
@@ -10,175 +10,155 @@ export class TransactionManager {
   }
 
   /**
-   * Generate a deterministic transaction ID based on input parameters
+   * Execute a transfer with ACID guarantees
    */
-  private generateTransactionId(params: any): string {
-    const input = JSON.stringify(params);
-    return createHash('sha256').update(input).digest('hex');
-  }
-
-  /**
-   * Validate transaction against risk rules and limits
-   */
-  private async validateTransaction(params: {
+  async executeTransfer(params: {
     fromAccountId: string;
     toAccountId: string;
-    amount: string;
+    amount: number;
     currency: string;
-  }): Promise<boolean> {
-    const { fromAccountId, amount, currency } = params;
-
-    // 1. Check account limits (mocked until accountLimits table is created)
-    // const accountLimits = await this.prisma.accountLimits.findUnique({
-    //   where: { accountId: fromAccountId }
-    // });
-
-    // For now, use basic validation without account limits
-    const accountLimits = null;
-
-    if (accountLimits) {
-      // Daily limit check
-      const dailyTransactions = await this.prisma.transfer.aggregate({
-        where: {
-          fromAccountId,
-          currency,
-          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-        },
-        _sum: { amount: true }
-      });
-
-      const dailyTotal = new Decimal(dailyTransactions._sum.amount || 0);
-      if (dailyTotal.plus(amount).greaterThan((accountLimits as any).dailyLimit)) {
-        throw new Error('Daily transfer limit exceeded');
-      }
-
-      // Monthly limit check
-      const monthlyTransactions = await this.prisma.transfer.aggregate({
-        where: {
-          fromAccountId,
-          currency,
-          createdAt: { gte: new Date(new Date().setDate(1)) }
-        },
-        _sum: { amount: true }
-      });
-
-      const monthlyTotal = new Decimal(monthlyTransactions._sum.amount || 0);
-      if (monthlyTotal.plus(amount).greaterThan((accountLimits as any).monthlyLimit)) {
-        throw new Error('Monthly transfer limit exceeded');
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Execute a financial transaction with full ACID compliance
-   */
-  async executeTransaction(params: {
-    fromAccountId: string;
-    toAccountId: string;
-    amount: string;
-    currency: string;
-    type: string;
     description?: string;
-    metadata?: Record<string, any>;
     idempotencyKey?: string;
   }): Promise<any> {
-    const transactionId = params.idempotencyKey || this.generateTransactionId(params);
+    const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = params;
 
-    // Check for existing transaction
+    // Generate deterministic idempotency key if not provided
+    const finalIdempotencyKey = idempotencyKey || this.generateIdempotencyKey(params);
+
+    // Check for existing transaction with this idempotency key
     const existing = await this.prisma.transfer.findUnique({
-      where: { idempotencyKey: transactionId }
+      where: { idempotencyKey: finalIdempotencyKey },
     });
 
     if (existing) {
       return existing;
     }
 
-    // Validate transaction
-    await this.validateTransaction(params);
+    // Mock account limits check (since accountLimits table doesn't exist yet)
+    const mockLimits = {
+      dailyLimit: 100000,
+      monthlyLimit: 500000,
+    };
 
-    // Execute transaction in a database transaction
-    return await this.prisma.$transaction(async (tx) => {
-      // Lock accounts
-      const accounts: any[] = await tx.$queryRaw`
-        SELECT id, balance, currency, status
-        FROM "Account"
-        WHERE id IN (${params.fromAccountId}, ${params.toAccountId})
+    // Calculate daily and monthly totals using Decimal
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dailyTotal = await this.prisma.transfer.aggregate({
+      where: {
+        fromAccountId,
+        createdAt: { gte: today },
+        status: 'COMPLETED',
+      },
+      _sum: { amount: true },
+    });
+
+    const dailySum = dailyTotal._sum.amount 
+      ? new Decimal(dailyTotal._sum.amount.toString()).plus(amount)
+      : new Decimal(amount);
+
+    if (dailySum.greaterThan(mockLimits.dailyLimit)) {
+      throw new Error('Daily transfer limit exceeded');
+    }
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthlyTotal = await this.prisma.transfer.aggregate({
+      where: {
+        fromAccountId,
+        createdAt: { gte: monthStart },
+        status: 'COMPLETED',
+      },
+      _sum: { amount: true },
+    });
+
+    const monthlySum = monthlyTotal._sum.amount
+      ? new Decimal(monthlyTotal._sum.amount.toString()).plus(amount)
+      : new Decimal(amount);
+
+    if (monthlySum.greaterThan(mockLimits.monthlyLimit)) {
+      throw new Error('Monthly transfer limit exceeded');
+    }
+
+    // Execute transfer in transaction
+    return await this.prisma.$transaction(async (tx: any) => {
+      // Lock accounts for update
+      const accounts = await tx.$queryRaw`
+        SELECT id, balance, currency 
+        FROM "Account" 
+        WHERE id IN (${fromAccountId}, ${toAccountId})
         FOR UPDATE
       `;
 
-      const fromAccount = accounts.find((a: any) => a.id === params.fromAccountId);
-      const toAccount = accounts.find((a: any) => a.id === params.toAccountId);
+      const fromAccount = (accounts as any[]).find((a: any) => a.id === fromAccountId);
+      const toAccount = (accounts as any[]).find((a: any) => a.id === toAccountId);
 
-      // Validate accounts
       if (!fromAccount || !toAccount) {
-        throw new Error('Account not found');
+        throw new Error('One or both accounts not found');
       }
 
-      if (fromAccount.status !== 'ACTIVE' || toAccount.status !== 'ACTIVE') {
-        throw new Error('Account is not active');
-      }
-
-      if (fromAccount.currency !== params.currency || toAccount.currency !== params.currency) {
+      if (fromAccount.currency !== currency || toAccount.currency !== currency) {
         throw new Error('Currency mismatch');
       }
 
-      // Check balance
-      if (Number(fromAccount.balance) < Number(params.amount)) {
-        throw new Error('Insufficient balance');
+      const fromBalance = new Decimal(fromAccount.balance.toString());
+      if (fromBalance.lessThan(amount)) {
+        throw new Error('Insufficient funds');
       }
 
-      // Create transfer record
+      // Create transfer record - Remove 'type' field as it doesn't exist in schema
       const transfer = await tx.transfer.create({
         data: {
-          fromAccountId: params.fromAccountId,
-          toAccountId: params.toAccountId,
-          amount: params.amount,
-          currency: params.currency,
+          fromAccountId,
+          toAccountId,
+          amount: new Prisma.Decimal(amount),
+          currency,
           status: 'COMPLETED',
-          type: params.type as any, // Cast to TransactionType
-          description: params.description,
-          idempotencyKey: transactionId
-        }
+          description: description || 'Transfer',
+          idempotencyKey: finalIdempotencyKey,
+        },
       });
 
-      // Update account balances
+      // Update account balances - Remove 'lastTransactionAt' field
       await tx.account.update({
-        where: { id: params.fromAccountId },
-        data: { 
-          balance: { decrement: params.amount }
-        }
+        where: { id: fromAccountId },
+        data: {
+          balance: { decrement: new Prisma.Decimal(amount) },
+        },
       });
 
       await tx.account.update({
-        where: { id: params.toAccountId },
-        data: { 
-          balance: { increment: params.amount }
-        }
+        where: { id: toAccountId },
+        data: {
+          balance: { increment: new Prisma.Decimal(amount) },
+        },
       });
 
-      // Create ledger entries
+      // Create ledger entries - Remove 'transferId' field
       await tx.ledgerEntry.createMany({
         data: [
           {
-            accountId: params.fromAccountId,
-            amount: `-${params.amount}`,
+            accountId: fromAccountId,
+            amount: new Prisma.Decimal(-amount),
+            currency,
             type: 'DEBIT',
-            balanceAfter: (Number(fromAccount.balance) - Number(params.amount)).toString(),
-            description: params.description
+            description: `Transfer to ${toAccountId}`,
           },
           {
-            accountId: params.toAccountId,
-            amount: params.amount,
+            accountId: toAccountId,
+            amount: new Prisma.Decimal(amount),
+            currency,
             type: 'CREDIT',
-            balanceAfter: (Number(toAccount.balance) + Number(params.amount)).toString(),
-            description: params.description
-          }
-        ]
+            description: `Transfer from ${fromAccountId}`,
+          },
+        ],
       });
 
       return transfer;
     });
+  }
+
+  private generateIdempotencyKey(params: any): string {
+    const data = JSON.stringify(params);
+    return crypto.createHash('sha256').update(data).digest('hex');
   }
 }
