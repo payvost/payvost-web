@@ -39,7 +39,9 @@ export const onNewLogin = functionsV1.analytics.event('login').onLog(async (even
 });
 
 // KYC Status Change Notifications
-export const onKycStatusChange = onDocumentUpdated('users/{userId}', async (event) => {
+export const onKycStatusChange = onDocumentUpdated(
+  { document: 'users/{userId}', region: 'us-central1' },
+  async (event) => {
   const beforeData = event.data?.before.data();
   const afterData = event.data?.after.data();
 
@@ -61,7 +63,9 @@ export const onKycStatusChange = onDocumentUpdated('users/{userId}', async (even
 });
 
 // Business Status Change Notifications
-export const onBusinessStatusChange = onDocumentUpdated('businesses/{businessId}', async (event) => {
+export const onBusinessStatusChange = onDocumentUpdated(
+  { document: 'businesses/{businessId}', region: 'us-central1' },
+  async (event) => {
     const beforeData = event.data?.before.data();
     const afterData = event.data?.after.data();
 
@@ -88,7 +92,9 @@ export const onBusinessStatusChange = onDocumentUpdated('businesses/{businessId}
   });
 
 // Transaction Status Change Notifications
-export const onTransactionStatusChange = onDocumentWritten('transactions/{transactionId}', async (event) => {
+export const onTransactionStatusChange = onDocumentWritten(
+  { document: 'transactions/{transactionId}', region: 'us-central1' },
+  async (event) => {
     if (!event.data?.after.exists) return; // Transaction deleted
     
     const transaction = event.data?.after.data();
@@ -119,7 +125,9 @@ export const onTransactionStatusChange = onDocumentWritten('transactions/{transa
   });
 
 // Payment Link Generation Notifications
-export const onPaymentLinkCreated = onDocumentCreated('paymentLinks/{linkId}', async (event) => {
+export const onPaymentLinkCreated = onDocumentCreated(
+  { document: 'paymentLinks/{linkId}', region: 'us-central1' },
+  async (event) => {
     const paymentLink = event.data?.data();
     if (!paymentLink) return;
     
@@ -142,7 +150,9 @@ export const onPaymentLinkCreated = onDocumentCreated('paymentLinks/{linkId}', a
   });
 
 // Invoice Notifications
-export const onInvoiceStatusChange = onDocumentWritten('invoices/{invoiceId}', async (event) => {
+export const onInvoiceStatusChange = onDocumentWritten(
+  { document: 'invoices/{invoiceId}', region: 'us-central1' },
+  async (event) => {
     if (!event.data?.after.exists) return; // Invoice deleted
     
     const invoice = event.data?.after.data();
@@ -193,7 +203,9 @@ export const onInvoiceStatusChange = onDocumentWritten('invoices/{invoiceId}', a
   });
 
 // Invoice Reminder Notifications (Scheduled Function)
-export const sendInvoiceReminders = onSchedule('every 24 hours', async () => {
+export const sendInvoiceReminders = onSchedule(
+  { schedule: 'every 24 hours', region: 'us-central1' },
+  async () => {
     const now = admin.firestore.Timestamp.now();
     const threeDaysFromNow = new admin.firestore.Timestamp(
       now.seconds + (3 * 24 * 60 * 60),
