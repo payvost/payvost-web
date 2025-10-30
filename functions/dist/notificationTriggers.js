@@ -93,6 +93,11 @@ exports.onBusinessStatusChange = (0, firestore_1.onDocumentUpdated)({ document: 
     const afterData = event.data?.after.data();
     if (!beforeData || !afterData)
         return;
+    // Validate required fields
+    if (!afterData.ownerId) {
+        console.error('Business missing ownerId, skipping notification');
+        return;
+    }
     // Only proceed if business status has changed
     if (beforeData.status === afterData.status)
         return;
@@ -121,6 +126,11 @@ exports.onTransactionStatusChange = (0, firestore_1.onDocumentWritten)({ documen
     const beforeData = event.data?.before.exists ? event.data?.before.data() : null;
     if (!transaction)
         return;
+    // Validate required fields
+    if (!transaction.userId) {
+        console.error('Transaction missing userId, skipping notification');
+        return;
+    }
     // Only proceed if status has changed or this is a new transaction
     if (beforeData && beforeData.status === transaction.status)
         return;
@@ -148,6 +158,11 @@ exports.onPaymentLinkCreated = (0, firestore_1.onDocumentCreated)({ document: 'p
     const paymentLink = event.data?.data();
     if (!paymentLink)
         return;
+    // Validate required fields
+    if (!paymentLink.createdBy) {
+        console.error('Payment link missing createdBy, skipping notification');
+        return;
+    }
     try {
         const userData = await getUserData(paymentLink.createdBy);
         if (!userData)
@@ -175,12 +190,26 @@ exports.onInvoiceStatusChange = (0, firestore_1.onDocumentWritten)({ document: '
     if (!invoice)
         return;
     try {
+        // Validate required fields
+        if (!invoice.userId) {
+            console.error('Invoice missing userId, skipping notification');
+            return;
+        }
         const userData = await getUserData(invoice.userId);
-        const businessDoc = await admin.firestore()
-            .collection('businesses')
-            .doc(invoice.businessId)
-            .get();
-        const businessData = businessDoc.data();
+        // Get business data if businessId exists
+        let businessData = null;
+        if (invoice.businessId && typeof invoice.businessId === 'string' && invoice.businessId.trim() !== '') {
+            try {
+                const businessDoc = await admin.firestore()
+                    .collection('businesses')
+                    .doc(invoice.businessId)
+                    .get();
+                businessData = businessDoc.data();
+            }
+            catch (err) {
+                console.error('Failed to fetch business data:', err);
+            }
+        }
         // New invoice
         if (!beforeData) {
             await (0, notificationService_1.sendInvoiceNotification)({
@@ -190,7 +219,7 @@ exports.onInvoiceStatusChange = (0, firestore_1.onDocumentWritten)({ document: '
                 amount: invoice.amount,
                 currency: invoice.currency ?? '',
                 dueDate: invoice.dueDate?.toDate() ?? new Date(),
-                businessName: businessData?.businessName ?? '',
+                businessName: businessData?.businessName ?? 'Payvost',
                 downloadLink: invoice.downloadUrl ?? ''
             }, 'generated');
             return;
@@ -204,7 +233,7 @@ exports.onInvoiceStatusChange = (0, firestore_1.onDocumentWritten)({ document: '
                 amount: invoice.amount,
                 currency: invoice.currency ?? '',
                 dueDate: invoice.dueDate?.toDate() ?? new Date(),
-                businessName: businessData?.businessName ?? '',
+                businessName: businessData?.businessName ?? 'Payvost',
                 downloadLink: invoice.downloadUrl ?? ''
             }, 'paid');
         }
