@@ -1,130 +1,192 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.confirmPasswordReset = exports.requestPasswordReset = exports.updateUserRole = exports.updateKycStatus = exports.getProfile = exports.login = exports.register = void 0;
-const client_1 = require("@prisma/client");
-const bcrypt_1 = __importDefault(require("bcrypt"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const prisma = new client_1.PrismaClient();
+exports.confirmPasswordReset = exports.requestPasswordReset = exports.updateUserRole = exports.updateKycStatus = exports.getProfile = exports.login = exports.register = exports.getAllUsers = void 0;
+const bcrypt = __importStar(require("bcrypt"));
+const path = __importStar(require("path"));
+const module_1 = require("module");
+// Use createRequire to load the firebase initializer so resolution works when running from project root
+const localRequire = (0, module_1.createRequire)(path.join(process.cwd(), 'backend', 'services', 'user', 'controllers', 'userController.js'));
+const adminMod = localRequire('../../../firebase');
+const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const firestore = admin.firestore();
+const usersCollection = firestore.collection('users');
+const getAllUsers = async (_req, res) => {
+    try {
+        const usersSnapshot = await usersCollection.get();
+        const users = usersSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            // Ensure we don't send back password hashes
+            const { passwordHash, ...userWithoutPassword } = data;
+            return { id: doc.id, ...userWithoutPassword };
+        });
+        return res.status(200).json(users);
+    }
+    catch (error) {
+        console.error("Error fetching all users:", error);
+        return res.status(500).json({ error: 'Failed to fetch users.' });
+    }
+};
+exports.getAllUsers = getAllUsers;
 const register = async (req, res) => {
     try {
         const { email, password, name } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password are required.' });
         }
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
+        const userQuery = await usersCollection.where('email', '==', email).limit(1).get();
+        if (!userQuery.empty) {
             return res.status(409).json({ error: 'User already exists.' });
         }
-        const passwordHash = await bcrypt_1.default.hash(password, 10);
-        const user = await prisma.user.create({
-            data: {
-                email,
-                password: passwordHash,
-                name,
-            },
+        const passwordHash = await bcrypt.hash(password, 10);
+        // Use Firebase Auth to create the user for authentication
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            password: password,
+            displayName: name,
         });
-        return res.status(201).json({ id: user.id, email: user.email, name: user.name });
+        const newUser = {
+            name,
+            email,
+            passwordHash,
+            role: 'user',
+            kycStatus: 'pending',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        // Use the Firebase Auth UID as the document ID in Firestore
+        await usersCollection.doc(userRecord.uid).set(newUser);
+        // Remove passwordHash from response
+        const { passwordHash: _, ...userResponse } = newUser;
+        return res.status(201).json({ id: userRecord.uid, ...userResponse });
     }
     catch (err) {
+        console.error("Registration Error:", err);
         return res.status(500).json({ error: 'Registration failed.' });
     }
 };
 exports.register = register;
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required.' });
+        const { credential, password } = req.body;
+        if (!credential || !password) {
+            return res.status(400).json({ error: 'Credential and password are required.' });
         }
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
+        const isEmail = credential.includes('@');
+        const queryField = isEmail ? 'email' : 'username';
+        const userQuery = await usersCollection.where(queryField, '==', credential).limit(1).get();
+        if (userQuery.empty) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
-        const valid = await bcrypt_1.default.compare(password, user.password);
+        const userDoc = userQuery.docs[0];
+        const user = userDoc.data();
+        const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-        return res.json({ token });
+        // Create a custom token for Firebase Auth
+        const customToken = await admin.auth().createCustomToken(userDoc.id);
+        return res.json({ token: customToken });
     }
     catch (err) {
+        console.error("Login Error:", err);
         return res.status(500).json({ error: 'Login failed.' });
     }
 };
 exports.login = login;
 const getProfile = async (req, res) => {
-    // This should be protected by JWT middleware in production
     try {
-        const auth = req.headers.authorization;
-        if (!auth)
-            return res.status(401).json({ error: 'No token provided.' });
-        const token = auth.replace('Bearer ', '');
-        let payload;
-        try {
-            payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        }
-        catch {
-            return res.status(401).json({ error: 'Invalid token.' });
-        }
-        const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-        if (!user)
+        // The authentication middleware now verifies Firebase ID tokens and attaches `user` to the request.
+        const userPayload = req.user;
+        if (!userPayload?.uid)
+            return res.status(401).json({ error: 'No authenticated user.' });
+        const userDoc = await usersCollection.doc(userPayload.uid).get();
+        if (!userDoc.exists) {
             return res.status(404).json({ error: 'User not found.' });
-        return res.json({ id: user.id, email: user.email, name: user.name, role: user.role, kycStatus: user.kycStatus });
+        }
+        const userData = userDoc.data();
+        // Exclude passwordHash and id from response
+        const { passwordHash, id, ...profileData } = userData;
+        return res.json({ id: userDoc.id, ...profileData });
     }
     catch (err) {
+        console.error("Get Profile Error:", err);
         return res.status(500).json({ error: 'Failed to fetch profile.' });
     }
 };
 exports.getProfile = getProfile;
-// Update KYC status (admin only)
 const updateKycStatus = async (req, res) => {
     try {
         const { userId, kycStatus } = req.body;
         if (!userId || !kycStatus) {
             return res.status(400).json({ error: 'userId and kycStatus required.' });
         }
-        const user = await prisma.user.update({
-            where: { id: userId },
-            data: { kycStatus },
-        });
-        return res.json({ id: user.id, kycStatus: user.kycStatus });
+        const userRef = usersCollection.doc(userId);
+        await userRef.update({ kycStatus, updatedAt: new Date() });
+        const updatedDoc = await userRef.get();
+        return res.json({ id: updatedDoc.id, kycStatus: updatedDoc.data()?.kycStatus });
     }
     catch (err) {
+        console.error("KYC Update Error:", err);
         return res.status(500).json({ error: 'Failed to update KYC status.' });
     }
 };
 exports.updateKycStatus = updateKycStatus;
-// Update user role (admin only)
 const updateUserRole = async (req, res) => {
     try {
         const { userId, role } = req.body;
         if (!userId || !role) {
             return res.status(400).json({ error: 'userId and role required.' });
         }
-        const user = await prisma.user.update({
-            where: { id: userId },
-            data: { role },
-        });
-        return res.json({ id: user.id, role: user.role });
+        const userRef = usersCollection.doc(userId);
+        await userRef.update({ role, updatedAt: new Date() });
+        const updatedDoc = await userRef.get();
+        return res.json({ id: updatedDoc.id, role: updatedDoc.data()?.role });
     }
     catch (err) {
+        console.error("Role Update Error:", err);
         return res.status(500).json({ error: 'Failed to update user role.' });
     }
 };
 exports.updateUserRole = updateUserRole;
-// Password reset request (scaffold)
 const requestPasswordReset = async (req, res) => {
-    // TODO: Send password reset email/link
-    return res.json({ message: 'Password reset request received.' });
+    return res.status(501).json({ message: 'Password reset not implemented.' });
 };
 exports.requestPasswordReset = requestPasswordReset;
-// Password reset confirm (scaffold)
 const confirmPasswordReset = async (req, res) => {
-    // TODO: Validate token and update password
-    return res.json({ message: 'Password reset confirmed.' });
+    return res.status(501).json({ message: 'Password reset not implemented.' });
 };
 exports.confirmPasswordReset = confirmPasswordReset;
