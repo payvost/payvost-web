@@ -66,29 +66,174 @@ app.get('/', (_req, res) => {
 app.get('/download/invoice/:invoiceId', async (req, res) => {
     try {
         const { invoiceId } = req.params;
-        const invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
-        if (!invoiceDoc.exists)
+        // Try both collections
+        let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
+        if (!invoiceDoc.exists) {
+            invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
+        }
+        if (!invoiceDoc.exists) {
+            console.error(`Invoice ${invoiceId} not found in any collection`);
             return res.status(404).send('Invoice not found');
+        }
         const invoiceData = invoiceDoc.data();
+        console.log(`Processing invoice ${invoiceId}:`, JSON.stringify(invoiceData, null, 2));
         // Only allow download if invoice is public
         if (!invoiceData?.isPublic) {
+            console.error(`Invoice ${invoiceId} is not public`);
             return res.status(403).send('Invoice is not public');
         }
-        const doc = new pdfkit_1.default({ size: 'A4' });
+        // Create PDF document
+        const doc = new pdfkit_1.default({
+            size: 'A4',
+            margin: 50
+        });
+        // Set response headers
         res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.pdf`);
         res.setHeader('Content-Type', 'application/pdf');
+        // Handle pipe errors
+        doc.on('error', (err) => {
+            console.error('PDF generation error:', err);
+            if (!res.headersSent) {
+                res.status(500).send('Failed to generate PDF');
+            }
+        });
+        // Pipe PDF to response
         doc.pipe(res);
-        doc.fontSize(20).text(`Invoice #${invoiceId}`, { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Customer: ${invoiceData?.customerName}`);
-        doc.text(`Amount: ${invoiceData?.amount} ${invoiceData?.currency}`);
-        doc.text(`Due Date: ${invoiceData?.dueDate}`);
-        doc.text(`Description: ${invoiceData?.description}`);
+        // --- PDF Header ---
+        doc.fontSize(24)
+            .fillColor('#2563eb')
+            .text('INVOICE', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(12)
+            .fillColor('#666666')
+            .text(`Invoice #${invoiceId}`, { align: 'center' });
+        doc.moveDown(2);
+        // --- Invoice Details ---
+        doc.fontSize(10).fillColor('#000000');
+        // Customer Information
+        doc.fontSize(14).text('Bill To:', { underline: true });
+        doc.moveDown(0.3);
+        doc.fontSize(11).text(invoiceData?.customerName || 'N/A');
+        if (invoiceData?.customerEmail) {
+            doc.fontSize(10).fillColor('#666666').text(invoiceData.customerEmail);
+        }
+        doc.moveDown(1.5);
+        // Invoice Information
+        doc.fontSize(14).fillColor('#000000').text('Invoice Details:', { underline: true });
+        doc.moveDown(0.3);
+        const invoiceDetails = [
+            { label: 'Invoice Number:', value: invoiceId },
+            { label: 'Issue Date:', value: invoiceData?.createdAt?.toDate?.()?.toLocaleDateString() || invoiceData?.issueDate || 'N/A' },
+            { label: 'Due Date:', value: invoiceData?.dueDate || 'N/A' },
+            { label: 'Status:', value: invoiceData?.status || 'Pending' }
+        ];
+        invoiceDetails.forEach(({ label, value }) => {
+            doc.fontSize(10)
+                .fillColor('#000000')
+                .text(label, { continued: true })
+                .fillColor('#666666')
+                .text(` ${value}`);
+        });
+        doc.moveDown(2);
+        // --- Line Items Table ---
+        doc.fontSize(14).fillColor('#000000').text('Items:', { underline: true });
+        doc.moveDown(0.5);
+        // Table headers
+        const tableTop = doc.y;
+        doc.fontSize(10)
+            .fillColor('#ffffff')
+            .rect(50, tableTop, 495, 20)
+            .fill('#2563eb');
+        doc.fillColor('#ffffff')
+            .text('Description', 55, tableTop + 5, { width: 250 })
+            .text('Quantity', 305, tableTop + 5, { width: 60, align: 'center' })
+            .text('Price', 365, tableTop + 5, { width: 80, align: 'right' })
+            .text('Amount', 445, tableTop + 5, { width: 95, align: 'right' });
+        // Table rows
+        const items = invoiceData?.items || [];
+        let yPosition = tableTop + 25;
+        let subtotal = 0;
+        if (items.length === 0) {
+            // Fallback to single item if no items array
+            const singleItem = {
+                description: invoiceData?.description || 'Service/Product',
+                quantity: 1,
+                price: invoiceData?.amount || 0
+            };
+            items.push(singleItem);
+        }
+        items.forEach((item, index) => {
+            const itemAmount = (item.quantity || 1) * (item.price || item.amount || 0);
+            subtotal += itemAmount;
+            doc.fillColor('#000000')
+                .text(item.description || item.name || 'Item', 55, yPosition, { width: 250 })
+                .text(String(item.quantity || 1), 305, yPosition, { width: 60, align: 'center' })
+                .text(`${invoiceData?.currency || 'USD'} ${(item.price || item.amount || 0).toFixed(2)}`, 365, yPosition, { width: 80, align: 'right' })
+                .text(`${invoiceData?.currency || 'USD'} ${itemAmount.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
+            yPosition += 25;
+            // Draw line after each row
+            if (index < items.length - 1) {
+                doc.strokeColor('#e5e7eb')
+                    .moveTo(50, yPosition - 5)
+                    .lineTo(545, yPosition - 5)
+                    .stroke();
+            }
+        });
+        // Total line
+        doc.strokeColor('#2563eb')
+            .lineWidth(2)
+            .moveTo(50, yPosition)
+            .lineTo(545, yPosition)
+            .stroke();
+        yPosition += 10;
+        // Subtotal, Tax, Total
+        const tax = invoiceData?.tax || 0;
+        const discount = invoiceData?.discount || 0;
+        const total = subtotal + tax - discount;
+        doc.fontSize(11)
+            .fillColor('#000000')
+            .text('Subtotal:', 365, yPosition, { width: 80, align: 'right' })
+            .text(`${invoiceData?.currency || 'USD'} ${subtotal.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
+        if (tax > 0) {
+            yPosition += 20;
+            doc.text('Tax:', 365, yPosition, { width: 80, align: 'right' })
+                .text(`${invoiceData?.currency || 'USD'} ${tax.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
+        }
+        if (discount > 0) {
+            yPosition += 20;
+            doc.fillColor('#ef4444')
+                .text('Discount:', 365, yPosition, { width: 80, align: 'right' })
+                .text(`-${invoiceData?.currency || 'USD'} ${discount.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
+        }
+        yPosition += 20;
+        doc.fontSize(14)
+            .fillColor('#2563eb')
+            .text('Total:', 365, yPosition, { width: 80, align: 'right' })
+            .text(`${invoiceData?.currency || 'USD'} ${total.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
+        // --- Notes/Terms ---
+        if (invoiceData?.notes) {
+            doc.moveDown(3);
+            doc.fontSize(12).fillColor('#000000').text('Notes:', { underline: true });
+            doc.moveDown(0.3);
+            doc.fontSize(10).fillColor('#666666').text(invoiceData.notes, { width: 495 });
+        }
+        // --- Footer ---
+        doc.fontSize(8)
+            .fillColor('#999999')
+            .text('Thank you for your business!', 50, doc.page.height - 50, { align: 'center', width: 495 });
+        // Finalize PDF
         doc.end();
+        console.log(`✅ Successfully generated PDF for invoice ${invoiceId}`);
     }
     catch (err) {
-        console.error(err);
-        res.status(500).send('Failed to generate invoice PDF');
+        console.error('PDF generation error:', err);
+        console.error('Error stack:', err.stack);
+        if (!res.headersSent) {
+            res.status(500).json({
+                error: 'Failed to generate invoice PDF',
+                details: err.message
+            });
+        }
     }
 });
 // --- Public JSON invoice endpoint (bypasses client Firestore rules) ---
