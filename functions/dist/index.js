@@ -36,8 +36,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendInvoiceReminders = exports.onInvoiceStatusChange = exports.onPaymentLinkCreated = exports.onTransactionStatusChange = exports.onBusinessStatusChange = exports.onNewLogin = exports.api = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+exports.sendInvoiceReminders = exports.onInvoiceStatusChange = exports.onPaymentLinkCreated = exports.onTransactionStatusChange = exports.onBusinessStatusChange = exports.onNewLogin = exports.api2 = exports.api = void 0;
+const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -281,15 +281,20 @@ app.get('/download/transactions/:userId', async (req, res) => {
         res.status(500).send('Failed to generate transactions CSV');
     }
 });
-// --- Export Express app as Firebase Function with cost-optimized scaling ---
-// Using v1 functions with optimized memory and scaling settings
-exports.api = functions
-    .runWith({
-    memory: '512MB', // Sufficient for PDF generation and API calls
+// --- Export Express app as Firebase Function (Gen 2) with cost-optimized scaling ---
+exports.api = (0, https_1.onRequest)({
+    region: 'us-central1',
+    memory: '512MiB', // Sufficient for PDF generation and API calls
     timeoutSeconds: 60, // 60 seconds for PDF/CSV generation
     maxInstances: 20, // Limit to 20 instances maximum
-})
-    .https.onRequest(app);
+}, app);
+// Temporary alias to avoid name conflict while Cloud Run 'api' service exists
+exports.api2 = (0, https_1.onRequest)({
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 60,
+    maxInstances: 20,
+}, app);
 // =============================================================
 // === OneSignal Email Integration (KYC verification trigger) ===
 // =============================================================
@@ -316,3 +321,4 @@ async function sendVerificationWelcomeEmail(toEmail, toName) {
         console.error('❌ Error sending OneSignal email:', error.body || error);
     }
 }
+// Firestore trigger: send email when KYC becomes "Verified"

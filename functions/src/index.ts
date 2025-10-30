@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions/v1';
+import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
@@ -297,15 +297,37 @@ app.get('/download/transactions/:userId', async (req, res) => {
   }
 });
 
-// --- Export Express app as Firebase Function with cost-optimized scaling ---
-// Using v1 functions with optimized memory and scaling settings
-export const api = functions
-  .runWith({
-    memory: '512MB',        // Sufficient for PDF generation and API calls
+// --- Export Express app as Firebase Function (Gen 2) with cost-optimized scaling ---
+export const api = onRequest(
+  {
+    region: 'us-central1',
+    memory: '512MiB',       // Sufficient for PDF generation and API calls
     timeoutSeconds: 60,     // 60 seconds for PDF/CSV generation
     maxInstances: 20,       // Limit to 20 instances maximum
-  })
-  .https.onRequest(app);
+  },
+  app
+);
+
+// Temporary alias to avoid name conflict while Cloud Run 'api' service exists
+export const api2 = onRequest(
+  {
+    region: 'us-central1',
+    memory: '512MiB',
+    timeoutSeconds: 60,
+    maxInstances: 20,
+  },
+  app
+);
+
+// Re-export triggers so the CLI discovers them consistently
+export {
+  onNewLogin,
+  onBusinessStatusChange,
+  onTransactionStatusChange,
+  onPaymentLinkCreated,
+  onInvoiceStatusChange,
+  sendInvoiceReminders,
+};
 
 
 
@@ -340,13 +362,3 @@ async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
 }
 
 // Firestore trigger: send email when KYC becomes "Verified"
-// Export notification triggers
-// Export notification triggers
-export {
-  onNewLogin,
-  onBusinessStatusChange,
-  onTransactionStatusChange,
-  onPaymentLinkCreated,
-  onInvoiceStatusChange,
-  sendInvoiceReminders
-};
