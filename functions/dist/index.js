@@ -158,17 +158,19 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
             const singleItem = {
                 description: invoiceData?.description || 'Service/Product',
                 quantity: 1,
-                price: invoiceData?.amount || 0
+                price: Number(invoiceData?.amount) || 0
             };
             items.push(singleItem);
         }
         items.forEach((item, index) => {
-            const itemAmount = (item.quantity || 1) * (item.price || item.amount || 0);
+            const quantity = Number(item.quantity) || 1;
+            const price = Number(item.price || item.amount) || 0;
+            const itemAmount = quantity * price;
             subtotal += itemAmount;
             doc.fillColor('#000000')
                 .text(item.description || item.name || 'Item', 55, yPosition, { width: 250 })
-                .text(String(item.quantity || 1), 305, yPosition, { width: 60, align: 'center' })
-                .text(`${invoiceData?.currency || 'USD'} ${(item.price || item.amount || 0).toFixed(2)}`, 365, yPosition, { width: 80, align: 'right' })
+                .text(String(quantity), 305, yPosition, { width: 60, align: 'center' })
+                .text(`${invoiceData?.currency || 'USD'} ${price.toFixed(2)}`, 365, yPosition, { width: 80, align: 'right' })
                 .text(`${invoiceData?.currency || 'USD'} ${itemAmount.toFixed(2)}`, 445, yPosition, { width: 95, align: 'right' });
             yPosition += 25;
             // Draw line after each row
@@ -187,8 +189,8 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
             .stroke();
         yPosition += 10;
         // Subtotal, Tax, Total
-        const tax = invoiceData?.tax || 0;
-        const discount = invoiceData?.discount || 0;
+        const tax = Number(invoiceData?.tax) || 0;
+        const discount = Number(invoiceData?.discount) || 0;
         const total = subtotal + tax - discount;
         doc.fontSize(11)
             .fillColor('#000000')
