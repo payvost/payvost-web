@@ -1,13 +1,13 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabase = createClient(
-  functions.config().supabase.url,
-  functions.config().supabase.service_key // use service role key for inserts
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_KEY || '' // use service role key for inserts
 );
 
-// Firestore trigger: when a transaction is created
+// Firestore trigger: when a transaction is created (using v1 API)
 export const syncTransactionToSupabase = functions.firestore
   .document('transactions/{transactionId}')
   .onCreate(async (snap, context) => {

@@ -117,11 +117,9 @@ export const api = functions.https.onRequest(app);
 // === OneSignal Email Integration (KYC verification trigger) ===
 // =============================================================
 
-// OneSignal config
-const ONESIGNAL_APP_ID =
-  process.env.ONESIGNAL_APP_ID || functions.config().onesignal?.app_id;
-const ONESIGNAL_API_KEY =
-  process.env.ONESIGNAL_API_KEY || functions.config().onesignal?.api_key;
+// OneSignal config - using environment variables (v2 compatible)
+const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
+const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
 
 // OneSignal client
 // The OneSignal SDK types are strict; cast the configuration to any to avoid type mismatch
