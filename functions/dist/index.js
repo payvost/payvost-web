@@ -37,7 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendInvoiceReminders = exports.onInvoiceStatusChange = exports.onPaymentLinkCreated = exports.onTransactionStatusChange = exports.onBusinessStatusChange = exports.onNewLogin = exports.api = void 0;
-const functions = __importStar(require("firebase-functions"));
+const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
@@ -279,8 +279,15 @@ app.get('/download/transactions/:userId', async (req, res) => {
         res.status(500).send('Failed to generate transactions CSV');
     }
 });
-// --- Export Express app as Firebase Function ---
-exports.api = functions.https.onRequest(app);
+// --- Export Express app as Firebase Function with cost-optimized scaling ---
+exports.api = functions
+    .runWith({
+    minInstances: 1, // Keep 1 instance warm to reduce cold starts
+    maxInstances: 20, // Allow scaling up to 20 instances under high load
+    memory: '512MB', // Sufficient for PDF generation and API calls
+    timeoutSeconds: 60, // 60 seconds for PDF/CSV generation
+})
+    .https.onRequest(app);
 // =============================================================
 // === OneSignal Email Integration (KYC verification trigger) ===
 // =============================================================
