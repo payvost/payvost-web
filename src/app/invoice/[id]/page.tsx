@@ -48,7 +48,9 @@ export default function PublicInvoicePage() {
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
-  const functionsUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
+  // Distinguish between the backend API gateway and the Cloud Functions base
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
+  const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
   useEffect(() => {
     if (!id) return;
@@ -86,7 +88,7 @@ export default function PublicInvoicePage() {
 
           // If online payment (stripe), fetch Stripe clientSecret
           if (invoiceData.paymentMethod === 'stripe') {
-            const res = await fetch(`${functionsUrl}/create-payment-intent`, {
+            const res = await fetch(`${apiBase}/create-payment-intent`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -113,8 +115,8 @@ export default function PublicInvoicePage() {
         if (String(code).toLowerCase().includes('permission-denied')) {
           try {
             const tryUrls = [
-              `${functionsUrl}/api/public/invoice/${id}`,
-              `${functionsUrl}/public/invoice/${id}`,
+              `${functionsBase}/public/invoice/${id}`,
+              `${functionsBase}/api/public/invoice/${id}`,
             ];
             let fallbackData: any = null;
             for (const url of tryUrls) {
@@ -170,7 +172,7 @@ export default function PublicInvoicePage() {
   const handleDownloadInvoice = () => {
     if (!id) return;
 
-    const downloadUrl = `${functionsUrl}/download/invoice/${id}`;
+  const downloadUrl = `${functionsBase}/download/invoice/${id}`;
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.target = "_blank";
