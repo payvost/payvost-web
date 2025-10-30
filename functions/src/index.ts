@@ -296,12 +296,12 @@ app.get('/download/transactions/:userId', async (req, res) => {
 });
 
 // --- Export Express app as Firebase Function with cost-optimized scaling ---
+// Using v1 functions with optimized memory and scaling settings
 export const api = functions
   .runWith({
-    minInstances: 1,        // Keep 1 instance warm to reduce cold starts
-    maxInstances: 20,       // Allow scaling up to 20 instances under high load
     memory: '512MB',        // Sufficient for PDF generation and API calls
     timeoutSeconds: 60,     // 60 seconds for PDF/CSV generation
+    maxInstances: 20,       // Limit to 20 instances maximum
   })
   .https.onRequest(app);
 
