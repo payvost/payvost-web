@@ -252,7 +252,12 @@ export default function PublicInvoicePage() {
       <style jsx global>{`
         @media print {
           body { margin: 0; padding: 0; }
-          header, .no-print { display: none !important; }
+          header, .no-print, [role="dialog"], [role="alertdialog"], 
+          .cookie-banner, .cookie-consent, [class*="cookie"], [class*="Cookie"],
+          [class*="notification"], [class*="Notification"], [class*="toast"], [class*="Toast"],
+          [id*="cookie"], [id*="notification"], [id*="onesignal"], [class*="onesignal"] { 
+            display: none !important; 
+          }
           .print-only { display: block !important; }
           .invoice-card { 
             box-shadow: none !important; 
