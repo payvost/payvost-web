@@ -47,6 +47,7 @@ app.get('/pdf', async (req, res) => {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
+        '--single-process',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
@@ -68,8 +69,8 @@ app.get('/pdf', async (req, res) => {
       timeout: 60000
     });
 
-    // Wait for any client-side rendering to complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for any client-side rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Generate PDF
     const pdf = await page.pdf({
@@ -86,10 +87,13 @@ app.get('/pdf', async (req, res) => {
 
     console.log(`[PDF] Successfully generated PDF (${pdf.length} bytes)`);
 
+    // Ensure we send a Node Buffer and not a typed array serialized as JSON
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=invoice.pdf');
-    res.setHeader('Content-Length', pdf.length);
-    res.send(pdf);
+    res.setHeader('Content-Length', String(pdfBuffer.length));
+    // Use res.end to avoid Express trying to serialize the body
+    res.end(pdfBuffer);
     
   } catch (error) {
     console.error('[PDF] Generation failed:', error.message);
