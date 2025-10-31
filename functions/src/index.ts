@@ -54,11 +54,8 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
   }
 
   try {
-    // Build the public invoice URL with print=1 for print-friendly CSS
-    const invoiceUrl = new URL(`${PUBLIC_SITE_URL.replace(/\/$/, '')}/invoice/${invoiceId}`);
-    invoiceUrl.searchParams.set('print', '1');
-
-    const target = `${PDF_SERVICE_URL.replace(/\/$/, '')}/pdf?url=${encodeURIComponent(invoiceUrl.toString())}`;
+    // Call PDF service with invoiceId (React-PDF approach)
+    const target = `${PDF_SERVICE_URL.replace(/\/$/, '')}/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
 
     const resp = await fetch(target, { method: 'GET' });
     if (!resp.ok) {
