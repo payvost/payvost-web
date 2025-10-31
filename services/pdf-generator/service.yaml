@@ -1,0 +1,20 @@
+# Cloud Run configuration for PDF Generator service
+# https://cloud.google.com/run/docs/configuring/services
+
+service: pdf-generator
+region: us-central1
+
+resources:
+  limits:
+    cpu: "1"
+    memory: 1Gi
+  
+scaling:
+  minInstances: 0
+  maxInstances: 10
+
+timeout: 60s
+
+# Allow unauthenticated access (Firebase Functions will call this)
+# Consider adding authentication if you want to restrict access
+invoker: public
