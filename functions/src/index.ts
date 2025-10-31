@@ -4,12 +4,12 @@ import express from 'express';
 import cors from 'cors';
 
 import { Parser } from 'json2csv';
-import * as OneSignal from '@onesignal/node-onesignal';
 
 // Import notification triggers
 import {
   onNewLogin,
   onBusinessStatusChange,
+  onKycStatusChange,
   onTransactionStatusChange,
   onPaymentLinkCreated,
   onInvoiceStatusChange,
@@ -20,7 +20,6 @@ admin.initializeApp();
 const db = admin.firestore();
 const storage = admin.storage();
 const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || 'https://www.payvost.com';
-const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || '';
 
 
 // === Express App for API routes ===
@@ -34,6 +33,7 @@ app.get('/', (_req, res) => {
 
 // --- Download invoice as PDF (proxy to Cloud Run PDF service) ---
 app.get('/download/invoice/:invoiceId', async (req, res) => {
+  const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || '';
   const { invoiceId } = req.params;
   if (!invoiceId || typeof invoiceId !== 'string') {
     return res.status(400).send('Invalid invoice id');
@@ -54,14 +54,16 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
   }
 
   try {
-    // Call PDF service with invoiceId (React-PDF approach)
-    const target = `${PDF_SERVICE_URL.replace(/\/$/, '')}/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
+    const pdfServiceBaseUrl = PDF_SERVICE_URL.replace(/\/$/, '');
+    const targetUrl = new URL(`${pdfServiceBaseUrl}/pdf`);
+    targetUrl.searchParams.set('invoiceId', invoiceId);
 
-    const resp = await fetch(target, { method: 'GET' });
+    const resp = await fetch(targetUrl.toString(), { method: 'GET' });
+
     if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      console.error('PDF service error', resp.status, text);
-      return res.status(502).send('Failed to render PDF');
+      const errorBody = await resp.text().catch(() => 'Could not read error body.');
+      console.error(`PDF service returned an error. Status: ${resp.status}, Body: ${errorBody}`);
+      return res.status(502).send(`Failed to generate PDF. Upstream service returned status ${resp.status}.`);
     }
 
     // Stream/forward the PDF back to the client
@@ -72,7 +74,7 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     const buf = Buffer.from(await resp.arrayBuffer());
     return res.status(200).send(buf);
   } catch (err: any) {
-    console.error('Error proxying to PDF service:', err?.message || err);
+    console.error('Error proxying to PDF service:', err.message || err);
     return res.status(500).send('Internal server error');
   }
 });
@@ -150,43 +152,10 @@ export const api2 = onRequest(
 // Re-export triggers so the CLI discovers them consistently
 export {
   onNewLogin,
+  onKycStatusChange,
   onBusinessStatusChange,
   onTransactionStatusChange,
   onPaymentLinkCreated,
   onInvoiceStatusChange,
   sendInvoiceReminders,
 };
-
-
-
-// =============================================================
-// === OneSignal Email Integration (KYC verification trigger) ===
-// =============================================================
-
-// OneSignal config - using environment variables (v2 compatible)
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
-
-// OneSignal client
-// The OneSignal SDK types are strict; cast the configuration to any to avoid type mismatch
-const configuration = OneSignal.createConfiguration({
-  apiKey: ONESIGNAL_API_KEY,
-} as any);
-const client = new OneSignal.DefaultApi(configuration);
-
-// Helper to send welcome email using a template
-async function sendVerificationWelcomeEmail(toEmail: string, toName: string) {
-  const notification = new OneSignal.Notification();
-  notification.app_id = ONESIGNAL_APP_ID;
-  notification.include_email_tokens = [toEmail];
-  notification.template_id = 'e93c127c-9194-4799-b545-4a91cfc3226b'; // Your OneSignal template ID
-
-  try {
-    const response = await client.createNotification(notification);
-    console.log(`✅ Welcome email sent to ${toEmail} (${response.id})`);
-  } catch (error: any) {
-    console.error('❌ Error sending OneSignal email:', error.body || error);
-  }
-}
-
-// Firestore trigger: send email when KYC becomes "Verified"
