@@ -39,141 +39,35 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     return res.status(400).send('Invalid invoice id');
   }
 
-  // Fetch invoice data server-side to ensure access and data completeness
-  // Try both collections
+  // Validate invoice exists and is public
   let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
   if (!invoiceDoc.exists) {
     invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
   }
-
-  if (!invoiceDoc.exists) {
-    return res.status(404).send('Invoice not found');
-  }
-
+  if (!invoiceDoc.exists) return res.status(404).send('Invoice not found');
   const invoiceData: any = invoiceDoc.data();
-  if (!invoiceData?.isPublic) {
-    return res.status(403).send('Invoice is not public');
+  if (!invoiceData?.isPublic) return res.status(403).send('Invoice is not public');
+
+  if (!PDF_SERVICE_URL) {
+    console.error('Missing PDF_SERVICE_URL environment variable');
+    return res.status(500).send('PDF service not configured');
   }
 
-  const safe = (v: any) => (v ?? '').toString();
-  const currency = invoiceData.currency || 'USD';
-  const items: any[] = Array.isArray(invoiceData.items) ? invoiceData.items : [];
-  const rowsHtml = (items.length ? items : [{ description: invoiceData.description || 'Item', quantity: 1, price: invoiceData.amount || 0 }])
-    .map((it) => {
-      const q = Number(it.quantity) || 1;
-      const p = Number(it.price ?? it.amount) || 0;
-      const t = q * p;
-      return `<tr>
-        <td>${safe(it.description ?? it.name ?? 'Item')}</td>
-        <td class="center">${q}</td>
-        <td class="right">${currency} ${p.toFixed(2)}</td>
-        <td class="right">${currency} ${t.toFixed(2)}</td>
-      </tr>`;
-    })
-    .join('');
-
-  const subtotal = (items.length ? items : [{ quantity: 1, price: Number(invoiceData.amount) || 0 }])
-    .reduce((acc, it) => acc + (Number(it.quantity) || 1) * (Number(it.price ?? it.amount) || 0), 0);
-  const tax = Number(invoiceData.tax || 0);
-  const discount = Number(invoiceData.discount || 0);
-  const total = subtotal + tax - discount;
-
-  const issueDate = invoiceData.issueDate?.toDate?.()?.toLocaleDateString?.() || invoiceData.createdAt?.toDate?.()?.toLocaleDateString?.() || '';
-  const dueDate = invoiceData.dueDate?.toDate?.()?.toLocaleDateString?.() || safe(invoiceData.dueDate || '');
-  const status = safe(invoiceData.status || 'Pending');
-
-  const html = `<!doctype html>
-  <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <title>Invoice ${invoiceId}</title>
-      <style>
-        :root { --primary:#2563eb; --muted:#6b7280; --border:#e5e7eb; }
-        body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; margin: 0; padding: 24px; color: #0f172a; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#f8fafc; border-radius:12px; border:1px solid var(--border); }
-        .title { color: var(--primary); font-size: 24px; font-weight: 700; margin:0; }
-        .badge { padding:6px 10px; border-radius:10px; font-weight:600; font-size:14px; background:#e5f0ff; color:#1e40af; }
-        .grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin:20px 0; }
-        .section h3 { margin:0 0 6px 0; font-size:14px; font-weight:600; }
-        .muted { color: var(--muted); font-size:12px; }
-        table { width:100%; border-collapse: collapse; margin-top:16px; }
-        th, td { padding:12px; border-bottom:1px solid var(--border); font-size: 14px; }
-        th { text-align:left; color:#334155; background:#f8fafc; }
-        .center { text-align:center; }
-        .right { text-align:right; }
-        .totals { width:100%; display:flex; justify-content:flex-end; margin-top:16px; }
-        .totals-box { width:320px; }
-        .row { display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
-        .row .label { color: var(--muted); }
-        .grand { font-weight:800; font-size:18px; padding-top:10px; border-top:1px solid var(--border); margin-top:8px; }
-        .notes { margin-top:20px; }
-        .notes h4 { margin:0 0 6px 0; font-size:14px; font-weight:600; }
-        .notes p { margin:0; color: var(--muted); font-size:13px; }
-        @media print { body { padding:0; } .header { border:none; } }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div>
-            <div class="title">INVOICE</div>
-            <div class="muted"># ${invoiceId}</div>
-          </div>
-          <div class="badge">${status}</div>
-        </div>
-        <div class="grid">
-          <div class="section">
-            <h3>Billed To</h3>
-            <div>${safe(invoiceData.toName)}</div>
-            <div class="muted">${safe(invoiceData.toAddress)}</div>
-            <div class="muted">${safe(invoiceData.toEmail)}</div>
-          </div>
-          <div class="section">
-            <h3>From</h3>
-            <div>${safe(invoiceData.fromName)}</div>
-            <div class="muted">${safe(invoiceData.fromAddress)}</div>
-            <div class="muted">Issue: ${issueDate || '-'}</div>
-            <div class="muted">Due: ${dueDate || '-'}</div>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th style="width:60%">Description</th>
-              <th class="center">Qty</th>
-              <th class="right">Price</th>
-              <th class="right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-        <div class="totals">
-          <div class="totals-box">
-            <div class="row"><span class="label">Subtotal</span><span>${currency} ${subtotal.toFixed(2)}</span></div>
-            ${tax > 0 ? `<div class="row"><span class="label">Tax</span><span>${currency} ${tax.toFixed(2)}</span></div>` : ''}
-            ${discount > 0 ? `<div class="row"><span class="label">Discount</span><span>- ${currency} ${discount.toFixed(2)}</span></div>` : ''}
-            <div class="row grand"><span>Grand Total</span><span>${currency} ${(total).toFixed(2)}</span></div>
-          </div>
-        </div>
-        ${invoiceData.notes ? `<div class="notes"><h4>Notes</h4><p>${safe(invoiceData.notes)}</p></div>` : ''}
-      </div>
-    </body>
-  </html>`;
-
-  let browser: any | null = null;
   try {
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true,
-    });
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36');
-    await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // Call PDF service with invoiceId (React-PDF approach)
+    const target = `${PDF_SERVICE_URL.replace(/\/$/, '')}/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
+
+    const resp = await fetch(target, { method: 'GET' });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      console.error('PDF service error', resp.status, text);
+      return res.status(502).send('Failed to render PDF');
+    }
+
+    // Stream/forward the PDF back to the client
+    res.setHeader('Content-Type', resp.headers.get('content-type') || 'application/pdf');
+    const cd = resp.headers.get('content-disposition') || `attachment; filename=invoice-${invoiceId}.pdf`;
+    res.setHeader('Content-Disposition', cd);
 
     const buf = Buffer.from(await resp.arrayBuffer());
     return res.status(200).send(buf);
