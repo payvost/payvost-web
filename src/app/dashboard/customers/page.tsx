@@ -32,11 +32,7 @@ export default function CustomersPage() {
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-                if (!apiUrl) {
-                    throw new Error("API URL is not configured. Please set NEXT_PUBLIC_API_URL environment variable.");
-                }
-                const response = await axios.get(`${apiUrl}/user/all`);
+                const response = await axios.get('/api/admin/customers');
                 setCustomers(response.data);
             } catch (error) {
                 console.error("Error fetching customers:", error);
@@ -54,6 +50,29 @@ export default function CustomersPage() {
         if (score > 40) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700">Medium</Badge>;
         return <Badge variant="default" className="bg-green-500/20 text-green-700">Low</Badge>;
     }
+
+    // Calculate new signups in the last 30 days
+    const getNewSignups = () => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        return customers.filter(customer => {
+            if (!customer.joinedDate) return false;
+            
+            let joinDate: Date;
+            if (typeof customer.joinedDate === 'string') {
+                joinDate = new Date(customer.joinedDate);
+            } else if (customer.joinedDate.toDate) {
+                joinDate = customer.joinedDate.toDate();
+            } else if ((customer.joinedDate as any)._seconds) {
+                joinDate = new Date((customer.joinedDate as any)._seconds * 1000);
+            } else {
+                return false;
+            }
+            
+            return joinDate >= thirtyDaysAgo;
+        }).length;
+    };
 
 
     return (
@@ -85,8 +104,8 @@ export default function CustomersPage() {
                         <UserPlus className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">2,130</div>
-                        <p className="text-xs text-muted-foreground">Across all categories</p>
+                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-20" /> : getNewSignups()}</div>
+                        <p className="text-xs text-muted-foreground">In the last 30 days</p>
                     </CardContent>
                 </Card>
                 <Card>
