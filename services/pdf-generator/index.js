@@ -39,8 +39,23 @@ async function fetchInvoiceData(invoiceId) {
 }
 
 app.get('/pdf', async (req, res) => {
-  const invoiceId = req.query.invoiceId;
-  
+  // Backward compatibility: allow legacy `url` param by extracting the invoice id from it
+  let { invoiceId } = req.query;
+  const { url: legacyUrl } = req.query;
+
+  if (!invoiceId && legacyUrl) {
+    try {
+      const parsed = new URL(String(legacyUrl));
+      const match = parsed.pathname.match(/\/invoice\/([^/?#]+)/);
+      if (match && match[1]) {
+        invoiceId = match[1];
+        console.log(`[PDF] Extracted invoiceId from legacy url param: ${invoiceId}`);
+      }
+    } catch (e) {
+      // ignore URL parsing errors; we'll fall back to the normal validation below
+    }
+  }
+
   if (!invoiceId) {
     return res.status(400).json({ error: 'Missing invoiceId parameter' });
   }
