@@ -38,20 +38,30 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     return res.status(400).send('Invalid invoice id');
   }
 
-  // Fetch invoice data server-side to ensure access and data completeness
-  // Try both collections
+  // --- Fetch invoice and associated business data ---
   let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
   if (!invoiceDoc.exists) {
     invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
   }
 
   if (!invoiceDoc.exists) {
-    return res.status(404).send('Invoice not found');
+    return res.status(404).send('Invoice not found.');
   }
 
   const invoiceData: any = invoiceDoc.data();
   if (!invoiceData?.isPublic) {
     return res.status(403).send('Invoice is not public');
+  }
+
+  // Fetch business profile to get the logo URL
+  let businessProfile: any = null;
+  if (invoiceData.businessId) {
+    const usersRef = db.collection('users');
+    const userQuery = usersRef.where('businessProfile.id', '==', invoiceData.businessId).limit(1);
+    const userSnap = await userQuery.get();
+    if (!userSnap.empty) {
+      businessProfile = userSnap.docs[0].data()?.businessProfile;
+    }
   }
 
   const safe = (v: any) => (v ?? '').toString();
@@ -81,6 +91,11 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
   const dueDate = invoiceData.dueDate?.toDate?.()?.toLocaleDateString?.() || safe(invoiceData.dueDate || '');
   const status = safe(invoiceData.status || 'Pending');
 
+  // --- Logo HTML ---
+  const logoUrl = businessProfile?.invoiceLogoUrl;
+  const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo" style="max-height: 80px; max-width: 200px; object-fit: contain;" />` : `<div class="title">INVOICE</div>`;
+
+  // --- Full HTML for PDF ---
   const html = `<!doctype html>
   <html>
     <head>
@@ -91,7 +106,7 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
         :root { --primary:#2563eb; --muted:#6b7280; --border:#e5e7eb; }
         body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; margin: 0; padding: 24px; color: #0f172a; }
         .container { max-width: 800px; margin: 0 auto; }
-        .header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#f8fafc; border-radius:12px; border:1px solid var(--border); }
+        .header { display:flex; justify-content:space-between; align-items:flex-start; padding:16px 20px; background:#f8fafc; border-radius:12px; border:1px solid var(--border); }
         .title { color: var(--primary); font-size: 24px; font-weight: 700; margin:0; }
         .badge { padding:6px 10px; border-radius:10px; font-weight:600; font-size:14px; background:#e5f0ff; color:#1e40af; }
         .grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin:20px 0; }
@@ -117,7 +132,7 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
       <div class="container">
         <div class="header">
           <div>
-            <div class="title">INVOICE</div>
+            ${logoHtml}
             <div class="muted"># ${invoiceId}</div>
           </div>
           <div class="badge">${status}</div>
@@ -171,7 +186,11 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     });
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36');
-    await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
+    // Optimize viewport and disable unnecessary features for smaller PDF size
+    await page.setViewport({ width: 800, height: 1122 }); // A4 paper size in pixels at 96 DPI
+    await page.emulateMediaType('print');
+    await page.setJavaScriptEnabled(false); // We don't need JS for static HTML
+
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdfBuffer = await page.pdf({
