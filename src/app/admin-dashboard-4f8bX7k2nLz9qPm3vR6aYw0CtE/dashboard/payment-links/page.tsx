@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -10,19 +10,105 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Search, MoreHorizontal, Copy, Edit, BarChart2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreatePaymentLinkForm } from '@/components/create-payment-link-form';
+import { Skeleton } from '@/components/ui/skeleton';
+import axios from 'axios';
 
-const sampleLinks = [
-    { id: 'pl_1', title: 'UX Design Course', status: 'Active', clicks: 152, paid: 87, amountReceived: 4350, currency: 'USD', created: '2024-08-10' },
-    { id: 'pl_2', title: 'Consulting Call', status: 'Active', clicks: 25, paid: 18, amountReceived: 2700, currency: 'USD', created: '2024-08-08' },
-    { id: 'pl_3', title: 'E-book "Intro to Remittances"', status: 'Expired', clicks: 540, paid: 350, amountReceived: 3496.5, currency: 'USD', created: '2024-06-01' },
-    { id: 'pl_4', title: 'Webinar Ticket', status: 'Active', clicks: 88, paid: 80, amountReceived: 800, currency: 'USD', created: '2024-08-05' },
-    { id: 'pl_5', title: 'Donation for Cause', status: 'Archived', clicks: 1200, paid: 950, amountReceived: 9500, currency: 'USD', created: '2024-05-20' },
-];
+interface PaymentLink {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  clicks: number;
+  paid: number;
+  amountReceived: number;
+  currency: string;
+  created: string;
+  publicUrl?: string;
+  type: 'payment_link' | 'invoice';
+}
+
+interface PaymentLinkStats {
+  totalRevenue: number;
+  activeLinks: number;
+  conversionRate: number;
+  totalClicks: number;
+  totalPaid: number;
+  totalLinks: number;
+}
 
 type View = 'list' | 'create';
 
 export default function PaymentLinksPage() {
     const [view, setView] = useState<View>('list');
+    const [links, setLinks] = useState<PaymentLink[]>([]);
+    const [stats, setStats] = useState<PaymentLinkStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    useEffect(() => {
+        async function fetchPaymentLinks() {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await axios.get('/api/admin/payment-links');
+                setLinks(response.data.links || []);
+                setStats(response.data.stats || null);
+            } catch (err: any) {
+                console.error('Error fetching payment links:', err);
+                setError(err.response?.data?.error || 'Failed to load payment links');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (view === 'list') {
+            fetchPaymentLinks();
+        }
+    }, [view]);
+
+    const formatCurrency = (amount: number, currency: string = 'USD') => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency,
+        }).format(amount);
+    };
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    const copyToClipboard = (url: string) => {
+        navigator.clipboard.writeText(url);
+        // You could add a toast notification here
+        alert('Link copied to clipboard!');
+    };
+
+    const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+        switch (status.toLowerCase()) {
+            case 'active':
+            case 'pending':
+                return 'default';
+            case 'completed':
+            case 'paid':
+                return 'secondary';
+            case 'expired':
+            case 'cancelled':
+                return 'destructive';
+            default:
+                return 'outline';
+        }
+    };
+
+    const filteredLinks = links.filter(link =>
+        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        link.id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     
     if (view === 'create') {
         return <CreatePaymentLinkForm onBack={() => setView('list')} />;
@@ -30,6 +116,12 @@ export default function PaymentLinksPage() {
 
     return (
         <>
+            {error && (
+                <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
+                    <p className="text-sm text-destructive">⚠️ {error}</p>
+                </div>
+            )}
+
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Payment Links</h2>
@@ -40,35 +132,68 @@ export default function PaymentLinksPage() {
                     Create Payment Link
                 </Button>
             </div>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">$20,846.50</div>
-                        <p className="text-xs text-muted-foreground">from all payment links</p>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-8 w-32 mb-2" />
+                                <Skeleton className="h-4 w-40" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">
+                                    {formatCurrency(stats?.totalRevenue || 0)}
+                                </div>
+                                <p className="text-xs text-muted-foreground">from all payment links</p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
-                 <Card>
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Links</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">3</div>
-                        <p className="text-xs text-muted-foreground">currently accepting payments</p>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-8 w-16 mb-2" />
+                                <Skeleton className="h-4 w-40" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{stats?.activeLinks || 0}</div>
+                                <p className="text-xs text-muted-foreground">currently accepting payments</p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
-                 <Card>
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">64.1%</div>
-                        <p className="text-xs text-muted-foreground">Clicks to successful payments</p>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-8 w-20 mb-2" />
+                                <Skeleton className="h-4 w-40" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">
+                                    {stats?.conversionRate ? stats.conversionRate.toFixed(1) : '0.0'}%
+                                </div>
+                                <p className="text-xs text-muted-foreground">Clicks to successful payments</p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </div>
+
             <Card>
                 <CardHeader>
                     <div className="relative">
@@ -77,51 +202,85 @@ export default function PaymentLinksPage() {
                             type="search"
                             placeholder="Search by link title or ID..."
                             className="w-full rounded-lg bg-background pl-8 md:w-[320px]"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Clicks / Paid</TableHead>
-                                <TableHead className="text-right">Amount Received</TableHead>
-                                <TableHead><span className="sr-only">Actions</span></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sampleLinks.map((link) => (
-                                <TableRow key={link.id}>
-                                    <TableCell>
-                                        <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-links/${link.id}`} className="font-medium hover:underline">{link.title}</Link>
-                                        <div className="text-xs text-muted-foreground">{link.created}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={link.status === 'Active' ? 'default' : 'secondary'}>{link.status}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {link.clicks} / {link.paid}
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono">
-                                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: link.currency }).format(link.amountReceived)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon">
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex items-center space-x-4">
+                                    <Skeleton className="h-12 w-full" />
+                                </div>
                             ))}
-                        </TableBody>
-                    </Table>
+                        </div>
+                    ) : filteredLinks.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-muted-foreground text-sm">
+                                {searchQuery ? 'No payment links match your search' : 'No payment links yet'}
+                            </p>
+                            <p className="text-muted-foreground text-xs mt-2">
+                                {searchQuery ? 'Try a different search term' : 'Create your first payment link to get started'}
+                            </p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Clicks / Paid</TableHead>
+                                    <TableHead className="text-right">Amount Received</TableHead>
+                                    <TableHead><span className="sr-only">Actions</span></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredLinks.map((link) => (
+                                    <TableRow key={link.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{link.title}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {formatDate(link.created)}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(link.status)}>
+                                                {link.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {link.clicks} / {link.paid}
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                            {formatCurrency(link.amountReceived, link.currency)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {link.publicUrl && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => copyToClipboard(link.publicUrl!)}
+                                                    title="Copy link"
+                                                >
+                                                    <Copy className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
-                <CardFooter>
-                     <div className="text-xs text-muted-foreground">
-                        Showing <strong>1-5</strong> of <strong>{sampleLinks.length}</strong> payment links
-                    </div>
-                </CardFooter>
+                {!loading && filteredLinks.length > 0 && (
+                    <CardFooter>
+                        <div className="text-xs text-muted-foreground">
+                            Showing <strong>1-{filteredLinks.length}</strong> of <strong>{links.length}</strong> payment links
+                        </div>
+                    </CardFooter>
+                )}
             </Card>
         </>
     );
