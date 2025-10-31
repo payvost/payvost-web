@@ -1,34 +1,130 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { ChevronDown, Globe, Landmark, TrendingUp, LineChart } from 'lucide-react';
+import { ChevronDown, Globe, Landmark, TrendingUp, LineChart, Loader2 } from 'lucide-react';
 import { AdminWorldMap } from '@/components/admin-world-map';
 import { AdminCurrencyPieChart } from '@/components/admin-currency-pie-chart';
 import { AdminTransactionOverviewChart } from '@/components/admin-transaction-overview-chart';
+import { Skeleton } from '@/components/ui/skeleton';
+import axios from 'axios';
 
-const kpiCards = [
-    { title: "Total Volume", value: "$4,231,530.50", change: "+20.1% vs last month", icon: <LineChart className="h-4 w-4 text-muted-foreground" /> },
-    { title: "Active Users", value: "+2,350", change: "+180.1% from last month", icon: <TrendingUp className="h-4 w-4 text-muted-foreground" /> },
-    { title: "Total Payouts", value: "$1,250,830.20", change: "+19% from last month", icon: <Landmark className="h-4 w-4 text-muted-foreground" /> },
-    { title: "Avg. Transaction Value", value: "$45.50", change: "+12.8% vs last month", icon: <Globe className="h-4 w-4 text-muted-foreground" /> },
-];
+interface DashboardStats {
+  totalVolume: number;
+  activeUsers: number;
+  totalUsers: number;
+  totalPayouts: number;
+  avgTransactionValue: number;
+  transactionCount: number;
+  growth: {
+    volume: number;
+    activeUsers: number;
+    payouts: number;
+    avgValue: number;
+  };
+}
 
-const recentTransactions = [
-    { customer: 'Olivia Martin', email: 'olivia.martin@email.com', amount: '$450.00', status: 'Successful', date: '2023-06-23' },
-    { customer: 'Jackson Lee', email: 'jackson.lee@email.com', amount: '$1,200.00', status: 'Processing', date: '2023-06-23' },
-    { customer: 'Isabella Nguyen', email: 'isabella.nguyen@email.com', amount: '$250.00', status: 'Successful', date: '2023-06-22' },
-    { customer: 'William Kim', email: 'will@email.com', amount: '$150.75', status: 'Failed', date: '2023-06-22' },
-];
+interface Transaction {
+  id: string;
+  customer: string;
+  email: string;
+  amount: number;
+  currency: string;
+  status: string;
+  type: string;
+  date: string;
+  description: string;
+}
 
 export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch stats and transactions in parallel
+        const [statsResponse, transactionsResponse] = await Promise.all([
+          axios.get('/api/admin/dashboard/stats'),
+          axios.get('/api/admin/dashboard/transactions?limit=10'),
+        ]);
+
+        setStats(statsResponse.data);
+        setTransactions(transactionsResponse.data.transactions || []);
+      } catch (err: any) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err.response?.data?.error || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, []);
+
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  };
+
+  const formatStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      completed: 'Successful',
+      success: 'Successful',
+      processing: 'Processing',
+      pending: 'Processing',
+      failed: 'Failed',
+      cancelled: 'Failed',
+    };
+    return statusMap[status.toLowerCase()] || status;
+  };
+
+  const kpiCards = [
+    {
+      title: 'Total Volume',
+      value: loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.totalVolume || 0),
+      change: loading ? <Skeleton className="h-4 w-24" /> : `+${stats?.growth.volume || 0}% vs last month`,
+      icon: <LineChart className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      title: 'Active Users',
+      value: loading ? <Skeleton className="h-8 w-20" /> : `${stats?.activeUsers || 0}`,
+      change: loading ? <Skeleton className="h-4 w-24" /> : `+${stats?.growth.activeUsers || 0}% from last month`,
+      icon: <TrendingUp className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      title: 'Total Payouts',
+      value: loading ? <Skeleton className="h-8 w-32" /> : formatCurrency(stats?.totalPayouts || 0),
+      change: loading ? <Skeleton className="h-4 w-24" /> : `+${stats?.growth.payouts || 0}% from last month`,
+      icon: <Landmark className="h-4 w-4 text-muted-foreground" />,
+    },
+    {
+      title: 'Avg. Transaction Value',
+      value: loading ? <Skeleton className="h-8 w-24" /> : formatCurrency(stats?.avgTransactionValue || 0),
+      change: loading ? <Skeleton className="h-4 w-24" /> : `+${stats?.growth.avgValue || 0}% vs last month`,
+      icon: <Globe className="h-4 w-4 text-muted-foreground" />,
+    },
+  ];
     return (
         <>
+            {error && (
+                <div className="mb-6 p-4 bg-destructive/10 border border-destructive rounded-lg">
+                    <p className="text-sm text-destructive">⚠️ {error}</p>
+                </div>
+            )}
+
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -94,27 +190,44 @@ export default function Dashboard() {
                     <CardDescription>A list of the most recent transactions on the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Customer</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {recentTransactions.map(tx => (
-                                <TableRow key={tx.customer}>
-                                    <TableCell>
-                                        <div className="font-medium">{tx.customer}</div>
-                                        <div className="text-sm text-muted-foreground">{tx.email}</div>
-                                    </TableCell>
-                                    <TableCell>{tx.status}</TableCell>
-                                    <TableCell className="text-right">{tx.amount}</TableCell>
-                                </TableRow>
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex items-center space-x-4">
+                                    <Skeleton className="h-12 w-full" />
+                                </div>
                             ))}
-                        </TableBody>
-                    </Table>
+                        </div>
+                    ) : transactions.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-muted-foreground text-sm">No transactions yet</p>
+                            <p className="text-muted-foreground text-xs mt-2">Transactions will appear here once users start making transfers</p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {transactions.map(tx => (
+                                    <TableRow key={tx.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{tx.customer}</div>
+                                            <div className="text-sm text-muted-foreground">{tx.email}</div>
+                                        </TableCell>
+                                        <TableCell>{formatStatus(tx.status)}</TableCell>
+                                        <TableCell className="text-right">
+                                            {formatCurrency(tx.amount, tx.currency)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
         </>
