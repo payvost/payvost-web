@@ -248,16 +248,34 @@ export default function PublicInvoicePage() {
   const taxAmount = invoice.grandTotal - subtotal;
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted/10">
-      <SiteHeader />
-      <main className="flex-1 py-12 px-4">
-        <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2">
-          <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-          <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
-          <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
-        </div>
+    <>
+      <style jsx global>{`
+        @media print {
+          body { margin: 0; padding: 0; }
+          header, .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          .invoice-card { 
+            box-shadow: none !important; 
+            border: none !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+          }
+        }
+        @media screen {
+          .print-only { display: none; }
+        }
+      `}</style>
+      
+      <div className="flex flex-col min-h-screen bg-muted/10">
+        <SiteHeader />
+        <main className="flex-1 py-12 px-4">
+          <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2 no-print">
+            <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4"/>Print</Button>
+            <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+            <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+          </div>
 
-        <Card className="max-w-4xl mx-auto w-full">
+          <Card className="max-w-4xl mx-auto w-full invoice-card">
           <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
             <div className="flex-1 flex items-center gap-4">
         {typeof businessProfile?.invoiceLogoUrl === 'string' && businessProfile.invoiceLogoUrl.length > 0 && (
@@ -350,7 +368,7 @@ export default function PublicInvoicePage() {
           </CardFooter>
         </Card>
 
-         <div className="text-center mt-8 text-sm text-muted-foreground">
+         <div className="text-center mt-8 text-sm text-muted-foreground no-print">
             Powered by{' '}
             <Link href="/" className="font-semibold text-primary hover:underline flex items-center justify-center gap-1">
                 <Icons.logo className="h-6" />
@@ -385,5 +403,6 @@ export default function PublicInvoicePage() {
         </Dialog>
       </main>
     </div>
+    </>
   );
 }
