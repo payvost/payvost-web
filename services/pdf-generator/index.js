@@ -1,95 +1,62 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const React = require('react');
+const { renderToStream } = require('@react-pdf/renderer');
 const cors = require('cors');
+const fetch = require('node-fetch');
+const InvoiceDocument = require('./InvoiceDocument');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Enable CORS for Firebase Functions
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// PDF generation endpoint
-app.get('/pdf', async (req, res) => {
-  let url = req.query.url;
-  
-  if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' });
-  }
+async function fetchInvoiceData(invoiceId) {
+  const publicEndpoints = [
+    `https://us-central1-payvost.cloudfunctions.net/api2/public/invoice/${invoiceId}`,
+    `https://api2-jpcbatlqpa-uc.a.run.app/public/invoice/${invoiceId}`,
+  ];
 
-  // Add print=1 query param for print-friendly styling
-  const parsedUrl = new URL(url);
-  parsedUrl.searchParams.set('print', '1');
-  url = parsedUrl.toString();
-
-  // Validate URL to prevent SSRF
-  try {
-    const allowedHosts = ['payvost.com', 'www.payvost.com', 'localhost'];
-    
-    if (!allowedHosts.some(host => parsedUrl.hostname === host || parsedUrl.hostname.endsWith(`.${host}`))) {
-      return res.status(403).json({ error: 'URL not allowed' });
+  for (const endpoint of publicEndpoints) {
+    try {
+      const response = await fetch(endpoint);
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`[PDF] Fetched invoice from: ${endpoint}`);
+        return data;
+      }
+    } catch (error) {
+      console.log(`[PDF] Failed to fetch from ${endpoint}:`, error.message);
+      continue;
     }
-  } catch (e) {
-    return res.status(400).json({ error: 'Invalid URL' });
   }
 
-  let browser;
+  throw new Error(`Invoice ${invoiceId} not found or not public`);
+}
+
+app.get('/pdf', async (req, res) => {
+  const invoiceId = req.query.invoiceId;
+  
+  if (!invoiceId) {
+    return res.status(400).json({ error: 'Missing invoiceId parameter' });
+  }
+
   try {
-    console.log(`[PDF] Generating PDF for: ${url}`);
+    console.log(`[PDF] Generating PDF for invoice: ${invoiceId}`);
     
-    browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ],
-      headless: true,
-    });
-
-    const page = await browser.newPage();
+    const invoiceData = await fetchInvoiceData(invoiceId);
+    const invoiceDoc = React.createElement(InvoiceDocument, { invoice: invoiceData });
+    const stream = await renderToStream(invoiceDoc);
     
-    // Set a realistic viewport and user agent
-    await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
-    await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // Navigate to the URL
-    await page.goto(url, {
-      waitUntil: 'networkidle2',
-      timeout: 60000
-    });
-
-    // Wait for any client-side rendering to complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate PDF
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '15mm',
-        bottom: '20mm',
-        left: '15mm'
-      },
-      preferCSSPageSize: false
-    });
-
-    console.log(`[PDF] Successfully generated PDF (${pdf.length} bytes)`);
-
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=invoice.pdf');
-    res.setHeader('Content-Length', pdf.length);
-    res.send(pdf);
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.pdf`);
+    
+    stream.pipe(res);
+    stream.on('end', () => console.log(`[PDF] Successfully generated PDF for ${invoiceId}`));
     
   } catch (error) {
     console.error('[PDF] Generation failed:', error.message);
@@ -98,21 +65,16 @@ app.get('/pdf', async (req, res) => {
       error: 'Failed to generate PDF',
       details: error.message 
     });
-  } finally {
-    if (browser) {
-      await browser.close().catch(err => console.error('[PDF] Browser close error:', err));
-    }
   }
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`PDF Generator service listening on port ${PORT}`);
-  console.log(`Chromium path: ${process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium'}`);
+  console.log(`PDF Generator service (React-PDF) listening on port ${PORT}`);
+  console.log(`  GET /health - Health check`);
+  console.log(`  GET /pdf?invoiceId=<id> - Generate PDF`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  console.log('SIGTERM signal received');
   process.exit(0);
 });
