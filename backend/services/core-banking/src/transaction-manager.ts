@@ -102,10 +102,14 @@ export class TransactionManager {
 
       const fromBalance = new Decimal(fromAccount.balance.toString());
       if (fromBalance.lessThan(amount)) {
-        throw new Error('Insufficient funds');
+        throw new Error('Insufficient balance');
       }
 
-      // Create transfer record - Remove 'type' field as it doesn't exist in schema
+      // Calculate new balances
+      const fromNewBalance = fromBalance.minus(amount);
+      const toNewBalance = new Decimal(toAccount.balance.toString()).plus(amount);
+
+      // Create transfer record including required `type` field
       const transfer = await tx.transfer.create({
         data: {
           fromAccountId,
@@ -113,6 +117,7 @@ export class TransactionManager {
           amount: new Prisma.Decimal(amount),
           currency,
           status: 'COMPLETED',
+          type: 'INTERNAL_TRANSFER',
           description: description || 'Transfer',
           idempotencyKey: finalIdempotencyKey,
         },
@@ -139,14 +144,14 @@ export class TransactionManager {
           {
             accountId: fromAccountId,
             amount: new Prisma.Decimal(-amount),
-            currency,
+            balanceAfter: new Prisma.Decimal(fromNewBalance.toString()),
             type: 'DEBIT',
             description: `Transfer to ${toAccountId}`,
           },
           {
             accountId: toAccountId,
             amount: new Prisma.Decimal(amount),
-            currency,
+            balanceAfter: new Prisma.Decimal(toNewBalance.toString()),
             type: 'CREDIT',
             description: `Transfer from ${fromAccountId}`,
           },
