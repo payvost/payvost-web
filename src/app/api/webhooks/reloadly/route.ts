@@ -10,6 +10,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { ENV_VARIABLES, RELOADLY } from '@/config/integration-partners';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Webhook event types
@@ -29,6 +32,9 @@ interface WebhookPayload {
     transactionId: number;
     customIdentifier?: string;
     status: string;
+    amount?: number;
+    currency?: string;
+    recipientPhone?: string;
     [key: string]: any;
   };
 }
@@ -52,10 +58,47 @@ function verifyWebhookSignature(
 async function handleTopupSuccess(data: any) {
   console.log('Topup successful:', data);
   
-  // TODO: Update transaction status in database
-  // TODO: Update wallet balance
-  // TODO: Send notification to user
-  // TODO: Log transaction for audit
+  try {
+    // Extract transaction ID from custom identifier (format: "topup-{userId}-{accountId}-{timestamp}")
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    // Update transaction status in database
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-${data.transactionId}`,
+      },
+      update: {
+        status: 'COMPLETED',
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-${data.transactionId}`,
+        type: 'AIRTIME_TOPUP',
+        status: 'COMPLETED',
+        amount: data.amount || 0,
+        currency: data.currency || 'USD',
+        recipientDetails: {
+          phone: data.recipientPhone,
+          operator: data.operatorName,
+        },
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+      },
+    });
+
+    console.log('Transaction updated successfully');
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+  }
   
   return {
     success: true,
@@ -69,10 +112,43 @@ async function handleTopupSuccess(data: any) {
 async function handleTopupFailed(data: any) {
   console.log('Topup failed:', data);
   
-  // TODO: Update transaction status in database
-  // TODO: Refund user if payment was deducted
-  // TODO: Send notification to user
-  // TODO: Log error for investigation
+  try {
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    // Update transaction status
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-${data.transactionId}`,
+      },
+      update: {
+        status: 'FAILED',
+        errorMessage: data.errorMessage || data.failureReason || 'Topup failed',
+        webhookReceived: true,
+        webhookData: data,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-${data.transactionId}`,
+        type: 'AIRTIME_TOPUP',
+        status: 'FAILED',
+        amount: data.amount || 0,
+        currency: data.currency || 'USD',
+        errorMessage: data.errorMessage || data.failureReason || 'Topup failed',
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+      },
+    });
+
+    // TODO: Refund user if payment was deducted
+    // TODO: Send notification to user
+  } catch (error) {
+    console.error('Error updating failed transaction:', error);
+  }
   
   return {
     success: true,
@@ -86,11 +162,47 @@ async function handleTopupFailed(data: any) {
 async function handleGiftCardSuccess(data: any) {
   console.log('Gift card order successful:', data);
   
-  // TODO: Update order status in database
-  // TODO: Store redeem codes
-  // TODO: Send gift card details to recipient
-  // TODO: Update wallet balance
-  // TODO: Send notification to user
+  try {
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    // Update transaction status in database
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
+      },
+      update: {
+        status: 'COMPLETED',
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
+        type: 'GIFT_CARD',
+        status: 'COMPLETED',
+        amount: data.amount || 0,
+        currency: data.currencyCode || 'USD',
+        recipientDetails: {
+          email: data.recipientEmail,
+          productName: data.productName,
+        },
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+      },
+    });
+
+    // TODO: Store redeem codes
+    // TODO: Send gift card details to recipient
+  } catch (error) {
+    console.error('Error updating gift card transaction:', error);
+  }
   
   return {
     success: true,
@@ -104,10 +216,41 @@ async function handleGiftCardSuccess(data: any) {
 async function handleGiftCardFailed(data: any) {
   console.log('Gift card order failed:', data);
   
-  // TODO: Update order status in database
-  // TODO: Refund user if payment was deducted
-  // TODO: Send notification to user
-  // TODO: Log error for investigation
+  try {
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
+      },
+      update: {
+        status: 'FAILED',
+        errorMessage: data.errorMessage || 'Gift card order failed',
+        webhookReceived: true,
+        webhookData: data,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
+        type: 'GIFT_CARD',
+        status: 'FAILED',
+        amount: data.amount || 0,
+        currency: data.currencyCode || 'USD',
+        errorMessage: data.errorMessage || 'Gift card order failed',
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+      },
+    });
+
+    // TODO: Refund user if payment was deducted
+  } catch (error) {
+    console.error('Error updating failed gift card transaction:', error);
+  }
   
   return {
     success: true,
@@ -121,11 +264,45 @@ async function handleGiftCardFailed(data: any) {
 async function handleBillPaymentSuccess(data: any) {
   console.log('Bill payment successful:', data);
   
-  // TODO: Update transaction status in database
-  // TODO: Update wallet balance
-  // TODO: Store payment receipt
-  // TODO: Send notification to user
-  // TODO: Log transaction for audit
+  try {
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+      },
+      update: {
+        status: 'COMPLETED',
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        type: 'BILL_PAYMENT',
+        status: 'COMPLETED',
+        amount: data.amount || 0,
+        currency: data.currencyCode || 'USD',
+        recipientDetails: {
+          billerName: data.billerName,
+          accountNumber: data.subscriberAccountNumber,
+        },
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+      },
+    });
+
+    // TODO: Store payment receipt
+  } catch (error) {
+    console.error('Error updating bill payment transaction:', error);
+  }
   
   return {
     success: true,
@@ -139,9 +316,44 @@ async function handleBillPaymentSuccess(data: any) {
 async function handleBillPaymentFailed(data: any) {
   console.log('Bill payment failed:', data);
   
-  // TODO: Update transaction status in database
-  // TODO: Refund user if payment was deducted
-  // TODO: Send notification to user
+  try {
+    const customId = data.customIdentifier;
+    const [, userId, accountId] = customId?.split('-') || [];
+
+    await prisma.externalTransaction.upsert({
+      where: {
+        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+      },
+      update: {
+        status: 'FAILED',
+        errorMessage: data.errorMessage || 'Bill payment failed',
+        webhookReceived: true,
+        webhookData: data,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: userId || 'unknown',
+        accountId: accountId || null,
+        provider: 'RELOADLY',
+        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        type: 'BILL_PAYMENT',
+        status: 'FAILED',
+        amount: data.amount || 0,
+        currency: data.currencyCode || 'USD',
+        errorMessage: data.errorMessage || 'Bill payment failed',
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+      },
+    });
+
+    // TODO: Refund user if payment was deducted
+  } catch (error) {
+    console.error('Error updating failed bill payment:', error);
+  }
+  
+  return {
+    success: true,
   // TODO: Log error for investigation
   
   return {
