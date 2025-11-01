@@ -29,6 +29,7 @@ import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { sendVerificationWelcomeEmail } from '@/services/emailService';
 import { sendBusinessApprovalEmail } from '@/services/emailService';
+import { externalTransactionService } from '@/services';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   const [count, setCount] = React.useState(0);
   const [disputes, setDisputes] = useState<DocumentData[]>([]);
   const [loadingDisputes, setLoadingDisputes] = useState(true);
+  const [externalTxStats, setExternalTxStats] = useState({ total: 0, completed: 0, pending: 0, failed: 0, totalAmount: 0 });
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
@@ -106,6 +108,25 @@ export default function DashboardPage() {
     ];
     setSpendingData(newSpendingData);
   }
+
+  // Fetch external transaction statistics
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchExternalStats = async () => {
+      try {
+        const stats = await externalTransactionService.getStats(user.uid);
+        setExternalTxStats(stats);
+      } catch (error) {
+        console.error('Failed to fetch external transaction stats:', error);
+      }
+    };
+
+    fetchExternalStats();
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchExternalStats, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     if (authLoading || !user || !user.email) {
@@ -499,6 +520,59 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         ))}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Partner Transactions</CardTitle>
+                        <CardDescription>Activity from Reloadly, Rapyd, and other partners.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {externalTxStats.total === 0 ? (
+                            <div className="text-center py-10 text-muted-foreground">No partner transactions yet.</div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Total Transactions</p>
+                                        <p className="text-2xl font-bold">{externalTxStats.total}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Total Amount</p>
+                                        <p className="text-2xl font-bold">${externalTxStats.totalAmount.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                                            <span className="text-sm">Completed</span>
+                                        </div>
+                                        <span className="text-sm font-medium">{externalTxStats.completed}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                                            <span className="text-sm">Pending</span>
+                                        </div>
+                                        <span className="text-sm font-medium">{externalTxStats.pending}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                                            <span className="text-sm">Failed</span>
+                                        </div>
+                                        <span className="text-sm font-medium">{externalTxStats.failed}</span>
+                                    </div>
+                                </div>
+                                <Button asChild variant="outline" className="w-full mt-4">
+                                    <Link href="/dashboard/transactions">
+                                        View All Transactions
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             </div>
