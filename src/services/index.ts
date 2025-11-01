@@ -39,3 +39,43 @@ export * from './emailService';
 
 // Notification Service (existing)
 export * from './notificationService';
+
+// Reloadly Service
+export { reloadlyService, ReloadlyError } from './reloadlyService';
+export type {
+  Operator,
+  TopupRequest,
+  TopupResponse,
+  GiftCardProduct,
+  GiftCardOrderRequest,
+  GiftCardOrderResponse,
+  Biller,
+  BillPaymentRequest,
+  BillPaymentResponse,
+} from './reloadlyService';
+
+// Rapyd Service
+export { rapydService, RapydError } from './rapydService';
+export type {
+  PaymentMethod,
+  CreatePaymentRequest,
+  Payment,
+  CreateCustomerRequest,
+  Customer,
+  CreatePayoutRequest,
+  Payout,
+  CreateVirtualAccountRequest,
+  VirtualAccount,
+  CreateWalletRequest,
+  Wallet,
+} from './rapydService';
+
+// External Transaction Service
+export { externalTransactionService } from './externalTransactionService';
+export type {
+  ExternalProvider,
+  ExternalTransactionType,
+  ExternalTransactionStatus,
+  CreateExternalTransactionDto,
+  UpdateExternalTransactionDto,
+} from './externalTransactionService';
