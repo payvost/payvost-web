@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Point to the API gateway; default to local gateway with /api prefix
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export const register = async (email: string, password: string, name?: string) => {
   return axios.post(`${API_URL}/user/register`, { email, password, name });
