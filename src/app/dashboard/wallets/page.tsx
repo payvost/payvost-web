@@ -29,50 +29,70 @@ import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Mock rates for demonstration
-const rates: Record<string, number> = {
-  USD: 1,
-  EUR: 1.08,
-  GBP: 1.27,
-  NGN: 0.00067,
-  JPY: 0.0064,
-  CAD: 0.73,
-  AUD: 0.66,
-  GHS: 0.067,
-};
+import { walletService, currencyService, type Account } from '@/services';
+import { useToast } from '@/hooks/use-toast';
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [wallets, setWallets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<Account[]>([]);
   const { user, loading: authLoading } = useAuth();
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isKycVerified, setIsKycVerified] = useState(false);
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const { toast } = useToast();
 
-
+  // Fetch wallets from backend
   useEffect(() => {
     if (!user) {
-        if (!authLoading) setLoadingWallets(false);
-        return;
+      if (!authLoading) setLoadingWallets(false);
+      return;
+    }
+
+    const fetchWallets = async () => {
+      try {
+        const accounts = await walletService.getAccounts();
+        setWallets(accounts);
+        setLoadingWallets(false);
+      } catch (error) {
+        console.error('Error fetching wallets:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load wallets. Please try again.',
+          variant: 'destructive',
+        });
+        setLoadingWallets(false);
+      }
     };
 
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists()) {
-            const userData = doc.data();
-            setWallets(userData.wallets || []);
-            const sortedTransactions = (userData.transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setTransactions(sortedTransactions);
-            setIsKycVerified(userData.kycStatus === 'Verified');
-        }
-        setLoadingWallets(false);
-    });
+    fetchWallets();
+  }, [user, authLoading, toast]);
 
-    return () => unsub();
-  }, [user, authLoading]);
+  // Fetch exchange rates
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const usdRates = await currencyService.getRates('USD');
+        setRates({ USD: 1, ...usdRates });
+      } catch (error) {
+        console.error('Error fetching rates:', error);
+        // Fallback to default rates if API fails
+        setRates({
+          USD: 1,
+          EUR: 1.08,
+          GBP: 1.27,
+          NGN: 0.00067,
+          JPY: 0.0064,
+          CAD: 0.73,
+          AUD: 0.66,
+          GHS: 0.067,
+        });
+      }
+    };
+
+    fetchRates();
+  }, []);
 
   const totalBalanceUSD = wallets.reduce((acc, wallet) => {
     const rate = rates[wallet.currency] || 0;
@@ -91,9 +111,18 @@ export default function WalletsPage() {
     }).format(amount);
   };
 
-  const handleWalletCreated = () => {
-    // Real-time listener will update the state automatically
-    console.log('A new wallet was created, the list will refresh.');
+  const handleWalletCreated = async () => {
+    // Refresh wallets after creation
+    try {
+      const accounts = await walletService.getAccounts();
+      setWallets(accounts);
+      toast({
+        title: 'Success',
+        description: 'Wallet created successfully!',
+      });
+    } catch (error) {
+      console.error('Error refreshing wallets:', error);
+    }
   };
 
   const isLoading = authLoading || loadingWallets;
