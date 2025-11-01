@@ -3,6 +3,7 @@
 ## Prerequisites
 - Vercel account
 - Service account JSON file (backend/payvost-ae91662ec061.json)
+- Prisma Postgres database (see PRISMA_POSTGRES_SETUP.md)
 
 ## Step 1: Prepare Service Account Key
 
@@ -43,7 +44,13 @@ Copy the **entire JSON output** (it will be one long line or formatted JSON).
    | `ONESIGNAL_API_KEY` | From .env.local | All |
    | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | From .env.local | All |
    | `STRIPE_SECRET_KEY` | From .env.local (Secret) | All |
-   | `DATABASE_URL` | From .env.local (Secret) | All |
+   | `DATABASE_URL` | Prisma Postgres URL (see PRISMA_POSTGRES_SETUP.md) | All |
+
+   **Database URL Options:**
+   - **Direct Connection**: `postgres://user:password@db.prisma.io:5432/postgres?sslmode=require`
+   - **Prisma Accelerate** (Recommended): `prisma+postgres://accelerate.prisma-data.net/?api_key=...`
+   
+   See PRISMA_POSTGRES_SETUP.md for detailed database configuration.
 
    **Important for FIREBASE_SERVICE_ACCOUNT_KEY:**
    - Paste the entire JSON as a single line (no line breaks)
