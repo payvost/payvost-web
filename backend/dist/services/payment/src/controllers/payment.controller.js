@@ -5,6 +5,9 @@ exports.getPaymentStatus = getPaymentStatus;
 const registry_1 = require("../providers/registry");
 const routing_1 = require("../utils/routing");
 const validators_1 = require("../validators");
+// Temporary in-memory persistence until a Prisma model is introduced
+// Shape: paymentId -> { intent, provider }
+const paymentStore = new Map();
 async function createPaymentIntent(req, res) {
     try {
         const paymentRequest = req.body;
@@ -15,8 +18,8 @@ async function createPaymentIntent(req, res) {
         const provider = await (0, routing_1.determineOptimalProvider)(paymentRequest);
         // Create payment intent with chosen provider
         const intent = await provider.createPaymentIntent(paymentRequest);
-        // Store payment intent in database
-        await savePaymentIntentToDB(intent);
+        // Store payment intent (temporary in-memory storage)
+        await savePaymentIntentToDB(intent, provider.name);
         res.json({
             paymentId: intent.id,
             clientSecret: intent.clientSecret,
@@ -48,10 +51,9 @@ async function getPaymentStatus(req, res) {
     }
 }
 async function getPaymentFromDB(paymentId) {
-    // TODO: implement actual DB lookup (e.g. using Prisma or your ORM)
-    // This stub returns null to indicate "not found" and avoids returning void.
-    return null;
+    const record = paymentStore.get(paymentId) || null;
+    return record;
 }
-function savePaymentIntentToDB(intent) {
-    throw new Error('Function not implemented.');
+async function savePaymentIntentToDB(intent, provider) {
+    paymentStore.set(intent.id, { intent, provider });
 }

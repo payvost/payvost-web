@@ -81,9 +81,12 @@ class TransactionManager {
             }
             const fromBalance = new decimal_js_1.Decimal(fromAccount.balance.toString());
             if (fromBalance.lessThan(amount)) {
-                throw new Error('Insufficient funds');
+                throw new Error('Insufficient balance');
             }
-            // Create transfer record - Remove 'type' field as it doesn't exist in schema
+            // Calculate new balances
+            const fromNewBalance = fromBalance.minus(amount);
+            const toNewBalance = new decimal_js_1.Decimal(toAccount.balance.toString()).plus(amount);
+            // Create transfer record including required `type` field
             const transfer = await tx.transfer.create({
                 data: {
                     fromAccountId,
@@ -91,6 +94,7 @@ class TransactionManager {
                     amount: new client_1.Prisma.Decimal(amount),
                     currency,
                     status: 'COMPLETED',
+                    type: 'INTERNAL_TRANSFER',
                     description: description || 'Transfer',
                     idempotencyKey: finalIdempotencyKey,
                 },
@@ -114,14 +118,14 @@ class TransactionManager {
                     {
                         accountId: fromAccountId,
                         amount: new client_1.Prisma.Decimal(-amount),
-                        currency,
+                        balanceAfter: new client_1.Prisma.Decimal(fromNewBalance.toString()),
                         type: 'DEBIT',
                         description: `Transfer to ${toAccountId}`,
                     },
                     {
                         accountId: toAccountId,
                         amount: new client_1.Prisma.Decimal(amount),
-                        currency,
+                        balanceAfter: new client_1.Prisma.Decimal(toNewBalance.toString()),
                         type: 'CREDIT',
                         description: `Transfer from ${fromAccountId}`,
                     },
