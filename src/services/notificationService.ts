@@ -1,287 +1,414 @@
-import * as OneSignal from '@onesignal/node-onesignal';
+/**
+ * Notification Service
+ * Handles email notifications via Mailgun/Nodemailer and SMS via Twilio
+ */
 
-// --- OneSignal Client Initialization ---
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-// Initialize OneSignal client
-const configuration = OneSignal.createConfiguration({
-  appKey: ONESIGNAL_API_KEY,
-});
-
-const client = new OneSignal.DefaultApi(configuration);
-
-// --- Notification Templates ---
-const EMAIL_TEMPLATES = {
-  AUTH: {
-    LOGIN: 'template_id_for_login',
-    SIGNUP: 'template_id_for_signup',
-    PASSWORD_RESET: 'template_id_for_password_reset',
-    NEW_DEVICE: 'template_id_for_new_device',
-  },
-  KYC: {
-    SUBMISSION_RECEIVED: 'template_id_for_kyc_submission',
-    APPROVED: '541ae0b3-f36e-4788-8e12-de07a6a714a6', // <- Update this line
-    REJECTED: 'template_id_for_kyc_rejected',
-  },
-  BUSINESS: {
-    SUBMISSION_RECEIVED: 'template_id_for_business_submission',
-    APPROVED: 'template_id_for_business_approved',
-    REJECTED: 'template_id_for_business_rejected',
-  },
-  TRANSACTION: {
-    INITIATED: 'template_id_for_transaction_initiated',
-    SUCCESS: 'template_id_for_transaction_success',
-    FAILED: 'template_id_for_transaction_failed',
-    STATUS_UPDATE: 'template_id_for_transaction_status',
-    REFUND_INITIATED: 'template_id_for_refund_initiated',
-    REFUND_COMPLETED: 'template_id_for_refund_completed',
-  },
-  PAYMENT: {
-    LINK_GENERATED: 'template_id_for_payment_link',
-    PAYMENT_RECEIVED: 'template_id_for_payment_received',
-  },
-  INVOICE: {
-    GENERATED: 'template_id_for_invoice_generated',
-    REMINDER: 'template_id_for_invoice_reminder',
-    PAID: 'template_id_for_invoice_paid',
-  },
-};
-
-// --- Base Notification Interface ---
-interface NotificationBase {
-  email: string;
-  name: string;
-  language?: string;
+// Email notification types
+export interface EmailNotification {
+  to: string | string[];
+  subject: string;
+  template: EmailTemplate;
+  variables: Record<string, any>;
+  from?: string;
 }
 
-// --- Notification Type Interfaces ---
-interface AuthNotification extends NotificationBase {
-  deviceInfo?: string;
-  location?: string;
-  timestamp: Date;
+export type EmailTemplate = 
+  | 'transaction_success'
+  | 'transaction_failed'
+  | 'bill_payment_success'
+  | 'bill_payment_failed'
+  | 'gift_card_delivered'
+  | 'airtime_topup_success'
+  | 'kyc_verified'
+  | 'account_welcome'
+  | 'password_reset'
+  | 'login_alert'
+  | 'withdrawal_request'
+  | 'deposit_received';
+
+// SMS notification interface
+export interface SMSNotification {
+  to: string;
+  message: string;
 }
 
-interface KycNotification extends NotificationBase {
-  status: 'approved' | 'rejected';
-  reason?: string;
-  nextSteps?: string;
-}
+class NotificationService {
+  private emailTransporter: Transporter | null = null;
+  private twilioConfigured: boolean = false;
 
-interface BusinessNotification extends NotificationBase {
-  status: 'approved' | 'rejected';
-  businessName: string;
-  reason?: string;
-  nextSteps?: string;
-}
+  constructor() {
+    this.initializeEmailTransporter();
+    this.checkTwilioConfig();
+  }
 
-interface TransactionNotification extends NotificationBase {
-  transactionId: string;
-  amount: number;
-  currency: string;
-  status: 'initiated' | 'success' | 'failed' | 'refunded';
-  recipientName?: string;
-  reason?: string;
-}
+  /**
+   * Initialize Nodemailer with Mailgun SMTP
+   */
+  private initializeEmailTransporter() {
+    const mailgunLogin = process.env.MAILGUN_SMTP_LOGIN;
+    const mailgunPassword = process.env.MAILGUN_SMTP_PASSWORD;
+    const mailgunHost = process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org';
+    const mailgunPort = parseInt(process.env.MAILGUN_SMTP_PORT || '587');
 
-interface PaymentLinkNotification extends NotificationBase {
-  amount: number;
-  currency: string;
-  paymentLink: string;
-  expiryDate?: Date;
-  description?: string;
-}
-
-interface InvoiceNotification extends NotificationBase {
-  invoiceNumber: string;
-  amount: number;
-  currency: string;
-  dueDate: Date;
-  businessName: string;
-  downloadLink?: string;
-}
-
-// --- Notification Functions ---
-
-// Authentication Notifications
-export async function sendLoginNotification(data: AuthNotification) {
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: EMAIL_TEMPLATES.AUTH.LOGIN,
-    name: "Login Notification",
-    email_subject: "New Login Detected",
-    email_from_name: "Payvost Security",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      deviceInfo: data.deviceInfo,
-      location: data.location,
-      timestamp: data.timestamp.toISOString(),
+    if (!mailgunLogin || !mailgunPassword) {
+      console.warn('Mailgun SMTP credentials not configured. Email notifications will be disabled.');
+      return;
     }
-  };
 
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ Login notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send login notification:', error.body || error);
-    throw new Error('Failed to send login notification');
+    try {
+      this.emailTransporter = nodemailer.createTransport({
+        host: mailgunHost,
+        port: mailgunPort,
+        secure: mailgunPort === 465, // true for 465, false for other ports
+        auth: {
+          user: mailgunLogin,
+          pass: mailgunPassword,
+        },
+      });
+
+      console.log('Email transporter initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize email transporter:', error);
+    }
+  }
+
+  /**
+   * Check if Twilio is configured
+   */
+  private checkTwilioConfig() {
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
+    this.twilioConfigured = !!(twilioAccountSid && twilioAuthToken && twilioPhoneNumber);
+
+    if (!this.twilioConfigured) {
+      console.warn('Twilio credentials not configured. SMS notifications will be disabled.');
+    }
+  }
+
+  /**
+   * Get email template HTML
+   */
+  private getEmailTemplate(template: EmailTemplate, variables: Record<string, any>): string {
+    const templates: Record<EmailTemplate, (vars: Record<string, any>) => string> = {
+      transaction_success: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Transaction Successful ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Your transaction has been completed successfully.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Recipient:</strong> ${vars.recipient}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+            <p><strong>Transaction ID:</strong> ${vars.transactionId}</p>
+          </div>
+          <p>If you have any questions, please contact our support team.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      transaction_failed: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #ef4444;">Transaction Failed ✗</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Unfortunately, your transaction could not be completed.</p>
+          <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            <p><strong>Reason:</strong> ${vars.reason}</p>
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+          </div>
+          <p>Please try again or contact our support team for assistance.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      bill_payment_success: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Bill Payment Successful ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Your bill payment has been processed successfully.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Biller:</strong> ${vars.billerName}</p>
+            <p><strong>Account Number:</strong> ${vars.accountNumber}</p>
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+            <p><strong>Reference:</strong> ${vars.reference}</p>
+          </div>
+          <p>Your payment will be reflected in your account within 24 hours.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      bill_payment_failed: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #ef4444;">Bill Payment Failed ✗</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Your bill payment could not be processed.</p>
+          <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            <p><strong>Biller:</strong> ${vars.billerName}</p>
+            <p><strong>Reason:</strong> ${vars.reason}</p>
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+          </div>
+          <p>Please verify your account details and try again.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      gift_card_delivered: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Gift Card Delivered 🎁</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Your gift card has been successfully delivered!</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Brand:</strong> ${vars.brandName}</p>
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Code:</strong> <code style="background: #fff; padding: 5px 10px; border-radius: 4px;">${vars.code}</code></p>
+            ${vars.pin ? `<p><strong>PIN:</strong> <code style="background: #fff; padding: 5px 10px; border-radius: 4px;">${vars.pin}</code></p>` : ''}
+            <p><strong>Redemption URL:</strong> <a href="${vars.redemptionUrl}">${vars.redemptionUrl}</a></p>
+          </div>
+          <p>Please keep this information safe. The gift card code can only be used once.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      airtime_topup_success: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Airtime Top-up Successful ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Your airtime top-up has been completed successfully.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Phone Number:</strong> ${vars.phoneNumber}</p>
+            <p><strong>Operator:</strong> ${vars.operatorName}</p>
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+          </div>
+          <p>The airtime should be available on the recipient's phone immediately.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      kyc_verified: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Account Verified ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Congratulations! Your account has been successfully verified.</p>
+          <div style="background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <p>You now have full access to all Payvost features, including:</p>
+            <ul>
+              <li>Unlimited transactions</li>
+              <li>Higher transaction limits</li>
+              <li>Bill payments and gift cards</li>
+              <li>International transfers</li>
+            </ul>
+          </div>
+          <p>Start exploring your dashboard and enjoy seamless payments!</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      account_welcome: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">Welcome to Payvost! 🎉</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Thank you for joining Payvost. We're excited to have you on board!</p>
+          <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+            <p><strong>Next steps:</strong></p>
+            <ol>
+              <li>Complete your profile</li>
+              <li>Verify your identity (KYC)</li>
+              <li>Add your first wallet</li>
+              <li>Start sending money</li>
+            </ol>
+          </div>
+          <p>If you need help getting started, check out our <a href="${vars.helpUrl}">Help Center</a> or contact support.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      password_reset: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f59e0b;">Password Reset Request</h2>
+          <p>Hello ${vars.name},</p>
+          <p>We received a request to reset your password. Click the button below to create a new password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${vars.resetUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
+          </div>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      login_alert: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f59e0b;">New Login Detected</h2>
+          <p>Hello ${vars.name},</p>
+          <p>We detected a new login to your account.</p>
+          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p><strong>Device:</strong> ${vars.device}</p>
+            <p><strong>Location:</strong> ${vars.location}</p>
+            <p><strong>IP Address:</strong> ${vars.ipAddress}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+          </div>
+          <p>If this wasn't you, please secure your account immediately by changing your password.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      withdrawal_request: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">Withdrawal Request Received</h2>
+          <p>Hello ${vars.name},</p>
+          <p>We have received your withdrawal request and it's being processed.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Bank:</strong> ${vars.bankName}</p>
+            <p><strong>Account:</strong> ${vars.accountNumber}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+          </div>
+          <p>The funds will be credited to your account within 1-3 business days.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      deposit_received: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Deposit Received ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>We have successfully received your deposit.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+            <p><strong>Payment Method:</strong> ${vars.paymentMethod}</p>
+            <p><strong>New Balance:</strong> ${vars.currency} ${vars.newBalance}</p>
+            <p><strong>Date:</strong> ${vars.date}</p>
+          </div>
+          <p>Your funds are now available in your wallet.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+    };
+
+    return templates[template](variables);
+  }
+
+  /**
+   * Send email notification
+   */
+  async sendEmail(notification: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!this.emailTransporter) {
+      console.error('Email transporter not initialized');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    try {
+      const from = notification.from || process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
+      const recipients = Array.isArray(notification.to) ? notification.to.join(', ') : notification.to;
+
+      const html = this.getEmailTemplate(notification.template, notification.variables);
+
+      const info = await this.emailTransporter.sendMail({
+        from: `Payvost <${from}>`,
+        to: recipients,
+        subject: notification.subject,
+        html,
+      });
+
+      console.log('Email sent successfully:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error: any) {
+      console.error('Failed to send email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Send SMS notification via Twilio
+   * Note: This is a placeholder. Actual Twilio integration will be added later.
+   */
+  async sendSMS(notification: SMSNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!this.twilioConfigured) {
+      console.warn('Twilio not configured. SMS will not be sent.');
+      return { success: false, error: 'SMS service not configured' };
+    }
+
+    try {
+      // TODO: Implement actual Twilio integration
+      // const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      // const message = await twilioClient.messages.create({
+      //   body: notification.message,
+      //   from: process.env.TWILIO_PHONE_NUMBER,
+      //   to: notification.to
+      // });
+      
+      console.log('SMS would be sent to:', notification.to);
+      console.log('Message:', notification.message);
+      
+      // Placeholder response
+      return { 
+        success: true, 
+        messageId: 'placeholder-' + Date.now(),
+        error: 'Twilio integration pending'
+      };
+    } catch (error: any) {
+      console.error('Failed to send SMS:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Send notification to user about external transaction
+   */
+  async notifyExternalTransaction(params: {
+    userId: string;
+    userEmail: string;
+    userName: string;
+    type: 'success' | 'failed';
+    transactionType: 'bill_payment' | 'gift_card' | 'airtime_topup';
+    details: Record<string, any>;
+  }): Promise<void> {
+    const { userEmail, userName, type, transactionType, details } = params;
+
+    // Determine email template
+    let template: EmailTemplate;
+    let subject: string;
+
+    if (transactionType === 'bill_payment') {
+      template = type === 'success' ? 'bill_payment_success' : 'bill_payment_failed';
+      subject = type === 'success' ? 'Bill Payment Successful' : 'Bill Payment Failed';
+    } else if (transactionType === 'gift_card') {
+      template = 'gift_card_delivered';
+      subject = 'Your Gift Card is Ready!';
+    } else {
+      template = 'airtime_topup_success';
+      subject = 'Airtime Top-up Successful';
+    }
+
+    const variables = {
+      name: userName,
+      date: new Date().toLocaleString(),
+      ...details,
+    };
+
+    await this.sendEmail({
+      to: userEmail,
+      subject,
+      template,
+      variables,
+    });
   }
 }
 
-// KYC Notifications
-export async function sendKycStatusNotification(data: KycNotification) {
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: data.status === 'approved' ? 
-      EMAIL_TEMPLATES.KYC.APPROVED : 
-      EMAIL_TEMPLATES.KYC.REJECTED,
-    name: "KYC Status Update",
-    email_subject: `KYC Verification ${data.status === 'approved' ? 'Approved' : 'Requires Action'}`,
-    email_from_name: "Payvost Compliance",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      status: data.status,
-      reason: data.reason,
-      nextSteps: data.nextSteps,
-    }
-  };
+// Export singleton instance
+export const notificationService = new NotificationService();
 
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ KYC status notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send KYC status notification:', error.body || error);
-    throw new Error('Failed to send KYC status notification');
-  }
+// Legacy exports for compatibility (these can be deprecated later)
+export async function sendVerificationWelcomeEmail(email: string, name: string) {
+  return notificationService.sendEmail({
+    to: email,
+    subject: 'Account Verified!',
+    template: 'kyc_verified',
+    variables: { name },
+  });
 }
 
-// Business Notifications
-export async function sendBusinessStatusNotification(data: BusinessNotification) {
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: data.status === 'approved' ? 
-      EMAIL_TEMPLATES.BUSINESS.APPROVED : 
-      EMAIL_TEMPLATES.BUSINESS.REJECTED,
-    name: "Business Status Update",
-    email_subject: `Business Account ${data.status === 'approved' ? 'Approved' : 'Requires Action'}`,
-    email_from_name: "Payvost Business",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      businessName: data.businessName,
-      status: data.status,
-      reason: data.reason,
-      nextSteps: data.nextSteps,
-    }
-  };
-
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ Business status notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send business status notification:', error.body || error);
-    throw new Error('Failed to send business status notification');
-  }
-}
-
-// Transaction Notifications
-export async function sendTransactionNotification(data: TransactionNotification) {
-  const templateKey = data.status.toUpperCase() as keyof typeof EMAIL_TEMPLATES.TRANSACTION;
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: EMAIL_TEMPLATES.TRANSACTION[templateKey],
-    name: "Transaction Update",
-    email_subject: `Transaction ${data.status.charAt(0).toUpperCase() + data.status.slice(1)}`,
-    email_from_name: "Payvost Transactions",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      transactionId: data.transactionId,
-      amount: data.amount,
-      currency: data.currency,
-      status: data.status,
-      recipientName: data.recipientName,
-      reason: data.reason,
-    }
-  };
-
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ Transaction notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send transaction notification:', error.body || error);
-    throw new Error('Failed to send transaction notification');
-  }
-}
-
-// Payment Link Notifications
-export async function sendPaymentLinkNotification(data: PaymentLinkNotification) {
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: EMAIL_TEMPLATES.PAYMENT.LINK_GENERATED,
-    name: "Payment Link Generated",
-    email_subject: "New Payment Link",
-    email_from_name: "Payvost Payments",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      amount: data.amount,
-      currency: data.currency,
-      paymentLink: data.paymentLink,
-      expiryDate: data.expiryDate?.toISOString(),
-      description: data.description,
-    }
-  };
-
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ Payment link notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send payment link notification:', error.body || error);
-    throw new Error('Failed to send payment link notification');
-  }
-}
-
-// Invoice Notifications
-export async function sendInvoiceNotification(data: InvoiceNotification, type: 'generated' | 'reminder' | 'paid') {
-  const templateKey = type.toUpperCase() as keyof typeof EMAIL_TEMPLATES.INVOICE;
-  const notification: OneSignal.Notification = {
-    app_id: ONESIGNAL_APP_ID,
-    include_email_tokens: [data.email],
-    template_id: EMAIL_TEMPLATES.INVOICE[templateKey],
-    name: "Invoice Notification",
-    email_subject: `Invoice ${type.charAt(0).toUpperCase() + type.slice(1)}`,
-    email_from_name: "Payvost Invoicing",
-    email_from_address: "noreply@payvost.com",
-    data: {
-      name: data.name,
-      invoiceNumber: data.invoiceNumber,
-      amount: data.amount,
-      currency: data.currency,
-      dueDate: data.dueDate.toISOString(),
-      businessName: data.businessName,
-      downloadLink: data.downloadLink,
-    }
-  };
-
-  try {
-    const response = await client.createNotification(notification);
-    console.log('✅ Invoice notification sent:', response.id);
-    return { success: true, id: response.id };
-  } catch (error: any) {
-    console.error('❌ Failed to send invoice notification:', error.body || error);
-    throw new Error('Failed to send invoice notification');
-  }
+export async function sendBusinessApprovalEmail(email: string, name: string, businessName: string) {
+  return notificationService.sendEmail({
+    to: email,
+    subject: 'Business Account Approved!',
+    template: 'account_welcome',
+    variables: { name, helpUrl: 'https://payvost.com/help' },
+  });
 }
