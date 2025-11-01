@@ -2,8 +2,8 @@ import { Router } from 'express';
 import path from 'path';
 import { createRequire } from 'module';
 
-// Use createRequire rooted at the backend folder so controller imports resolve reliably
-const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'routes', 'userRoutes.js'));
+// Use createRequire rooted at this file so relative imports resolve reliably
+const localRequire = createRequire(__filename);
 const controllersMod = localRequire('../controllers/userController');
 const { register, login, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } = controllersMod && controllersMod.default ? controllersMod.default : controllersMod;
 const authMod = localRequire('../middleware/authMiddleware');

@@ -4,10 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const path_1 = __importDefault(require("path"));
 const module_1 = require("module");
-// Use createRequire rooted at the backend folder so controller imports resolve reliably
-const localRequire = (0, module_1.createRequire)(path_1.default.join(process.cwd(), 'backend', 'services', 'user', 'routes', 'userRoutes.js'));
+// Use createRequire rooted at this file so relative imports resolve reliably
+const localRequire = (0, module_1.createRequire)(__filename);
 const controllersMod = localRequire('../controllers/userController');
 const { register, login, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } = controllersMod && controllersMod.default ? controllersMod.default : controllersMod;
 const authMod = localRequire('../middleware/authMiddleware');
