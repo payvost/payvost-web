@@ -2,7 +2,7 @@
 // Initializes Firebase Admin SDK and configures all service routes
 import path from 'path';
 import { createRequire } from 'module';
-import './firebase.js';
+import './firebase.ts';
 
 // Initialize Firebase first
 const localRequire = createRequire(__filename);
