@@ -2,21 +2,20 @@
 // Initializes Firebase Admin SDK and configures all service routes
 import path from 'path';
 import { createRequire } from 'module';
+import './firebase';
 
 // Initialize Firebase first
-const localRequire = createRequire(path.join(process.cwd(), 'backend', 'index.js'));
+const localRequire = createRequire(__filename);
 let userRoutes: any;
 let walletRoutes: any;
 let transactionRoutes: any;
 let fraudRoutes: any;
 let notificationRoutes: any;
 let currencyRoutes: any;
+let paymentRoutes: any;
 
 try {
-  const fb = localRequire('./firebase');
-  const fbDefault = fb && fb.default ? fb.default : fb;
   console.log('✅ Firebase Admin SDK initialized');
-  
   // Load service routes
   const userMod = localRequire('./services/user/routes/userRoutes');
   userRoutes = userMod && userMod.default ? userMod.default : userMod;
@@ -35,6 +34,9 @@ try {
   
   const currencyMod = localRequire('./services/currency/routes');
   currencyRoutes = currencyMod && currencyMod.default ? currencyMod.default : currencyMod;
+  
+  const paymentMod = localRequire('./services/payment/src/routes');
+  paymentRoutes = paymentMod && paymentMod.default ? paymentMod.default : paymentMod;
   
   console.log('✅ All service routes loaded');
 } catch (err) {
@@ -72,6 +74,10 @@ try {
   
   if (currencyRoutes) {
     registerServiceRoutes(app, 'Currency Service', '/api/currency', currencyRoutes);
+  }
+  
+  if (paymentRoutes) {
+    registerServiceRoutes(app, 'Payment Service', '/api/payment', paymentRoutes);
   }
   
   console.log('✅ All service routes registered');

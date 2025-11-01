@@ -35,10 +35,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.confirmPasswordReset = exports.requestPasswordReset = exports.updateUserRole = exports.updateKycStatus = exports.getProfile = exports.login = exports.register = exports.getAllUsers = void 0;
 const bcrypt = __importStar(require("bcrypt"));
-const path = __importStar(require("path"));
 const module_1 = require("module");
-// Use createRequire to load the firebase initializer so resolution works when running from project root
-const localRequire = (0, module_1.createRequire)(path.join(process.cwd(), 'backend', 'services', 'user', 'controllers', 'userController.js'));
+// Use createRequire relative to this file for reliable resolution
+const localRequire = (0, module_1.createRequire)(__filename);
 const adminMod = localRequire('../../../firebase');
 const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
