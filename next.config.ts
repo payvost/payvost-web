@@ -6,6 +6,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      // Serve flag assets from /public/flag when requested via /flags
+      { source: '/flags/:path*', destination: '/flag/:path*' },
+    ];
+  },
   images: {
     remotePatterns: [
       {

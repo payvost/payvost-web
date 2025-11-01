@@ -5,8 +5,8 @@ import * as jwt from 'jsonwebtoken';
 import * as path from 'path';
 import { createRequire } from 'module';
 
-// Use createRequire to load the firebase initializer so resolution works when running from project root
-const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'controllers', 'userController.js'));
+// Use createRequire relative to this file for reliable resolution
+const localRequire = createRequire(__filename);
 const adminMod = localRequire('../../../firebase');
 const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 import type { User } from '../models/user';
