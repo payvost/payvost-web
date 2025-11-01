@@ -171,3 +171,59 @@ model AppliedRuleInstance {
   @@index([appliedFeeId])
   @@index([feeRuleId])
 }
+
+// External Partner Transactions (Reloadly, Rapyd, etc.)
+enum ExternalProvider {
+  RELOADLY
+  RAPYD
+  PAYSTACK
+  FLUTTERWAVE
+  STRIPE
+}
+
+enum ExternalTransactionType {
+  AIRTIME_TOPUP
+  DATA_BUNDLE
+  GIFT_CARD
+  BILL_PAYMENT
+  PAYMENT
+  PAYOUT
+  VIRTUAL_ACCOUNT_DEPOSIT
+  WALLET_TRANSFER
+  CARD_ISSUANCE
+}
+
+enum ExternalTransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model ExternalTransaction {
+  id                  String                    @id @default(uuid())
+  userId              String
+  accountId           String?
+  provider            ExternalProvider
+  providerTransactionId String?                @unique
+  type                ExternalTransactionType
+  status              ExternalTransactionStatus @default(PENDING)
+  amount              Decimal                   @db.Decimal(20, 8)
+  currency            String
+  recipientDetails    Json?
+  metadata            Json?
+  errorMessage        String?
+  webhookReceived     Boolean                   @default(false)
+  webhookData         Json?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  completedAt         DateTime?
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([provider])
+  @@index([status])
+  @@index([providerTransactionId])
+}

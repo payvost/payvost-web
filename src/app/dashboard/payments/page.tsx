@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PaymentConfirmationDialog } from '@/components/payment-confirmation-dialog';
-import { reloadlyService, type Biller, type GiftCardProduct } from '@/services';
+import { reloadlyService, type Biller, type GiftCardProduct, externalTransactionService } from '@/services';
 import { useToast } from '@/hooks/use-toast';
 
 const billerData: Record<string, any> = {
@@ -129,7 +129,7 @@ export default function PaymentsPage() {
   }, []);
 
   const handleBillPayment = async () => {
-    if (!selectedBiller || !accountNumber || !billAmount) {
+    if (!selectedBiller || !accountNumber || !billAmount || !user) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields',
@@ -139,14 +139,45 @@ export default function PaymentsPage() {
     }
 
     setIsLoading(true);
+    let transactionRecord;
+    
     try {
+      // Create custom identifier with user info for webhook tracking
+      const customIdentifier = `bill-${user.uid}-wallet-${Date.now()}`;
+      
+      // Record the transaction in our database first
+      transactionRecord = await externalTransactionService.create({
+        userId: user.uid,
+        provider: 'RELOADLY',
+        type: 'BILL_PAYMENT',
+        amount: parseFloat(billAmount),
+        currency: currentBillerData.currency,
+        recipientDetails: {
+          billerName: selectedBiller.name,
+          billerId: selectedBiller.id,
+          accountNumber: accountNumber,
+        },
+        metadata: {
+          customIdentifier,
+          billerType: billCategory,
+        },
+      });
+
       // Make the actual bill payment via Reloadly
       const result = await reloadlyService.payBill({
         billerId: selectedBiller.id,
         subscriberAccountNumber: accountNumber,
         amount: parseFloat(billAmount),
-        customIdentifier: `bill-${Date.now()}`,
+        customIdentifier,
       });
+
+      // Update transaction with provider ID
+      if (transactionRecord && result.transactionId) {
+        await externalTransactionService.update(transactionRecord.id, {
+          providerTransactionId: result.transactionId.toString(),
+          status: result.deliveryStatus === 'SUCCESSFUL' ? 'COMPLETED' : 'PROCESSING',
+        });
+      }
 
       toast({
         title: 'Payment Successful',
@@ -160,6 +191,15 @@ export default function PaymentsPage() {
       setSelectedBiller(null);
     } catch (error) {
       console.error('Bill payment failed:', error);
+      
+      // Update transaction status to failed if we created a record
+      if (transactionRecord) {
+        await externalTransactionService.update(transactionRecord.id, {
+          status: 'FAILED',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+      
       toast({
         title: 'Payment Failed',
         description: error instanceof Error ? error.message : 'An error occurred',

@@ -69,3 +69,13 @@ export type {
   CreateWalletRequest,
   Wallet,
 } from './rapydService';
+
+// External Transaction Service
+export { externalTransactionService } from './externalTransactionService';
+export type {
+  ExternalProvider,
+  ExternalTransactionType,
+  ExternalTransactionStatus,
+  CreateExternalTransactionDto,
+  UpdateExternalTransactionDto,
+} from './externalTransactionService';
