@@ -39,3 +39,17 @@ export * from './emailService';
 
 // Notification Service (existing)
 export * from './notificationService';
+
+// Reloadly Service
+export { reloadlyService, ReloadlyError } from './reloadlyService';
+export type {
+  Operator,
+  TopupRequest,
+  TopupResponse,
+  GiftCardProduct,
+  GiftCardOrderRequest,
+  GiftCardOrderResponse,
+  Biller,
+  BillPaymentRequest,
+  BillPaymentResponse,
+} from './reloadlyService';
