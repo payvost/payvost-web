@@ -137,6 +137,68 @@ PAYMENT_GATEWAYS.STRIPE.CUSTOMERS       // POST /customers
 PAYMENT_GATEWAYS.STRIPE.REFUNDS         // POST /refunds
 ```
 
+### Rapyd (Global Fintech Platform)
+**Base URLs**:
+- **Sandbox**: `https://sandboxapi.rapyd.net`
+- **Production**: `https://api.rapyd.net`
+
+**Payment Methods**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.PAYMENT_METHODS  // GET /v1/payment_methods/country
+PAYMENT_GATEWAYS.RAPYD.REQUIRED_FIELDS  // GET /v1/payment_methods/required_fields/:type
+```
+
+**Payments**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.PAYMENTS         // POST /v1/payments
+PAYMENT_GATEWAYS.RAPYD.PAYMENT_BY_ID    // GET /v1/payments/:paymentId
+PAYMENT_GATEWAYS.RAPYD.CANCEL_PAYMENT   // DELETE /v1/payments/:paymentId
+```
+
+**Customers**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.CUSTOMERS        // POST /v1/customers
+PAYMENT_GATEWAYS.RAPYD.CUSTOMER_BY_ID   // GET /v1/customers/:customerId
+```
+
+**Checkout**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.CHECKOUT         // POST /v1/checkout
+PAYMENT_GATEWAYS.RAPYD.CHECKOUT_BY_ID   // GET /v1/checkout/:checkoutId
+```
+
+**Virtual Accounts**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.VIRTUAL_ACCOUNTS // POST /v1/virtual_accounts
+PAYMENT_GATEWAYS.RAPYD.VIRTUAL_ACCOUNT_BY_ID // GET /v1/virtual_accounts/:virtualAccountId
+```
+
+**Payouts**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.PAYOUTS          // POST /v1/payouts
+PAYMENT_GATEWAYS.RAPYD.PAYOUT_BY_ID     // GET /v1/payouts/:payoutId
+PAYMENT_GATEWAYS.RAPYD.BENEFICIARIES    // POST /v1/payouts/beneficiary
+PAYMENT_GATEWAYS.RAPYD.SENDER           // POST /v1/payouts/sender
+```
+
+**Wallets**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.WALLETS          // POST /v1/user
+PAYMENT_GATEWAYS.RAPYD.WALLET_BY_ID     // GET /v1/user/:walletId
+PAYMENT_GATEWAYS.RAPYD.TRANSFER_BETWEEN_WALLETS // POST /v1/account/transfer
+```
+
+**Card Issuing**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.ISSUED_CARDS     // POST /v1/issuing/cards
+PAYMENT_GATEWAYS.RAPYD.CARD_BY_ID       // GET /v1/issuing/cards/:cardId
+```
+
+**FX Rates**
+```typescript
+PAYMENT_GATEWAYS.RAPYD.RATES            // GET /v1/rates/daily
+```
+
 ---
 
 ## KYC/Verification
@@ -244,6 +306,14 @@ const giftcardsUrl = getReloadlyBaseUrl('giftcards');
 const utilitiesUrl = getReloadlyBaseUrl('utilities');
 ```
 
+### Get Rapyd Base URL
+```typescript
+import { getRapydBaseUrl } from '@/config/integration-partners';
+
+// Returns sandbox or production URL based on RAPYD_ENV
+const rapydUrl = getRapydBaseUrl();
+```
+
 ### Replace URL Parameters
 ```typescript
 import { replaceUrlParams } from '@/config/integration-partners';
@@ -266,6 +336,11 @@ RELOADLY_CLIENT_ID=your_client_id
 RELOADLY_CLIENT_SECRET=your_client_secret
 RELOADLY_WEBHOOK_SECRET=your_webhook_secret
 RELOADLY_ENV=sandbox
+
+# Rapyd
+RAPYD_ACCESS_KEY=your_access_key
+RAPYD_SECRET_KEY=your_secret_key
+RAPYD_ENV=sandbox
 
 # Backend
 NEXT_PUBLIC_API_URL=http://localhost:3001
@@ -323,6 +398,26 @@ import { reloadlyService } from '@/services';
 const operators = await reloadlyService.getOperatorsByCountry('NG');
 const topup = await reloadlyService.sendTopup({...});
 const giftCards = await reloadlyService.getGiftCardProducts('US');
+```
+
+### Using Rapyd Service
+
+```typescript
+import { rapydService } from '@/services';
+
+// The service handles HMAC signature authentication automatically
+const paymentMethods = await rapydService.getPaymentMethodsByCountry('US');
+const payment = await rapydService.createPayment({
+  amount: 100,
+  currency: 'USD',
+  payment_method: 'us_debit_visa_card'
+});
+const wallet = await rapydService.createWallet({
+  first_name: 'John',
+  last_name: 'Doe',
+  email: 'john@example.com'
+});
+```
 ```
 
 ---
