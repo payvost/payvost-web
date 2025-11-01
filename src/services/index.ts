@@ -53,3 +53,19 @@ export type {
   BillPaymentRequest,
   BillPaymentResponse,
 } from './reloadlyService';
+
+// Rapyd Service
+export { rapydService, RapydError } from './rapydService';
+export type {
+  PaymentMethod,
+  CreatePaymentRequest,
+  Payment,
+  CreateCustomerRequest,
+  Customer,
+  CreatePayoutRequest,
+  Payout,
+  CreateVirtualAccountRequest,
+  VirtualAccount,
+  CreateWalletRequest,
+  Wallet,
+} from './rapydService';
