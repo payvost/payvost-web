@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db } from '@/lib/firebase-admin';
+import { verifySessionCookie, isAdmin } from '@/lib/auth-helpers';
 
 export async function GET() {
   try {
+    // Authorization: verify session and admin role
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const decoded = await verifySessionCookie(sessionCookie);
+    const admin = await isAdmin(decoded.uid);
+    if (!admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     console.log('🔍 Fetching payment requests...');
 
     const paymentLinks: any[] = [];
