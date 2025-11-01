@@ -7,9 +7,9 @@ import cors from 'cors';
 import path from 'path';
 import { createRequire } from 'module';
 
-// Initialize Firebase and load routes using createRequire so resolution works when started from root or backend dir.
-// Avoid using `import.meta` or `__filename` to keep TypeScript and different runtimes happy.
-const localRequire = createRequire(path.join(process.cwd(), 'backend', 'index.js'));
+// Initialize Firebase and load routes using createRequire relative to this file's directory,
+// so it works whether the process is started from repo root or the backend folder.
+const localRequire = createRequire(__filename);
 let userRoutes: any;
 try {
   const fb = localRequire('./firebase');
