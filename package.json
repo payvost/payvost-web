@@ -6,7 +6,7 @@
     "genkit:dev": "genkit dev",
     "dev:all": "npm-run-all --parallel dev genkit:dev",
     "dev:client": "next dev -p 3000",
-    "dev:server": "cross-env PORT=3001 ts-node-dev --prefer-ts-exts --respawn --transpile-only backend/index.ts",
+    "dev:server": "cd backend && cross-env PORT=3001 ts-node-dev --prefer-ts-exts --respawn --transpile-only index.ts",
     "dev": "concurrently -k \"npm:dev:client\" \"npm:dev:server\"",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "lint": "npx next lint",
