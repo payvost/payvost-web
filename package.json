@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "images:optimize": "node ./scripts/optimize-images.js",
     "build:client": "next build",
-    "prisma:generate": "prisma generate",
+  "prisma:generate": "prisma generate --schema backend/prisma/schema.prisma",
     "build:server": "npm run prisma:generate && cd backend && tsc -p tsconfig.json",
     "build": "npm run build:client && npm run build:server",
     "start:client": "next start -p 3000",
