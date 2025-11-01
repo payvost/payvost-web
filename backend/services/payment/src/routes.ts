@@ -8,6 +8,8 @@ const router = Router();
 
 // Payment Intent Creation
 router.post('/create-intent', createPaymentIntent);
+// Compatibility alias for existing frontend usage
+router.post('/create-payment-intent', createPaymentIntent);
 
 // Payment Status Check
 router.get('/status/:paymentId', getPaymentStatus);
