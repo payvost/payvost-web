@@ -13,8 +13,7 @@ import { Loader2, Wallet, CheckCircle, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { walletService } from '@/services';
 
 interface CreateWalletDialogProps {
   children: React.ReactNode;
@@ -57,49 +56,28 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
     setCreationStatus('submitting');
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const existingWallets = userData.wallets || [];
-        if (existingWallets.some((w: any) => w.currency === data.currency)) {
-            toast({
-                title: "Wallet Exists",
-                description: `You already have a ${data.currency} wallet.`,
-                variant: "destructive"
-            });
-            setCreationStatus('form');
-            return;
-        }
-      }
-
-      const newWallet = {
+      // Create wallet via backend API
+      await walletService.createAccount({
         currency: data.currency,
-        balance: 0,
-        name: availableCurrencies.find(c => c.currency === data.currency)?.name,
-        flag: availableCurrencies.find(c => c.currency === data.currency)?.flag,
-      };
-
-      await updateDoc(userDocRef, {
-        wallets: arrayUnion(newWallet)
+        type: 'PERSONAL',
       });
       
       toast({
-          title: "Wallet Created!",
-          description: `Your new ${data.currency} wallet is ready.`,
+        title: "Wallet Created!",
+        description: `Your new ${data.currency} wallet is ready.`,
       });
       onWalletCreated();
       setCreationStatus('success');
       reset();
     } catch(error) {
-        console.error("Error creating wallet:", error);
-        toast({
-            title: "Error",
-            description: "Failed to create wallet. Please try again.",
-            variant: "destructive"
-        });
-        setCreationStatus('form');
+      console.error("Error creating wallet:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create wallet. Please try again.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      setCreationStatus('form');
     }
   };
   

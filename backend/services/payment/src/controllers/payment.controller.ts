@@ -4,6 +4,10 @@ import { PaymentMethod, Currency, PaymentRequestDTO, PaymentIntent } from '../in
 import { determineOptimalProvider } from '../utils/routing';
 import { validateAmount, validateCurrency } from '../validators';
 
+// Temporary in-memory persistence until a Prisma model is introduced
+// Shape: paymentId -> { intent, provider }
+const paymentStore: Map<string, { intent: PaymentIntent; provider: string }> = new Map();
+
 export async function createPaymentIntent(req: Request, res: Response) {
   try {
     const paymentRequest: PaymentRequestDTO = req.body;
@@ -15,11 +19,11 @@ export async function createPaymentIntent(req: Request, res: Response) {
     // Determine optimal payment provider based on amount, currency, region, etc.
     const provider = await determineOptimalProvider(paymentRequest);
     
-    // Create payment intent with chosen provider
-    const intent = await provider.createPaymentIntent(paymentRequest);
+  // Create payment intent with chosen provider
+  const intent = await provider.createPaymentIntent(paymentRequest);
     
-    // Store payment intent in database
-    await savePaymentIntentToDB(intent);
+  // Store payment intent (temporary in-memory storage)
+  await savePaymentIntentToDB(intent, provider.name);
     
     res.json({
       paymentId: intent.id,
@@ -54,12 +58,12 @@ export async function getPaymentStatus(req: Request, res: Response) {
   }
 }
 
-async function getPaymentFromDB(paymentId: string): Promise<any | null> {
-    // TODO: implement actual DB lookup (e.g. using Prisma or your ORM)
-    // This stub returns null to indicate "not found" and avoids returning void.
-    return null;
+async function getPaymentFromDB(paymentId: string): Promise<{ intent: PaymentIntent; provider: string } | null> {
+  const record = paymentStore.get(paymentId) || null;
+  return record;
 }
-function savePaymentIntentToDB(intent: PaymentIntent) {
-    throw new Error('Function not implemented.');
+
+async function savePaymentIntentToDB(intent: PaymentIntent, provider: string): Promise<void> {
+  paymentStore.set(intent.id, { intent, provider });
 }
 

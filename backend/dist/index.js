@@ -1,52 +1,75 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-// Ensure Firebase Admin SDK is initialized before anything else
-// Use require() so ts-node-dev can load the local .ts initializer reliably at runtime
-// Dynamically import the firebase initializer and routes so we work in both CJS and ESM runtimes
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const path_1 = __importDefault(require("path"));
 const module_1 = require("module");
-// Initialize Firebase and load routes using createRequire so resolution works when started from root or backend dir.
-// Avoid using `import.meta` or `__filename` to keep TypeScript and different runtimes happy.
-const localRequire = (0, module_1.createRequire)(path_1.default.join(process.cwd(), 'backend', 'index.js'));
+require("./firebase");
+// Initialize Firebase first
+const localRequire = (0, module_1.createRequire)(__filename);
 let userRoutes;
+let walletRoutes;
+let transactionRoutes;
+let fraudRoutes;
+let notificationRoutes;
+let currencyRoutes;
+let paymentRoutes;
 try {
-    const fb = localRequire('./firebase');
-    // allow default export interoperability
-    const fbDefault = fb && fb.default ? fb.default : fb;
-    // load routes
-    const routesMod = localRequire('./services/user/routes/userRoutes');
-    userRoutes = routesMod && routesMod.default ? routesMod.default : routesMod;
+    console.log('✅ Firebase Admin SDK initialized');
+    // Load service routes
+    const userMod = localRequire('./services/user/routes/userRoutes');
+    userRoutes = userMod && userMod.default ? userMod.default : userMod;
+    const walletMod = localRequire('./services/wallet/routes');
+    walletRoutes = walletMod && walletMod.default ? walletMod.default : walletMod;
+    const transactionMod = localRequire('./services/transaction/routes');
+    transactionRoutes = transactionMod && transactionMod.default ? transactionMod.default : transactionMod;
+    const fraudMod = localRequire('./services/fraud/routes');
+    fraudRoutes = fraudMod && fraudMod.default ? fraudMod.default : fraudMod;
+    const notificationMod = localRequire('./services/notification/routes');
+    notificationRoutes = notificationMod && notificationMod.default ? notificationMod.default : notificationMod;
+    const currencyMod = localRequire('./services/currency/routes');
+    currencyRoutes = currencyMod && currencyMod.default ? currencyMod.default : currencyMod;
+    const paymentMod = localRequire('./services/payment/src/routes');
+    paymentRoutes = paymentMod && paymentMod.default ? paymentMod.default : paymentMod;
+    console.log('✅ All service routes loaded');
 }
 catch (err) {
-    console.error('Failed to load backend modules:', err);
+    console.error('❌ Failed to load backend modules:', err);
     process.exit(1);
 }
-const app = (0, express_1.default)();
+// Create gateway application
+const index_1 = require("./gateway/index");
+const app = (0, index_1.createGateway)();
 const port = process.env.PORT || 3001;
-// Enable CORS for all routes with custom settings
-app.use((0, cors_1.default)({
-    origin: '*', // Change to your frontend URL in production for better security
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-}));
-app.use(express_1.default.json());
-app.get("/", (_req, res) => {
-    res.send("Payvost backend is running 🚀");
-});
-// Mount the user routes
-// Mount user routes once they are loaded. If routes aren't ready yet, the request will be handled after they load.
-app.use((req, res, next) => {
-    if (!userRoutes)
-        return res.status(503).send('Server initializing');
-    next();
-});
-app.use('/user', (req, res, next) => userRoutes(req, res, next));
+// Register service routes
+try {
+    if (userRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'User Service', '/api/user', userRoutes);
+    }
+    if (walletRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Wallet Service', '/api/wallet', walletRoutes);
+    }
+    if (transactionRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Transaction Service', '/api/transaction', transactionRoutes);
+    }
+    if (fraudRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Fraud Service', '/api/fraud', fraudRoutes);
+    }
+    if (notificationRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Notification Service', '/api/notification', notificationRoutes);
+    }
+    if (currencyRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Currency Service', '/api/currency', currencyRoutes);
+    }
+    if (paymentRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Payment Service', '/api/payment', paymentRoutes);
+    }
+    console.log('✅ All service routes registered');
+}
+catch (err) {
+    console.error('❌ Failed to register service routes:', err);
+    process.exit(1);
+}
+// Global error handler (must be last)
+app.use(index_1.errorHandler);
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`🚀 Payvost API Gateway running on port ${port}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

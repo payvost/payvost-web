@@ -17,6 +17,8 @@ import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PaymentConfirmationDialog } from '@/components/payment-confirmation-dialog';
+import { reloadlyService, type Biller, type GiftCardProduct, externalTransactionService } from '@/services';
+import { useToast } from '@/hooks/use-toast';
 
 const billerData: Record<string, any> = {
   NGA: {
@@ -53,20 +55,159 @@ const billerData: Record<string, any> = {
 export default function PaymentsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
+  const { toast } = useToast();
+  
+  // Bill payment state
   const [billCountry, setBillCountry] = useState('NGA'); // Default to Nigeria, can be dynamic
   const [billCategory, setBillCategory] = useState('');
   const [billProvider, setBillProvider] = useState('');
   const [billAmount, setBillAmount] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Reloadly integration state
+  const [billers, setBillers] = useState<Biller[]>([]);
+  const [selectedBiller, setSelectedBiller] = useState<Biller | null>(null);
+  const [giftCardProducts, setGiftCardProducts] = useState<GiftCardProduct[]>([]);
+  const [loadingBillers, setLoadingBillers] = useState(false);
+  const [loadingGiftCards, setLoadingGiftCards] = useState(false);
   
   const currentBillerData = billerData[billCountry];
   const providers = currentBillerData.categories.find((c:any) => c.value === billCategory)?.providers || [];
 
+  // Load billers from Reloadly when component mounts or country changes
+  useEffect(() => {
+    const loadBillers = async () => {
+      if (!billCountry) return;
+      
+      setLoadingBillers(true);
+      try {
+        // Map country codes to Reloadly country codes
+        const countryCodeMap: Record<string, string> = {
+          'NGA': 'NG',
+          'USA': 'US',
+          'GBR': 'GB',
+        };
+        
+        const reloadlyCountryCode = countryCodeMap[billCountry] || billCountry;
+        const fetchedBillers = await reloadlyService.getBillersByCountry(reloadlyCountryCode);
+        setBillers(fetchedBillers);
+      } catch (error) {
+        console.error('Failed to load billers:', error);
+        // Fall back to hardcoded data if Reloadly fails
+      } finally {
+        setLoadingBillers(false);
+      }
+    };
+
+    loadBillers();
+  }, [billCountry]);
+
+  // Load gift cards when gift cards tab is active
+  useEffect(() => {
+    const loadGiftCards = async () => {
+      setLoadingGiftCards(true);
+      try {
+        const products = await reloadlyService.getGiftCardProducts();
+        setGiftCardProducts(products.slice(0, 12)); // Show first 12
+      } catch (error) {
+        console.error('Failed to load gift cards:', error);
+        toast({
+          title: 'Failed to load gift cards',
+          description: 'Please try again later',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingGiftCards(false);
+      }
+    };
+
+    // Only load once
+    if (giftCardProducts.length === 0) {
+      loadGiftCards();
+    }
+  }, []);
+
   const handleBillPayment = async () => {
+    if (!selectedBiller || !accountNumber || !billAmount || !user) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call for bill payment
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
+    let transactionRecord;
+    
+    try {
+      // Create custom identifier with user info for webhook tracking
+      const customIdentifier = `bill-${user.uid}-wallet-${Date.now()}`;
+      
+      // Record the transaction in our database first
+      transactionRecord = await externalTransactionService.create({
+        userId: user.uid,
+        provider: 'RELOADLY',
+        type: 'BILL_PAYMENT',
+        amount: parseFloat(billAmount),
+        currency: currentBillerData.currency,
+        recipientDetails: {
+          billerName: selectedBiller.name,
+          billerId: selectedBiller.id,
+          accountNumber: accountNumber,
+        },
+        metadata: {
+          customIdentifier,
+          billerType: billCategory,
+        },
+      });
+
+      // Make the actual bill payment via Reloadly
+      const result = await reloadlyService.payBill({
+        billerId: selectedBiller.id,
+        subscriberAccountNumber: accountNumber,
+        amount: parseFloat(billAmount),
+        customIdentifier,
+      });
+
+      // Update transaction with provider ID
+      if (transactionRecord && result.transactionId) {
+        await externalTransactionService.update(transactionRecord.id, {
+          providerTransactionId: result.transactionId.toString(),
+          status: result.deliveryStatus === 'SUCCESSFUL' ? 'COMPLETED' : 'PROCESSING',
+        });
+      }
+
+      toast({
+        title: 'Payment Successful',
+        description: `Bill payment of ${billAmount} ${currentBillerData.currency} completed successfully`,
+      });
+
+      // Clear form
+      setBillProvider('');
+      setBillAmount('');
+      setAccountNumber('');
+      setSelectedBiller(null);
+    } catch (error) {
+      console.error('Bill payment failed:', error);
+      
+      // Update transaction status to failed if we created a record
+      if (transactionRecord) {
+        await externalTransactionService.update(transactionRecord.id, {
+          status: 'FAILED',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+      
+      toast({
+        title: 'Payment Failed',
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const billPaymentDetails = {
@@ -151,22 +292,51 @@ export default function PaymentsPage() {
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="provider">Provider/Biller</Label>
-                    <Select disabled={!billCategory || providers.length === 0} onValueChange={setBillProvider}>
+                    <Select 
+                      disabled={loadingBillers || billers.length === 0} 
+                      onValueChange={(value) => {
+                        setBillProvider(value);
+                        const biller = billers.find(b => b.id.toString() === value);
+                        setSelectedBiller(biller || null);
+                      }}
+                      value={billProvider}
+                    >
                         <SelectTrigger id="provider">
-                            <SelectValue placeholder={providers.length > 0 ? "Select a provider" : "Enter details below"} />
+                            <SelectValue placeholder={loadingBillers ? "Loading billers..." : billers.length > 0 ? "Select a biller" : "No billers available"} />
                         </SelectTrigger>
                         <SelectContent>
-                            {providers.map((p:string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            {billers.map((biller) => (
+                              <SelectItem key={biller.id} value={biller.id.toString()}>
+                                {biller.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="account-number">Account/Meter Number</Label>
-                    <Input id="account-number" placeholder="Enter account or meter number" />
+                    <Input 
+                      id="account-number" 
+                      placeholder="Enter account or meter number" 
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                    />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="amount">Amount ({currentBillerData.currency})</Label>
-                    <Input id="amount" type="number" placeholder="Enter amount" value={billAmount} onChange={(e) => setBillAmount(e.target.value)} />
+                    <Input 
+                      id="amount" 
+                      type="number" 
+                      placeholder="Enter amount" 
+                      value={billAmount} 
+                      onChange={(e) => setBillAmount(e.target.value)} 
+                    />
+                    {selectedBiller && (
+                      <p className="text-sm text-muted-foreground">
+                        Min: {selectedBiller.localMinAmount} {selectedBiller.localTransactionFeeCurrencyCode} | 
+                        Max: {selectedBiller.localMaxAmount} {selectedBiller.localTransactionFeeCurrencyCode}
+                      </p>
+                    )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -250,14 +420,31 @@ export default function PaymentsPage() {
                 <CardDescription>Purchase and send gift cards from popular brands.</CardDescription>
               </CardHeader>
               <CardContent>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((i) => (
-                        <Card key={i} className="flex flex-col items-center justify-center p-4">
-                            <img src={`https://placehold.co/100x60.png`} data-ai-hint="gift card" alt="Brand Logo" className="rounded-md" />
-                            <p className="mt-2 text-sm font-semibold">Brand {i}</p>
-                        </Card>
-                    ))}
-                 </div>
+                 {loadingGiftCards ? (
+                   <div className="text-center py-12">
+                     <p className="text-muted-foreground">Loading gift cards...</p>
+                   </div>
+                 ) : giftCardProducts.length > 0 ? (
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {giftCardProducts.map((product) => (
+                          <Card key={product.productId} className="flex flex-col items-center justify-center p-4 cursor-pointer hover:border-primary transition-colors">
+                              {product.logoUrls && product.logoUrls.length > 0 ? (
+                                <img src={product.logoUrls[0]} alt={product.productName} className="h-16 w-auto object-contain rounded-md" />
+                              ) : (
+                                <div className="h-16 w-20 bg-muted rounded-md flex items-center justify-center">
+                                  <Gift className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              )}
+                              <p className="mt-2 text-sm font-semibold text-center">{product.productName}</p>
+                              <p className="text-xs text-muted-foreground">{product.countryCode}</p>
+                          </Card>
+                      ))}
+                   </div>
+                 ) : (
+                   <div className="text-center py-12">
+                     <p className="text-muted-foreground">No gift cards available at the moment.</p>
+                   </div>
+                 )}
               </CardContent>
             </Card>
           </TabsContent>

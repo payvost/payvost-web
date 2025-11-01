@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import * as path from 'path';
 import { createRequire } from 'module';
 
-// Use createRequire to reliably load the project's firebase admin initializer
-const localRequire = createRequire(path.join(process.cwd(), 'backend', 'services', 'user', 'middleware', 'authMiddleware.js'));
+// Use createRequire relative to this file
+const localRequire = createRequire(__filename);
 const adminMod = localRequire('../../../firebase');
 const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 

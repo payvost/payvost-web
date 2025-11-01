@@ -32,7 +32,7 @@ function initFirebaseAdmin() {
       credential = admin.credential.cert(parsed as admin.ServiceAccount);
     } else {
       // Development: use local file
-      const serviceAccountPath = path.resolve(process.cwd(), 'backend', LOCAL_SA_FILENAME);
+  const serviceAccountPath = path.resolve(__dirname, LOCAL_SA_FILENAME);
       
       if (!fs.existsSync(serviceAccountPath)) {
         console.warn(`No Firebase credentials found. Set FIREBASE_SERVICE_ACCOUNT_KEY or place ${LOCAL_SA_FILENAME} in the backend folder.`);

@@ -1,52 +1,102 @@
-
-// Ensure Firebase Admin SDK is initialized before anything else
-// Use require() so ts-node-dev can load the local .ts initializer reliably at runtime
-// Dynamically import the firebase initializer and routes so we work in both CJS and ESM runtimes
-import express from 'express';
-import cors from 'cors';
+// Payvost Backend - API Gateway
+// Initializes Firebase Admin SDK and configures all service routes
 import path from 'path';
 import { createRequire } from 'module';
+import './firebase.ts';
 
-// Initialize Firebase and load routes using createRequire relative to this file's directory,
-// so it works whether the process is started from repo root or the backend folder.
+// Initialize Firebase first
 const localRequire = createRequire(__filename);
+
+// Helper to load modules in both TS (dev) and JS (prod) builds
+function loadService(modPath: string) {
+  const candidates = [
+    modPath,
+    `${modPath}.ts`,
+    `${modPath}.js`,
+    `${modPath}/index.ts`,
+    `${modPath}/index.js`,
+  ];
+  for (const p of candidates) {
+    try {
+      const m = localRequire(p);
+      return m && m.default ? m.default : m;
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error(`Cannot load module: ${modPath}`);
+}
+
 let userRoutes: any;
+let walletRoutes: any;
+let transactionRoutes: any;
+let fraudRoutes: any;
+let notificationRoutes: any;
+let currencyRoutes: any;
+let paymentRoutes: any;
+
 try {
-  const fb = localRequire('./firebase');
-  // allow default export interoperability
-  const fbDefault = fb && fb.default ? fb.default : fb;
-  // load routes
-  const routesMod = localRequire('./services/user/routes/userRoutes');
-  userRoutes = routesMod && routesMod.default ? routesMod.default : routesMod;
+  console.log('✅ Firebase Admin SDK initialized');
+  // Load service routes
+  userRoutes = loadService('./services/user/routes/userRoutes');
+  walletRoutes = loadService('./services/wallet/routes');
+  transactionRoutes = loadService('./services/transaction/routes');
+  fraudRoutes = loadService('./services/fraud/routes');
+  notificationRoutes = loadService('./services/notification/routes');
+  currencyRoutes = loadService('./services/currency/routes');
+  paymentRoutes = loadService('./services/payment/src/routes');
+  console.log('✅ All service routes loaded');
 } catch (err) {
-  console.error('Failed to load backend modules:', err);
+  console.error('❌ Failed to load backend modules:', err);
   process.exit(1);
 }
 
-const app = express();
+// Create gateway application
+import { createGateway, registerServiceRoutes, errorHandler } from './gateway/index';
+
+const app = createGateway();
 const port = process.env.PORT || 3001;
 
-// Enable CORS for all routes with custom settings
-app.use(cors({
-  origin: '*', // Change to your frontend URL in production for better security
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-app.use(express.json());
+// Register service routes
+try {
+  if (userRoutes) {
+    registerServiceRoutes(app, 'User Service', '/api/user', userRoutes);
+  }
+  
+  if (walletRoutes) {
+    registerServiceRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes);
+  }
+  
+  if (transactionRoutes) {
+    registerServiceRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes);
+  }
+  
+  if (fraudRoutes) {
+    registerServiceRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes);
+  }
+  
+  if (notificationRoutes) {
+    registerServiceRoutes(app, 'Notification Service', '/api/notification', notificationRoutes);
+  }
+  
+  if (currencyRoutes) {
+    registerServiceRoutes(app, 'Currency Service', '/api/currency', currencyRoutes);
+  }
+  
+  if (paymentRoutes) {
+    registerServiceRoutes(app, 'Payment Service', '/api/payment', paymentRoutes);
+  }
+  
+  console.log('✅ All service routes registered');
+} catch (err) {
+  console.error('❌ Failed to register service routes:', err);
+  process.exit(1);
+}
 
-app.get("/", (_req, res) => {
-  res.send("Payvost backend is running 🚀");
-});
-
-// Mount the user routes
-// Mount user routes once they are loaded. If routes aren't ready yet, the request will be handled after they load.
-app.use((req, res, next) => {
-  if (!userRoutes) return res.status(503).send('Server initializing');
-  next();
-});
-app.use('/user', (req, res, next) => userRoutes(req, res, next));
+// Global error handler (must be last)
+app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`🚀 Payvost API Gateway running on port ${port}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
