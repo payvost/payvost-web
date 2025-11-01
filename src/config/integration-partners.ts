@@ -192,6 +192,71 @@ export const PAYMENT_GATEWAYS = {
     CUSTOMERS: '/customers',
     REFUNDS: '/refunds',
   },
+  
+  // Rapyd (Global fintech platform)
+  RAPYD: {
+    SANDBOX_BASE_URL: 'https://sandboxapi.rapyd.net',
+    PRODUCTION_BASE_URL: 'https://api.rapyd.net',
+    
+    // Payment Methods
+    PAYMENT_METHODS: '/v1/payment_methods/country',
+    REQUIRED_FIELDS: '/v1/payment_methods/required_fields/:type',
+    
+    // Payments
+    PAYMENTS: '/v1/payments',
+    PAYMENT_BY_ID: '/v1/payments/:paymentId',
+    CANCEL_PAYMENT: '/v1/payments/:paymentId',
+    
+    // Customers
+    CUSTOMERS: '/v1/customers',
+    CUSTOMER_BY_ID: '/v1/customers/:customerId',
+    
+    // Checkout
+    CHECKOUT: '/v1/checkout',
+    CHECKOUT_BY_ID: '/v1/checkout/:checkoutId',
+    
+    // Virtual Accounts (Collect)
+    VIRTUAL_ACCOUNTS: '/v1/virtual_accounts',
+    VIRTUAL_ACCOUNT_BY_ID: '/v1/virtual_accounts/:virtualAccountId',
+    SIMULATE_BANK_TRANSFER: '/v1/virtual_accounts/transactions',
+    
+    // Payouts (Disburse)
+    PAYOUTS: '/v1/payouts',
+    PAYOUT_BY_ID: '/v1/payouts/:payoutId',
+    BENEFICIARIES: '/v1/payouts/beneficiary',
+    BENEFICIARY_BY_ID: '/v1/payouts/beneficiary/:beneficiaryId',
+    SENDER: '/v1/payouts/sender',
+    
+    // Wallets
+    WALLETS: '/v1/user',
+    WALLET_BY_ID: '/v1/user/:walletId',
+    WALLET_CONTACTS: '/v1/user/:walletId/contacts',
+    WALLET_TRANSACTIONS: '/v1/user/:walletId/transactions',
+    TRANSFER_BETWEEN_WALLETS: '/v1/account/transfer',
+    SET_FUNDS_TRANSFER: '/v1/account/transfer/response',
+    
+    // Card Issuing
+    ISSUED_CARDS: '/v1/issuing/cards',
+    CARD_BY_ID: '/v1/issuing/cards/:cardId',
+    ACTIVATE_CARD: '/v1/issuing/cards/:cardId/activate',
+    
+    // FX
+    RATES: '/v1/rates/daily',
+    
+    // Webhooks
+    WEBHOOKS: '/v1/webhooks',
+    WEBHOOK_BY_ID: '/v1/webhooks/:webhookId',
+    
+    // Webhook Event Types
+    WEBHOOK_EVENTS: {
+      PAYMENT_COMPLETED: 'PAYMENT_COMPLETED',
+      PAYMENT_FAILED: 'PAYMENT_FAILED',
+      PAYOUT_COMPLETED: 'PAYOUT_COMPLETED',
+      PAYOUT_FAILED: 'PAYOUT_FAILED',
+      TRANSFER_COMPLETED: 'TRANSFER_COMPLETED',
+      VIRTUAL_ACCOUNT_DEPOSIT: 'CREATED_VIRTUAL_ACCOUNT_TRANSACTION',
+    },
+  },
 } as const;
 
 /**
@@ -356,6 +421,11 @@ export const ENV_VARIABLES = {
   FLUTTERWAVE_PUBLIC_KEY: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY,
   STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   
+  // Rapyd
+  RAPYD_ACCESS_KEY: process.env.RAPYD_ACCESS_KEY,
+  RAPYD_SECRET_KEY: process.env.RAPYD_SECRET_KEY,
+  RAPYD_ENV: process.env.RAPYD_ENV || 'sandbox', // 'sandbox' | 'production'
+  
   // Email
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
   
@@ -389,6 +459,14 @@ export function getReloadlyBaseUrl(service: 'airtime' | 'giftcards' | 'utilities
 }
 
 /**
+ * Helper function to get Rapyd base URL based on environment
+ */
+export function getRapydBaseUrl(): string {
+  const isProduction = ENV_VARIABLES.RAPYD_ENV === 'production';
+  return isProduction ? PAYMENT_GATEWAYS.RAPYD.PRODUCTION_BASE_URL : PAYMENT_GATEWAYS.RAPYD.SANDBOX_BASE_URL;
+}
+
+/**
  * Helper function to replace URL parameters
  */
 export function replaceUrlParams(url: string, params: Record<string, string>): string {
@@ -413,5 +491,6 @@ export default {
   ANALYTICS,
   ENV_VARIABLES,
   getReloadlyBaseUrl,
+  getRapydBaseUrl,
   replaceUrlParams,
 };
