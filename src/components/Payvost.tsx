@@ -26,15 +26,14 @@ import { SendToBankForm } from './send-to-bank-form';
 import { SendToUserForm } from './send-to-user-form';
 import { PaymentConfirmationDialog } from './payment-confirmation-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { walletService, transactionService, currencyService, type Account } from '@/services';
 
 export function Payvost() {
   const [isLoading, setIsLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
-  const [wallets, setWallets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<Account[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [sendAmount, setSendAmount] = useState('0.00');
@@ -44,14 +43,10 @@ export function Payvost() {
   const [recipientGets, setRecipientGets] = useState('0.00');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<string | undefined>(undefined);
   const [isKycVerified, setIsKycVerified] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const { toast } = useToast();
 
-  const exchangeRates: Record<string, Record<string, number>> = {
-    USD: { NGN: 1450.5, GHS: 14.5, KES: 130.25 },
-    EUR: { NGN: 1600.2, GHS: 16.0, KES: 143.5 },
-    GBP: { NGN: 1850.75, GHS: 18.5, KES: 165.8 },
-    NGN: { USD: 1 / 1450.5, GHS: 14.5 / 1450.5, KES: 130.25 / 1450.5 },
-  };
-
+  // Fetch wallets from backend
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -59,21 +54,23 @@ export function Payvost() {
       return;
     }
 
-    const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        const userData = doc.data();
-        const userWallets = userData.wallets || [];
-        setWallets(userWallets);
-        setBeneficiaries(userData.beneficiaries || []);
-        setIsKycVerified(userData.kycStatus === 'Verified');
-        if (userWallets.length > 0 && !fromWallet) {
-          setFromWallet(userWallets[0].currency);
+    const fetchData = async () => {
+      try {
+        const accounts = await walletService.getAccounts();
+        setWallets(accounts);
+        // TODO: Fetch beneficiaries from backend when endpoint is available
+        // For now, beneficiaries still come from Firebase
+        if (accounts.length > 0 && !fromWallet) {
+          setFromWallet(accounts[0].currency);
         }
+        setLoadingData(false);
+      } catch (error) {
+        console.error('Error fetching wallets:', error);
+        setLoadingData(false);
       }
-      setLoadingData(false);
-    });
+    };
 
-    return () => unsub();
+    fetchData();
   }, [user, authLoading, fromWallet]);
 
   useEffect(() => {
@@ -87,29 +84,99 @@ export function Payvost() {
     }
   }, [sendAmount, fromWallet, wallets]);
 
+  // Fetch exchange rate when currencies change
+  useEffect(() => {
+    const fetchRate = async () => {
+      if (!fromWallet || !receiveCurrency || fromWallet === receiveCurrency) {
+        setExchangeRate(1);
+        return;
+      }
+
+      try {
+        const rate = await currencyService.getRate(fromWallet, receiveCurrency);
+        setExchangeRate(rate);
+      } catch (error) {
+        console.error('Error fetching exchange rate:', error);
+        // Fallback to default rates
+        const fallbackRates: Record<string, Record<string, number>> = {
+          USD: { NGN: 1450.5, GHS: 14.5, KES: 130.25 },
+          EUR: { NGN: 1600.2, GHS: 16.0, KES: 143.5 },
+          GBP: { NGN: 1850.75, GHS: 18.5, KES: 165.8 },
+        };
+        setExchangeRate(fallbackRates[fromWallet]?.[receiveCurrency] || 0);
+      }
+    };
+
+    fetchRate();
+  }, [fromWallet, receiveCurrency]);
+
+  // Calculate recipient amount when send amount or rate changes
   useEffect(() => {
     const amount = parseFloat(sendAmount);
-    if (
-      !isNaN(amount) &&
-      amount > 0 &&
-      fromWallet &&
-      receiveCurrency &&
-      exchangeRates[fromWallet] &&
-      exchangeRates[fromWallet][receiveCurrency]
-    ) {
-      const rate = exchangeRates[fromWallet][receiveCurrency];
-      const convertedAmount = amount * rate;
+    if (!isNaN(amount) && amount > 0 && exchangeRate > 0) {
+      const convertedAmount = amount * exchangeRate;
       setRecipientGets(convertedAmount.toFixed(2));
     } else {
       setRecipientGets('0.00');
     }
-  }, [sendAmount, fromWallet, receiveCurrency]);
+  }, [sendAmount, exchangeRate]);
 
   const handleSendMoney = async () => {
+    if (!fromWallet || !selectedBeneficiary) {
+      toast({
+        title: 'Error',
+        description: 'Please select a wallet and beneficiary',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
+    try {
+      // Get the account ID for the selected wallet
+      const selectedAccount = wallets.find((w) => w.currency === fromWallet);
+      if (!selectedAccount) {
+        throw new Error('Selected wallet not found');
+      }
+
+      // Create transaction via backend
+      const transaction = await transactionService.create({
+        fromAccountId: selectedAccount.id,
+        toBeneficiaryId: selectedBeneficiary,
+        amount: parseFloat(sendAmount),
+        currency: fromWallet,
+        recipientCurrency: receiveCurrency,
+        type: 'REMITTANCE',
+        description: `Transfer to ${recipientName}`,
+        metadata: {
+          exchangeRate,
+          recipientGets: parseFloat(recipientGets),
+        },
+      });
+
+      toast({
+        title: 'Transfer Successful!',
+        description: `Sent ${sendAmount} ${fromWallet} to ${recipientName}`,
+      });
+
+      // Refresh wallets to show updated balance
+      const updatedAccounts = await walletService.getAccounts();
+      setWallets(updatedAccounts);
+
+      // Reset form
+      setSendAmount('0.00');
+      setSelectedBeneficiary(undefined);
+    } catch (error) {
+      console.error('Transfer error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Transfer failed. Please try again.';
+      toast({
+        title: 'Transfer Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const recipientName =
@@ -121,10 +188,8 @@ export function Payvost() {
     recipientGets: recipientGets,
     recipientCurrency: receiveCurrency,
     recipientName: recipientName,
-    exchangeRate: `1 ${fromWallet} = ${
-      exchangeRates[fromWallet || 'USD']?.[receiveCurrency] || 0
-    } ${receiveCurrency}`,
-    fee: '$5.00', // This should be dynamic
+    exchangeRate: `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`,
+    fee: '$5.00', // TODO: Calculate dynamic fee from backend
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -144,8 +209,8 @@ export function Payvost() {
     !selectedBeneficiary;
     
   const currentRate =
-    fromWallet && receiveCurrency && exchangeRates[fromWallet]?.[receiveCurrency]
-      ? `1 ${fromWallet} = ${exchangeRates[fromWallet][receiveCurrency]} ${receiveCurrency}`
+    fromWallet && receiveCurrency && exchangeRate > 0
+      ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
       : 'Not available';
 
   return (

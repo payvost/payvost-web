@@ -2,7 +2,7 @@
 
 ## Core Features:
 
-- Quick Remit: Enable users to quickly send remittances after they log in using the dashboard.
+- Payvost: Enable users to quickly send remittances after they log in using the dashboard.
 - Transfer Tracking: Allow users to see up-to-date status on recent transfers and track transfers in real-time.
 - Address Book: Store users' recipients for quick selection.
 - Secure Authentication: Enable secure login and registration with Firebase Authentication.
