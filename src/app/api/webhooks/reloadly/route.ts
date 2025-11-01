@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { ENV_VARIABLES, RELOADLY } from '@/config/integration-partners';
 import { PrismaClient } from '@prisma/client';
+import { notificationService } from '@/services/notificationService';
 
 const prisma = new PrismaClient();
 
@@ -96,6 +97,31 @@ async function handleTopupSuccess(data: any) {
     });
 
     console.log('Transaction updated successfully');
+    
+    // Send email notification to user
+    if (userId && userId !== 'unknown') {
+      try {
+        // Fetch user details from database or use from webhook data
+        // For now, using placeholder - in production, fetch from User table
+        await notificationService.notifyExternalTransaction({
+          userId,
+          userEmail: data.userEmail || 'user@example.com', // TODO: Fetch from user record
+          userName: data.userName || 'User', // TODO: Fetch from user record
+          type: 'success',
+          transactionType: 'airtime_topup',
+          details: {
+            phoneNumber: data.recipientPhone,
+            operatorName: data.operatorName,
+            amount: data.amount,
+            currency: data.currency || 'USD',
+            transactionId: data.transactionId,
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Don't fail the webhook if notification fails
+      }
+    }
   } catch (error) {
     console.error('Error updating transaction:', error);
   }
@@ -144,8 +170,28 @@ async function handleTopupFailed(data: any) {
       },
     });
 
-    // TODO: Refund user if payment was deducted
-    // TODO: Send notification to user
+    // Refund user if payment was deducted
+    // TODO: Implement refund logic
+    
+    // Send notification to user about failed transaction
+    if (userId && userId !== 'unknown') {
+      try {
+        await notificationService.sendEmail({
+          to: data.userEmail || 'user@example.com', // TODO: Fetch from user record
+          subject: 'Airtime Top-up Failed',
+          template: 'transaction_failed',
+          variables: {
+            name: data.userName || 'User', // TODO: Fetch from user record
+            reason: data.errorMessage || data.failureReason || 'Topup failed',
+            amount: data.amount,
+            currency: data.currency || 'USD',
+            date: new Date().toLocaleString(),
+          },
+        });
+      } catch (notifError) {
+        console.error('Failed to send notification:', notifError);
+      }
+    }
   } catch (error) {
     console.error('Error updating failed transaction:', error);
   }
