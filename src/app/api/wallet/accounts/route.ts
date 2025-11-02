@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/firebase-admin';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,31 +14,22 @@ export async function GET(req: NextRequest) {
     const token = authHeader.split('Bearer ')[1];
     
     // Verify Firebase token
+    let decodedToken;
     try {
-      await auth.verifyIdToken(token);
+      decodedToken = await auth.verifyIdToken(token);
     } catch (error) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Forward request to backend service
-    const backendResponse = await fetch(`${BACKEND_URL}/api/wallet/accounts`, {
-      method: 'GET',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
+    const userId = decodedToken.uid;
+
+    // Fetch accounts directly from database
+    const accounts = await prisma.account.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!backendResponse.ok) {
-      const error = await backendResponse.text();
-      return NextResponse.json(
-        { error: error || 'Failed to fetch accounts' },
-        { status: backendResponse.status }
-      );
-    }
-
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    return NextResponse.json({ accounts });
   } catch (error) {
     console.error('GET /api/wallet/accounts error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -56,33 +46,33 @@ export async function POST(req: NextRequest) {
 
     const token = authHeader.split('Bearer ')[1];
     
+    let decodedToken;
     try {
-      await auth.verifyIdToken(token);
+      decodedToken = await auth.verifyIdToken(token);
     } catch (error) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    const userId = decodedToken.uid;
     const body = await req.json();
 
-    const backendResponse = await fetch(`${BACKEND_URL}/api/wallet/accounts`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const { currency, type = 'PERSONAL' } = body;
 
-    if (!backendResponse.ok) {
-      const error = await backendResponse.text();
-      return NextResponse.json(
-        { error: error || 'Failed to create account' },
-        { status: backendResponse.status }
-      );
+    if (!currency) {
+      return NextResponse.json({ error: 'Currency is required' }, { status: 400 });
     }
 
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    // Create account directly in database
+    const account = await prisma.account.create({
+      data: {
+        userId,
+        currency,
+        balance: 0,
+        type,
+      },
+    });
+
+    return NextResponse.json({ account });
   } catch (error) {
     console.error('POST /api/wallet/accounts error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
