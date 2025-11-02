@@ -8,7 +8,12 @@
 import { auth } from '@/lib/firebase';
 
 // API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Use relative URLs for client-side to hit Next.js API routes
+// Use backend URL for server-side
+const isServer = typeof window === 'undefined';
+const API_BASE_URL = isServer 
+  ? (process.env.BACKEND_URL || 'http://localhost:3001')
+  : ''; // Empty string means relative to current domain
 
 /**
  * Custom error class for API errors
@@ -68,10 +73,15 @@ class ApiClient {
     const { skipAuth = false, timeout = 30000, ...fetchOptions } = options;
 
     // Build headers
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...fetchOptions.headers,
     };
+
+    // Merge existing headers
+    if (fetchOptions.headers) {
+      const existingHeaders = fetchOptions.headers as Record<string, string>;
+      Object.assign(headers, existingHeaders);
+    }
 
     // Add authorization header if not skipped
     if (!skipAuth) {
