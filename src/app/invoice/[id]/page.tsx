@@ -54,8 +54,6 @@ export default function PublicInvoicePage() {
 
   // Use backend API instead of Cloud Functions
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  // Legacy Cloud Functions base (fallback for downloads)
-  const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
   useEffect(() => {
     if (!id) return;
@@ -177,10 +175,8 @@ export default function PublicInvoicePage() {
   const handleDownloadInvoice = () => {
     if (!id) return;
 
-    // Prefer internal serverless route on Vercel
-    const primaryUrl = `/api/pdf/invoice/${id}`;
-    // Fallback to legacy Cloud Function if needed
-    const fallbackUrl = `${functionsBase}/download/invoice/${id}`;
+  // Internal serverless route only
+  const primaryUrl = `/api/pdf/invoice/${id}`;
 
     toast({ title: 'Preparing Download', description: 'Generating your invoice PDF...' });
 
@@ -199,10 +195,6 @@ export default function PublicInvoicePage() {
     });
 
     attempt(primaryUrl)
-      .catch((err) => {
-        console.warn('[Invoice Download] Primary failed, trying fallback:', err?.message || err);
-        return attempt(fallbackUrl);
-      })
       .then((blob) => {
         if (!blob) return;
         const url = window.URL.createObjectURL(blob);
