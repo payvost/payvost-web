@@ -89,6 +89,54 @@ catch (err) {
     console.error('❌ Failed to register service routes:', err);
     process.exit(1);
 }
+// PDF Service Proxy
+// Forward PDF generation requests to the dedicated PDF service
+const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || 'http://localhost:3005';
+app.get('/api/pdf/invoice/:id', async (req, res) => {
+    const { id } = req.params;
+    const origin = req.query.origin;
+    try {
+        const url = new URL(`/invoice/${id}`, PDF_SERVICE_URL);
+        if (origin) {
+            url.searchParams.set('origin', origin);
+        }
+        console.log(`[Gateway] Proxying PDF request to: ${url.toString()}`);
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[Gateway] PDF service error: ${response.status} - ${errorText}`);
+            return res.status(response.status).json({
+                error: 'PDF generation failed',
+                message: errorText,
+            });
+        }
+        // Forward headers
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'application/pdf');
+        res.setHeader('Content-Disposition', response.headers.get('content-disposition') || `attachment; filename="invoice-${id}.pdf"`);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.send(buffer);
+    }
+    catch (error) {
+        console.error('[Gateway] PDF proxy error:', error);
+        res.status(500).json({
+            error: 'Failed to connect to PDF service',
+            message: error.message,
+        });
+    }
+});
+app.get('/api/pdf/health', async (_req, res) => {
+    try {
+        const response = await fetch(`${PDF_SERVICE_URL}/health`);
+        const data = await response.json();
+        res.json(data);
+    }
+    catch (error) {
+        res.status(503).json({
+            error: 'PDF service unavailable',
+            message: error.message,
+        });
+    }
+});
 // Global error handler (must be last)
 app.use(index_1.errorHandler);
 app.listen(port, () => {
