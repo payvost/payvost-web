@@ -1,71 +1,53 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationTemplates = void 0;
 const express_1 = require("express");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
-const OneSignal = __importStar(require("@onesignal/node-onesignal"));
+const nodemailer_1 = __importDefault(require("nodemailer"));
 const router = (0, express_1.Router)();
-// Initialize OneSignal client
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
-const configuration = OneSignal.createConfiguration({
-    appKey: ONESIGNAL_API_KEY,
+// Initialize Nodemailer with Mailgun SMTP
+const emailTransporter = nodemailer_1.default.createTransport({
+    host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
+    port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
+    secure: false,
+    auth: {
+        user: process.env.MAILGUN_SMTP_LOGIN || '',
+        pass: process.env.MAILGUN_SMTP_PASSWORD || '',
+    },
 });
-const oneSignalClient = new OneSignal.DefaultApi(configuration);
+// Check if email service is configured
+const isEmailConfigured = !!(process.env.MAILGUN_SMTP_LOGIN && process.env.MAILGUN_SMTP_PASSWORD);
+if (!isEmailConfigured) {
+    console.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
+}
+// Check if Twilio SMS is configured
+const isSMSConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
+if (!isSMSConfigured) {
+    console.warn('Twilio not configured. SMS notifications will be disabled.');
+}
 /**
  * POST /api/notification/send
- * Send a notification to a user
+ * Send an email notification (replaced push notification)
  */
 router.post('/send', middleware_1.verifyFirebaseToken, async (req, res) => {
     try {
-        const { userId, title, message, type, data } = req.body;
-        if (!userId || !title || !message) {
-            throw new index_1.ValidationError('userId, title, and message are required');
+        const { email, subject, template, variables } = req.body;
+        if (!email || !subject || !template) {
+            throw new index_1.ValidationError('email, subject, and template are required');
         }
-        const result = await sendPushNotification({
-            userId,
-            title,
-            message,
-            type,
-            data,
+        const result = await sendEmailNotification({
+            email,
+            subject,
+            template,
+            variables,
         });
         res.status(200).json({
-            success: true,
-            notificationId: result.id,
+            success: result.success,
+            messageId: result.messageId,
         });
     }
     catch (error) {
@@ -79,19 +61,19 @@ router.post('/send', middleware_1.verifyFirebaseToken, async (req, res) => {
  */
 router.post('/send-email', middleware_1.verifyFirebaseToken, async (req, res) => {
     try {
-        const { email, templateId, subject, variables } = req.body;
-        if (!email || !templateId) {
-            throw new index_1.ValidationError('email and templateId are required');
+        const { email, subject, template, variables } = req.body;
+        if (!email || !template) {
+            throw new index_1.ValidationError('email and template are required');
         }
         const result = await sendEmailNotification({
             email,
-            templateId,
-            subject,
+            subject: subject || 'Notification from Payvost',
+            template,
             variables,
         });
         res.status(200).json({
-            success: true,
-            messageId: result.id,
+            success: result.success,
+            messageId: result.messageId,
         });
     }
     catch (error) {
@@ -105,21 +87,20 @@ router.post('/send-email', middleware_1.verifyFirebaseToken, async (req, res) =>
  */
 router.post('/send-batch', middleware_1.verifyFirebaseToken, async (req, res) => {
     try {
-        const { userIds, title, message, type, data } = req.body;
-        if (!userIds || !Array.isArray(userIds) || !title || !message) {
-            throw new index_1.ValidationError('userIds (array), title, and message are required');
+        const { emails, subject, template, variables } = req.body;
+        if (!emails || !Array.isArray(emails) || !template) {
+            throw new index_1.ValidationError('emails (array) and template are required');
         }
-        const results = await Promise.allSettled(userIds.map(userId => sendPushNotification({
-            userId,
-            title,
-            message,
-            type,
-            data,
+        const results = await Promise.allSettled(emails.map(email => sendEmailNotification({
+            email,
+            subject: subject || 'Notification from Payvost',
+            template,
+            variables,
         })));
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
         res.status(200).json({
-            total: userIds.length,
+            total: emails.length,
             successful,
             failed,
         });
@@ -127,6 +108,31 @@ router.post('/send-batch', middleware_1.verifyFirebaseToken, async (req, res) =>
     catch (error) {
         console.error('Error sending batch notifications:', error);
         res.status(500).json({ error: error.message || 'Failed to send batch notifications' });
+    }
+});
+/**
+ * POST /api/notification/send-sms
+ * Send an SMS notification (Twilio placeholder)
+ */
+router.post('/send-sms', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { phoneNumber, message } = req.body;
+        if (!phoneNumber || !message) {
+            throw new index_1.ValidationError('phoneNumber and message are required');
+        }
+        const result = await sendSMSNotification({
+            phoneNumber,
+            message,
+        });
+        res.status(200).json({
+            success: result.success,
+            messageId: result.messageId,
+            error: result.error,
+        });
+    }
+    catch (error) {
+        console.error('Error sending SMS:', error);
+        res.status(500).json({ error: error.message || 'Failed to send SMS' });
     }
 });
 /**
@@ -144,7 +150,7 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
         const preferences = {
             userId,
             email: email !== undefined ? email : true,
-            push: push !== undefined ? push : true,
+            push: push !== undefined ? push : false, // Disabled since we removed OneSignal
             sms: sms !== undefined ? sms : false,
             transactionAlerts: transactionAlerts !== undefined ? transactionAlerts : true,
             marketingEmails: marketingEmails !== undefined ? marketingEmails : false,
@@ -163,63 +169,120 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
     }
 });
 /**
- * Helper function to send push notification
- */
-async function sendPushNotification(params) {
-    const { userId, title, message, type, data } = params;
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
-        console.warn('OneSignal not configured, skipping push notification');
-        return { id: 'mock-notification-id', success: false };
-    }
-    try {
-        const notification = new OneSignal.Notification();
-        notification.app_id = ONESIGNAL_APP_ID;
-        notification.include_external_user_ids = [userId];
-        notification.headings = { en: title };
-        notification.contents = { en: message };
-        if (type) {
-            notification.data = { type, ...data };
-        }
-        const response = await oneSignalClient.createNotification(notification);
-        return { id: response.id, success: true };
-    }
-    catch (error) {
-        console.error('OneSignal error:', error);
-        throw new Error('Failed to send push notification');
-    }
-}
-/**
  * Helper function to send email notification
  */
 async function sendEmailNotification(params) {
-    const { email, templateId, subject, variables } = params;
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
-        console.warn('OneSignal not configured, skipping email notification');
-        return { id: 'mock-email-id', success: false };
+    const { email, subject, template, variables } = params;
+    if (!isEmailConfigured) {
+        console.warn('Email service not configured, skipping email notification');
+        return { success: false, error: 'Email service not configured' };
     }
     try {
-        const notification = new OneSignal.Notification();
-        notification.app_id = ONESIGNAL_APP_ID;
-        notification.include_email_tokens = [email];
-        notification.template_id = templateId;
-        // Note: subject and custom_data may not be directly available in all OneSignal SDK versions
-        // Check OneSignal documentation for your SDK version
-        // For now, we'll use the data field as a workaround
-        if (subject || variables) {
-            const emailData = {};
-            if (subject)
-                emailData.subject = subject;
-            if (variables)
-                emailData.variables = variables;
-            notification.data = emailData;
-        }
-        const response = await oneSignalClient.createNotification(notification);
-        return { id: response.id, success: true };
+        const html = getEmailTemplate(template, variables || {});
+        const info = await emailTransporter.sendMail({
+            from: `Payvost <${process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com'}>`,
+            to: email,
+            subject,
+            html,
+        });
+        console.log('Email sent successfully:', info.messageId);
+        return { success: true, messageId: info.messageId };
     }
     catch (error) {
-        console.error('OneSignal email error:', error);
-        throw new Error('Failed to send email notification');
+        console.error('Email sending error:', error);
+        return { success: false, error: error.message };
     }
+}
+/**
+ * Helper function to send SMS notification (Twilio placeholder)
+ */
+async function sendSMSNotification(params) {
+    const { phoneNumber, message } = params;
+    if (!isSMSConfigured) {
+        console.warn('Twilio not configured, SMS will not be sent');
+        return { success: false, error: 'SMS service not configured. Twilio integration pending.' };
+    }
+    try {
+        // TODO: Implement actual Twilio integration
+        // const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        // const messageResult = await twilioClient.messages.create({
+        //   body: message,
+        //   from: process.env.TWILIO_PHONE_NUMBER,
+        //   to: phoneNumber
+        // });
+        console.log('SMS would be sent to:', phoneNumber);
+        console.log('Message:', message);
+        return {
+            success: true,
+            messageId: 'placeholder-' + Date.now(),
+            error: 'Twilio integration pending'
+        };
+    }
+    catch (error) {
+        console.error('SMS error:', error);
+        return { success: false, error: error.message };
+    }
+}
+/**
+ * Get email template HTML
+ */
+function getEmailTemplate(template, variables) {
+    const templates = {
+        transaction_success: (vars) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10b981;">Transaction Successful ✓</h2>
+        <p>Hello ${vars.name},</p>
+        <p>Your transaction has been completed successfully.</p>
+        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+          <p><strong>Recipient:</strong> ${vars.recipient}</p>
+          <p><strong>Date:</strong> ${vars.date}</p>
+          <p><strong>Transaction ID:</strong> ${vars.transactionId}</p>
+        </div>
+        <p>Best regards,<br>Payvost Team</p>
+      </div>
+    `,
+        transaction_failed: (vars) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ef4444;">Transaction Failed ✗</h2>
+        <p>Hello ${vars.name},</p>
+        <p>Unfortunately, your transaction could not be completed.</p>
+        <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>Reason:</strong> ${vars.reason}</p>
+          <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+        </div>
+        <p>Best regards,<br>Payvost Team</p>
+      </div>
+    `,
+        bill_payment_success: (vars) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10b981;">Bill Payment Successful ✓</h2>
+        <p>Hello ${vars.name},</p>
+        <p>Your bill payment has been processed successfully.</p>
+        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>Biller:</strong> ${vars.billerName}</p>
+          <p><strong>Amount:</strong> ${vars.currency} ${vars.amount}</p>
+          <p><strong>Reference:</strong> ${vars.reference}</p>
+        </div>
+        <p>Best regards,<br>Payvost Team</p>
+      </div>
+    `,
+        kyc_verified: (vars) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10b981;">Account Verified ✓</h2>
+        <p>Hello ${vars.name},</p>
+        <p>Congratulations! Your account has been successfully verified.</p>
+        <p>You now have full access to all Payvost features.</p>
+        <p>Best regards,<br>Payvost Team</p>
+      </div>
+    `,
+    };
+    return templates[template] ? templates[template](variables) : `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <p>${variables.message || 'Notification from Payvost'}</p>
+      <p>Best regards,<br>Payvost Team</p>
+    </div>
+  `;
 }
 /**
  * Transaction notification templates
