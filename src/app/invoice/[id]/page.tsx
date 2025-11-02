@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { doc, getDoc, DocumentData, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StripeCheckout from '@/components/StripeCheckout';
@@ -38,6 +38,7 @@ const currencySymbols: { [key: string]: string } = {
 
 export default function PublicInvoicePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const [invoice, setInvoice] = useState<DocumentData | null>(null);
   const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
@@ -48,9 +49,11 @@ export default function PublicInvoicePage() {
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
-  // Distinguish between the backend API gateway and the Cloud Functions base
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://api-g5kypmrtqa-uc.a.run.app';
-  const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
+  // Check if this page is being rendered for PDF generation
+  const isRenderForPdf = searchParams.get('pdf') === '1' || searchParams.get('print') === '1';
+
+  // Use backend API instead of Cloud Functions
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
     if (!id) return;
@@ -115,8 +118,7 @@ export default function PublicInvoicePage() {
         if (String(code).toLowerCase().includes('permission-denied')) {
           try {
             const tryUrls = [
-              `${functionsBase}/public/invoice/${id}`,
-              `${functionsBase}/api/public/invoice/${id}`,
+              `${apiBase}/api/public/invoice/${id}`,
             ];
             let fallbackData: any = null;
             for (const url of tryUrls) {
@@ -172,15 +174,65 @@ export default function PublicInvoicePage() {
   const handleDownloadInvoice = () => {
     if (!id) return;
 
-  const downloadUrl = `${functionsBase}/download/invoice/${id}`;
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.download = `invoice-${id}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Use backend PDF service instead of Cloud Functions
+    const downloadUrl = `${apiBase}/api/pdf/invoice/${id}`;
+    
+    // Show loading toast
+    toast({
+      title: "Preparing Download",
+      description: "Generating your invoice PDF...",
+    });
+
+    // Attempt download with error handling
+    fetch(downloadUrl)
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          
+          // Check if it's the billing/service unavailable error
+          if (errorText.includes('not available yet') || errorText.includes('try again in 30 seconds')) {
+            toast({
+              title: "Service Temporarily Unavailable",
+              description: "The PDF generation service is currently unavailable. Please try again later or contact support.",
+              variant: "destructive",
+            });
+          } else if (errorText.includes('not configured')) {
+            toast({
+              title: "Configuration Error",
+              description: "The PDF service is not properly configured. Please contact support.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Download Failed",
+              description: `Unable to generate PDF. ${errorText}`,
+              variant: "destructive",
+            });
+          }
+          throw new Error(errorText);
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `invoice-${id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Complete",
+          description: "Your invoice has been downloaded successfully.",
+        });
+      })
+      .catch((error) => {
+        console.error('[Invoice Download] Error:', error);
+        // Error toast already shown above
+      });
   };
 
   // Pay Now button handler
@@ -250,7 +302,12 @@ export default function PublicInvoicePage() {
   return (
     <>
       <style jsx global>{`
+        @page {
+          size: A4;
+          margin: 16mm;
+        }
         @media print {
+          html, body { background: #fff !important; }
           body { margin: 0; padding: 0; }
           header, .no-print, [role="dialog"], [role="alertdialog"], 
           .cookie-banner, .cookie-consent, [class*="cookie"], [class*="Cookie"],
@@ -264,11 +321,30 @@ export default function PublicInvoicePage() {
             border: none !important;
             max-width: 100% !important;
             margin: 0 !important;
+            background: #fff !important;
           }
         }
         @media screen {
           .print-only { display: none; }
         }
+        ${isRenderForPdf ? `
+          /* Apply print-like layout when ?pdf=1 or ?print=1 for PDF generation */
+          header, .no-print, [role="dialog"], [role="alertdialog"],
+          .cookie-banner, .cookie-consent, [class*="cookie"], [class*="Cookie"],
+          [class*="notification"], [class*="Notification"], [class*="toast"], [class*="Toast"],
+          [id*="cookie"], [id*="notification"], [id*="onesignal"], [class*="onesignal"] { 
+            display: none !important; 
+          }
+          .invoice-card {
+            box-shadow: none !important;
+            border: none !important;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            background: #fff !important;
+          }
+          html, body { background: #fff !important; }
+          .print-only { display: block !important; }
+        ` : ''}
       `}</style>
       
       <div className="flex flex-col min-h-screen bg-muted/10">
