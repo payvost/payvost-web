@@ -137,11 +137,11 @@ router.post('/calculate-fees', verifyFirebaseToken, async (req: AuthenticatedReq
 });
 
 /**
- * Get exchange rates (mock implementation - in production, fetch from external API)
+ * Get exchange rates from Fixer API
  */
 async function getExchangeRates(base: string, target?: string): Promise<Record<string, string>> {
   // Check cache first
-  const cacheKey = `${base}-rates`;
+  const cacheKey = target ? `${base}-${target}` : `${base}-rates`;
   const cached = exchangeRateCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -149,19 +149,66 @@ async function getExchangeRates(base: string, target?: string): Promise<Record<s
     if (target) {
       rates[target] = cached.rate.toString();
     } else {
-      // Return all rates (mock - in production, fetch from API)
+      // Return all cached rates
       SUPPORTED_CURRENCIES.forEach(currency => {
         if (currency !== base) {
-          rates[currency] = getMockExchangeRate(base, currency).toString();
+          const cachedRate = exchangeRateCache.get(`${base}-${currency}`);
+          if (cachedRate) {
+            rates[currency] = cachedRate.rate.toString();
+          }
         }
       });
+      if (Object.keys(rates).length > 0) {
+        return rates;
+      }
     }
-    return rates;
+    if (target && rates[target]) {
+      return rates;
+    }
   }
 
-  // Mock exchange rates (in production, fetch from external API like Fixer.io, ExchangeRate-API, etc.)
-  const rates: Record<string, string> = {};
+  // Fetch from Fixer API
+  const FIXER_API_KEY = process.env.FIXER_API_KEY;
+  
+  if (!FIXER_API_KEY) {
+    console.warn('FIXER_API_KEY not configured, using mock rates');
+    return getMockRates(base, target);
+  }
 
+  try {
+    const symbols = target ? target : SUPPORTED_CURRENCIES.filter(c => c !== base).join(',');
+    const fixerUrl = `https://api.fixer.io/latest?access_key=${FIXER_API_KEY}&base=${base}&symbols=${symbols}`;
+    
+    const response = await fetch(fixerUrl);
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error('Fixer API error:', data.error);
+      return getMockRates(base, target);
+    }
+
+    const rates: Record<string, string> = {};
+    
+    // Cache and return rates
+    Object.entries(data.rates).forEach(([currency, rate]) => {
+      const decimalRate = new Decimal(rate as number);
+      rates[currency] = decimalRate.toString();
+      exchangeRateCache.set(`${base}-${currency}`, { rate: decimalRate, timestamp: Date.now() });
+    });
+
+    return rates;
+  } catch (error) {
+    console.error('Error fetching from Fixer API:', error);
+    return getMockRates(base, target);
+  }
+}
+
+/**
+ * Fallback mock rates
+ */
+function getMockRates(base: string, target?: string): Record<string, string> {
+  const rates: Record<string, string> = {};
+  
   if (target) {
     const rate = getMockExchangeRate(base, target);
     rates[target] = rate.toString();
@@ -171,11 +218,11 @@ async function getExchangeRates(base: string, target?: string): Promise<Record<s
       if (currency !== base) {
         const rate = getMockExchangeRate(base, currency);
         rates[currency] = rate.toString();
+        exchangeRateCache.set(`${base}-${currency}`, { rate, timestamp: Date.now() });
       }
     });
-    exchangeRateCache.set(cacheKey, { rate: new Decimal(1), timestamp: Date.now() });
   }
-
+  
   return rates;
 }
 
