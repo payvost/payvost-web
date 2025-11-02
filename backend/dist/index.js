@@ -1,9 +1,38 @@
 "use strict";
+// Payvost Backend - API Gateway
+// Initializes Firebase Admin SDK and configures all service routes
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+// Load environment variables first
+const dotenv_1 = require("dotenv");
+const path_1 = __importDefault(require("path"));
+(0, dotenv_1.config)({ path: path_1.default.resolve(__dirname, '.env') });
 const module_1 = require("module");
 require("./firebase");
 // Initialize Firebase first
 const localRequire = (0, module_1.createRequire)(__filename);
+// Helper to load modules in both TS (dev) and JS (prod) builds
+function loadService(modPath) {
+    const candidates = [
+        modPath,
+        `${modPath}.ts`,
+        `${modPath}.js`,
+        `${modPath}/index.ts`,
+        `${modPath}/index.js`,
+    ];
+    for (const p of candidates) {
+        try {
+            const m = localRequire(p);
+            return m && m.default ? m.default : m;
+        }
+        catch {
+            // try next candidate
+        }
+    }
+    throw new Error(`Cannot load module: ${modPath}`);
+}
 let userRoutes;
 let walletRoutes;
 let transactionRoutes;
@@ -14,20 +43,13 @@ let paymentRoutes;
 try {
     console.log('✅ Firebase Admin SDK initialized');
     // Load service routes
-    const userMod = localRequire('./services/user/routes/userRoutes');
-    userRoutes = userMod && userMod.default ? userMod.default : userMod;
-    const walletMod = localRequire('./services/wallet/routes');
-    walletRoutes = walletMod && walletMod.default ? walletMod.default : walletMod;
-    const transactionMod = localRequire('./services/transaction/routes');
-    transactionRoutes = transactionMod && transactionMod.default ? transactionMod.default : transactionMod;
-    const fraudMod = localRequire('./services/fraud/routes');
-    fraudRoutes = fraudMod && fraudMod.default ? fraudMod.default : fraudMod;
-    const notificationMod = localRequire('./services/notification/routes');
-    notificationRoutes = notificationMod && notificationMod.default ? notificationMod.default : notificationMod;
-    const currencyMod = localRequire('./services/currency/routes');
-    currencyRoutes = currencyMod && currencyMod.default ? currencyMod.default : currencyMod;
-    const paymentMod = localRequire('./services/payment/src/routes');
-    paymentRoutes = paymentMod && paymentMod.default ? paymentMod.default : paymentMod;
+    userRoutes = loadService('./services/user/routes/userRoutes');
+    walletRoutes = loadService('./services/wallet/routes');
+    transactionRoutes = loadService('./services/transaction/routes');
+    fraudRoutes = loadService('./services/fraud/routes');
+    notificationRoutes = loadService('./services/notification/routes');
+    currencyRoutes = loadService('./services/currency/routes');
+    paymentRoutes = loadService('./services/payment/src/routes');
     console.log('✅ All service routes loaded');
 }
 catch (err) {
