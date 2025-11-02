@@ -7,7 +7,7 @@ import path from 'path';
 config({ path: path.resolve(__dirname, '.env') });
 
 import { createRequire } from 'module';
-import './firebase.ts';
+import './firebase';
 
 // Initialize Firebase first
 const localRequire = createRequire(__filename);
