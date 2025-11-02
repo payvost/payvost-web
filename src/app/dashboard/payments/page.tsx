@@ -91,10 +91,13 @@ export default function PaymentsPage() {
         
         const reloadlyCountryCode = countryCodeMap[billCountry] || billCountry;
         const fetchedBillers = await reloadlyService.getBillersByCountry(reloadlyCountryCode);
-        setBillers(fetchedBillers);
+        // Defensive check: ensure billers is an array
+        const billersArray = Array.isArray(fetchedBillers) ? fetchedBillers : [];
+        setBillers(billersArray);
       } catch (error) {
         console.error('Failed to load billers:', error);
         // Fall back to hardcoded data if Reloadly fails
+        setBillers([]);
       } finally {
         setLoadingBillers(false);
       }
@@ -109,7 +112,9 @@ export default function PaymentsPage() {
       setLoadingGiftCards(true);
       try {
         const products = await reloadlyService.getGiftCardProducts();
-        setGiftCardProducts(products.slice(0, 12)); // Show first 12
+        // Defensive check: ensure products is an array
+        const productsArray = Array.isArray(products) ? products : [];
+        setGiftCardProducts(productsArray.slice(0, 12)); // Show first 12
       } catch (error) {
         console.error('Failed to load gift cards:', error);
         toast({
@@ -139,14 +144,14 @@ export default function PaymentsPage() {
     }
 
     setIsLoading(true);
-    let transactionRecord;
+    let transactionRecord: any = null;
     
     try {
       // Create custom identifier with user info for webhook tracking
       const customIdentifier = `bill-${user.uid}-wallet-${Date.now()}`;
       
       // Record the transaction in our database first
-      transactionRecord = await externalTransactionService.create({
+      const createResponse = await externalTransactionService.create({
         userId: user.uid,
         provider: 'RELOADLY',
         type: 'BILL_PAYMENT',
@@ -161,7 +166,9 @@ export default function PaymentsPage() {
           customIdentifier,
           billerType: billCategory,
         },
-      });
+      }) as { transaction: any };
+
+      transactionRecord = createResponse.transaction;
 
       // Make the actual bill payment via Reloadly
       const result = await reloadlyService.payBill({
@@ -172,7 +179,7 @@ export default function PaymentsPage() {
       });
 
       // Update transaction with provider ID
-      if (transactionRecord && result.transactionId) {
+      if (transactionRecord?.id && result.transactionId) {
         await externalTransactionService.update(transactionRecord.id, {
           providerTransactionId: result.transactionId.toString(),
           status: result.deliveryStatus === 'SUCCESSFUL' ? 'COMPLETED' : 'PROCESSING',
@@ -193,7 +200,7 @@ export default function PaymentsPage() {
       console.error('Bill payment failed:', error);
       
       // Update transaction status to failed if we created a record
-      if (transactionRecord) {
+      if (transactionRecord?.id) {
         await externalTransactionService.update(transactionRecord.id, {
           status: 'FAILED',
           errorMessage: error instanceof Error ? error.message : 'Unknown error',

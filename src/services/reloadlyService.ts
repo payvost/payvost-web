@@ -7,6 +7,7 @@
  */
 
 import { RELOADLY, ENV_VARIABLES, getReloadlyBaseUrl, replaceUrlParams } from '@/config/integration-partners';
+import { apiClient } from './apiClient';
 
 /**
  * Reloadly API Error
@@ -284,23 +285,29 @@ class ReloadlyService {
     const token = await this.getAuthToken(service);
     const baseUrl = getReloadlyBaseUrl(service);
 
+    // Set vendor-specific Accept header required by Reloadly APIs
+    const acceptHeader =
+      service === 'airtime'
+        ? 'application/com.reloadly.topups-v1+json'
+        : service === 'giftcards'
+          ? 'application/com.reloadly.giftcards-v1+json'
+          : 'application/com.reloadly.utilities-v1+json';
+
     const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Accept': acceptHeader,
         ...options.headers,
       },
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new ReloadlyError(
-        error.message || error.error || 'Reloadly API request failed',
-        response.status,
-        error
-      );
+      const baseMsg = error.message || error.error || 'Reloadly API request failed';
+      const envHint = ` (service: ${service}, env: ${ENV_VARIABLES.RELOADLY_ENV}, url: ${baseUrl}${endpoint})`;
+      throw new ReloadlyError(baseMsg + envHint, response.status, error);
     }
 
     return await response.json();
@@ -444,6 +451,14 @@ class ReloadlyService {
    */
   async getGiftCardProducts(countryCode?: string): Promise<GiftCardProduct[]> {
     try {
+      // If running in the browser, use our server API to avoid exposing credentials
+      if (typeof window !== 'undefined') {
+        const endpoint = `/api/reloadly/giftcards/products${countryCode ? `?countryCode=${encodeURIComponent(countryCode)}` : ''}`;
+        const data = await apiClient.get<{ ok: boolean; products: GiftCardProduct[]; error?: string }>(endpoint);
+        if (!data.ok) throw new Error(data.error || 'Failed to fetch gift card products');
+        return data.products;
+      }
+
       const endpoint = countryCode
         ? `${RELOADLY.GIFTCARDS.PRODUCTS}?countryCode=${countryCode}`
         : RELOADLY.GIFTCARDS.PRODUCTS;
@@ -553,11 +568,27 @@ class ReloadlyService {
    */
   async getBillersByCountry(countryCode: string): Promise<Biller[]> {
     try {
-      const endpoint = replaceUrlParams(RELOADLY.UTILITIES.BILLERS_BY_COUNTRY, {
-        countryCode,
-      });
+      // Browser calls should go through our API
+      if (typeof window !== 'undefined') {
+        const endpoint = `/api/reloadly/utilities/billers?countryCode=${encodeURIComponent(countryCode)}`;
+        const data = await apiClient.get<{ ok: boolean; billers: Biller[]; error?: string }>(endpoint);
+        if (!data.ok) throw new Error(data.error || `Failed to fetch billers for ${countryCode}`);
+        return data.billers;
+      }
 
-      return await this.request<Biller[]>('utilities', endpoint);
+      // Try query param format first (some Reloadly APIs use this)
+      const endpointWithQuery = `/billers?iso-code=${countryCode}`;
+      
+      try {
+        return await this.request<Biller[]>('utilities', endpointWithQuery);
+      } catch (queryError) {
+        // Fallback to path param format
+        console.warn('Query param format failed, trying path param:', queryError);
+        const endpoint = replaceUrlParams(RELOADLY.UTILITIES.BILLERS_BY_COUNTRY, {
+          countryCode,
+        });
+        return await this.request<Biller[]>('utilities', endpoint);
+      }
     } catch (error) {
       if (error instanceof ReloadlyError) {
         throw new Error(`Failed to fetch billers for ${countryCode}: ${error.message}`);
@@ -589,6 +620,16 @@ class ReloadlyService {
    */
   async payBill(request: BillPaymentRequest): Promise<BillPaymentResponse> {
     try {
+      // Browser calls should go through our API
+      if (typeof window !== 'undefined') {
+        const data = await apiClient.post<{ ok: boolean; result: BillPaymentResponse; error?: string }>(
+          '/api/reloadly/utilities/pay',
+          request
+        );
+        if (!data.ok) throw new Error(data.error || 'Failed to pay bill');
+        return data.result;
+      }
+
       return await this.request<BillPaymentResponse>(
         'utilities',
         RELOADLY.UTILITIES.BILL_PAYMENT,

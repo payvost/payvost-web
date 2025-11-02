@@ -54,7 +54,7 @@ export const RELOADLY = {
   UTILITIES: {
     BILLERS: '/billers',
     BILLER_BY_ID: '/billers/:billerId',
-    BILLERS_BY_COUNTRY: '/billers/countries/:countryCode',
+    BILLERS_BY_COUNTRY: '/billers/:countryCode',
     BILL_PAYMENT: '/pay',
     TRANSACTION: '/transactions/:transactionId',
     BALANCE: '/accounts/balance',
