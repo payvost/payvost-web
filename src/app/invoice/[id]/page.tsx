@@ -189,6 +189,12 @@ export default function PublicInvoicePage() {
         const text = await response.text().catch(() => 'Unknown error');
         throw new Error(text);
       }
+      // Validate content-type to ensure we actually received a PDF
+      const ct = response.headers.get('content-type')?.toLowerCase() || '';
+      if (!ct.includes('application/pdf')) {
+        const text = await response.text().catch(() => 'Invalid content-type, expected PDF');
+        throw new Error(text || 'Invalid PDF response');
+      }
       return response.blob();
     });
 

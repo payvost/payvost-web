@@ -130,17 +130,23 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const { invoice, businessProfile } = await getPublicInvoiceAndBusiness(id);
     if (!invoice) return new Response('Invoice not found or not public', { status: 404 });
 
-    // Optional storage cache redirect if public file already exists
+    // Optional storage cache: if file exists, serve it directly
     try {
       const storage = getAdminStorage();
       const file = storage.bucket().file(`invoices/${id}.pdf`);
       const [exists] = await file.exists();
       if (exists) {
-        const [meta] = await file.getMetadata();
-        const isPublic = (meta as any)?.acl?.some?.((a: any) => a.entity === 'allUsers' && a.role === 'READER');
-        if (isPublic && typeof (file as any).publicUrl === 'function') {
-          return Response.redirect((file as any).publicUrl(), 302);
-        }
+        const [contents] = await file.download();
+        const fromCache = new Blob([contents as any], { type: 'application/pdf' });
+        return new Response(fromCache, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
+            'Cache-Control': 'public, max-age=3600',
+            'X-PDF-Cache': 'HIT',
+          },
+        });
       }
     } catch {
       // ignore cache errors
