@@ -5,6 +5,8 @@
  * external partner transaction data. All database access happens on the server.
  */
 
+import { apiClient } from './apiClient';
+
 export type ExternalProvider = 'RELOADLY' | 'RAPYD' | 'PAYSTACK' | 'FLUTTERWAVE' | 'STRIPE';
 export type ExternalTransactionType = 
   | 'AIRTIME_TOPUP'
@@ -53,27 +55,24 @@ class ExternalTransactionService {
    * Create a new external transaction record
    */
   async create(data: CreateExternalTransactionDto) {
-    // Optional: Implement POST API if needed in the future
-    throw new Error('Not implemented on client. Use server route to create transactions.');
+    return await apiClient.post('/api/external-transactions/create', data);
   }
 
   /**
    * Update an external transaction
    */
   async update(id: string, data: UpdateExternalTransactionDto) {
-    // Optional: Implement PATCH API if needed in the future
-    throw new Error('Not implemented on client. Use server route to update transactions.');
+    return await apiClient.patch('/api/external-transactions/update', { id, ...data });
   }
 
   /**
    * Update by provider transaction ID
    */
   async updateByProviderTransactionId(
-    _providerTransactionId: string,
-    _data: UpdateExternalTransactionDto
+    providerTransactionId: string,
+    data: UpdateExternalTransactionDto
   ) {
-    // Optional: Implement PATCH API if needed in the future
-    throw new Error('Not implemented on client. Use server route to update transactions.');
+    return await apiClient.patch('/api/external-transactions/update', { providerTransactionId, ...data });
   }
 
   /**
