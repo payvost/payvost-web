@@ -6,7 +6,10 @@
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
+  // Generate Prisma Client into the repo root node_modules/.prisma, which is the
+  // supported location. Imports from '@prisma/client' will automatically forward
+  // to this path.
+  output   = "../../node_modules/.prisma/client"
 }
 
 datasource db {
