@@ -5,10 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/providers';
-import { CookieConsentBanner } from '@/components/cookie-consent-banner';
+import { UnifiedConsentBanner } from '@/components/unified-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
-import { LocationPermissionBanner } from '@/components/location-permission-banner';
 import PWARegister from '../components/pwa-register';
 
 const inter = Inter({
@@ -53,8 +52,7 @@ export default function RootLayout({
       
       <PWARegister />
             <Toaster />
-            <LocationPermissionBanner />
-            <CookieConsentBanner />
+            <UnifiedConsentBanner />
             <SpeedInsights />
             <Analytics />
         </Providers>

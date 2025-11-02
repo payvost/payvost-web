@@ -206,7 +206,15 @@ export function PaymentConfirmationDialog({
                 </AlertDialogHeader>
                 <div className="my-4 flex flex-col items-center justify-center gap-4">
                      <Label htmlFor="pin-input" className="sr-only">Transaction PIN</Label>
-                    <InputOTP id="pin-input" maxLength={4} value={pin} onChange={setPin} pattern="\d{4}">
+                        <InputOTP
+                            id="pin-input"
+                            maxLength={4}
+                            value={pin}
+                            onChange={setPin}
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            aria-label="Transaction PIN"
+                        >
                         <InputOTPGroup>
                             <InputOTPSlot index={0} />
                             <InputOTPSlot index={1} />

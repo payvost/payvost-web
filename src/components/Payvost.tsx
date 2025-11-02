@@ -296,8 +296,16 @@ export function Payvost() {
                 <Label htmlFor="send-amount">You send</Label>
                 <Input
                   id="send-amount"
+                  type="number"
                   value={sendAmount}
                   onChange={(e) => setSendAmount(e.target.value)}
+                  onFocus={(e) => {
+                    if (e.target.value === '0.00') setSendAmount('');
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') setSendAmount('0.00');
+                  }}
+                  placeholder="0.00"
                   disabled={!isKycVerified}
                 />
                 {amountError && (

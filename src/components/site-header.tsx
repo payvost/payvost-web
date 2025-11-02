@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { countries, Country } from "@/lib/countries";
+import { ThemeSwitcher } from './theme-switcher';
 
 const products: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
   {
@@ -153,6 +154,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                  <div className="hidden md:flex">
                   <CountrySelector />
                 </div>
+                <ThemeSwitcher />
                 {showLogin && (
                     <Button variant="ghost" className="text-sm font-medium" asChild>
                         <Link href="/login">Login</Link>
