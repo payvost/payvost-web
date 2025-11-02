@@ -34,11 +34,11 @@ export type {
   ConversionResult,
 } from './currencyService';
 
-// Email Service (existing)
-export * from './emailService';
+// Email Service (existing) - Server-side only, import directly from './emailService' in API routes
+// export * from './emailService';
 
-// Notification Service (existing)
-export * from './notificationService';
+// Notification Service (existing) - Server-side only, import directly from './notificationService' in API routes
+// export * from './notificationService';
 
 // Reloadly Service
 export { reloadlyService, ReloadlyError } from './reloadlyService';
