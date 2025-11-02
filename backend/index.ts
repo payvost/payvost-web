@@ -1,6 +1,11 @@
 // Payvost Backend - API Gateway
 // Initializes Firebase Admin SDK and configures all service routes
+
+// Load environment variables first
+import { config } from 'dotenv';
 import path from 'path';
+config({ path: path.resolve(__dirname, '.env') });
+
 import { createRequire } from 'module';
 import './firebase.ts';
 
