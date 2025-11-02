@@ -2,11 +2,6 @@ import { NextRequest } from 'next/server';
 import { Document, Page, Text, View, StyleSheet, pdf as renderPdf } from '@react-pdf/renderer';
 import { getAdminDb, getAdminStorage } from '../../../../../lib/firebaseAdmin';
 
-const CF_BASE =
-  process.env.FUNCTIONS_PUBLIC_BASE_URL ||
-  process.env.NEXT_PUBLIC_FUNCTIONS_URL ||
-  'https://us-central1-payvost.cloudfunctions.net/api2';
-
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 11, fontFamily: 'Helvetica' },
   header: { marginBottom: 16 },
@@ -96,53 +91,35 @@ function InvoicePDF({ invoice, businessProfile }: any) {
 }
 
 async function getPublicInvoiceAndBusiness(id: string) {
-  // First try Firebase Admin (preferred)
-  try {
-    const db = getAdminDb();
-    const collections = ['invoices', 'businessInvoices'];
-    let invoice: any = null;
+  const db = getAdminDb();
+  const collections = ['invoices', 'businessInvoices'];
+  let invoice: any = null;
 
-    for (const col of collections) {
-      const snap = await db.collection(col).doc(id).get();
-      if (snap.exists) {
-        const data = snap.data();
-        if (data?.isPublic) {
-          invoice = { id, ...data };
-          break;
-        }
+  for (const col of collections) {
+    const snap = await db.collection(col).doc(id).get();
+    if (snap.exists) {
+      const data = snap.data();
+      if (data?.isPublic) {
+        invoice = { id, ...data };
+        break;
       }
     }
+  }
 
-    if (!invoice) return { invoice: null, businessProfile: null };
+  if (!invoice) return { invoice: null, businessProfile: null };
 
-    let businessProfile: any = null;
-    if (invoice.businessId) {
-      const q = await db
-        .collection('users')
-        .where('businessProfile.id', '==', invoice.businessId)
-        .limit(1)
-        .get();
-      if (!q.empty) {
-        businessProfile = q.docs[0].data().businessProfile;
-      }
+  let businessProfile: any = null;
+  if (invoice.businessId) {
+    const q = await db
+      .collection('users')
+      .where('businessProfile.id', '==', invoice.businessId)
+      .limit(1)
+      .get();
+    if (!q.empty) {
+      businessProfile = q.docs[0].data().businessProfile;
     }
-    return { invoice, businessProfile };
-  } catch (e) {
-    // Fall through to CF public endpoint fetch
   }
-
-  // Fallback: fetch from legacy Cloud Functions public endpoint (server-to-server; CORS not applicable)
-  try {
-    const resp = await fetch(`${CF_BASE}/public/invoice/${id}`, { cache: 'no-store' });
-    if (!resp.ok) return { invoice: null, businessProfile: null };
-    const data = await resp.json();
-    if (!data?.isPublic) return { invoice: null, businessProfile: null };
-
-    // try to fetch business profile via CF too, if available later; for now, omit and render without
-    return { invoice: { id, ...data }, businessProfile: null };
-  } catch {
-    return { invoice: null, businessProfile: null };
-  }
+  return { invoice, businessProfile };
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -159,7 +136,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       const file = storage.bucket().file(`invoices/${id}.pdf`);
       const [exists] = await file.exists();
       if (exists) {
+        // cache hit: serve bytes directly
         const [contents] = await file.download();
+        try { console.log(`[api/pdf/invoice] cache HIT id=${id}`); } catch {}
         const fromCache = new Blob([contents as any], { type: 'application/pdf' });
         return new Response(fromCache, {
           status: 200,
@@ -179,6 +158,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       <InvoicePDF invoice={invoice} businessProfile={businessProfile} />
     ).toBuffer();
 
+    // Best-effort write-through cache to Storage for faster subsequent downloads
+    try {
+      const storage = getAdminStorage();
+      const file = storage.bucket().file(`invoices/${id}.pdf`);
+      await file.save(buffer, {
+        contentType: 'application/pdf',
+        resumable: false,
+        metadata: { cacheControl: 'public, max-age=3600' },
+      });
+      try { console.log(`[api/pdf/invoice] cache SAVE id=${id}`); } catch {}
+    } catch {
+      // ignore caching failures
+    }
+
     const blob = new Blob([buffer as any], { type: 'application/pdf' });
     return new Response(blob, {
       status: 200,
@@ -186,6 +179,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
         'Cache-Control': 'public, max-age=60',
+        'X-PDF-Cache': 'MISS',
       },
     });
   } catch (e: any) {

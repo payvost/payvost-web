@@ -64,12 +64,7 @@ STRIPE_SECRET_KEY=<your-stripe-secret-key>
 NEXT_PUBLIC_STRIPE_PUBLIC_KEY=<your-stripe-public-key>
 ```
 
-### Legacy Integrations (Optional)
-If you still use legacy Cloud Functions endpoints as a fallback, set:
-```
-NEXT_PUBLIC_FUNCTIONS_URL=https://us-central1-payvost.cloudfunctions.net/api2
-FUNCTIONS_PUBLIC_BASE_URL=https://us-central1-payvost.cloudfunctions.net/api2
-```
+<!-- Legacy Cloud Functions fallback removed: internal PDF route now handles generation directly. -->
 
 If you run a separate backend gateway for APIs in development:
 ```
