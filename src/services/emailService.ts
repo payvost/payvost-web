@@ -1,26 +1,20 @@
 
 'use server';
 
-import * as OneSignal from '@onesignal/node-onesignal';
+import nodemailer from 'nodemailer';
 
-// --- OneSignal Client Initialization ---
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
-
-// Correctly initialize the OneSignal client with authentication
-const configuration = OneSignal.createConfiguration({
-    authMethods: {
-        app_key: {
-            tokenProvider: {
-                getToken(): string {
-                    return ONESIGNAL_API_KEY;
-                }
-            }
-        }
-    }
+// --- Mailgun/Nodemailer Configuration ---
+const transporter = nodemailer.createTransport({
+  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
+  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
+  secure: false, // Use TLS
+  auth: {
+    user: process.env.MAILGUN_SMTP_LOGIN,
+    pass: process.env.MAILGUN_SMTP_PASSWORD,
+  },
 });
 
-const client = new OneSignal.DefaultApi(configuration);
+const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
 
 interface PaymentRequestEmail {
@@ -83,33 +77,33 @@ interface PaymentRequestEmail {
 
 
 export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
-    const notification = new OneSignal.Notification();
-    notification.app_id = ONESIGNAL_APP_ID;
-    notification.email_to = [details.to];
-    notification.name = "Payment Request";
-    notification.email_subject = `Payment Request from ${details.requesterName}`;
-    notification.email_body = `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2>You've Received a Payment Request</h2>
-            <p>Hello,</p>
-            <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
-            <p>
-                <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                    Pay Securely Now
-                </a>
-            </p>
-            <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
-        </div>
-    `;
+  const mailOptions = {
+    from: FROM_EMAIL,
+    to: details.to,
+    subject: `Payment Request from ${details.requesterName}`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; color: #333;">
+        <h2>You've Received a Payment Request</h2>
+        <p>Hello,</p>
+        <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
+        <p>
+          <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Pay Securely Now
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
+      </div>
+    `,
+  };
 
-    try {
-        const response = await client.createNotification(notification);
-        console.log('Payment request email sent successfully to', details.to, 'with ID:', response.id);
-        return { success: true };
-    } catch (e: any) {
-        console.error('Error sending payment request email with OneSignal:', e.body || e);
-        throw new Error('Failed to send payment request email.');
-    }
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Payment request email sent successfully to', details.to, 'with ID:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error('Error sending payment request email:', error);
+    throw new Error('Failed to send payment request email.');
+  }
 }
 
 

@@ -398,10 +398,7 @@ async function handleBillPaymentFailed(data: any) {
     console.error('Error updating failed bill payment:', error);
   }
   
-  return {
-    success: true,
   // TODO: Log error for investigation
-  
   return {
     success: true,
     message: 'Bill payment failure processed',
