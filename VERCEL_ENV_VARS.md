@@ -68,6 +68,7 @@ NEXT_PUBLIC_STRIPE_PUBLIC_KEY=<your-stripe-public-key>
 If you still use legacy Cloud Functions endpoints as a fallback, set:
 ```
 NEXT_PUBLIC_FUNCTIONS_URL=https://us-central1-payvost.cloudfunctions.net/api2
+FUNCTIONS_PUBLIC_BASE_URL=https://us-central1-payvost.cloudfunctions.net/api2
 ```
 
 If you run a separate backend gateway for APIs in development:

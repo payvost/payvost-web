@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server';
 import { Document, Page, Text, View, StyleSheet, pdf as renderPdf } from '@react-pdf/renderer';
 import { getAdminDb, getAdminStorage } from '../../../../../lib/firebaseAdmin';
 
+const CF_BASE =
+  process.env.FUNCTIONS_PUBLIC_BASE_URL ||
+  process.env.NEXT_PUBLIC_FUNCTIONS_URL ||
+  'https://us-central1-payvost.cloudfunctions.net/api2';
+
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 11, fontFamily: 'Helvetica' },
   header: { marginBottom: 16 },
@@ -91,35 +96,53 @@ function InvoicePDF({ invoice, businessProfile }: any) {
 }
 
 async function getPublicInvoiceAndBusiness(id: string) {
-  const db = getAdminDb();
-  const collections = ['invoices', 'businessInvoices'];
-  let invoice: any = null;
+  // First try Firebase Admin (preferred)
+  try {
+    const db = getAdminDb();
+    const collections = ['invoices', 'businessInvoices'];
+    let invoice: any = null;
 
-  for (const col of collections) {
-    const snap = await db.collection(col).doc(id).get();
-    if (snap.exists) {
-      const data = snap.data();
-      if (data?.isPublic) {
-        invoice = { id, ...data };
-        break;
+    for (const col of collections) {
+      const snap = await db.collection(col).doc(id).get();
+      if (snap.exists) {
+        const data = snap.data();
+        if (data?.isPublic) {
+          invoice = { id, ...data };
+          break;
+        }
       }
     }
-  }
 
-  if (!invoice) return { invoice: null, businessProfile: null };
+    if (!invoice) return { invoice: null, businessProfile: null };
 
-  let businessProfile: any = null;
-  if (invoice.businessId) {
-    const q = await db
-      .collection('users')
-      .where('businessProfile.id', '==', invoice.businessId)
-      .limit(1)
-      .get();
-    if (!q.empty) {
-      businessProfile = q.docs[0].data().businessProfile;
+    let businessProfile: any = null;
+    if (invoice.businessId) {
+      const q = await db
+        .collection('users')
+        .where('businessProfile.id', '==', invoice.businessId)
+        .limit(1)
+        .get();
+      if (!q.empty) {
+        businessProfile = q.docs[0].data().businessProfile;
+      }
     }
+    return { invoice, businessProfile };
+  } catch (e) {
+    // Fall through to CF public endpoint fetch
   }
-  return { invoice, businessProfile };
+
+  // Fallback: fetch from legacy Cloud Functions public endpoint (server-to-server; CORS not applicable)
+  try {
+    const resp = await fetch(`${CF_BASE}/public/invoice/${id}`, { cache: 'no-store' });
+    if (!resp.ok) return { invoice: null, businessProfile: null };
+    const data = await resp.json();
+    if (!data?.isPublic) return { invoice: null, businessProfile: null };
+
+    // try to fetch business profile via CF too, if available later; for now, omit and render without
+    return { invoice: { id, ...data }, businessProfile: null };
+  } catch {
+    return { invoice: null, businessProfile: null };
+  }
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -167,7 +190,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
   } catch (e: any) {
     console.error('[api/pdf/invoice] error', e);
-    return new Response('Failed to generate PDF', { status: 500 });
+    return new Response('Failed to generate PDF', { status: 500, headers: { 'X-Error': String(e?.message || e) } });
   }
 }
 
