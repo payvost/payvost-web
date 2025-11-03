@@ -44,10 +44,10 @@ function InvoicePDF({ invoice, businessProfile }: any) {
         </View>
 
         <View style={styles.meta}>
-          <Text>Invoice #: {invoice?.invoiceNumber || invoice?.id}</Text>
+          <Text>Invoice #: {invoice?.invoiceNumber || invoice?.id || 'N/A'}</Text>
           <Text>Issue Date: {tsToDate(invoice?.issueDate)?.toLocaleDateString() || '-'}</Text>
           <Text>Due Date: {tsToDate(invoice?.dueDate)?.toLocaleDateString() || '-'}</Text>
-          {invoice?.status && <Text>Status: {invoice.status}</Text>}
+          <Text>Status: {invoice?.status || 'Draft'}</Text>
         </View>
 
         <View style={styles.table}>
@@ -74,17 +74,17 @@ function InvoicePDF({ invoice, businessProfile }: any) {
 
         <View style={styles.totals}>
           <Text>Subtotal: {formatMoney(invoice?.subtotal, currency)}</Text>
-          {invoice?.tax ? <Text>Tax: {formatMoney(invoice.tax, currency)}</Text> : null}
-          {invoice?.discount ? <Text>Discount: -{formatMoney(invoice.discount, currency)}</Text> : null}
+          {invoice?.tax > 0 && <Text>Tax: {formatMoney(invoice.tax, currency)}</Text>}
+          {invoice?.discount > 0 && <Text>Discount: -{formatMoney(invoice.discount, currency)}</Text>}
           <Text>Grand Total: {formatMoney(invoice?.grandTotal, currency)}</Text>
         </View>
 
-        {invoice?.notes ? (
+        {invoice?.notes && (
           <View style={{ marginTop: 16 }}>
             <Text>Notes:</Text>
             <Text style={styles.muted}>{invoice.notes}</Text>
           </View>
-        ) : null}
+        )}
       </Page>
     </Document>
   );
