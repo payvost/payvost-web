@@ -246,7 +246,20 @@ const formatDate = (dateValue) => {
 };
 
 const InvoiceDocument = ({ invoice }) => {
-  const items = Array.isArray(invoice.items) && invoice.items.length > 0 ? invoice.items : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
+  // Defensive check: ensure invoice exists
+  if (!invoice || typeof invoice !== 'object') {
+    console.error('[InvoiceDocument] Invalid invoice data:', invoice);
+    throw new Error('Invalid invoice data: invoice object is required');
+  }
+
+  const items = Array.isArray(invoice.items) && invoice.items.length > 0 
+    ? invoice.items 
+    : [{ 
+        description: invoice.description || 'Item', 
+        quantity: 1, 
+        price: invoice.amount || invoice.grandTotal || 0 
+      }];
+  
   const subtotal = items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
   const tax = Number(invoice.tax || 0);
   const discount = Number(invoice.discount || 0);
@@ -263,21 +276,21 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, { style: styles.invoiceNumber }, `Invoice # ${invoice.invoiceNumber || invoice.id || 'INV-XXXX'}`)
         ),
         React.createElement(View, { style: [styles.statusBadge, statusStyle] },
-          React.createElement(Text, {}, status.toUpperCase())
+          React.createElement(Text, {}, String(status || 'Pending').toUpperCase())
         )
       ),
       React.createElement(View, { style: styles.section },
         React.createElement(View, { style: styles.column },
           React.createElement(Text, { style: styles.sectionHeader }, 'Billed To'),
           React.createElement(Text, { style: styles.text }, invoice.toName || 'Customer Name'),
-          invoice.toEmail && React.createElement(Text, { style: styles.mutedText }, invoice.toEmail),
-          invoice.toAddress && React.createElement(Text, { style: styles.mutedText }, invoice.toAddress)
+          invoice.toEmail && React.createElement(Text, { style: styles.mutedText }, String(invoice.toEmail)),
+          invoice.toAddress && React.createElement(Text, { style: styles.mutedText }, String(invoice.toAddress))
         ),
         React.createElement(View, { style: styles.column },
           React.createElement(Text, { style: styles.sectionHeader }, 'From'),
           React.createElement(Text, { style: styles.text }, invoice.fromName || 'Your Business'),
-          invoice.fromAddress && React.createElement(Text, { style: styles.mutedText }, invoice.fromAddress),
-          invoice.fromEmail && React.createElement(Text, { style: styles.mutedText }, invoice.fromEmail)
+          invoice.fromAddress && React.createElement(Text, { style: styles.mutedText }, String(invoice.fromAddress)),
+          invoice.fromEmail && React.createElement(Text, { style: styles.mutedText }, String(invoice.fromEmail))
         ),
         React.createElement(View, { style: styles.columnRight },
           React.createElement(Text, { style: styles.sectionHeader }, 'Invoice Details'),
@@ -297,9 +310,11 @@ const InvoiceDocument = ({ invoice }) => {
           const price = Number(item.price) || 0;
           const total = qty * price;
           const isAlt = index % 2 === 1;
+          const description = String(item.description || item.name || 'Item');
+          
           return React.createElement(View, { key: index, style: [styles.tableRow, isAlt && styles.tableRowAlt] },
-            React.createElement(Text, { style: [styles.tableCol, styles.tableColDesc] }, item.description || item.name || 'Item'),
-            React.createElement(Text, { style: [styles.tableCol, styles.tableColQty] }, qty),
+            React.createElement(Text, { style: [styles.tableCol, styles.tableColDesc] }, description),
+            React.createElement(Text, { style: [styles.tableCol, styles.tableColQty] }, String(qty)),
             React.createElement(Text, { style: [styles.tableCol, styles.tableColPrice] }, formatCurrency(price, currency)),
             React.createElement(Text, { style: [styles.tableCol, styles.tableColTotal] }, formatCurrency(total, currency))
           );
@@ -327,7 +342,7 @@ const InvoiceDocument = ({ invoice }) => {
       ),
       invoice.notes && React.createElement(View, { style: styles.notesSection },
         React.createElement(Text, { style: styles.notesHeader }, 'Notes'),
-        React.createElement(Text, { style: styles.notesText }, invoice.notes)
+        React.createElement(Text, { style: styles.notesText }, String(invoice.notes))
       ),
       React.createElement(View, { style: styles.footer },
         React.createElement(Text, {}, 'Thank you for your business!')
