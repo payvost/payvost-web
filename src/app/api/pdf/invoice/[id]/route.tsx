@@ -23,6 +23,15 @@ function formatMoney(value: any, currency?: string) {
   return `${currency || ''} ${num.toFixed(2)}`.trim();
 }
 
+function safeText(value: any): string {
+  if (value == null) return '';
+  if (value instanceof Date) return value.toLocaleDateString();
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') return String(value);
+  // Avoid rendering objects/elements inside <Text/>
+  return '';
+}
+
 function InvoicePDF({ invoice, businessProfile }: any) {
   const items = Array.isArray(invoice?.items) ? invoice.items : [];
   const currency = invoice?.currency || 'USD';
@@ -38,16 +47,20 @@ function InvoicePDF({ invoice, businessProfile }: any) {
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>{businessProfile?.name || 'Invoice'}</Text>
-          {businessProfile?.address && <Text style={styles.muted}>{businessProfile.address}</Text>}
-          {businessProfile?.email && <Text style={styles.muted}>{businessProfile.email}</Text>}
+          <Text style={styles.title}>{safeText(businessProfile?.name) || 'Invoice'}</Text>
+          {safeText(businessProfile?.address) && (
+            <Text style={styles.muted}>{safeText(businessProfile?.address)}</Text>
+          )}
+          {safeText(businessProfile?.email) && (
+            <Text style={styles.muted}>{safeText(businessProfile?.email)}</Text>
+          )}
         </View>
 
         <View style={styles.meta}>
-          <Text>Invoice #: {invoice?.invoiceNumber || invoice?.id || 'N/A'}</Text>
-          <Text>Issue Date: {tsToDate(invoice?.issueDate)?.toLocaleDateString() || '-'}</Text>
-          <Text>Due Date: {tsToDate(invoice?.dueDate)?.toLocaleDateString() || '-'}</Text>
-          <Text>Status: {invoice?.status || 'Draft'}</Text>
+          <Text>Invoice #: {safeText(invoice?.invoiceNumber) || safeText(invoice?.id) || 'N/A'}</Text>
+          <Text>Issue Date: {safeText(tsToDate(invoice?.issueDate)) || '-'}</Text>
+          <Text>Due Date: {safeText(tsToDate(invoice?.dueDate)) || '-'}</Text>
+          <Text>Status: {safeText(invoice?.status) || 'Draft'}</Text>
         </View>
 
         <View style={styles.table}>
@@ -63,7 +76,7 @@ function InvoicePDF({ invoice, businessProfile }: any) {
             const amount = Number(it?.amount ?? qty * price);
             return (
               <View key={i} style={styles.tr}>
-                <Text style={styles.colDesc}>{it?.description || it?.name || '-'}</Text>
+                <Text style={styles.colDesc}>{safeText(it?.description) || safeText(it?.name) || '-'}</Text>
                 <Text style={styles.colQty}>{qty}</Text>
                 <Text style={styles.colPrice}>{formatMoney(price, currency)}</Text>
                 <Text style={styles.colAmt}>{formatMoney(amount, currency)}</Text>
@@ -79,10 +92,10 @@ function InvoicePDF({ invoice, businessProfile }: any) {
           <Text>Grand Total: {formatMoney(invoice?.grandTotal, currency)}</Text>
         </View>
 
-        {invoice?.notes && (
+        {safeText(invoice?.notes) && (
           <View style={{ marginTop: 16 }}>
             <Text>Notes:</Text>
-            <Text style={styles.muted}>{invoice.notes}</Text>
+            <Text style={styles.muted}>{safeText(invoice?.notes)}</Text>
           </View>
         )}
       </Page>
