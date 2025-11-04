@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { TwoFactorSettings } from '@/components/two-factor-settings';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -137,6 +138,9 @@ export default function SettingsPage() {
           </div>
 
           <div className="lg:col-span-1 space-y-6">
+
+            {/* Two-Factor Authentication */}
+            <TwoFactorSettings />
 
              {/* Accessibility & UI */}
             <Card>
