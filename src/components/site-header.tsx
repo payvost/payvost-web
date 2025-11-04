@@ -28,7 +28,7 @@ const products: { title: string; href: string; description: string; icon: React.
   },
   {
     title: "Live Exchange Rates",
-    href: "/#",
+    href: "/fx-rates",
     description: "Get real-time FX rates to make informed decisions for your transfers.",
     icon: <BarChart className="h-5 w-5" />
   },
@@ -104,12 +104,16 @@ const CountrySelector = () => {
     )
 }
 
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
+
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     return (
         <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center bg-background/95 backdrop-blur-sm border-b rounded-b-md">
             <Link href="/" className="flex items-center justify-center">
                 <Icons.logo className="h-8" />
             </Link>
+            {/* Desktop Navigation */}
             <nav className="ml-auto hidden lg:flex gap-4 sm:gap-6">
                 <NavigationMenu>
                     <NavigationMenuList>
@@ -150,10 +154,9 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </NavigationMenuList>
                 </NavigationMenu>
             </nav>
-            <nav className="ml-auto flex items-center gap-4 sm:gap-6">
-                 <div className="hidden md:flex">
-                  <CountrySelector />
-                </div>
+            {/* Desktop Right Actions */}
+            <nav className="hidden lg:flex ml-auto items-center gap-4">
+                <CountrySelector />
                 <ThemeSwitcher />
                 {showLogin && (
                     <Button variant="ghost" className="text-sm font-medium" asChild>
@@ -166,6 +169,63 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </Button>
                 )}
             </nav>
+            {/* Mobile Hamburger & Sheet */}
+            <nav className="ml-auto flex items-center gap-2 lg:hidden">
+                <ThemeSwitcher />
+                <Sheet>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon" className="p-2">
+                            <Menu className="h-6 w-6" />
+                            <span className="sr-only">Open menu</span>
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-72">
+                        <div className="flex flex-col h-full">
+                            <div className="flex items-center justify-between px-4 py-3 border-b">
+                                <Link href="/" className="flex items-center">
+                                    <Icons.logo className="h-8" />
+                                </Link>
+                            </div>
+                            <nav className="flex flex-col gap-2 px-4 py-4 overflow-y-auto">
+                                <Link href="/" className="py-2 text-base font-medium hover:text-primary transition-colors">Home</Link>
+                                <div className="py-2 border-b">
+                                    <div className="text-sm font-semibold text-muted-foreground mb-2">Products</div>
+                                    {products.map((product) => (
+                                        <Link 
+                                            key={product.title}
+                                            href={product.href}
+                                            className="flex items-start gap-3 py-2 rounded-md hover:bg-accent transition-colors"
+                                        >
+                                            <div className="mt-0.5">{product.icon}</div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-medium">{product.title}</div>
+                                                <div className="text-xs text-muted-foreground mt-0.5">{product.description}</div>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                                <Link href="/about" className="py-2 text-base font-medium hover:text-primary transition-colors">About Us</Link>
+                                <Link href="/blog" className="py-2 text-base font-medium hover:text-primary transition-colors">Blog</Link>
+                                <div className="py-3 border-t mt-2">
+                                    <div className="text-sm font-semibold text-muted-foreground mb-2">Country</div>
+                                    <CountrySelector />
+                                </div>
+                                {showLogin && (
+                                    <Button variant="outline" className="w-full mt-2" asChild>
+                                        <Link href="/login">Login</Link>
+                                    </Button>
+                                )}
+                                {showRegister && (
+                                    <Button className="w-full mt-2" asChild>
+                                        <Link href="/register">Get Started</Link>
+                                    </Button>
+                                )}
+                            </nav>
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            </nav>
         </header>
     )
 }
+
