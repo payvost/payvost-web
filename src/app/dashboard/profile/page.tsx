@@ -32,6 +32,7 @@ import { CalendarIcon } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// 2FA card is intentionally not shown on Profile page. It's available in Settings.
 
 
 const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -300,11 +301,9 @@ export default function ProfilePage() {
             canvas.toBlob((blob) => {
                 if (blob) {
                     const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
                     
                     setPreviewImage(canvas.toDataURL('image/jpeg'));
-                    setValue('photo', dataTransfer.files); // Update RHF state
+                    setImageFile(file);
                     stopCamera();
                     setShowCamera(false);
                 }
@@ -521,9 +520,9 @@ export default function ProfilePage() {
                                 )}
                             </DialogContent>
                         </Dialog>
-                         <Button variant="outline" className="w-full justify-start"><ShieldCheck className="mr-2 h-4 w-4"/>Enable Two-Factor Auth</Button>
                     </CardContent>
                 </Card>
+                
             </div>
             <div className="lg:col-span-2 space-y-6">
                  <Card>

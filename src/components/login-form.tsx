@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, MultiFactorResolver } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import axios from 'axios';
 
 const loginSchema = z.object({
@@ -51,6 +53,9 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -90,12 +95,21 @@ export function LoginForm() {
         return;
       }
 
+      // No MFA enrolled, proceed with login
       toast({
           title: "Login Successful!",
           description: "Redirecting you to the dashboard...",
       });
       router.push('/dashboard');
     } catch (error: any) {
+      // Handle MFA required
+      if (error.code === 'auth/multi-factor-auth-required') {
+        setMfaResolver(error.resolver);
+        setShow2FADialog(true);
+        setIsLoading(false);
+        return;
+      }
+      
       let errorMessage = "An unknown error occurred.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
@@ -109,6 +123,68 @@ export function LoginForm() {
       });
     } finally {
         setIsLoading(false);
+    }
+  }
+
+  const verify2FA = async () => {
+    if (!mfaResolver || twoFactorCode.length !== 6) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 6-digit code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedHint = mfaResolver.hints[0];
+      let multiFactorAssertion;
+
+      if (selectedHint.factorId === TotpMultiFactorGenerator.FACTOR_ID) {
+        // TOTP verification
+        multiFactorAssertion = TotpMultiFactorGenerator.assertionForSignIn(
+          selectedHint.uid,
+          twoFactorCode
+        );
+      } else if (selectedHint.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+        // Phone verification (this would need additional SMS flow)
+        // For now, we'll just show an error
+        throw new Error('Phone MFA verification not yet fully implemented in login');
+      } else {
+        throw new Error('Unsupported MFA method');
+      }
+
+      // Resolve sign-in with MFA
+      const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
+        toast({
+          title: "Email Not Verified",
+          description: "Please verify your email before logging in.",
+          variant: "destructive"
+        });
+        await auth.signOut();
+        router.push('/verify-email');
+        return;
+      }
+
+      // 2FA successful
+      toast({
+        title: "Login Successful!",
+        description: "Redirecting you to the dashboard...",
+      });
+      setShow2FADialog(false);
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid verification code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -171,6 +247,46 @@ export function LoginForm() {
               <AppleIcon className="mr-2 h-4 w-4" /> Apple
           </Button>
       </div>
+
+      {/* 2FA Verification Dialog */}
+      <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              Enter the 6-digit code from your authenticator app or the code sent to your email/phone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={twoFactorCode}
+                onChange={setTwoFactorCode}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              onClick={verify2FA} 
+              disabled={isLoading || twoFactorCode.length !== 6}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

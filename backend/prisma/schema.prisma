@@ -19,18 +19,26 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  password    String
-  name        String?
-  role        String   @default("user")
-  kycStatus   String   @default("pending")
-  accounts    Account[]
-  activities  AccountActivity[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  country     String?
-  userTier    String   @default("STANDARD")
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  password              String
+  name                  String?
+  role                  String   @default("user")
+  kycStatus             String   @default("pending")
+  accounts              Account[]
+  activities            AccountActivity[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  country               String?
+  userTier              String   @default("STANDARD")
+  
+  // 2FA fields
+  twoFactorEnabled      Boolean  @default(false)
+  twoFactorMethod       String?  // 'email', 'sms', 'authenticator'
+  twoFactorSecret       String?  // TOTP secret for authenticator
+  twoFactorPhone        String?  // Phone number for SMS 2FA
+  twoFactorBackupCodes  String[] // Array of backup codes
+  twoFactorVerified     Boolean  @default(false) // Whether 2FA setup is verified
 }
 
 model Account {
