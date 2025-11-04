@@ -1,35 +1,24 @@
 
 // src/components/icons.tsx
-'use client';
-
 import type { LucideProps } from "lucide-react";
-import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+
+// Dynamically import the logo component with no SSR to avoid hydration issues
+const LogoComponent = dynamic(() => import('./logo-component').then(mod => mod.LogoComponent), {
+  ssr: false,
+  loading: () => (
+    <img
+      src="/payvost.png"
+      alt="Payvost Logo"
+      width={110}
+      height={150}
+      style={{ width: 'auto' }}
+    />
+  ),
+});
 
 export const Icons = {
-  logo: (props: Omit<React.ComponentProps<typeof Image>, 'src' | 'alt'>) => {
-    const { resolvedTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-      setMounted(true);
-    }, []);
-
-    // Use light logo as default during SSR to avoid hydration mismatch
-    const logoSrc = mounted && resolvedTheme === 'dark' ? '/Payvost White.png' : '/payvost.png';
-
-    return (
-      <Image
-        src={logoSrc}
-        alt="Payvost Logo"
-        width={110}
-        height={150}
-        style={{ width: 'auto' }}
-        {...props}
-      />
-    );
-  },
+  logo: LogoComponent,
   instagram: (props: React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
