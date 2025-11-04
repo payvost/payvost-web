@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { walletService, transactionService, currencyService, type Account } from '@/services';
+import { TransferPageSkeleton } from '@/components/skeletons/transfer-page-skeleton';
 
 export function Payvost() {
   const [isLoading, setIsLoading] = useState(false);
@@ -212,6 +213,11 @@ export function Payvost() {
     fromWallet && receiveCurrency && exchangeRate > 0
       ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
       : 'Not available';
+
+  // Show loading skeleton while data is being fetched
+  if (loadingData) {
+    return <TransferPageSkeleton />;
+  }
 
   return (
     <Card>

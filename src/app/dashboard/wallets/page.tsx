@@ -30,7 +30,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WalletsPageSkeleton } from '@/components/skeletons/wallets-page-skeleton';
 import { walletService, currencyService, type Account } from '@/services';
+import { getCurrencyMeta, getFlagCode, getCurrencyName } from '@/utils/currency-meta';
 import { useToast } from '@/hooks/use-toast';
 
 export default function WalletsPage() {
@@ -99,8 +101,15 @@ export default function WalletsPage() {
     return acc + (wallet.balance * rate);
   }, 0);
 
-  const primaryWallet = wallets.find(w => w.currency === 'USD') || wallets[0];
-  const otherWallets = primaryWallet ? wallets.filter(w => w.currency !== primaryWallet.currency) : [];
+  // Derive view models with flag/name for UI components that expect them
+  const walletViews = wallets.map(w => ({
+    ...w,
+    name: getCurrencyName(w.currency),
+    flag: getFlagCode(w.currency),
+  }));
+
+  const primaryWallet = walletViews.find(w => w.currency === 'USD') || walletViews[0];
+  const otherWallets = primaryWallet ? walletViews.filter(w => w.currency !== primaryWallet.currency) : [];
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -128,26 +137,7 @@ export default function WalletsPage() {
   const isLoading = authLoading || loadingWallets;
 
   if (isLoading) {
-    return (
-        <DashboardLayout language={language} setLanguage={setLanguage}>
-            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-                 <div className="flex items-center justify-between">
-                    <Skeleton className="h-10 w-48" />
-                    <Skeleton className="h-10 w-36" />
-                </div>
-                <Skeleton className="h-24 w-full" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <div className="lg:col-span-1 space-y-6">
-                        <Skeleton className="h-64 w-full" />
-                        <Skeleton className="h-80 w-full" />
-                    </div>
-                    <div className="lg:col-span-1">
-                        <Skeleton className="h-[450px] w-full" />
-                    </div>
-                </div>
-            </main>
-        </DashboardLayout>
-    )
+  return <WalletsPageSkeleton language={language} setLanguage={setLanguage} />;
   }
 
   return (
@@ -213,7 +203,7 @@ export default function WalletsPage() {
                          <FundWalletDialog wallet={primaryWallet}>
                             <Button variant="secondary" size="sm" className="w-full"><ArrowDownLeft className="mr-2 h-4 w-4"/>Fund</Button>
                         </FundWalletDialog>
-                        <CurrencyExchangeDialog wallets={wallets}>
+                        <CurrencyExchangeDialog wallets={walletViews}>
                           <Button variant="secondary" size="sm" className="w-full"><Repeat className="mr-2 h-4 w-4"/>Exchange</Button>
                         </CurrencyExchangeDialog>
                     </CardFooter>
@@ -251,7 +241,7 @@ export default function WalletsPage() {
                                             <FundWalletDialog wallet={wallet}>
                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Fund</DropdownMenuItem>
                                             </FundWalletDialog>
-                                            <CurrencyExchangeDialog wallets={wallets}>
+                                            <CurrencyExchangeDialog wallets={walletViews}>
                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Exchange</DropdownMenuItem>
                                             </CurrencyExchangeDialog>
                                         </DropdownMenuContent>
