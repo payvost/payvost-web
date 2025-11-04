@@ -53,11 +53,12 @@ export default function PublicBusinessInvoicePage() {
         const docRef = doc(db, "businessInvoices", id);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists() && docSnap.data().isPublic) {
+        if (docSnap.exists()) {
+          // Business invoices are always public, no need to check isPublic flag
           setInvoice(docSnap.data());
         } else {
           setInvoice(null);
-          console.log("Business invoice not found or not public.");
+          console.log("Business invoice not found.");
         }
       } catch (error) {
         console.error("Error fetching business invoice:", error);
