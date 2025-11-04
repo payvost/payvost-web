@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
 import {
   TrendingUp,
   TrendingDown,
@@ -121,7 +122,13 @@ export function DetailedRateChart({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{flag}</span>
+            <Image 
+              src={flag} 
+              alt={currencyCode}
+              width={32}
+              height={32}
+              className="rounded"
+            />
             <div>
               <CardTitle className="text-xl">
                 {currencyCode} / {baseCurrency}
@@ -303,7 +310,13 @@ export function CurrencyComparisonChart({ baseCurrency, currencies }: Comparison
             <div key={currency.code} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{currency.flag}</span>
+                  <Image 
+                    src={currency.flag} 
+                    alt={currency.code}
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
                   <span className="font-medium">{currency.code}</span>
                 </div>
                 <div className="flex items-center gap-2">
