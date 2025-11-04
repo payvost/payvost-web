@@ -324,14 +324,6 @@ export const SMS_PROVIDERS = {
  * Push Notification Services
  */
 export const PUSH_NOTIFICATION = {
-  // OneSignal
-  ONESIGNAL: {
-    BASE_URL: 'https://onesignal.com/api/v1',
-    NOTIFICATIONS: '/notifications',
-    PLAYERS: '/players',
-    SEGMENTS: '/segments',
-  },
-  
   // Firebase Cloud Messaging
   FCM: {
     BASE_URL: 'https://fcm.googleapis.com/fcm',
@@ -433,8 +425,9 @@ export const ENV_VARIABLES = {
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
   
-  // Push Notifications
-  ONESIGNAL_APP_ID: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID,
+  // Push Notifications (FCM)
+  FCM_SERVER_KEY: process.env.FCM_SERVER_KEY,
+  FCM_VAPID_KEY: process.env.NEXT_PUBLIC_FCM_VAPID_KEY,
   
   // Exchange Rates
   EXCHANGE_RATE_API_KEY: process.env.EXCHANGE_RATE_API_KEY,
