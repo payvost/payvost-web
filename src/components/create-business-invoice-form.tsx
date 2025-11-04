@@ -96,7 +96,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
   const { user, loading: authLoading } = useAuth();
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [showSendDialog, setShowSendDialog] = useState(false);
-    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const isEditing = !!invoiceId;
 
@@ -231,10 +231,6 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         try {
             const finalInvoiceId = await saveInvoice('Pending');
             setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
-            // Warm PDF cache in background
-            try {
-              fetch(`/api/pdf/cache/invoice/${finalInvoiceId}`, { method: 'POST' }).catch(() => {});
-            } catch {}
             setShowSendDialog(true);
         } catch (error) {
              console.error("Error sending invoice:", error);

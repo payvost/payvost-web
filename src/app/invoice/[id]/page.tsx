@@ -171,50 +171,67 @@ export default function PublicInvoicePage() {
   }, [id]);
 
   // Download invoice PDF
-  // Download invoice PDF
   const handleDownloadInvoice = () => {
     if (!id) return;
 
-  // Internal serverless route only
-  const primaryUrl = `/api/pdf/invoice/${id}`;
-
-    toast({ title: 'Preparing Download', description: 'Generating your invoice PDF...' });
-
-    const attempt = (url: string) => fetch(url).then(async (response) => {
-      if (!response.ok) {
-        const text = await response.text().catch(() => 'Unknown error');
-        throw new Error(text);
-      }
-      // Validate content-type to ensure we actually received a PDF
-      const ct = response.headers.get('content-type')?.toLowerCase() || '';
-      if (!ct.includes('application/pdf')) {
-        const text = await response.text().catch(() => 'Invalid content-type, expected PDF');
-        throw new Error(text || 'Invalid PDF response');
-      }
-      return response.blob();
+    // Use backend PDF service instead of Cloud Functions
+    const downloadUrl = `${apiBase}/api/pdf/invoice/${id}`;
+    
+    // Show loading toast
+    toast({
+      title: "Preparing Download",
+      description: "Generating your invoice PDF...",
     });
 
-    attempt(primaryUrl)
+    // Attempt download with error handling
+    fetch(downloadUrl)
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          
+          // Check if it's the billing/service unavailable error
+          if (errorText.includes('not available yet') || errorText.includes('try again in 30 seconds')) {
+            toast({
+              title: "Service Temporarily Unavailable",
+              description: "The PDF generation service is currently unavailable. Please try again later or contact support.",
+              variant: "destructive",
+            });
+          } else if (errorText.includes('not configured')) {
+            toast({
+              title: "Configuration Error",
+              description: "The PDF service is not properly configured. Please contact support.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Download Failed",
+              description: `Unable to generate PDF. ${errorText}`,
+              variant: "destructive",
+            });
+          }
+          throw new Error(errorText);
+        }
+        return response.blob();
+      })
       .then((blob) => {
-        if (!blob) return;
+        // Create download link
         const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = `invoice-${id}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
-        toast({ title: 'Download Complete', description: 'Your invoice has been downloaded.' });
+        
+        toast({
+          title: "Download Complete",
+          description: "Your invoice has been downloaded successfully.",
+        });
       })
       .catch((error) => {
         console.error('[Invoice Download] Error:', error);
-        const msg = String(error?.message || error);
-        toast({
-          title: 'Download Failed',
-          description: msg.includes('not available yet') ? 'Service temporarily unavailable. Please try again later.' : msg,
-          variant: 'destructive',
-        });
+        // Error toast already shown above
       });
   };
 
