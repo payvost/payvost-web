@@ -217,7 +217,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     <SheetContent side="right" className="p-0 w-80">
                         <div className="flex flex-col h-full">
                             {/* Header with Logo and Country Selector */}
-                            <div className="flex items-center justify-between px-4 py-3 border-b">
+                            <div className="flex items-center justify-between pl-4 pr-12 py-3 border-b">
                                 <Link href="/" className="flex items-center">
                                     <Icons.logo className="h-7" />
                                 </Link>
