@@ -39,6 +39,7 @@ let fraudRoutes: any;
 let notificationRoutes: any;
 let currencyRoutes: any;
 let paymentRoutes: any;
+let escrowRoutes: any;
 
 try {
   console.log('✅ Firebase Admin SDK initialized');
@@ -50,6 +51,7 @@ try {
   notificationRoutes = loadService('./services/notification/routes');
   currencyRoutes = loadService('./services/currency/routes');
   paymentRoutes = loadService('./services/payment/src/routes');
+  escrowRoutes = loadService('./services/escrow/routes');
   console.log('✅ All service routes loaded');
 } catch (err) {
   console.error('❌ Failed to load backend modules:', err);
@@ -90,6 +92,10 @@ try {
   
   if (paymentRoutes) {
     registerServiceRoutes(app, 'Payment Service', '/api/payment', paymentRoutes);
+  }
+  
+  if (escrowRoutes) {
+    registerServiceRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes);
   }
   
   console.log('✅ All service routes registered');
