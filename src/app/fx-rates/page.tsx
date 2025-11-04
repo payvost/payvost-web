@@ -300,42 +300,42 @@ export default function FXRatesPage() {
                 </span>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+            </div>
+          </CardContent>
+        </Card>
+      );
+    };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <SiteHeader />
       
-      <main className="container mx-auto px-4 py-8 space-y-8">
+      <main className="container mx-auto px-4 py-4 md:py-8 space-y-6 md:space-y-8">
         {/* Hero Section */}
-        <div className="text-center space-y-4 py-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <Activity className="h-4 w-4 animate-pulse" />
+        <div className="text-center space-y-3 md:space-y-4 py-6 md:py-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-medium mb-2 md:mb-4">
+            <Activity className="h-3 w-3 md:h-4 md:w-4 animate-pulse" />
             Live Exchange Rates
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight px-2">
             Real-Time <span className="text-primary">FX Rates</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
             Monitor live foreign exchange rates across {CURRENCIES.length}+ currencies.
             Make informed decisions with up-to-the-second market data.
           </p>
           
-          <div className="flex flex-wrap items-center justify-center gap-6 pt-6">
-            <div className="flex items-center gap-2 text-sm">
-              <Zap className="h-5 w-5 text-yellow-500" />
+          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 pt-4 md:pt-6 px-4">
+            <div className="flex items-center gap-2 text-xs md:text-sm">
+              <Zap className="h-4 w-4 md:h-5 md:w-5 text-yellow-500" />
               <span>Updates every 30s</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Globe2 className="h-5 w-5 text-blue-500" />
+            <div className="flex items-center gap-2 text-xs md:text-sm">
+              <Globe2 className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
               <span>{CURRENCIES.length} Currencies</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <BarChart3 className="h-5 w-5 text-green-500" />
+            <div className="flex items-center gap-2 text-xs md:text-sm">
+              <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
               <span>Live Market Data</span>
             </div>
           </div>
@@ -343,132 +343,144 @@ export default function FXRatesPage() {
 
         {/* Base Currency Selector & Controls */}
         <Card className="border-2">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <Label htmlFor="base-currency" className="text-sm font-medium mb-2 block">
-                  Base Currency
-                </Label>
-                <Select value={baseCurrency} onValueChange={setBaseCurrency}>
-                  <SelectTrigger id="base-currency" className="h-12 text-lg">
-                    <SelectValue>
-                      <div className="flex items-center gap-2">
-                        <Image 
-                          src={CURRENCIES.find(c => c.code === baseCurrency)?.flag || '/flag/US.png'}
-                          alt={baseCurrency}
-                          width={28}
-                          height={28}
-                          className="rounded"
-                        />
-                        <span className="font-semibold">{baseCurrency}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map(currency => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        <div className="flex items-center gap-3">
+          <CardContent className="pt-4 md:pt-6">
+            <div className="flex flex-col gap-3 md:gap-4">
+              {/* First Row: Base Currency and Search */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <div className="w-full">
+                  <Label htmlFor="base-currency" className="text-sm font-medium mb-2 block">
+                    Base Currency
+                  </Label>
+                  <Select value={baseCurrency} onValueChange={setBaseCurrency}>
+                    <SelectTrigger id="base-currency" className="h-11 md:h-12 text-base md:text-lg w-full">
+                      <SelectValue>
+                        <div className="flex items-center gap-2">
                           <Image 
-                            src={currency.flag}
-                            alt={currency.code}
-                            width={24}
-                            height={24}
+                            src={CURRENCIES.find(c => c.code === baseCurrency)?.flag || '/flag/US.png'}
+                            alt={baseCurrency}
+                            width={28}
+                            height={28}
                             className="rounded"
                           />
-                          <div className="flex flex-col">
-                            <span className="font-semibold">{currency.code}</span>
-                            <span className="text-xs text-muted-foreground">{currency.name}</span>
-                          </div>
+                          <span className="font-semibold">{baseCurrency}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(currency => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          <div className="flex items-center gap-3">
+                            <Image 
+                              src={currency.flag}
+                              alt={currency.code}
+                              width={24}
+                              height={24}
+                              className="rounded"
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-semibold">{currency.code}</span>
+                              <span className="text-xs text-muted-foreground">{currency.name}</span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="flex-1">
-                <Label htmlFor="search" className="text-sm font-medium mb-2 block">
-                  Search Currencies
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    placeholder="Search by name, code, or country..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-12"
-                  />
+                <div className="w-full">
+                  <Label htmlFor="search" className="text-sm font-medium mb-2 block">
+                    Search Currencies
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 md:top-3.5 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      placeholder="Search by name, code..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 md:pl-10 h-11 md:h-12 text-sm md:text-base w-full"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <Button
-                onClick={fetchExchangeRates}
-                disabled={isRefreshing}
-                size="lg"
-                className="h-12 px-6"
-              >
-                <RefreshCw className={cn('h-5 w-5 mr-2', isRefreshing && 'animate-spin')} />
-                Refresh
-              </Button>
-
-              <div className="flex gap-2">
+              {/* Second Row: Action Buttons */}
+              <div className="flex flex-wrap gap-2 md:gap-3">
                 <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  size="lg"
-                  className="h-12"
-                  onClick={() => setViewMode('grid')}
+                  onClick={fetchExchangeRates}
+                  disabled={isRefreshing}
+                  size="default"
+                  className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base flex-1 sm:flex-none"
                 >
-                  <BarChart3 className="h-5 w-5" />
+                  <RefreshCw className={cn('h-4 w-4 md:h-5 md:w-5 mr-2', isRefreshing && 'animate-spin')} />
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">Refresh</span>
                 </Button>
-                <Button
-                  variant={viewMode === 'compact' ? 'default' : 'outline'}
-                  size="lg"
-                  className="h-12"
-                  onClick={() => setViewMode('compact')}
-                >
-                  <Activity className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
 
-            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-green-500 animate-pulse" />
-                <span>Live rates updating automatically</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="default"
+                    className="h-10 md:h-12 px-3 md:px-4"
+                    onClick={() => setViewMode('grid')}
+                    aria-label="Grid view"
+                  >
+                    <BarChart3 className="h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'compact' ? 'default' : 'outline'}
+                    size="default"
+                    className="h-10 md:h-12 px-3 md:px-4"
+                    onClick={() => setViewMode('compact')}
+                    aria-label="Compact view"
+                  >
+                    <Activity className="h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
+                </div>
               </div>
-              <div>Last updated: <LastUpdatedTime date={lastUpdate} /></div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs md:text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-3 w-3 md:h-4 md:w-4 text-green-500 animate-pulse" />
+                  <span>Live rates updating automatically</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Last updated:</span>
+                  <LastUpdatedTime date={lastUpdate} />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Currency Converter */}
         <Card className="border-2 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader>
+          <CardHeader className="pb-3 md:pb-6">
             <div className="flex items-center gap-2">
-              <ArrowRightLeft className="h-5 w-5 text-primary" />
-              <CardTitle>Quick Currency Converter</CardTitle>
+              <ArrowRightLeft className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+              <CardTitle className="text-base md:text-lg">Quick Currency Converter</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs md:text-sm">
               Convert between any two currencies instantly
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount" className="text-sm">Amount</Label>
                 <Input
                   id="amount"
                   type="number"
                   value={convertAmount}
                   onChange={(e) => setConvertAmount(e.target.value)}
-                  className="h-12 text-lg"
+                  className="h-11 md:h-12 text-base md:text-lg"
                   placeholder="Enter amount"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="from-currency">From</Label>
+                <Label htmlFor="from-currency" className="text-sm">From</Label>
                 <Select value={convertFrom} onValueChange={setConvertFrom}>
                   <SelectTrigger id="from-currency" className="h-12">
                     <SelectValue>
@@ -504,7 +516,7 @@ export default function FXRatesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="to-currency">To</Label>
+                <Label htmlFor="to-currency" className="text-sm">To</Label>
                 <Select value={convertTo} onValueChange={setConvertTo}>
                   <SelectTrigger id="to-currency" className="h-12">
                     <SelectValue>
@@ -540,13 +552,13 @@ export default function FXRatesPage() {
               </div>
             </div>
 
-            <div className="mt-6 p-6 bg-background rounded-lg border-2">
+            <div className="mt-4 md:mt-6 p-4 md:p-6 bg-background rounded-lg border-2">
               <div className="text-center space-y-2">
-                <div className="text-sm text-muted-foreground">Converted Amount</div>
-                <div className="text-4xl font-bold text-primary">
+                <div className="text-xs md:text-sm text-muted-foreground">Converted Amount</div>
+                <div className="text-2xl md:text-4xl font-bold text-primary break-words">
                   {getCurrencyInfo(convertTo)?.symbol}{convertedAmount()}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs md:text-sm text-muted-foreground">
                   {convertAmount} {convertFrom} = {convertedAmount()} {convertTo}
                 </div>
               </div>
@@ -555,13 +567,13 @@ export default function FXRatesPage() {
         </Card>
 
         {/* Exchange Rates Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 h-12">
-            <TabsTrigger value="all" className="text-base">
+        <Tabs defaultValue="all" className="space-y-4 md:space-y-6">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 h-10 md:h-12">
+            <TabsTrigger value="all" className="text-sm md:text-base">
               All Currencies ({filteredRates.length})
             </TabsTrigger>
-            <TabsTrigger value="favorites" className="text-base">
-              <Star className="h-4 w-4 mr-2 fill-yellow-400 text-yellow-400" />
+            <TabsTrigger value="favorites" className="text-sm md:text-base">
+              <Star className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2 fill-yellow-400 text-yellow-400" />
               Favorites ({favoriteRates.length})
             </TabsTrigger>
           </TabsList>
