@@ -43,14 +43,14 @@ export default function BusinessInvoiceDetailsPage() {
 
 
     useEffect(() => {
-        if (!user || !id) {
+        if (!id) {
             setLoading(false);
             return;
-        };
+        }
 
         const docRef = doc(db, 'businessInvoices', id);
         const unsubscribeInvoice = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists() && docSnap.data().createdBy === user.uid) {
+            if (docSnap.exists()) {
                 setInvoice({ id: docSnap.id, ...docSnap.data() });
             } else {
                 setInvoice(null);
@@ -61,17 +61,20 @@ export default function BusinessInvoiceDetailsPage() {
             setLoading(false);
         });
 
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setBusinessProfile(docSnap.data().businessProfile || null);
-            }
-        });
-
+        // Load business profile if user is authenticated and is the creator
+        let unsubscribeProfile: (() => void) | undefined;
+        if (user) {
+            const userDocRef = doc(db, 'users', user.uid);
+            unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setBusinessProfile(docSnap.data().businessProfile || null);
+                }
+            });
+        }
 
         return () => {
             unsubscribeInvoice();
-            unsubscribeProfile();
+            if (unsubscribeProfile) unsubscribeProfile();
         };
     }, [user, id]);
     
