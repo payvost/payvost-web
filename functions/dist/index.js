@@ -58,7 +58,12 @@ const PUBLIC_SITE_URL = process.env.PUBLIC_SITE_URL || 'https://www.payvost.com'
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || '';
 // === Express App for API routes ===
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: '*', // Allow all origins for public endpoints
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
+}));
 // --- Test route ---
 app.get('/', (_req, res) => {
     res.send('API is working via Firebase Functions 🚀');
@@ -71,14 +76,18 @@ app.get('/download/invoice/:invoiceId', async (req, res) => {
     }
     // Validate invoice exists and is public
     let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
+    let isBusinessInvoice = false;
     if (!invoiceDoc.exists) {
         invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
+        isBusinessInvoice = true;
     }
     if (!invoiceDoc.exists)
         return res.status(404).send('Invoice not found');
     const invoiceData = invoiceDoc.data();
-    if (!invoiceData?.isPublic)
+    // Only check isPublic for regular invoices, business invoices are always public
+    if (!isBusinessInvoice && !invoiceData?.isPublic) {
         return res.status(403).send('Invoice is not public');
+    }
     if (!PDF_SERVICE_URL) {
         console.error('Missing PDF_SERVICE_URL environment variable');
         return res.status(500).send('PDF service not configured');
@@ -111,15 +120,19 @@ app.get('/public/invoice/:invoiceId', async (req, res) => {
         const { invoiceId } = req.params;
         // Try the legacy invoices collection first
         let invoiceDoc = await db.collection('invoices').doc(invoiceId).get();
+        let isBusinessInvoice = false;
         // If not found, try businessInvoices
         if (!invoiceDoc.exists) {
             invoiceDoc = await db.collection('businessInvoices').doc(invoiceId).get();
+            isBusinessInvoice = true;
         }
         if (!invoiceDoc.exists)
             return res.status(404).json({ error: 'Invoice not found' });
         const invoiceData = invoiceDoc.data();
-        if (!invoiceData?.isPublic)
+        // Only check isPublic for regular invoices, business invoices are always public
+        if (!isBusinessInvoice && !invoiceData?.isPublic) {
             return res.status(403).json({ error: 'Invoice is not public' });
+        }
         // Return the invoice data as JSON (sanitize sensitive fields if needed)
         return res.status(200).json({ id: invoiceDoc.id, ...invoiceData });
     }
