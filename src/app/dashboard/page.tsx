@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, Sun, Moon, PlusCircle, FileText, ShieldAlert, CreditCard, ArrowRightLeft, Smartphone, ShoppingCart, Wallet, LineChart, CheckCircle, Users } from 'lucide-react';
 import { CurrencyCard } from '@/components/currency-card';
+import { getFlagCode } from '@/utils/currency-meta';
 import { AccountCompletion } from '@/components/account-completion';
 import { cn, abbreviateNumber } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -21,14 +22,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { KycNotification } from '@/components/kyc-notification';
+import { DashboardLoadingSkeleton, WalletCardSkeleton } from '@/components/skeletons/dashboard-skeleton';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
+import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
 import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { sendVerificationWelcomeEmail } from '@/services/emailService';
-import { sendBusinessApprovalEmail } from '@/services/emailService';
 import { externalTransactionService } from '@/services';
 
 
@@ -79,11 +80,13 @@ export default function DashboardPage() {
   const [disputes, setDisputes] = useState<DocumentData[]>([]);
   const [loadingDisputes, setLoadingDisputes] = useState(true);
   const [externalTxStats, setExternalTxStats] = useState({ total: 0, completed: 0, pending: 0, failed: 0, totalAmount: 0 });
+    const [needsPin, setNeedsPin] = useState(false);
+    const [pinDialogOpen, setPinDialogOpen] = useState(false);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
 
-  const processTransactionsForSpending = (transactions: any[]) => {
+    const processTransactionsForSpending = (transactions: any[]) => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
@@ -100,11 +103,11 @@ export default function DashboardPage() {
             return acc;
         }, {} as Record<string, number>);
 
-    const totalSpent = Object.values(monthlySpending).reduce((sum, amount) => sum + amount, 0);
+    const totalSpent = (Object.values(monthlySpending) as number[]).reduce((sum: number, amount: number) => sum + amount, 0);
 
-    const newSpendingData = [
-        { category: 'Transfers', amount: monthlySpending['Transfers'] || 0, total: totalSpent || 1, icon: <ArrowRightLeft className="h-5 w-5 text-primary" /> },
-        { category: 'Bill Payments', amount: monthlySpending['Bill Payments'] || 0, total: totalSpent || 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
+    const newSpendingData: { category: string; amount: number; total: number; icon: React.JSX.Element }[] = [
+      { category: 'Transfers', amount: monthlySpending['Transfers'] || 0, total: totalSpent || 1, icon: <ArrowRightLeft className="h-5 w-5 text-primary" /> },
+      { category: 'Bill Payments', amount: monthlySpending['Bill Payments'] || 0, total: totalSpent || 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
     ];
     setSpendingData(newSpendingData);
   }
@@ -136,7 +139,7 @@ export default function DashboardPage() {
       return;
     }
   
-    const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(db, "users", user.uid);
     const unsubUser = onSnapshot(userDocRef, async (doc) => {
       if (doc.exists()) {
         const data = doc.data();
@@ -176,7 +179,12 @@ export default function DashboardPage() {
             }
         }
         
-        setIsKycVerified(newKycStatus === 'Verified');
+    setIsKycVerified(newKycStatus === 'Verified');
+
+    // Check if transaction PIN is set
+    const hasPin = Boolean(data.transactionPinHash);
+    setNeedsPin(!hasPin);
+    setPinDialogOpen(!hasPin);
   
         const transactions = data.transactions || [];
         if (transactions.length > 0) {
@@ -316,19 +324,20 @@ export default function DashboardPage() {
     // Real-time listener will update the state automatically
   }
 
-  const isLoading = authLoading || loadingWallets || loadingDisputes;
+        // Prevent flash of incorrect data by waiting for all data to load
+        const isLoading = authLoading || loadingWallets || loadingDisputes;
   const hasWallets = wallets.length > 0;
   const showCreateWalletCTA = wallets.length < 4;
 
   const renderWalletCards = () => {
     if (isLoading) {
-        return (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
-                 {[...Array(2)].map((_, i) => (
-                    <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-                  ))}
-            </div>
-        )
+                return (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+                                 {Array.from({ length: 2 }).map((_, i) => (
+                                        <WalletCardSkeleton key={i} />
+                                    ))}
+                        </div>
+                )
     }
 
     if (!hasWallets) {
@@ -357,7 +366,7 @@ export default function DashboardPage() {
 
     const cards = wallets.map(wallet => (
         <CarouselItem key={wallet.currency} className="md:basis-1/2 lg:basis-1/3">
-             <CurrencyCard currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={wallet.flag} />
+             <CurrencyCard currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={getFlagCode(wallet.currency)} />
         </CarouselItem>
     ));
 
@@ -407,7 +416,7 @@ export default function DashboardPage() {
   const renderDesktopWalletCards = () => {
     const cards = [];
     wallets.slice(0, 4).forEach(wallet => {
-        cards.push(<CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={wallet.flag} />);
+        cards.push(<CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={getFlagCode(wallet.currency)} />);
     });
     if (hasWallets) {
         cards.push(
@@ -447,6 +456,14 @@ export default function DashboardPage() {
   const amountUnderReview = disputes
     .filter(d => ['Needs response', 'Under review'].includes(d.status))
     .reduce((sum, d) => sum + d.amount, 0);
+    // Show comprehensive loading skeleton to prevent flash of incorrect state
+    if (isLoading) {
+        return (
+            <DashboardLayout language={language} setLanguage={setLanguage}>
+                <DashboardLoadingSkeleton />
+            </DashboardLayout>
+        );
+    }
 
 
   return (
@@ -459,15 +476,20 @@ export default function DashboardPage() {
             </h1>
         </div>
 
-        {!isKycVerified && !isLoading && <KycNotification onDismiss={() => {}} />}
+                {!isKycVerified && !isLoading && <KycNotification onDismiss={() => {}} />}
+                {user && (
+                    <TransactionPinSetupDialog
+                        userId={user.uid}
+                        open={pinDialogOpen}
+                        onOpenChange={setPinDialogOpen}
+                        onCompleted={() => setPinDialogOpen(false)}
+                        force={false}
+                    />
+                )}
 
         {renderWalletCards()}
         <div className="hidden lg:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <Card key={i}><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-                  ))
-              ) : renderDesktopWalletCards()}
+                            {renderDesktopWalletCards()}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">

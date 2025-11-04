@@ -17,7 +17,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 const loginSchema = z.object({
-  email: z.string().email('A valid email is required'),
+  credential: z.string().min(1, 'Email or username is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -59,7 +59,24 @@ export function LoginForm() {
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      let emailToUse = data.credential;
+      if (!data.credential.includes('@')) {
+        // Resolve username -> email via Firestore
+        const { db } = await import('@/lib/firebase');
+        const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
+        const q = query(collection(db, 'users'), where('username', '==', data.credential), limit(1));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          throw { code: 'auth/user-not-found', message: 'Username does not exist' };
+        }
+        const docData: any = snap.docs[0].data();
+        if (!docData.email) {
+          throw { code: 'auth/user-not-found', message: 'No email associated with this username' };
+        }
+        emailToUse = docData.email;
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
       const user = userCredential.user;
 
       if (!user.emailVerified) {
@@ -100,9 +117,9 @@ export function LoginForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="text" placeholder="m@example.com" {...register('email')} />
-             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            <Label htmlFor="credential">Email or Username</Label>
+            <Input id="credential" type="text" placeholder="jane or jane@example.com" {...register('credential')} />
+             {errors.credential && <p className="text-sm text-destructive">{errors.credential.message}</p>}
           </div>
           <div className="grid gap-2">
             <div className="flex items-center">

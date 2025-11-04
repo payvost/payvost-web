@@ -21,7 +21,6 @@ interface FundWalletDialogProps {
   children: React.ReactNode;
   wallet: {
     currency: string;
-    name: string;
   };
 }
 
@@ -162,10 +161,10 @@ export function FundWalletDialog({ children, wallet }: FundWalletDialogProps) {
           </TabsContent>
           <TabsContent value="transfer" className="pt-4">
              <div className="space-y-4">
-                {Object.entries(details).map(([key, value]) => (
+        {Object.entries(details).map(([key, value]) => (
                      <div key={key} className="text-sm">
                         <p className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                        <p className="font-semibold">{value}</p>
+            <p className="font-semibold">{String(value)}</p>
                     </div>
                 ))}
                 <Separator />

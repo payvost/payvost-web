@@ -30,6 +30,8 @@ import { Icons } from './icons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import Image from 'next/image';
+import { TransactionPinSetupDialog } from './transaction-pin-setup-dialog';
+import { collection as fsCollection, query as fsQuery, where as fsWhere, limit as fsLimit, getDocs as fsGetDocs } from 'firebase/firestore';
 
 const allCountries = [
     { name: "United States", code: "US", phone: "1", flag: "US" },
@@ -117,6 +119,10 @@ export function RegistrationForm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [newlyCreatedUserId, setNewlyCreatedUserId] = useState<string | null>(null);
 
   const {
     register,
@@ -133,6 +139,29 @@ export function RegistrationForm() {
         agreeTerms: false
     }
   });
+  // Real-time username availability (debounced)
+  const usernameValue = watch('username');
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      const name = (usernameValue || '').trim();
+      if (!name || name.length < 3) { setUsernameAvailable(null); return; }
+      setCheckingUsername(true);
+      try {
+        const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', name), fsLimit(1));
+        const snap = await fsGetDocs(q);
+        if (!active) return;
+        setUsernameAvailable(snap.empty);
+      } catch (e) {
+        if (!active) return;
+        setUsernameAvailable(null);
+      } finally {
+        if (active) setCheckingUsername(false);
+      }
+    };
+    const t = setTimeout(check, 400);
+    return () => { active = false; clearTimeout(t); };
+  }, [usernameValue]);
 
 
   useEffect(() => {
@@ -257,6 +286,14 @@ export function RegistrationForm() {
 
     if (!output) return;
 
+    // Ensure username still available before proceeding past step containing username
+    if (steps[currentStep].fields.includes('username')) {
+      if (usernameAvailable === false) {
+        toast({ title: 'Username unavailable', description: 'Please choose a different username.', variant: 'destructive' });
+        return;
+      }
+    }
+
     if (currentStep < steps.length - 1) {
       setCurrentStep((step) => step + 1);
     }
@@ -271,6 +308,14 @@ export function RegistrationForm() {
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsLoading(true);
     try {
+      // Re-validate username availability to prevent race conditions
+      const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', data.username.trim()), fsLimit(1));
+      const existing = await fsGetDocs(q);
+      if (!existing.empty) {
+        toast({ title: 'Username already taken', description: 'Please select a different username.', variant: 'destructive' });
+        setIsLoading(false);
+        return;
+      }
       // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
@@ -318,6 +363,10 @@ export function RegistrationForm() {
         idNumber: data.idNumber,
       };
       await setDoc(userDocRef, firestoreData);
+
+  // Open PIN setup dialog before redirecting
+  setNewlyCreatedUserId(user.uid);
+  setPinDialogOpen(true);
       
       // 5. Upload ID document and create KYC subcollection document
       const idFile = data.idDocument?.[0];
@@ -346,14 +395,7 @@ export function RegistrationForm() {
         read: false,
       });
       
-      // 7. Send verification email
-      await sendEmailVerification(user);
-
-      toast({
-          title: "Registration Successful!",
-          description: "A verification link has been sent to your email.",
-      })
-      router.push('/verify-email');
+      // We will send verification email after PIN is set (in onPinCompleted)
 
     } catch (error: any) {
       console.error("Registration process failed:", error);
@@ -407,7 +449,7 @@ export function RegistrationForm() {
                     </DropdownMenu>
                     <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={(e) => handleFileChange(e, 'photo')} disabled={isLoading} />
                     <p className="text-xs text-muted-foreground">Upload a clear photo of yourself. PNG, JPG up to 5MB.</p>
-                     {errors.photo && <p className="text-sm text-destructive">{errors.photo.message}</p>}
+                     {errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
                 </div>
             </div>
 
@@ -427,7 +469,14 @@ export function RegistrationForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
-                    <Input id="username" {...register('username')} disabled={isLoading} />
+                    <div className="space-y-1">
+                      <Input id="username" {...register('username')} disabled={isLoading} />
+                      <div className="text-xs text-muted-foreground h-4">
+                        {checkingUsername && <span>Checking availability…</span>}
+                        {!checkingUsername && usernameAvailable === true && <span className="text-green-600">Available</span>}
+                        {!checkingUsername && usernameAvailable === false && <span className="text-destructive">Not available</span>}
+                      </div>
+                    </div>
                     {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
                 </div>
                 <div className="space-y-2">
@@ -634,7 +683,7 @@ export function RegistrationForm() {
                     </div>
                 </Label>
                  <Input id="id-document-upload" type="file" className="hidden" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, 'idDocument')} disabled={isLoading} />
-                 {errors.idDocument && <p className="text-sm text-destructive">{errors.idDocument.message}</p>}
+                 {errors.idDocument && <p className="text-sm text-destructive">{String(errors.idDocument.message)}</p>}
             </div>
 
             {selectedCountry === 'NG' && (
@@ -684,6 +733,23 @@ export function RegistrationForm() {
           )}
         </div>
       </form>
+      {/* Transaction PIN setup dialog after registration */}
+      <TransactionPinSetupDialog
+        userId={newlyCreatedUserId || ''}
+        open={pinDialogOpen}
+        onOpenChange={(open) => setPinDialogOpen(open)}
+        onCompleted={async () => {
+          if (!auth.currentUser) return;
+          try {
+            await sendEmailVerification(auth.currentUser);
+            toast({ title: 'Registration Successful!', description: 'A verification link has been sent to your email.' });
+          } catch (e: any) {
+            toast({ title: 'Could not send verification email', description: e?.message || 'Please check your email later.' });
+          }
+          router.push('/verify-email');
+        }}
+        force={true}
+      />
        <Dialog open={showCamera} onOpenChange={(open) => {
            if (!open) stopCamera();
            setShowCamera(open);
