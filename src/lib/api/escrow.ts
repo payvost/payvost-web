@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/services/apiClient';
 
 export interface CreateEscrowRequest {
   title: string;
@@ -62,43 +62,38 @@ export const escrowApi = {
    * Create a new escrow agreement
    */
   async createEscrow(data: CreateEscrowRequest) {
-    const response = await apiClient.post('/api/escrow', data);
-    return response.data;
+    return apiClient.post<any>('/api/escrow', data);
   },
 
   /**
    * Get all escrows for the authenticated user
    */
   async getUserEscrows() {
-    const response = await apiClient.get('/api/escrow');
-    return response.data;
+    return apiClient.get<any[]>('/api/escrow');
   },
 
   /**
    * Get detailed information about a specific escrow
    */
   async getEscrowDetails(escrowId: string) {
-    const response = await apiClient.get(`/api/escrow/${escrowId}`);
-    return response.data;
+    return apiClient.get<any>(`/api/escrow/${escrowId}`);
   },
 
   /**
    * Accept an escrow invitation
    */
   async acceptEscrow(escrowId: string) {
-    const response = await apiClient.post(`/api/escrow/${escrowId}/accept`);
-    return response.data;
+    return apiClient.post<any>(`/api/escrow/${escrowId}/accept`);
   },
 
   /**
    * Fund a milestone
    */
   async fundMilestone(escrowId: string, milestoneId: string, data: FundMilestoneRequest) {
-    const response = await apiClient.post(
+    return apiClient.post<any>(
       `/api/escrow/${escrowId}/milestones/${milestoneId}/fund`,
       data
     );
-    return response.data;
   },
 
   /**
@@ -109,11 +104,10 @@ export const escrowApi = {
     milestoneId: string,
     data: SubmitDeliverableRequest
   ) {
-    const response = await apiClient.post(
+    return apiClient.post<any>(
       `/api/escrow/${escrowId}/milestones/${milestoneId}/deliverable`,
       data
     );
-    return response.data;
   },
 
   /**
@@ -124,37 +118,33 @@ export const escrowApi = {
     milestoneId: string,
     data: ReleaseMilestoneRequest
   ) {
-    const response = await apiClient.post(
+    return apiClient.post<any>(
       `/api/escrow/${escrowId}/milestones/${milestoneId}/release`,
       data
     );
-    return response.data;
   },
 
   /**
    * Raise a dispute
    */
   async raiseDispute(escrowId: string, data: RaiseDisputeRequest) {
-    const response = await apiClient.post(`/api/escrow/${escrowId}/dispute`, data);
-    return response.data;
+    return apiClient.post<any>(`/api/escrow/${escrowId}/dispute`, data);
   },
 
   /**
    * Resolve a dispute (mediator/admin only)
    */
   async resolveDispute(escrowId: string, disputeId: string, data: ResolveDisputeRequest) {
-    const response = await apiClient.post(
+    return apiClient.post<any>(
       `/api/escrow/${escrowId}/dispute/${disputeId}/resolve`,
       data
     );
-    return response.data;
   },
 
   /**
    * Cancel an escrow
    */
   async cancelEscrow(escrowId: string, data: CancelEscrowRequest) {
-    const response = await apiClient.post(`/api/escrow/${escrowId}/cancel`, data);
-    return response.data;
+    return apiClient.post<any>(`/api/escrow/${escrowId}/cancel`, data);
   },
 };

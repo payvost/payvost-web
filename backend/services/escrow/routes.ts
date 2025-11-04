@@ -2,7 +2,13 @@ import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
 import { EscrowService } from './service';
-import { EscrowPartyRole } from '@prisma/client';
+
+// Define EscrowPartyRole enum locally if not available in Prisma schema
+enum EscrowPartyRole {
+  BUYER = 'BUYER',
+  SELLER = 'SELLER',
+  MEDIATOR = 'MEDIATOR'
+}
 
 const router = Router();
 

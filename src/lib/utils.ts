@@ -21,3 +21,17 @@ export function abbreviateNumber(value: number): string {
   
   return shortValue + suffixes[suffixNum];
 }
+
+/**
+ * Format a number as currency
+ */
+export function formatCurrency(amount: number | string, currency: string = 'USD'): string {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numAmount);
+}
