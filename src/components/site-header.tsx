@@ -104,10 +104,45 @@ const CountrySelector = () => {
     )
 }
 
+const MobileCountrySelector = () => {
+    const otherCountries = countries.filter(c => c.code !== "global");
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Globe className="h-5 w-5" />
+                    <span className="sr-only">Select country</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                 <DropdownMenuItem asChild>
+                    <Link href="/" className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        <span>Global</span>
+                    </Link>
+                </DropdownMenuItem>
+                {otherCountries.map(country => (
+                    <DropdownMenuItem key={country.code} asChild>
+                        <Link href={`/${country.code.toLowerCase()}/home`} className="flex items-center gap-2">
+                            <Image src={`/flag/${country.flag}`} alt={country.name} width={16} height={16} className="rounded-full" />
+                            <span>{country.name}</span>
+                        </Link>
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useState } from 'react';
 
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
+    const [productsOpen, setProductsOpen] = useState(false);
+    
     return (
         <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center bg-background/95 backdrop-blur-sm border-b rounded-b-md">
             <Link href="/" className="flex items-center justify-center">
@@ -179,47 +214,69 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                             <span className="sr-only">Open menu</span>
                         </Button>
                     </SheetTrigger>
-                    <SheetContent side="left" className="p-0 w-72">
+                    <SheetContent side="right" className="p-0 w-80">
                         <div className="flex flex-col h-full">
+                            {/* Header with Logo and Country Selector */}
                             <div className="flex items-center justify-between px-4 py-3 border-b">
                                 <Link href="/" className="flex items-center">
-                                    <Icons.logo className="h-8" />
+                                    <Icons.logo className="h-7" />
                                 </Link>
+                                <MobileCountrySelector />
                             </div>
-                            <nav className="flex flex-col gap-2 px-4 py-4 overflow-y-auto">
-                                <Link href="/" className="py-2 text-base font-medium hover:text-primary transition-colors">Home</Link>
-                                <div className="py-2 border-b">
-                                    <div className="text-sm font-semibold text-muted-foreground mb-2">Products</div>
-                                    {products.map((product) => (
-                                        <Link 
-                                            key={product.title}
-                                            href={product.href}
-                                            className="flex items-start gap-3 py-2 rounded-md hover:bg-accent transition-colors"
-                                        >
-                                            <div className="mt-0.5">{product.icon}</div>
-                                            <div className="flex-1">
-                                                <div className="text-sm font-medium">{product.title}</div>
-                                                <div className="text-xs text-muted-foreground mt-0.5">{product.description}</div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                            
+                            {/* Login and Get Started Buttons - Side by Side */}
+                            <div className="px-4 pt-4 pb-3 border-b">
+                                <div className="flex gap-2">
+                                    {showLogin && (
+                                        <Button variant="outline" className="flex-1" asChild>
+                                            <Link href="/login">Login</Link>
+                                        </Button>
+                                    )}
+                                    {showRegister && (
+                                        <Button className="flex-1" asChild>
+                                            <Link href="/register">Get Started</Link>
+                                        </Button>
+                                    )}
                                 </div>
-                                <Link href="/about" className="py-2 text-base font-medium hover:text-primary transition-colors">About Us</Link>
-                                <Link href="/blog" className="py-2 text-base font-medium hover:text-primary transition-colors">Blog</Link>
-                                <div className="py-3 border-t mt-2">
-                                    <div className="text-sm font-semibold text-muted-foreground mb-2">Country</div>
-                                    <CountrySelector />
-                                </div>
-                                {showLogin && (
-                                    <Button variant="outline" className="w-full mt-2" asChild>
-                                        <Link href="/login">Login</Link>
-                                    </Button>
-                                )}
-                                {showRegister && (
-                                    <Button className="w-full mt-2" asChild>
-                                        <Link href="/register">Get Started</Link>
-                                    </Button>
-                                )}
+                            </div>
+                            
+                            {/* Navigation Links */}
+                            <nav className="flex flex-col px-4 py-3 overflow-y-auto flex-1">
+                                <Link href="/" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                    Home
+                                </Link>
+                                
+                                {/* Products Collapsible */}
+                                <Collapsible open={productsOpen} onOpenChange={setProductsOpen}>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                        <span>Products</span>
+                                        <ChevronRight className={cn("h-4 w-4 transition-transform", productsOpen && "rotate-90")} />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="border-b">
+                                        <div className="py-2 space-y-1">
+                                            {products.map((product) => (
+                                                <Link 
+                                                    key={product.title}
+                                                    href={product.href}
+                                                    className="flex items-start gap-3 p-3 rounded-md hover:bg-accent transition-colors"
+                                                >
+                                                    <div className="mt-0.5">{product.icon}</div>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-medium">{product.title}</div>
+                                                        <div className="text-xs text-muted-foreground mt-1">{product.description}</div>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                                
+                                <Link href="/about" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                    About Us
+                                </Link>
+                                <Link href="/blog" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                    Blog
+                                </Link>
                             </nav>
                         </div>
                     </SheetContent>
