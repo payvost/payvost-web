@@ -42,7 +42,6 @@ const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const json2csv_1 = require("json2csv");
-const OneSignal = __importStar(require("@onesignal/node-onesignal"));
 // Import notification triggers
 const notificationTriggers_1 = require("./notificationTriggers");
 Object.defineProperty(exports, "onNewLogin", { enumerable: true, get: function () { return notificationTriggers_1.onNewLogin; } });
@@ -175,29 +174,8 @@ exports.api2 = (0, https_1.onRequest)({
     maxInstances: 20, // cap burst cost
 }, app);
 // =============================================================
-// === OneSignal Email Integration (KYC verification trigger) ===
+// === Email Integration (Nodemailer/Mailgun)                ===
 // =============================================================
-// OneSignal config - using environment variables (v2 compatible)
-const ONESIGNAL_APP_ID = process.env.ONESIGNAL_APP_ID || '';
-const ONESIGNAL_API_KEY = process.env.ONESIGNAL_API_KEY || '';
-// OneSignal client
-// The OneSignal SDK types are strict; cast the configuration to any to avoid type mismatch
-const configuration = OneSignal.createConfiguration({
-    apiKey: ONESIGNAL_API_KEY,
-});
-const client = new OneSignal.DefaultApi(configuration);
-// Helper to send welcome email using a template
-async function sendVerificationWelcomeEmail(toEmail, toName) {
-    const notification = new OneSignal.Notification();
-    notification.app_id = ONESIGNAL_APP_ID;
-    notification.include_email_tokens = [toEmail];
-    notification.template_id = 'e93c127c-9194-4799-b545-4a91cfc3226b'; // Your OneSignal template ID
-    try {
-        const response = await client.createNotification(notification);
-        console.log(`✅ Welcome email sent to ${toEmail} (${response.id})`);
-    }
-    catch (error) {
-        console.error('❌ Error sending OneSignal email:', error.body || error);
-    }
-}
+// Email is now handled through notificationService.ts using Nodemailer
+// No OneSignal dependency needed
 // Firestore trigger: send email when KYC becomes "Verified"

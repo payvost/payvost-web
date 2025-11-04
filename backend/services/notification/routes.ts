@@ -2,6 +2,13 @@ import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
 import nodemailer from 'nodemailer';
+import {
+  sendPushNotification,
+  sendMulticastNotification,
+  sendTopicNotification,
+  subscribeToTopic,
+  unsubscribeFromTopic,
+} from './fcm';
 
 const router = Router();
 
@@ -148,6 +155,132 @@ router.post('/send-sms', verifyFirebaseToken, async (req: AuthenticatedRequest, 
   } catch (error: any) {
     console.error('Error sending SMS:', error);
     res.status(500).json({ error: error.message || 'Failed to send SMS' });
+  }
+});
+
+/**
+ * POST /api/notification/send-push
+ * Send a push notification to a single device
+ */
+router.post('/send-push', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { token, title, body, data, imageUrl, clickAction } = req.body;
+
+    if (!token || !title || !body) {
+      throw new ValidationError('token, title, and body are required');
+    }
+
+    const result = await sendPushNotification({
+      token,
+      title,
+      body,
+      data,
+      imageUrl,
+      clickAction,
+    });
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error sending push notification:', error);
+    res.status(500).json({ error: error.message || 'Failed to send push notification' });
+  }
+});
+
+/**
+ * POST /api/notification/send-push-batch
+ * Send push notifications to multiple devices
+ */
+router.post('/send-push-batch', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tokens, title, body, data, imageUrl, clickAction } = req.body;
+
+    if (!tokens || !Array.isArray(tokens) || !title || !body) {
+      throw new ValidationError('tokens (array), title, and body are required');
+    }
+
+    const result = await sendMulticastNotification({
+      tokens,
+      title,
+      body,
+      data,
+      imageUrl,
+      clickAction,
+    });
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error sending multicast notification:', error);
+    res.status(500).json({ error: error.message || 'Failed to send multicast notification' });
+  }
+});
+
+/**
+ * POST /api/notification/send-topic
+ * Send push notification to a topic
+ */
+router.post('/send-topic', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { topic, title, body, data, imageUrl, clickAction } = req.body;
+
+    if (!topic || !title || !body) {
+      throw new ValidationError('topic, title, and body are required');
+    }
+
+    const result = await sendTopicNotification({
+      topic,
+      title,
+      body,
+      data,
+      imageUrl,
+      clickAction,
+    });
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error sending topic notification:', error);
+    res.status(500).json({ error: error.message || 'Failed to send topic notification' });
+  }
+});
+
+/**
+ * POST /api/notification/subscribe-topic
+ * Subscribe tokens to a topic
+ */
+router.post('/subscribe-topic', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tokens, topic } = req.body;
+
+    if (!tokens || !Array.isArray(tokens) || !topic) {
+      throw new ValidationError('tokens (array) and topic are required');
+    }
+
+    const result = await subscribeToTopic(tokens, topic);
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error subscribing to topic:', error);
+    res.status(500).json({ error: error.message || 'Failed to subscribe to topic' });
+  }
+});
+
+/**
+ * POST /api/notification/unsubscribe-topic
+ * Unsubscribe tokens from a topic
+ */
+router.post('/unsubscribe-topic', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tokens, topic } = req.body;
+
+    if (!tokens || !Array.isArray(tokens) || !topic) {
+      throw new ValidationError('tokens (array) and topic are required');
+    }
+
+    const result = await unsubscribeFromTopic(tokens, topic);
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error unsubscribing from topic:', error);
+    res.status(500).json({ error: error.message || 'Failed to unsubscribe from topic' });
   }
 });
 
