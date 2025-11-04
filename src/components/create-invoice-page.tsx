@@ -93,7 +93,7 @@ const currencyOptions = [
 export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps) {
     const { toast } = useToast();
     const [showSendDialog, setShowSendDialog] = useState(false);
-    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId);
+    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
     const { user, loading: authLoading } = useAuth();
     const [loadingUserData, setLoadingUserData] = useState(true);
     const [isDueDateOpen, setIsDueDateOpen] = useState(false);
@@ -244,6 +244,11 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         try {
             const finalInvoiceId = await saveInvoice('Pending');
             setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
+            // Fire-and-forget warm cache for PDF (no Cloud Functions)
+            try {
+                fetch(`/api/pdf/cache/invoice/${finalInvoiceId}`, { method: 'POST' })
+                  .catch(() => {});
+            } catch {}
             setShowSendDialog(true);
         } catch (error) {
             console.error("Error sending invoice:", error);
