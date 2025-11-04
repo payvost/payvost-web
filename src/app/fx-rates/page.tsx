@@ -31,6 +31,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LastUpdatedTime } from '@/components/LastUpdatedTime';
 
 // Currency data with flags and symbols
 const CURRENCIES = [
@@ -436,7 +437,7 @@ export default function FXRatesPage() {
                 <Activity className="h-4 w-4 text-green-500 animate-pulse" />
                 <span>Live rates updating automatically</span>
               </div>
-              <div>Last updated: {lastUpdate.toLocaleTimeString()}</div>
+              <div>Last updated: <LastUpdatedTime date={lastUpdate} /></div>
             </div>
           </CardContent>
         </Card>

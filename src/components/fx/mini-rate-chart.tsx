@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface RateHistory {
   time: string;
@@ -124,7 +125,13 @@ export function CurrencySparkline({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{flag}</span>
+            <Image 
+              src={flag} 
+              alt={currencyCode}
+              width={24}
+              height={24}
+              className="rounded"
+            />
             <div>
               <CardTitle className="text-sm font-medium">{currencyCode}</CardTitle>
               <p className="text-xs text-muted-foreground">{currencyName}</p>
