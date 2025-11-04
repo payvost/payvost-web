@@ -137,7 +137,7 @@ router.post('/calculate-fees', verifyFirebaseToken, async (req: AuthenticatedReq
 });
 
 /**
- * Get exchange rates from Fixer API
+ * Get exchange rates from OpenExchangeRates API
  */
 async function getExchangeRates(base: string, target?: string): Promise<Record<string, string>> {
   // Check cache first
@@ -167,23 +167,23 @@ async function getExchangeRates(base: string, target?: string): Promise<Record<s
     }
   }
 
-  // Fetch from Fixer API
-  const FIXER_API_KEY = process.env.FIXER_API_KEY;
+  // Fetch from OpenExchangeRates API
+  const OXR_APP_ID = process.env.OPEN_EXCHANGE_RATES_APP_ID;
   
-  if (!FIXER_API_KEY) {
-    console.warn('FIXER_API_KEY not configured, using mock rates');
+  if (!OXR_APP_ID) {
+    console.warn('OPEN_EXCHANGE_RATES_APP_ID not configured, using mock rates');
     return getMockRates(base, target);
   }
 
   try {
     const symbols = target ? target : SUPPORTED_CURRENCIES.filter(c => c !== base).join(',');
-    const fixerUrl = `https://api.fixer.io/latest?access_key=${FIXER_API_KEY}&base=${base}&symbols=${symbols}`;
+    const oxrUrl = `https://openexchangerates.org/api/latest.json?app_id=${OXR_APP_ID}${base !== 'USD' ? `&base=${base}` : ''}&symbols=${symbols}`;
     
-    const response = await fetch(fixerUrl);
+    const response = await fetch(oxrUrl);
     const data = await response.json();
 
-    if (!data.success) {
-      console.error('Fixer API error:', data.error);
+    if (!data.rates) {
+      console.error('OpenExchangeRates API error:', data.message || 'Unknown error');
       return getMockRates(base, target);
     }
 
@@ -198,7 +198,7 @@ async function getExchangeRates(base: string, target?: string): Promise<Record<s
 
     return rates;
   } catch (error) {
-    console.error('Error fetching from Fixer API:', error);
+    console.error('Error fetching from OpenExchangeRates API:', error);
     return getMockRates(base, target);
   }
 }

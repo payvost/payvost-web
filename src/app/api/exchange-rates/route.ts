@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const FIXER_API_KEY = process.env.FIXER_API_KEY;
-const FIXER_BASE_URL = 'https://api.fixer.io/';
+const OXR_APP_ID = process.env.OPEN_EXCHANGE_RATES_APP_ID;
+const OXR_BASE_URL = 'https://openexchangerates.org/api/';
 
 // In-memory cache to reduce API calls
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -21,16 +21,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cached.data);
     }
 
-    if (!FIXER_API_KEY) {
+    if (!OXR_APP_ID) {
       return NextResponse.json(
-        { error: 'FIXER_API_KEY is not configured' },
+        { error: 'OPEN_EXCHANGE_RATES_APP_ID is not configured' },
         { status: 500 }
       );
     }
 
-    const url = new URL(`${FIXER_BASE_URL}latest`);
-    url.searchParams.append('access_key', FIXER_API_KEY);
-    url.searchParams.append('base', base);
+    const url = new URL(`${OXR_BASE_URL}latest.json`);
+    url.searchParams.append('app_id', OXR_APP_ID);
+    
+    // Note: Changing base currency requires paid plan, free plan is USD only
+    if (base !== 'USD') {
+      url.searchParams.append('base', base);
+    }
     
     if (symbols) {
       url.searchParams.append('symbols', symbols);
@@ -39,26 +43,19 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url.toString());
     
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: `Fixer API error: ${response.statusText}` },
+        { error: errorData.message || `OpenExchangeRates API error: ${response.statusText}` },
         { status: response.status }
       );
     }
 
     const data = await response.json();
 
-    if (!data.success) {
-      return NextResponse.json(
-        { error: data.error?.info || 'Failed to fetch exchange rates' },
-        { status: 400 }
-      );
-    }
-
     // Format response
     const result = {
       success: true,
       base: data.base,
-      date: data.date,
       timestamp: data.timestamp,
       rates: data.rates,
     };

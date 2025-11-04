@@ -9,18 +9,19 @@ import { Label } from '@/components/ui/label';
 import { ArrowRightLeft, TrendingUp, TrendingDown, RefreshCw, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const POPULAR_CURRENCIES = [
-  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '🇳🇬' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', flag: '🇬🇭' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '🇰🇪' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '🇨🇦' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '/flag/US.png' },
+  { code: 'EUR', name: 'Euro', symbol: '€', flag: '/flag/EU.png' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '/flag/GB.png' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '/flag/NG.png' },
+  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', flag: '/flag/GH.png' },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '/flag/KE.png' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '/flag/SA.png' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '/flag/JP.png' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '/flag/CA.png' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '/flag/AU.png' },
 ];
 
 export function LiveRateChecker() {
@@ -50,18 +51,18 @@ export function LiveRateChecker() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversion rate');
-      }
-
       const data = await response.json();
 
-      if (data.success) {
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch conversion rate');
+      }
+
+      if (data.success && data.rate && data.result !== undefined) {
         setRate(data.rate);
         setConvertedAmount(data.result);
         setLastUpdate(new Date(data.timestamp * 1000));
       } else {
-        throw new Error(data.error || 'Conversion failed');
+        throw new Error(data.error || 'Invalid response from server');
       }
     } catch (err: any) {
       console.error('Error fetching rate:', err);
@@ -97,80 +98,70 @@ export function LiveRateChecker() {
   };
 
   return (
-    <Card className="border-2 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+    <Card className="w-full border-2 shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-background pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">Check Live Rates</CardTitle>
+          <div>
+            <CardTitle className="text-2xl font-bold">Check Live Rates</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Get real-time exchange rates instantly</p>
+          </div>
           <Link href="/fx-rates">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm" className="gap-2">
               View All Rates
-              <ExternalLink className="ml-2 h-4 w-4" />
+              <ExternalLink className="h-4 w-4" />
             </Button>
           </Link>
         </div>
       </CardHeader>
-      <CardContent className="pt-6 space-y-6">
-        <div className="space-y-4">
+      <CardContent className="pt-6 space-y-5">
+        {/* Amount and From Currency Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Amount Input */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount" className="text-sm font-medium">You Send</Label>
             <Input
               id="amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter amount"
-              className="text-lg h-12"
+              className="text-xl h-14 font-semibold"
             />
           </div>
 
           {/* From Currency */}
           <div className="space-y-2">
-            <Label htmlFor="from">From</Label>
+            <Label htmlFor="from" className="text-sm font-medium">From</Label>
             <Select value={fromCurrency} onValueChange={setFromCurrency}>
-              <SelectTrigger id="from" className="h-12">
-                <SelectValue />
+              <SelectTrigger id="from" className="h-14 text-lg">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    <Image 
+                      src={getCurrencyInfo(fromCurrency)?.flag || '/flag/US.png'} 
+                      alt={fromCurrency}
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="font-semibold">{fromCurrency}</span>
+                  </div>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {POPULAR_CURRENCIES.map(currency => (
                   <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{currency.flag}</span>
-                      <span className="font-medium">{currency.code}</span>
-                      <span className="text-muted-foreground">- {currency.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Swap Button */}
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={swapCurrencies}
-              className="rounded-full"
-            >
-              <ArrowRightLeft className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* To Currency */}
-          <div className="space-y-2">
-            <Label htmlFor="to">To</Label>
-            <Select value={toCurrency} onValueChange={setToCurrency}>
-              <SelectTrigger id="to" className="h-12">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {POPULAR_CURRENCIES.map(currency => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{currency.flag}</span>
-                      <span className="font-medium">{currency.code}</span>
-                      <span className="text-muted-foreground">- {currency.name}</span>
+                    <div className="flex items-center gap-3">
+                      <Image 
+                        src={currency.flag} 
+                        alt={currency.code}
+                        width={24}
+                        height={24}
+                        className="rounded"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{currency.code}</span>
+                        <span className="text-xs text-muted-foreground">{currency.name}</span>
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
@@ -179,42 +170,109 @@ export function LiveRateChecker() {
           </div>
         </div>
 
-        {/* Result */}
+        {/* Swap Button */}
+        <div className="flex justify-center -my-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={swapCurrencies}
+            className="rounded-full h-10 w-10 border-2 shadow-sm hover:shadow-md transition-all"
+          >
+            <ArrowRightLeft className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* To Currency Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Converted Amount Display */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Recipient Gets</Label>
+            <div className="h-14 px-4 rounded-md border bg-muted/30 flex items-center">
+              {convertedAmount !== null && !isLoading ? (
+                <span className="text-xl font-semibold text-primary">
+                  {getCurrencyInfo(toCurrency)?.symbol}{convertedAmount.toFixed(2)}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">---</span>
+              )}
+            </div>
+          </div>
+
+          {/* To Currency */}
+          <div className="space-y-2">
+            <Label htmlFor="to" className="text-sm font-medium">To</Label>
+            <Select value={toCurrency} onValueChange={setToCurrency}>
+              <SelectTrigger id="to" className="h-14 text-lg">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    <Image 
+                      src={getCurrencyInfo(toCurrency)?.flag || '/flag/NG.png'} 
+                      alt={toCurrency}
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="font-semibold">{toCurrency}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {POPULAR_CURRENCIES.map(currency => (
+                  <SelectItem key={currency.code} value={currency.code}>
+                    <div className="flex items-center gap-3">
+                      <Image 
+                        src={currency.flag} 
+                        alt={currency.code}
+                        width={24}
+                        height={24}
+                        className="rounded"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{currency.code}</span>
+                        <span className="text-xs text-muted-foreground">{currency.name}</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Exchange Rate Info */}
         {error ? (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-center">
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="p-4 bg-destructive/5 border-2 border-destructive/20 rounded-xl text-center">
+            <p className="text-sm font-medium text-destructive">{error}</p>
           </div>
         ) : convertedAmount !== null && rate !== null ? (
-          <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/20 rounded-lg border-2 border-primary/20">
-            <div className="text-center space-y-3">
-              <div className="text-sm text-muted-foreground">You'll receive</div>
-              <div className="text-4xl font-bold text-primary">
-                {getCurrencyInfo(toCurrency)?.symbol}
-                {convertedAmount.toFixed(2)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {amount} {fromCurrency} = {convertedAmount.toFixed(2)} {toCurrency}
-              </div>
-              
-              <div className="pt-3 border-t">
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Exchange Rate:</span>
-                  <span className="font-semibold">
-                    1 {fromCurrency} = {rate.toFixed(4)} {toCurrency}
-                  </span>
-                </div>
-                {lastUpdate && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Updated: {lastUpdate.toLocaleTimeString()}
+          <div className="space-y-4">
+            {/* Exchange Rate Display */}
+            <div className="p-5 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 rounded-xl border-2 border-primary/10 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Exchange Rate
                   </div>
-                )}
+                  <div className="text-lg font-bold text-foreground">
+                    1 {fromCurrency} = {rate.toFixed(4)} {toCurrency}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-background/50 rounded-lg border">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-semibold text-green-600">Live</span>
+                </div>
               </div>
+              {lastUpdate && (
+                <div className="text-xs text-muted-foreground mt-3 pt-3 border-t border-primary/10">
+                  Last updated: {lastUpdate.toLocaleTimeString()}
+                </div>
+              )}
             </div>
           </div>
         ) : isLoading ? (
-          <div className="p-6 bg-muted rounded-lg text-center">
-            <RefreshCw className="h-8 w-8 mx-auto animate-spin text-primary mb-2" />
-            <p className="text-sm text-muted-foreground">Fetching live rate...</p>
+          <div className="p-6 bg-muted/50 rounded-xl text-center border-2 border-muted">
+            <RefreshCw className="h-8 w-8 mx-auto animate-spin text-primary mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Fetching live rate...</p>
           </div>
         ) : null}
 
@@ -222,18 +280,24 @@ export function LiveRateChecker() {
         <Button
           onClick={fetchRate}
           disabled={isLoading || !amount}
-          className="w-full"
+          className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
           size="lg"
         >
           <RefreshCw className={cn('h-5 w-5 mr-2', isLoading && 'animate-spin')} />
-          {isLoading ? 'Fetching Rate...' : 'Refresh Rate'}
+          {isLoading ? 'Fetching Rate...' : 'Get Live Rate'}
         </Button>
 
         {/* Quick Info */}
-        <div className="text-center text-xs text-muted-foreground">
-          <p>Powered by Fixer.io • Rates update every 5 minutes</p>
-          <Link href="/fx-rates" className="text-primary hover:underline mt-1 inline-block">
-            View detailed rates and charts →
+        <div className="text-center space-y-2 pt-2">
+          <p className="text-xs text-muted-foreground">
+            Powered by Payvost Exchange Engine • Updates every 5 minutes
+          </p>
+          <Link 
+            href="/fx-rates" 
+            className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1 group"
+          >
+            View detailed rates and charts
+            <TrendingUp className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
       </CardContent>
