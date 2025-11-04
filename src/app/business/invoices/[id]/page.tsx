@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, getDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -48,34 +48,36 @@ export default function BusinessInvoiceDetailsPage() {
             return;
         }
 
-        const docRef = doc(db, 'businessInvoices', id);
-        const unsubscribeInvoice = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setInvoice({ id: docSnap.id, ...docSnap.data() });
-            } else {
-                setInvoice(null);
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching invoice:", error);
-            setLoading(false);
-        });
-
-        // Load business profile if user is authenticated and is the creator
-        let unsubscribeProfile: (() => void) | undefined;
-        if (user) {
-            const userDocRef = doc(db, 'users', user.uid);
-            unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+        const fetchInvoice = async () => {
+            try {
+                // Fetch invoice document directly (like regular invoices do)
+                const docRef = doc(db, 'businessInvoices', id);
+                const docSnap = await getDoc(docRef);
+                
                 if (docSnap.exists()) {
-                    setBusinessProfile(docSnap.data().businessProfile || null);
+                    const invoiceData = docSnap.data();
+                    setInvoice({ id: docSnap.id, ...invoiceData });
+                    
+                    // Load business profile if user is authenticated
+                    if (user) {
+                        const userDocRef = doc(db, 'users', user.uid);
+                        const userSnap = await getDoc(userDocRef);
+                        if (userSnap.exists()) {
+                            setBusinessProfile(userSnap.data().businessProfile || null);
+                        }
+                    }
+                } else {
+                    setInvoice(null);
                 }
-            });
-        }
-
-        return () => {
-            unsubscribeInvoice();
-            if (unsubscribeProfile) unsubscribeProfile();
+            } catch (error) {
+                console.error("Error fetching invoice:", error);
+                setInvoice(null);
+            } finally {
+                setLoading(false);
+            }
         };
+
+        fetchInvoice();
     }, [user, id]);
     
     if (loading) {
