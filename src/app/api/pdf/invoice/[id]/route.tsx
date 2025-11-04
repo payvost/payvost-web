@@ -77,9 +77,9 @@ function InvoicePDF({ invoice, businessProfile }: any) {
             return (
               <View key={i} style={styles.tr}>
                 <Text style={styles.colDesc}>{safeText(it?.description) || safeText(it?.name) || '-'}</Text>
-                <Text style={styles.colQty}>{qty}</Text>
-                <Text style={styles.colPrice}>{formatMoney(price, currency)}</Text>
-                <Text style={styles.colAmt}>{formatMoney(amount, currency)}</Text>
+                <Text style={styles.colQty}>{String(qty)}</Text>
+                <Text style={styles.colPrice}>{String(formatMoney(price, currency))}</Text>
+                <Text style={styles.colAmt}>{String(formatMoney(amount, currency))}</Text>
               </View>
             );
           })}
@@ -152,8 +152,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         // cache hit: serve bytes directly
         const [contents] = await file.download();
         try { console.log(`[api/pdf/invoice] cache HIT id=${id}`); } catch {}
-        const fromCache = new Blob([contents as any], { type: 'application/pdf' });
-        return new Response(fromCache, {
+        // Directly return Buffer to avoid Blob usage in Node runtime
+        return new Response(contents as any, {
           status: 200,
           headers: {
             'Content-Type': 'application/pdf',
@@ -185,8 +185,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       // ignore caching failures
     }
 
-    const blob = new Blob([buffer as any], { type: 'application/pdf' });
-    return new Response(blob, {
+    // Return Buffer directly to Response to avoid Blob in Node.js
+    return new Response(buffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
