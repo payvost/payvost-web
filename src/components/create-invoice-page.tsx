@@ -93,7 +93,7 @@ const currencyOptions = [
 export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps) {
     const { toast } = useToast();
     const [showSendDialog, setShowSendDialog] = useState(false);
-    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId);
+    const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
     const { user, loading: authLoading } = useAuth();
     const [loadingUserData, setLoadingUserData] = useState(true);
     const [isDueDateOpen, setIsDueDateOpen] = useState(false);

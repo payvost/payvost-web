@@ -96,7 +96,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
   const { user, loading: authLoading } = useAuth();
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [showSendDialog, setShowSendDialog] = useState(false);
-  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId);
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const isEditing = !!invoiceId;
 
