@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SiteHeader } from '@/components/site-header';
 import { CurrencySparkline } from '@/components/fx/mini-rate-chart';
 import { DetailedRateChart, CurrencyComparisonChart } from '@/components/fx/detailed-chart';
+import Image from 'next/image';
 import {
   ArrowUpDown,
   TrendingUp,
@@ -33,19 +34,19 @@ import { cn } from '@/lib/utils';
 
 // Currency data with flags and symbols
 const CURRENCIES = [
-  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸', country: 'United States' },
-  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺', country: 'European Union' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧', country: 'United Kingdom' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '🇳🇬', country: 'Nigeria' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', flag: '🇬🇭', country: 'Ghana' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '🇰🇪', country: 'Kenya' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '🇿🇦', country: 'South Africa' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵', country: 'Japan' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '🇨🇦', country: 'Canada' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺', country: 'Australia' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', flag: '🇨🇭', country: 'Switzerland' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳', country: 'China' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '🇮🇳', country: 'India' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '/flag/US.png', country: 'United States' },
+  { code: 'EUR', name: 'Euro', symbol: '€', flag: '/flag/EU.png', country: 'European Union' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '/flag/GB.png', country: 'United Kingdom' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', flag: '/flag/NG.png', country: 'Nigeria' },
+  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', flag: '/flag/GH.png', country: 'Ghana' },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', flag: '/flag/KE.png', country: 'Kenya' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R', flag: '/flag/SA.png', country: 'South Africa' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '/flag/JP.png', country: 'Japan' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '/flag/CA.png', country: 'Canada' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '/flag/AU.png', country: 'Australia' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', flag: '/flag/GE.png', country: 'Switzerland' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '/flag/US.png', country: 'China' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', flag: '/flag/US.png', country: 'India' },
 ];
 
 interface ExchangeRate {
@@ -70,14 +71,13 @@ export default function FXRatesPage() {
   const [showDetailChart, setShowDetailChart] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
 
-  // Fetch real exchange rates from Fixer API
+  // Fetch real exchange rates from Payvost Exchange Engine (OpenExchangeRates API)
   const fetchExchangeRates = useCallback(async () => {
     setIsRefreshing(true);
     
     try {
-      // Note: Fixer.io free plan only supports EUR as base
-      // We'll fetch EUR rates and calculate cross-rates
-      const response = await fetch(`/api/exchange-rates?base=EUR`);
+      // Fetch rates with USD as base (free plan default)
+      const response = await fetch(`/api/exchange-rates?base=${baseCurrency}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch exchange rates');
@@ -89,14 +89,11 @@ export default function FXRatesPage() {
         throw new Error(data.error || 'Failed to fetch rates');
       }
 
-      // Calculate rates relative to selected base currency
-      const baseRateToEUR = baseCurrency === 'EUR' ? 1 : (data.rates[baseCurrency] || 1);
-      
+      // Map rates to our exchange rate structure
       const rates: ExchangeRate[] = CURRENCIES
         .filter(c => c.code !== baseCurrency)
         .map(currency => {
-          const eurRate = data.rates[currency.code] || 1;
-          const rate = eurRate / baseRateToEUR;
+          const rate = data.rates[currency.code] || 1;
           
           // Calculate 24h change (simulated for now - would need historical data)
           const change24h = (Math.random() - 0.5) * 2; // ±1% for demo
@@ -223,7 +220,15 @@ export default function FXRatesPage() {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-4xl">{currency.flag}</div>
+              <div className="w-8 h-8 relative flex-shrink-0">
+                <Image 
+                  src={currency.flag} 
+                  alt={`${currency.name} flag`} 
+                  width={32} 
+                  height={32}
+                  className="rounded"
+                />
+              </div>
               <div>
                 <CardTitle className="text-lg">{currency.code}</CardTitle>
                 <CardDescription className="text-xs">{currency.name}</CardDescription>
@@ -345,15 +350,34 @@ export default function FXRatesPage() {
                 </Label>
                 <Select value={baseCurrency} onValueChange={setBaseCurrency}>
                   <SelectTrigger id="base-currency" className="h-12 text-lg">
-                    <SelectValue />
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <Image 
+                          src={CURRENCIES.find(c => c.code === baseCurrency)?.flag || '/flag/US.png'}
+                          alt={baseCurrency}
+                          width={28}
+                          height={28}
+                          className="rounded"
+                        />
+                        <span className="font-semibold">{baseCurrency}</span>
+                      </div>
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map(currency => (
                       <SelectItem key={currency.code} value={currency.code}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">{currency.flag}</span>
-                          <span className="font-medium">{currency.code}</span>
-                          <span className="text-muted-foreground">- {currency.name}</span>
+                        <div className="flex items-center gap-3">
+                          <Image 
+                            src={currency.flag}
+                            alt={currency.code}
+                            width={24}
+                            height={24}
+                            className="rounded"
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{currency.code}</span>
+                            <span className="text-xs text-muted-foreground">{currency.name}</span>
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
@@ -446,12 +470,32 @@ export default function FXRatesPage() {
                 <Label htmlFor="from-currency">From</Label>
                 <Select value={convertFrom} onValueChange={setConvertFrom}>
                   <SelectTrigger id="from-currency" className="h-12">
-                    <SelectValue />
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <Image 
+                          src={CURRENCIES.find(c => c.code === convertFrom)?.flag || '/flag/US.png'}
+                          alt={convertFrom}
+                          width={20}
+                          height={20}
+                          className="rounded"
+                        />
+                        <span className="font-semibold">{convertFrom}</span>
+                      </div>
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map(currency => (
                       <SelectItem key={currency.code} value={currency.code}>
-                        {currency.flag} {currency.code}
+                        <div className="flex items-center gap-2">
+                          <Image 
+                            src={currency.flag}
+                            alt={currency.code}
+                            width={20}
+                            height={20}
+                            className="rounded"
+                          />
+                          <span className="font-semibold">{currency.code}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -462,12 +506,32 @@ export default function FXRatesPage() {
                 <Label htmlFor="to-currency">To</Label>
                 <Select value={convertTo} onValueChange={setConvertTo}>
                   <SelectTrigger id="to-currency" className="h-12">
-                    <SelectValue />
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <Image 
+                          src={CURRENCIES.find(c => c.code === convertTo)?.flag || '/flag/EU.png'}
+                          alt={convertTo}
+                          width={20}
+                          height={20}
+                          className="rounded"
+                        />
+                        <span className="font-semibold">{convertTo}</span>
+                      </div>
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CURRENCIES.map(currency => (
                       <SelectItem key={currency.code} value={currency.code}>
-                        {currency.flag} {currency.code}
+                        <div className="flex items-center gap-2">
+                          <Image 
+                            src={currency.flag}
+                            alt={currency.code}
+                            width={20}
+                            height={20}
+                            className="rounded"
+                          />
+                          <span className="font-semibold">{currency.code}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -594,6 +658,20 @@ export default function FXRatesPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Footer Info */}
+        <Card className="border-2 bg-muted/50">
+          <CardContent className="py-6">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Powered by <span className="font-semibold text-foreground">Payvost Exchange Engine</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Real-time exchange rates • Updates every 30 seconds • {CURRENCIES.length} currencies supported
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

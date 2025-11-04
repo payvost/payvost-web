@@ -100,7 +100,7 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="w-full py-20 md:py-28 lg:py-32 rounded-b-[15px] bg-card">
           <div className="container mx-auto max-w-screen-xl px-4 md:px-6">
-            <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
+            <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:gap-10 xl:gap-12">
               <div className="flex flex-col justify-center space-y-4 text-center lg:text-left">
                 <div className="space-y-4">
                   <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
@@ -123,7 +123,7 @@ export default function LandingPage() {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center justify-center lg:justify-end">
                 <LiveRateChecker />
               </div>
             </div>
