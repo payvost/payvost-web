@@ -70,34 +70,70 @@ export default function FXRatesPage() {
   const [showDetailChart, setShowDetailChart] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
 
-  // Simulate fetching exchange rates (replace with actual API call)
+  // Fetch real exchange rates from Fixer API
   const fetchExchangeRates = useCallback(async () => {
     setIsRefreshing(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Note: Fixer.io free plan only supports EUR as base
+      // We'll fetch EUR rates and calculate cross-rates
+      const response = await fetch(`/api/exchange-rates?base=EUR`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch exchange rates');
+      }
 
-    // Generate mock rates with realistic fluctuations
-    const mockRates: ExchangeRate[] = CURRENCIES
-      .filter(c => c.code !== baseCurrency)
-      .map(currency => {
-        const baseRate = getBaseRate(baseCurrency, currency.code);
-        const fluctuation = (Math.random() - 0.5) * 0.02; // ±1% change
-        const rate = baseRate * (1 + fluctuation);
-        const change24h = (Math.random() - 0.5) * 2; // ±1% daily change
-        
-        return {
-          code: currency.code,
-          rate,
-          change24h,
-          previousRate: rate / (1 + change24h / 100),
-          lastUpdated: new Date(),
-        };
-      });
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch rates');
+      }
 
-    setExchangeRates(mockRates);
-    setLastUpdate(new Date());
-    setIsRefreshing(false);
+      // Calculate rates relative to selected base currency
+      const baseRateToEUR = baseCurrency === 'EUR' ? 1 : (data.rates[baseCurrency] || 1);
+      
+      const rates: ExchangeRate[] = CURRENCIES
+        .filter(c => c.code !== baseCurrency)
+        .map(currency => {
+          const eurRate = data.rates[currency.code] || 1;
+          const rate = eurRate / baseRateToEUR;
+          
+          // Calculate 24h change (simulated for now - would need historical data)
+          const change24h = (Math.random() - 0.5) * 2; // ±1% for demo
+          
+          return {
+            code: currency.code,
+            rate,
+            change24h,
+            previousRate: rate / (1 + change24h / 100),
+            lastUpdated: new Date(data.timestamp * 1000),
+          };
+        });
+
+      setExchangeRates(rates);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching exchange rates:', error);
+      // Fallback to mock data on error
+      const mockRates: ExchangeRate[] = CURRENCIES
+        .filter(c => c.code !== baseCurrency)
+        .map(currency => {
+          const baseRate = getBaseRate(baseCurrency, currency.code);
+          const rate = baseRate;
+          const change24h = (Math.random() - 0.5) * 2;
+          
+          return {
+            code: currency.code,
+            rate,
+            change24h,
+            previousRate: rate / (1 + change24h / 100),
+            lastUpdated: new Date(),
+          };
+        });
+      setExchangeRates(mockRates);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [baseCurrency]);
 
   // Initial fetch and polling

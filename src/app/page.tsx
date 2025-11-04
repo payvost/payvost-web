@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin, MoreHorizontal, Star } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
 import placeholderImageData from '@/app/lib/placeholder-images.json';
 
@@ -123,63 +124,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="flex items-center">
-                <Card className="w-full">
-                  <CardHeader>
-                    <CardTitle>Check Live Rates</CardTitle>
-                    <CardDescription>Get the best exchange rates in real-time.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="send-amount">You send</Label>
-                        <Input id="send-amount" value={sendAmount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSendAmount(e.target.value)} placeholder="0.00"/>
-                      </div>
-                      <div className="flex items-center justify-center">
-                        <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="recipient-gets">Recipient gets</Label>
-                        <Input id="recipient-gets" readOnly value={recipientGets} placeholder="0.00" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="send-currency">Currency</Label>
-                        <Select value={sendCurrency} onValueChange={setSendCurrency}>
-                          <SelectTrigger id="send-currency">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="EUR">EUR</SelectItem>
-                            <SelectItem value="GBP">GBP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div></div>
-                      <div className="space-y-2">
-                        <Label htmlFor="receive-currency">Currency</Label>
-                        <Select value={receiveCurrency} onValueChange={setReceiveCurrency}>
-                          <SelectTrigger id="receive-currency">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NGN">NGN</SelectItem>
-                            <SelectItem value="GHS">GHS</SelectItem>
-                            <SelectItem value="KES">KES</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground pt-2">
-                      <p>Exchange rate: 1 {sendCurrency} = {currentRate.toFixed(2)} {receiveCurrency}</p>
-                      <p>No hidden fees.</p>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" onClick={handleCheckPricing}>Check Pricing</Button>
-                  </CardFooter>
-                </Card>
+                <LiveRateChecker />
               </div>
             </div>
           </div>
@@ -466,6 +411,7 @@ export default function LandingPage() {
                 <ul className="space-y-2">
                     <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
+                    <li><Link href="/fx-rates" className="hover:text-primary transition-colors">Live FX Rates</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
