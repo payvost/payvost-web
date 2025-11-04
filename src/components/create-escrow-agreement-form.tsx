@@ -1,30 +1,30 @@
-
 'use client';
 
 import { useFieldArray, useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Trash2, Plus, Send, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Separator } from './ui/separator';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { escrowApi } from '@/lib/api/escrow';
 
 const milestoneSchema = z.object({
-  description: z.string().min(1, 'Description is required'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
   amount: z.preprocess(
     (val) => Number(String(val)),
     z.number().positive('Must be > 0')
   ),
+  deliverableDescription: z.string().optional(),
 });
 
 const agreementSchema = z.object({
@@ -33,8 +33,10 @@ const agreementSchema = z.object({
   currency: z.string().min(1, 'Currency is required'),
   sellerEmail: z.string().email('Invalid email for seller'),
   buyerEmail: z.string().email('Invalid email for buyer'),
-  mediatorEmail: z.string().email('Invalid email for mediator').optional(),
+  mediatorEmail: z.string().email('Invalid email for mediator').optional().or(z.literal('')),
   milestones: z.array(milestoneSchema).min(1, 'At least one milestone is required'),
+  autoReleaseEnabled: z.boolean().optional(),
+  autoReleaseDays: z.number().optional(),
 });
 
 type AgreementFormValues = z.infer<typeof agreementSchema>;
@@ -70,7 +72,9 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
             sellerEmail: '',
             buyerEmail: '',
             mediatorEmail: '',
-            milestones: [{ description: '', amount: 0 }],
+            milestones: [{ title: '', description: '', amount: 0, deliverableDescription: '' }],
+            autoReleaseEnabled: false,
+            autoReleaseDays: 7,
         },
     });
 
@@ -97,24 +101,33 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
 
         setIsSubmitting(true);
         try {
-            await addDoc(collection(db, 'escrow'), {
-                ...data,
-                totalAmount,
-                userIds: [user.uid], // Link the agreement to the creator
-                status: 'Awaiting Funding',
-                createdAt: serverTimestamp(),
+            await escrowApi.createEscrow({
+                title: data.title,
+                description: data.description,
+                currency: data.currency,
+                buyerEmail: data.buyerEmail,
+                sellerEmail: data.sellerEmail,
+                mediatorEmail: data.mediatorEmail || undefined,
+                milestones: data.milestones.map(m => ({
+                    title: m.title,
+                    description: m.description,
+                    amount: m.amount,
+                    deliverableDescription: m.deliverableDescription,
+                })),
+                autoReleaseEnabled: data.autoReleaseEnabled,
+                autoReleaseDays: data.autoReleaseDays,
             });
 
             toast({
-                title: "Agreement Sent for Review",
-                description: "All parties have been notified to review and fund the agreement.",
+                title: "Agreement Created",
+                description: "All parties have been notified to review and accept the agreement.",
             });
             onBack();
-        } catch (error) {
-            console.error("Error creating escrow agreement: ", error);
+        } catch (error: any) {
+            console.error("Error creating escrow agreement:", error);
             toast({
                 title: "Error",
-                description: "Could not create the agreement. Please try again.",
+                description: error.response?.data?.error || "Could not create the agreement. Please try again.",
                 variant: 'destructive',
             });
         } finally {
@@ -204,7 +217,8 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[60%]">Description</TableHead>
+                                        <TableHead className="w-[40%]">Milestone Title</TableHead>
+                                        <TableHead className="w-[35%]">Description</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
                                         <TableHead className="w-12"></TableHead>
                                     </TableRow>
@@ -213,15 +227,19 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
                                     {fields.map((field, index) => (
                                         <TableRow key={field.id}>
                                             <TableCell>
-                                                <Input {...register(`milestones.${index}.description`)} placeholder="e.g., Initial Deposit, Final Payment"/>
+                                                <Input {...register(`milestones.${index}.title`)} placeholder="e.g., Design Phase"/>
+                                                {errors.milestones?.[index]?.title && <p className="text-sm text-destructive mt-1">{errors.milestones[index]?.title?.message}</p>}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input {...register(`milestones.${index}.description`)} placeholder="Optional description"/>
                                                 {errors.milestones?.[index]?.description && <p className="text-sm text-destructive mt-1">{errors.milestones[index]?.description?.message}</p>}
                                             </TableCell>
                                             <TableCell>
-                                                <Input type="number" {...register(`milestones.${index}.amount`)} placeholder="0.00" className="w-32 text-right ml-auto" />
+                                                <Input type="number" {...register(`milestones.${index}.amount`)} placeholder="0.00" className="w-32 text-right ml-auto" step="0.01" />
                                                  {errors.milestones?.[index]?.amount && <p className="text-sm text-destructive mt-1">{errors.milestones[index]?.amount?.message}</p>}
                                             </TableCell>
                                             <TableCell>
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length === 1}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </TableCell>
@@ -231,7 +249,7 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
                             </Table>
                             {errors.milestones && <p className="text-sm text-destructive mt-2">{errors.milestones.message}</p>}
                             <div className="flex justify-between items-center mt-4">
-                                <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', amount: 0 })}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => append({ title: '', description: '', amount: 0, deliverableDescription: '' })}>
                                     <Plus className="mr-2 h-4 w-4" /> Add Milestone
                                 </Button>
                                 <div className="text-right">
@@ -242,9 +260,9 @@ export function CreateEscrowAgreementForm({ onBack }: CreateEscrowAgreementFormP
                         </div>
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                         <Button type="button" variant="outline">Save as Draft</Button>
+                         <Button type="button" variant="outline" onClick={onBack}>Cancel</Button>
                          <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Sending...' : <><ShieldCheck className="mr-2 h-4 w-4" />Create & Send for Review</>}
+                            {isSubmitting ? 'Creating...' : <><ShieldCheck className="mr-2 h-4 w-4" />Create Agreement</>}
                          </Button>
                     </CardFooter>
                 </Card>
