@@ -135,9 +135,9 @@ async function getPublicInvoiceAndBusiness(id: string) {
   return { invoice, businessProfile };
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const { id } = await params;
     if (!id) return new Response('Missing id', { status: 400 });
 
     const { invoice, businessProfile } = await getPublicInvoiceAndBusiness(id);
