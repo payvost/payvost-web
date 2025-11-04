@@ -140,25 +140,6 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
   }
 });
 
-// Warm cache for invoice PDF (pre-generate and store in bucket)
-app.post('/api/pdf/cache/invoice/:id', async (req, res) => {
-  const { id } = req.params;
-  const origin = req.query.origin as string;
-  try {
-    const url = new URL(`/cache/invoice/${id}`, PDF_SERVICE_URL);
-    if (origin) url.searchParams.set('origin', origin);
-    console.log(`[Gateway] Proxying PDF warm-cache to: ${url.toString()}`);
-
-    const response = await fetch(url.toString(), { method: 'POST' });
-    const text = await response.text();
-    res.status(response.status).setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-    return res.send(text);
-  } catch (error: any) {
-    console.error('[Gateway] PDF warm-cache proxy error:', error);
-    return res.status(500).json({ error: 'Failed to warm PDF cache', message: error.message });
-  }
-});
-
 app.get('/api/pdf/health', async (_req, res) => {
   try {
     const response = await fetch(`${PDF_SERVICE_URL}/health`);

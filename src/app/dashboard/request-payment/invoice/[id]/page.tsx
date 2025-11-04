@@ -39,6 +39,7 @@ export default function InvoiceDetailsPage() {
     const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
+    const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
 
     useEffect(() => {
@@ -126,7 +127,7 @@ export default function InvoiceDetailsPage() {
                     </div>
                      <div className="flex gap-2">
                         <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                        <a href={`/api/pdf/invoice/${id}`} download>
+                        <a href={`${functionsBase}/download/invoice/${id}`} download>
                             <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                         </a>
                         <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>
