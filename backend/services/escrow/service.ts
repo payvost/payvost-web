@@ -1,4 +1,4 @@
-import { PrismaClient, Escrow, EscrowStatus, MilestoneStatus, EscrowPartyRole } from '@prisma/client';
+import { PrismaClient, EscrowStatus, MilestoneStatus, EscrowPartyRole, Escrow as PrismaEscrow } from '@prisma/client';
 import Decimal from 'decimal.js';
 import {
   CreateEscrowInput,
@@ -40,7 +40,7 @@ export class EscrowStateMachine {
     toStatus: EscrowStatus,
     userId?: string,
     role?: EscrowPartyRole
-  ): Promise<Escrow> {
+  ): Promise<PrismaEscrow> {
     const escrow = await prisma.escrow.findUnique({ where: { id: escrowId } });
     if (!escrow) throw new Error('Escrow not found');
 
@@ -103,7 +103,15 @@ export async function createEscrow(
     });
 
     // Create parties
-    const parties = [
+    const parties: Array<{
+      escrowId: string;
+      userId?: string;
+      role: EscrowPartyRole;
+      email: string;
+      name?: string | null;
+      hasAccepted: boolean;
+      acceptedAt?: Date;
+    }> = [
       {
         escrowId: newEscrow.id,
         userId: creatorUserId,
@@ -653,7 +661,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
       deliverableSubmitted: m.deliverableSubmitted,
       deliverableUrl: m.deliverableUrl || undefined,
     })),
-    activities: escrow.activities.map((a) => ({
+    activities: escrow.activities.map((a: any) => ({
       id: a.id,
       type: a.type,
       description: a.description,
