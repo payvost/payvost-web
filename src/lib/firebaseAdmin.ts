@@ -1,4 +1,6 @@
 import admin from 'firebase-admin';
+import fs from 'fs';
+import path from 'path';
 
 // Initialize Firebase Admin singleton for server-side usage
 export function getAdminApp() {
@@ -11,7 +13,7 @@ export function getAdminApp() {
       process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
       process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
 
-    let credential: admin.credential.Credential;
+    let credential: admin.credential.Credential | null = null;
 
     if (serviceAccountEnv) {
       let serviceAccount: any;
@@ -32,12 +34,43 @@ export function getAdminApp() {
 
       credential = admin.credential.cert(serviceAccount as admin.ServiceAccount);
     } else {
-      // Fall back to ADC in environments that provide it (local dev)
+      // Fallbacks for local/dev without env var:
+      // 1) Try known service account files in repo
+      const candidates = [
+        path.resolve(process.cwd(), 'backend', 'payvost-ae91662ec061.json'),
+        path.resolve(process.cwd(), 'functions', 'serviceAccountKey.json'),
+      ];
+      let loadedFromFile = false;
+      for (const filePath of candidates) {
+        try {
+          if (fs.existsSync(filePath)) {
+            console.log('[firebaseAdmin] Attempting file:', filePath);
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            const svc = JSON.parse(raw);
+            credential = admin.credential.cert(svc as admin.ServiceAccount);
+            loadedFromFile = true;
+            console.log('[firebaseAdmin] Loaded from file:', filePath);
+            break;
+          }
+        } catch (err) {
+          console.error('[firebaseAdmin] Failed to load', filePath, err);
+          // continue
+        }
+      }
+
+      if (!loadedFromFile) {
+        // 2) Fall back to ADC in environments that provide it
+        credential = admin.credential.applicationDefault();
+      }
+    }
+
+    // Ensure we have a credential
+    if (!credential) {
       credential = admin.credential.applicationDefault();
     }
 
     const config: admin.AppOptions = {
-      credential,
+      credential: credential,
     };
 
     // Add storage bucket if provided
