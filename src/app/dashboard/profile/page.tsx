@@ -40,6 +40,7 @@ const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: '
     Pending: { color: 'text-yellow-700', variant: 'secondary' },
     Unverified: { color: 'text-gray-700', variant: 'outline' },
     Restricted: { color: 'text-orange-700', variant: 'destructive' },
+    Rejected: { color: 'text-red-700', variant: 'destructive' },
     Default: { color: 'text-gray-700', variant: 'outline' },
 };
 

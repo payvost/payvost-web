@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera, ChevronsUpDown, Check, ShieldCheckIcon, ShieldX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -316,11 +316,34 @@ export function RegistrationForm() {
         setIsLoading(false);
         return;
       }
-      // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
-      
-      // 2. Upload profile photo if it exists
+
+      // 1. Call backend API to create user (bypasses client restrictions)
+      const registerResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          displayName: data.fullName,
+          phoneNumber: `+${data.countryCode}${data.phone}`,
+          countryCode: data.country,
+          userType: 'Pending',
+        }),
+      });
+
+      if (!registerResponse.ok) {
+        const error = await registerResponse.json();
+        throw new Error(error.error || 'Registration failed');
+      }
+
+      const { uid, customToken } = await registerResponse.json();
+
+      // 2. Sign in with custom token
+      await signInWithCustomToken(auth, customToken);
+      const user = auth.currentUser;
+      if (!user) throw new Error('Failed to authenticate after registration');
+
+      // 3. Upload profile photo if it exists
       let photoURL = '';
       const photoFile = data.photo?.[0];
       if (photoFile) {
@@ -329,13 +352,13 @@ export function RegistrationForm() {
         photoURL = await getDownloadURL(photoStorageRef);
       }
 
-      // 3. Update Auth profile
+      // 4. Update Auth profile
       await updateProfile(user, {
         displayName: data.fullName,
         photoURL: photoURL,
       });
       
-      // 4. Create the main user document in Firestore
+      // 5. Update the user document in Firestore with additional details
       const userDocRef = doc(db, "users", user.uid);
       const firestoreData = {
         uid: user.uid,

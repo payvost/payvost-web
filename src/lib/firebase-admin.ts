@@ -64,5 +64,12 @@ function initFirebaseAdmin() {
 
 initFirebaseAdmin();
 
-export const db = admin.firestore();
-export const auth = admin.auth();
+// New explicit exports
+export const adminDb = admin.firestore();
+export const adminAuth = admin.auth();
+
+// Backward compatibility exports for existing API routes
+export const db = adminDb;
+export const auth = adminAuth;
+
+export { admin };
