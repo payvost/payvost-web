@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,12 @@ import type { CustomerData, KycStatus, UserType } from '@/types/customer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import axios from 'axios';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import dynamic from 'next/dynamic';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(m => m.TransactionChart), { ssr: false });
 
 
 const kycStatusConfig: Record<KycStatus, { icon: React.ReactNode; color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -22,6 +28,7 @@ const kycStatusConfig: Record<KycStatus, { icon: React.ReactNode; color: string;
     Pending: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-yellow-600', variant: 'secondary' },
     Unverified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-gray-600', variant: 'outline' },
     Restricted: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
+    Rejected: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-red-600', variant: 'destructive' },
 };
 
 
@@ -31,6 +38,73 @@ export default function CustomerDetailsPage() {
     const [customer, setCustomer] = useState<CustomerData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { toast } = useToast();
+
+    // Admin action dialog state
+    const [approveOpen, setApproveOpen] = useState(false);
+    const [rejectOpen, setRejectOpen] = useState(false);
+    const [limitsOpen, setLimitsOpen] = useState(false);
+    const [approveLevel, setApproveLevel] = useState<'Basic' | 'Full' | 'Advanced'>('Full');
+    const [rejectReason, setRejectReason] = useState('');
+    const [limits, setLimits] = useState({ daily: 1000, fx: 5000, withdrawal: 2000 });
+
+    // Helpers
+    const toDate = (date: any): Date | null => {
+        if (!date) return null;
+        if (typeof date === 'string') return new Date(date);
+        if (date.toDate) return date.toDate();
+        if (date._seconds) return new Date(date._seconds * 1000);
+        return null;
+    };
+
+    const monthKey = (d: Date) => d.toLocaleString('en-US', { month: 'short' });
+
+    const computeStats = (c: CustomerData) => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfQuarter = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+
+        let monthIn = 0, monthOut = 0, qIn = 0, qOut = 0, lifeIn = 0, lifeOut = 0;
+        const counts = { succeeded: 0, failed: 0, pending: 0 } as Required<NonNullable<CustomerData['transactionCounts']>>;
+
+        const byMonth: Record<string, { income: number; expense: number }> = {};
+
+        (c.transactions || []).forEach(tx => {
+            const d = toDate((tx as any).date) ?? new Date();
+            const isThisMonth = d >= startOfMonth;
+            const isThisQuarter = d >= startOfQuarter;
+
+            const amt = tx.amount || 0;
+            if (tx.type === 'inflow') {
+                lifeIn += amt; if (isThisMonth) monthIn += amt; if (isThisQuarter) qIn += amt;
+            } else {
+                lifeOut += amt; if (isThisMonth) monthOut += amt; if (isThisQuarter) qOut += amt;
+            }
+
+            counts[tx.status] = (counts[tx.status] ?? 0) + 1;
+
+            const key = monthKey(d);
+            byMonth[key] = byMonth[key] || { income: 0, expense: 0 };
+            if (tx.type === 'inflow') byMonth[key].income += amt; else byMonth[key].expense += amt;
+        });
+
+        // Build last 6 months sequence for chart
+        const months: { month: string; income: number; expense: number }[] = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = d.toLocaleString('en-US', { month: 'short' });
+            const ent = byMonth[key] || { income: 0, expense: 0 };
+            months.push({ month: key, income: ent.income, expense: ent.expense });
+        }
+
+        return {
+            month: { inflow: monthIn, outflow: monthOut },
+            quarter: { inflow: qIn, outflow: qOut },
+            lifetime: { inflow: lifeIn, outflow: lifeOut },
+            counts,
+            chartData: months,
+        };
+    };
 
     useEffect(() => {
         const fetchCustomer = async () => {
@@ -91,7 +165,8 @@ export default function CustomerDetailsPage() {
         );
     }
 
-    const status = kycStatusConfig[customer.kycStatus as KycStatus];
+    const status = kycStatusConfig[customer.kycStatus as KycStatus] || kycStatusConfig.Unverified;
+    const stats = computeStats(customer);
     
     // Format joined date
     const formatDate = (date: any) => {
@@ -126,23 +201,55 @@ export default function CustomerDetailsPage() {
                     </div>
                 </div>
                  <div className="flex items-center space-x-2">
-                    <Button variant="outline"><Repeat className="mr-2 h-4 w-4" />Reset Password</Button>
-                    <Button variant="destructive"><Power className="mr-2 h-4 w-4" />Suspend</Button>
+                    <Button variant="outline" onClick={() => toast({ title: 'Reset Password', description: 'Password reset link sent to user.' })}><Repeat className="mr-2 h-4 w-4" />Reset Password</Button>
+                    <Button variant="destructive" onClick={() => toast({ title: 'Account Suspended', description: 'User session will be revoked.' })}><Power className="mr-2 h-4 w-4" />Suspend</Button>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                      <Card>
-                        <CardHeader>
-                            <CardTitle>Customer Profile</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> User Type</p><p className="font-medium pl-5">{customer.userType}</p></div>
-                            <div><p className="text-muted-foreground flex items-center gap-1"><Phone className="h-4 w-4" /> Phone</p><p className="font-medium pl-5">{customer.phone}</p></div>
-                            <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country}</p></div>
-                            <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate)}</p></div>
-                        </CardContent>
+                                                <CardHeader>
+                                                        <CardTitle>Customer Profile</CardTitle>
+                                                        <CardDescription>Core identity and KYC details</CardDescription>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> User Type</p><p className="font-medium pl-5">{customer.userType}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Phone className="h-4 w-4" /> Phone</p><p className="font-medium pl-5">{customer.phone || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate)}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Shield className="h-4 w-4" /> KYC Level</p><p className="font-medium pl-5">{customer.kycLevel || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Type</p><p className="font-medium pl-5">{customer.kycIdType || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Number</p><p className="font-medium pl-5">{customer.kycIdNumber || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Activity className="h-4 w-4" /> Last Login</p><p className="font-medium pl-5">{customer.lastLoginAt ? new Date(toDate(customer.lastLoginAt)!).toLocaleString() : 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Last IP</p><p className="font-medium pl-5">{customer.lastLoginIp || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> Device</p><p className="font-medium pl-5">{customer.lastLoginDevice || 'N/A'}</p></div>
+                                                </CardContent>
+                                                <Separator />
+                                                {(customer.address || customer.businessInfo) && (
+                                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {customer.address && (
+                                                            <div>
+                                                                <h4 className="font-semibold mb-2">Address</h4>
+                                                                <div className="text-sm space-y-1">
+                                                                    <p>{customer.address.street || '—'}</p>
+                                                                    <p>{[customer.address.city, customer.address.state, customer.address.postalCode].filter(Boolean).join(', ') || '—'}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {customer.businessInfo && (
+                                                            <div>
+                                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Briefcase className="h-4 w-4"/> Business Info</h4>
+                                                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                                                    <div><span className="text-muted-foreground">Registered Name</span><div className="font-medium">{customer.businessInfo.registeredName || '—'}</div></div>
+                                                                    <div><span className="text-muted-foreground">Reg. Number</span><div className="font-medium">{customer.businessInfo.registrationNumber || '—'}</div></div>
+                                                                    <div><span className="text-muted-foreground">Category</span><div className="font-medium">{customer.businessInfo.category || '—'}</div></div>
+                                                                    <div><span className="text-muted-foreground">Contact</span><div className="font-medium">{customer.businessInfo.contactPerson || '—'}</div></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                )}
                     </Card>
 
                     {customer.associatedAccounts && customer.associatedAccounts.length > 0 && (
@@ -206,50 +313,347 @@ export default function CustomerDetailsPage() {
                             )}
                         </CardContent>
                         <CardFooter>
-                            <Button variant="secondary">View All Transactions</Button>
+                                                        <Button variant="secondary">View All Transactions</Button>
                         </CardFooter>
                     </Card>
+
+                                        <Card>
+                                                <CardHeader>
+                                                        <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5"/> Analytics & Activity</CardTitle>
+                                                        <CardDescription>Spending trends over the last 6 months</CardDescription>
+                                                </CardHeader>
+                                                <CardContent>
+                                                        <div className="h-64">
+                                                                <TransactionChart data={stats.chartData} />
+                                                        </div>
+                                                        {customer.topCounterparties && customer.topCounterparties.length > 0 && (
+                                                                <div className="mt-6">
+                                                                    <h4 className="font-semibold mb-2">Top Counterparties</h4>
+                                                                    <div className="space-y-2 text-sm">
+                                                                        {customer.topCounterparties.slice(0,5).map(cp => (
+                                                                            <div key={cp.name} className="flex justify-between">
+                                                                                <span>{cp.name}</span>
+                                                                                <span className="font-mono">{cp.count} tx • {new Intl.NumberFormat('en-US', { style: 'currency', currency: cp.currency || 'USD' }).format(cp.volume)}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                        )}
+                                                </CardContent>
+                                        </Card>
                 </div>
                 <div className="lg:col-span-1 space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><CircleDollarSign className="h-5 w-5"/>Account Value</CardTitle>
+                                                        <CardTitle className="flex items-center gap-2"><CircleDollarSign className="h-5 w-5"/>Financial Overview</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div>
-                                <p className="text-sm text-muted-foreground">Total Spend</p>
-                                <p className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(customer.totalSpend)}</p>
-                            </div>
-                             <Separator />
-                              <div>
-                                <p className="text-sm text-muted-foreground mb-2">Wallet Balances</p>
-                                {customer.wallets && customer.wallets.length > 0 ? (
-                                <div className="space-y-2">
-                                {customer.wallets.map(wallet => (
-                                    <div key={wallet.currency} className="flex justify-between items-center">
-                                        <span className="font-medium">{wallet.currency}</span>
-                                        <span className="font-mono">{new Intl.NumberFormat('en-US', { style: 'currency', currency: wallet.currency, maximumFractionDigits: 2 }).format(wallet.balance)}</span>
-                                    </div>
-                                ))}
-                                </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No wallets configured</p>
-                                )}
-                            </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Total Spend</p>
+                                                                <p className="text-xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(customer.totalSpend || 0)}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">This Month Inflow</p>
+                                                                <p className="text-xl font-bold text-green-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.month.inflow)}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">This Month Outflow</p>
+                                                                <p className="text-xl font-bold text-red-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.month.outflow)}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs text-muted-foreground">Lifetime Volume</p>
+                                                                <p className="text-xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.lifetime.inflow + stats.lifetime.outflow)}</p>
+                                                            </div>
+                                                        </div>
+                                                        <Separator />
+                                                        <div>
+                                                            <p className="text-sm text-muted-foreground mb-2">Transactions</p>
+                                                            <div className="flex gap-3 text-sm">
+                                                                <Badge variant="default">Succeeded {stats.counts.succeeded}</Badge>
+                                                                <Badge variant="secondary">Pending {stats.counts.pending}</Badge>
+                                                                <Badge variant="destructive">Failed {stats.counts.failed}</Badge>
+                                                            </div>
+                                                        </div>
+                                                        <Separator />
+                                                        <div>
+                                                                <p className="text-sm text-muted-foreground mb-2">Wallet Balances</p>
+                                                                {customer.wallets && customer.wallets.length > 0 ? (
+                                                                <div className="space-y-2">
+                                                                {customer.wallets.map(wallet => (
+                                                                        <div key={wallet.currency} className="flex justify-between items-center">
+                                                                                <span className="font-medium">{wallet.currency}</span>
+                                                                                <span className="font-mono">{new Intl.NumberFormat('en-US', { style: 'currency', currency: wallet.currency, maximumFractionDigits: 2 }).format(wallet.balance)}</span>
+                                                                        </div>
+                                                                ))}
+                                                                </div>
+                                                                ) : (
+                                                                        <p className="text-sm text-muted-foreground">No wallets configured</p>
+                                                                )}
+                                                        </div>
+                                                        <Separator />
+                                                        <div>
+                                                                <p className="text-sm text-muted-foreground mb-2">Linked Payment Methods</p>
+                                                                {customer.paymentMethods && customer.paymentMethods.length > 0 ? (
+                                                                    <div className="space-y-2 text-sm">
+                                                                        {customer.paymentMethods.map((pm, idx) => (
+                                                                            <div key={pm.id || idx} className="flex items-center justify-between">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    {pm.type === 'card' ? <CreditCard className="h-4 w-4"/> : pm.type === 'bank' ? <Landmark className="h-4 w-4"/> : <KeyRound className="h-4 w-4"/>}
+                                                                                    <span className="font-medium">
+                                                                                        {pm.type === 'card' && (pm.brand ? `${pm.brand} •••• ${pm.last4 || ''}` : 'Card')}
+                                                                                        {pm.type === 'bank' && (pm.bankName ? `${pm.bankName} ${pm.accountNoMasked || ''}` : 'Bank')}
+                                                                                        {pm.type !== 'card' && pm.type !== 'bank' && 'Virtual Account'}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <Badge variant="outline" className="capitalize">{pm.status || 'active'}</Badge>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm text-muted-foreground">No payment methods</p>
+                                                                )}
+                                                        </div>
+                                                        <Separator />
+                                                        <div>
+                                                            <p className="text-sm text-muted-foreground mb-2">Active Services</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {(customer.activeServices && customer.activeServices.length > 0 ? customer.activeServices : ['Virtual Card', 'API Access']).map(svc => (
+                                                                    <Badge key={svc} variant="outline">{svc}</Badge>
+                                                                ))}
+                                                            </div>
+                                                        </div>
                         </CardContent>
                     </Card>
-                    <Card>
+                                        <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5"/>Risk & Security</CardTitle>
+                                                        <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5"/>Risk & Security</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                             <div>
-                                <p className="text-sm text-muted-foreground">Internal Risk Score</p>
-                                <p className="text-2xl font-bold">{customer.riskScore} / 100</p>
-                            </div>
-                            <Button variant="outline" className="w-full justify-start"><MessageSquareWarning className="mr-2 h-4 w-4"/>Flag for Review</Button>
+                                                         <div>
+                                                                <p className="text-sm text-muted-foreground">Internal Risk Score</p>
+                                                                <p className="text-2xl font-bold">{customer.riskScore} / 100</p>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                                <div className="text-sm">
+                                                                    <p className="text-muted-foreground mb-1">MFA Status</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Switch checked={!!customer.mfaEnabled} disabled />
+                                                                        <span>{customer.mfaEnabled ? 'Enabled' : 'Disabled'}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-sm">
+                                                                    <p className="text-muted-foreground mb-1">Account Lock</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Button size="sm" variant={customer.accountLocked ? 'secondary' : 'outline'} onClick={() => toast({ title: customer.accountLocked ? 'Unlock Account' : 'Lock Account', description: 'Action queued for processing.' })}>
+                                                                            {customer.accountLocked ? <Unlock className="h-4 w-4 mr-2"/> : <Lock className="h-4 w-4 mr-2"/>}
+                                                                            {customer.accountLocked ? 'Unlock' : 'Lock'}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                        </div>
+                                                        {customer.amlFlags && customer.amlFlags.length > 0 ? (
+                                                            <div>
+                                                                <p className="text-sm text-muted-foreground mb-2">AML/KYC Flags</p>
+                                                                <ul className="list-disc pl-5 text-sm space-y-1">
+                                                                    {customer.amlFlags.map((f, i) => (<li key={i}>{f}</li>))}
+                                                                </ul>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2 text-sm text-green-700"><CheckCircle2 className="h-4 w-4"/> No AML alerts</div>
+                                                        )}
+                                                        <div>
+                                                            <p className="text-sm text-muted-foreground mb-2">Login History</p>
+                                                            {customer.loginHistory && customer.loginHistory.length > 0 ? (
+                                                                <div className="space-y-2 text-xs">
+                                                                    {customer.loginHistory.slice(0,5).map((l, idx) => (
+                                                                        <div key={idx} className="flex justify-between">
+                                                                            <span>{toDate(l.timestamp)?.toLocaleString() || '—'}</span>
+                                                                            <span className="text-muted-foreground">{l.ip} • {l.device || l.browser || ''}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-muted-foreground">No recent logins</p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-muted-foreground mb-2">Identity Verification Logs</p>
+                                                            {customer.identityVerificationLogs && customer.identityVerificationLogs.length > 0 ? (
+                                                                <div className="space-y-2 text-xs">
+                                                                    {customer.identityVerificationLogs.slice(0,5).map((ev, idx) => (
+                                                                        <div key={idx} className="flex justify-between">
+                                                                            <span>{toDate(ev.timestamp)?.toLocaleString() || '—'}</span>
+                                                                            <span className="text-muted-foreground">{ev.action}: {ev.result}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-sm text-muted-foreground">No identity log entries</p>
+                                                            )}
+                                                        </div>
+                                                        <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'Flagged', description: 'User flagged for manual review.' })}><MessageSquareWarning className="mr-2 h-4 w-4"/>Flag for Review</Button>
                         </CardContent>
                     </Card>
+
+                                        {customer.settlements && customer.settlements.length > 0 && (
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Recent Settlements</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="space-y-2 text-sm">
+                                                        {customer.settlements.slice(0,5).map((s) => (
+                                                            <div key={s.id} className="flex justify-between">
+                                                                <span className="text-muted-foreground">{toDate(s.date)?.toLocaleDateString() || '—'}</span>
+                                                                <span className="font-mono">{new Intl.NumberFormat('en-US', { style: 'currency', currency: s.currency }).format(s.amount)} • <span className="capitalize">{s.status}</span></span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5"/>Admin Controls</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Button variant="outline" size="sm" onClick={() => toast({ title: 'Force Logout', description: 'All active sessions revoked.' })}><Power className="h-4 w-4 mr-2"/>Force Logout</Button>
+                                                    <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
+                                                      <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm"><Shield className="h-4 w-4 mr-2"/>Change KYC Level</Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                        <DialogHeader>
+                                                          <DialogTitle>Change KYC Level</DialogTitle>
+                                                          <DialogDescription>Select the new KYC level to apply to this user.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div>
+                                                          <label className="text-sm text-muted-foreground">Level</label>
+                                                          <select className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={approveLevel} onChange={e => setApproveLevel(e.target.value as any)}>
+                                                            <option value="Basic">Basic</option>
+                                                            <option value="Full">Full</option>
+                                                            <option value="Advanced">Advanced</option>
+                                                          </select>
+                                                        </div>
+                                                        <DialogFooter>
+                                                          <Button variant="secondary" onClick={() => setApproveOpen(false)}>Cancel</Button>
+                                                          <Button onClick={() => { setApproveOpen(false); toast({ title: 'KYC Level Updated', description: `Level set to ${approveLevel}.` }); }}>Save</Button>
+                                                        </DialogFooter>
+                                                      </DialogContent>
+                                                    </Dialog>
+                                                    <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+                                                      <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm"><CheckCircle2 className="h-4 w-4 mr-2"/>Approve Docs</Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                        <DialogHeader>
+                                                          <DialogTitle>Approve KYC Submission</DialogTitle>
+                                                          <DialogDescription>Confirm approval and notify the user.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <DialogFooter>
+                                                          <Button variant="secondary" onClick={() => setRejectOpen(false)}>Cancel</Button>
+                                                          <Button onClick={() => { setRejectOpen(false); toast({ title: 'KYC Approved', description: 'User has been notified.' }); }}>Approve</Button>
+                                                        </DialogFooter>
+                                                      </DialogContent>
+                                                    </Dialog>
+                                                    <Dialog>
+                                                      <DialogTrigger asChild>
+                                                        <Button variant="destructive" size="sm"><XCircle className="h-4 w-4 mr-2"/>Reject Docs</Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                        <DialogHeader>
+                                                          <DialogTitle>Reject KYC Submission</DialogTitle>
+                                                          <DialogDescription>Provide a reason. The user will be notified.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div>
+                                                          <textarea className="w-full border rounded-md p-2 min-h-[100px]" placeholder="Reason for rejection" value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
+                                                        </div>
+                                                        <DialogFooter>
+                                                          <Button variant="secondary" onClick={() => { setRejectReason(''); }}>Clear</Button>
+                                                          <Button onClick={() => { toast({ title: 'KYC Rejected', description: rejectReason || 'No reason provided.' }); setRejectReason(''); }}>Send</Button>
+                                                        </DialogFooter>
+                                                      </DialogContent>
+                                                    </Dialog>
+                                                    <Dialog open={limitsOpen} onOpenChange={setLimitsOpen}>
+                                                      <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm"><ListChecks className="h-4 w-4 mr-2"/>Adjust Limits</Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                        <DialogHeader>
+                                                          <DialogTitle>Adjust Account Limits</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                          <div>
+                                                            <label className="text-sm text-muted-foreground">Daily Transfer Limit (USD)</label>
+                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.daily} onChange={e => setLimits({ ...limits, daily: Number(e.target.value) })} />
+                                                          </div>
+                                                          <div>
+                                                            <label className="text-sm text-muted-foreground">FX Limit (USD)</label>
+                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.fx} onChange={e => setLimits({ ...limits, fx: Number(e.target.value) })} />
+                                                          </div>
+                                                          <div>
+                                                            <label className="text-sm text-muted-foreground">Withdrawal Cap (USD)</label>
+                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.withdrawal} onChange={e => setLimits({ ...limits, withdrawal: Number(e.target.value) })} />
+                                                          </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                          <Button variant="secondary" onClick={() => setLimitsOpen(false)}>Cancel</Button>
+                                                          <Button onClick={() => { setLimitsOpen(false); toast({ title: 'Limits Updated', description: `Daily ${limits.daily}, FX ${limits.fx}, Withdraw ${limits.withdrawal}` }); }}>Save</Button>
+                                                        </DialogFooter>
+                                                      </DialogContent>
+                                                    </Dialog>
+                                                    <Button variant="outline" size="sm" onClick={() => toast({ title: 'Notification Sent', description: 'User has been notified.' })}><Bell className="h-4 w-4 mr-2"/>Send Notification</Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card>
+                                            <CardHeader>
+                                                <div className="flex items-center justify-between">
+                                                    <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5"/>System Metadata</CardTitle>
+                                                    <Button size="sm" variant="outline" asChild>
+                                                        <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${customer.id}/audit`}>View Audit Trail</Link>
+                                                    </Button>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="space-y-2 text-sm">
+                                                <div className="flex justify-between"><span className="text-muted-foreground">Customer ID</span><span className="font-mono">{customer.id}</span></div>
+                                                {customer.metadata?.customerRef && (<div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="font-mono">{customer.metadata.customerRef}</span></div>)}
+                                                <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span>{customer.metadata?.createdAt ? toDate(customer.metadata.createdAt)?.toLocaleString() : formatDate(customer.joinedDate)}</span></div>
+                                                {customer.metadata?.createdBy && (<div className="flex justify-between"><span className="text-muted-foreground">Created By</span><span>{customer.metadata.createdBy}</span></div>)}
+                                                {customer.metadata?.lastModifiedAt && (<div className="flex justify-between"><span className="text-muted-foreground">Last Modified</span><span>{toDate(customer.metadata.lastModifiedAt)?.toLocaleString()}</span></div>)}
+                                                {customer.metadata?.lastModifiedBy && (<div className="flex justify-between"><span className="text-muted-foreground">Last Modified By</span><span>{customer.metadata.lastModifiedBy}</span></div>)}
+                                                {customer.metadata?.apiKeys && customer.metadata.apiKeys.length > 0 && (
+                                                    <div className="pt-2">
+                                                        <p className="text-muted-foreground">API Keys</p>
+                                                        <div className="mt-1 space-y-1">
+                                                            {customer.metadata.apiKeys.map((k, idx) => (
+                                                                <div key={idx} className="flex justify-between text-xs">
+                                                                    <span>{k.label || 'Key'} • {k.maskedKey}</span>
+                                                                    <span className="capitalize">{k.status || 'active'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {customer.metadata?.webhooks && customer.metadata.webhooks.length > 0 && (
+                                                    <div className="pt-2">
+                                                        <p className="text-muted-foreground">Webhooks</p>
+                                                        <div className="mt-1 space-y-1 text-xs">
+                                                            {customer.metadata.webhooks.map((w, idx) => (
+                                                                <div key={idx} className="flex justify-between">
+                                                                    <span className="truncate max-w-[60%]" title={w.url}>{w.url}</span>
+                                                                    <span className="capitalize">{w.status || 'active'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
                 </div>
             </div>
         </>

@@ -16,6 +16,7 @@ import { ListFilter } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import axios from 'axios';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -23,6 +24,7 @@ const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | '
     Pending: { color: 'text-yellow-700', variant: 'secondary' },
     Unverified: { color: 'text-gray-700', variant: 'outline' },
     Restricted: { color: 'text-orange-700', variant: 'destructive' },
+    Rejected: { color: 'text-red-700', variant: 'destructive' },
 };
 
 export default function CustomersPage() {
@@ -44,6 +46,22 @@ export default function CustomersPage() {
 
         fetchCustomers();
     }, []);
+
+
+    // Generate avatar initials as a fallback
+    const getInitials = (name?: string, email?: string) => {
+        if (name && name.trim().length > 0) {
+            const parts = name.trim().split(/\s+/);
+            const first = parts[0]?.[0] ?? '';
+            const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+            return (first + last).toUpperCase() || 'U';
+        }
+        if (email && email.includes('@')) {
+            const handle = email.split('@')[0];
+            return handle.slice(0, 2).toUpperCase();
+        }
+        return 'U';
+    }
 
 
     const getRiskBadge = (score: number) => {
@@ -175,12 +193,15 @@ export default function CustomersPage() {
                                 const status = kycStatusConfig[user.kycStatus as KycStatus] || kycStatusConfig.Unverified;
                                 const riskScore = user.riskScore || Math.floor(Math.random() * 100);
                                 const userType = user.userType || 'Pending';
-                                
+
                                 return (
                                 <TableRow key={user.id} onClick={() => router.push(`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers/${user.id}`)} className="cursor-pointer">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <img src={`/flag/${user.countryCode?.toUpperCase()}.png`} alt={user.country} className="h-4 w-6 object-cover rounded-sm"/>
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={user.photoURL || ''} alt={user.name} />
+                                                <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
+                                            </Avatar>
                                             <div>
                                                 <div className="font-medium">{user.name}</div>
                                                 <div className="text-sm text-muted-foreground">{user.email}</div>
