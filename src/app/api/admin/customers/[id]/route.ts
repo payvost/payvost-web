@@ -47,7 +47,7 @@ export async function GET(
       email: data.email || '',
       phone: data.phoneNumber || data.phone || '',
       photoURL: data.photoURL || null,
-      kycStatus: data.kycStatus || 'Unverified',
+  kycStatus: typeof data.kycStatus === 'string' ? data.kycStatus.toLowerCase() : 'unverified',
       userType: data.userType || 'Normal User',
       country: data.country || 'Unknown',
       countryCode: data.countryCode || 'US',

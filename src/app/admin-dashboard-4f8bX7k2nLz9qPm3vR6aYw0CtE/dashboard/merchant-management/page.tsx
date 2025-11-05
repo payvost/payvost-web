@@ -13,11 +13,11 @@ import type { MerchantAccountData } from '@/types/merchant';
 import { cn } from '@/lib/utils';
 
 const sampleMerchants: MerchantAccountData[] = [
-    { id: 'merch_1', name: 'Creatify Studio', status: 'Active', balance: 15230.50, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-08-01', complianceStatus: 'Verified', platformFee: 1.5, transactions: [] },
+    { id: 'merch_1', name: 'Creatify Studio', status: 'Active', balance: 15230.50, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-08-01', complianceStatus: 'verified', platformFee: 1.5, transactions: [] },
     { id: 'merch_2', name: 'Gourmet Goods', status: 'Restricted', balance: 250.00, currency: 'USD', payoutSchedule: 'Weekly', onboardedDate: '2024-07-15', complianceStatus: 'Pending', platformFee: 2.0, transactions: [] },
-    { id: 'merch_3', name: 'Digital Nomads Inc.', status: 'Active', balance: 8900.00, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-06-20', complianceStatus: 'Verified', platformFee: 1.5, transactions: [] },
+    { id: 'merch_3', name: 'Digital Nomads Inc.', status: 'Active', balance: 8900.00, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-06-20', complianceStatus: 'verified', platformFee: 1.5, transactions: [] },
     { id: 'merch_4', name: 'The Art Corner', status: 'Payouts Held', balance: 5400.75, currency: 'USD', payoutSchedule: 'Monthly', onboardedDate: '2024-05-10', complianceStatus: 'Needs Review', platformFee: 2.5, transactions: [] },
-    { id: 'merch_5', name: 'Tech Gadgets Online', status: 'Active', balance: 112050.00, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-08-05', complianceStatus: 'Verified', platformFee: 1.0, transactions: [] },
+    { id: 'merch_5', name: 'Tech Gadgets Online', status: 'Active', balance: 112050.00, currency: 'USD', payoutSchedule: 'Daily', onboardedDate: '2024-08-05', complianceStatus: 'verified', platformFee: 1.0, transactions: [] },
 ];
 
 const statusConfig = {

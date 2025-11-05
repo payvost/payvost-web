@@ -373,7 +373,7 @@ export function RegistrationForm() {
         city: data.city,
         state: data.state,
         zip: data.zip,
-        kycStatus: 'Pending',
+  kycStatus: 'pending',
         userType: 'Pending' as const,
         riskScore: Math.floor(Math.random() * 30),
         totalSpend: 0,

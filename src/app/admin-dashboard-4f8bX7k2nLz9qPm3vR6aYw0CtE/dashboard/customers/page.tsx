@@ -10,7 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import type { CustomerData, KycStatus, UserType } from '@/types/customer';
+import type { CustomerData, UserType } from '@/types/customer';
+import type { KycStatus } from '@/types/kyc';
+import { normalizeKycStatus } from '@/types/kyc';
 import { cn } from '@/lib/utils';
 import { ListFilter } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -20,11 +22,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    Verified: { color: 'text-green-700', variant: 'default' },
-    Pending: { color: 'text-yellow-700', variant: 'secondary' },
-    Unverified: { color: 'text-gray-700', variant: 'outline' },
-    Restricted: { color: 'text-orange-700', variant: 'destructive' },
-    Rejected: { color: 'text-red-700', variant: 'destructive' },
+    verified: { color: 'text-green-700', variant: 'default' },
+    pending: { color: 'text-yellow-700', variant: 'secondary' },
+    unverified: { color: 'text-gray-700', variant: 'outline' },
+    restricted: { color: 'text-orange-700', variant: 'destructive' },
+    rejected: { color: 'text-red-700', variant: 'destructive' },
 };
 
 export default function CustomersPage() {
@@ -133,7 +135,7 @@ export default function CustomersPage() {
                         <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-10" /> : customers.filter(c => c.kycStatus === 'Pending').length}</div>
+                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-10" /> : customers.filter(c => typeof c.kycStatus === 'string' && c.kycStatus.toLowerCase() === 'pending').length}</div>
                         <p className="text-xs text-muted-foreground">Awaiting document review</p>
                     </CardContent>
                 </Card>
@@ -190,7 +192,9 @@ export default function CustomersPage() {
                                 ))
                             ) : (
                             customers.map((user) => {
-                                const status = kycStatusConfig[user.kycStatus as KycStatus] || kycStatusConfig.Unverified;
+                                const normalizedStatus = normalizeKycStatus(user.kycStatus);
+                                const status = kycStatusConfig[normalizedStatus];
+                                const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
                                 const riskScore = user.riskScore || Math.floor(Math.random() * 100);
                                 const userType = user.userType || 'Pending';
 
@@ -212,7 +216,7 @@ export default function CustomersPage() {
                                         <Badge variant="outline">{userType}</Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={status.variant} className={cn('capitalize', status.color, status.color.replace('text-','bg-').replace('-700','-500/20'))}>{user.kycStatus}</Badge>
+                                        <Badge variant={status.variant} className={cn('capitalize', status.color, status.color.replace('text-','bg-').replace('-700','-500/20'))}>{statusLabel}</Badge>
                                     </TableCell>
                                     <TableCell>
                                         {getRiskBadge(riskScore)}

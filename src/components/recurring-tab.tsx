@@ -38,9 +38,10 @@ export function RecurringTab() {
             return;
         };
 
-        const userUnsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-            if (doc.exists()) {
-                setIsKycVerified(doc.data().kycStatus === 'Verified');
+        const userUnsub = onSnapshot(doc(db, "users", user.uid), (snapshot: any) => {
+            if (snapshot.exists()) {
+                const status = snapshot.data()?.kycStatus;
+                setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
             }
         });
 
