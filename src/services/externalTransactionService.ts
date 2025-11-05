@@ -79,18 +79,14 @@ class ExternalTransactionService {
    * Get transaction by ID
    */
   async getById(id: string) {
-    const res = await fetch(`/api/external-transactions/by-id?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch external transaction');
-    return res.json();
+    return apiClient.get(`/api/external-transactions/by-id?id=${encodeURIComponent(id)}`);
   }
 
   /**
    * Get transaction by provider transaction ID
    */
   async getByProviderTransactionId(providerTransactionId: string) {
-    const res = await fetch(`/api/external-transactions/by-provider?id=${encodeURIComponent(providerTransactionId)}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch external transaction');
-    return res.json();
+    return apiClient.get(`/api/external-transactions/by-provider?id=${encodeURIComponent(providerTransactionId)}`);
   }
 
   /**
@@ -108,18 +104,14 @@ class ExternalTransactionService {
     if (options?.limit) params.set('limit', String(options.limit));
     if (options?.offset) params.set('offset', String(options.offset));
     // Note: Filtering by provider/type/status can be added to API route when needed
-    const res = await fetch(`/api/external-transactions/by-user?${params.toString()}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch external transactions');
-    return res.json();
+    return apiClient.get(`/api/external-transactions/by-user?${params.toString()}`);
   }
 
   /**
    * Get recent transactions
    */
   async getRecent(limit = 10) {
-    const res = await fetch(`/api/external-transactions/by-user?limit=${limit}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch external transactions');
-    return res.json();
+    return apiClient.get(`/api/external-transactions/by-user?limit=${limit}`);
   }
 
   /**
@@ -127,9 +119,7 @@ class ExternalTransactionService {
    */
   async getStats(userId: string) {
     const params = new URLSearchParams({ userId });
-    const res = await fetch(`/api/external-transactions/stats?${params.toString()}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch external transaction stats');
-    return res.json();
+    return apiClient.get(`/api/external-transactions/stats?${params.toString()}`);
   }
 }
 
