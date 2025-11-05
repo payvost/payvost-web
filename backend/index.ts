@@ -25,7 +25,9 @@ function loadService(modPath: string) {
     try {
       const m = localRequire(p);
       return m && m.default ? m.default : m;
-    } catch {
+    } catch (error) {
+      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      console.warn(`⚠️  Failed to load module candidate ${p}: ${detail}`);
       // try next candidate
     }
   }
