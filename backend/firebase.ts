@@ -5,7 +5,7 @@ import path from 'path';
 // Single, robust initializer for firebase-admin.
 // Supports both environment variable (production) and local file (development).
 
-const LOCAL_SA_FILENAME = 'payvost-ae91662ec061.json';
+const LOCAL_SA_FILENAME = 'payvost-f28db3f2f0bc.json';
 
 function initFirebaseAdmin() {
   if (admin.apps.length) return admin;
