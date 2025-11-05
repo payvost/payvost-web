@@ -12,7 +12,7 @@ import { CardDetails } from '@/components/card-details';
 import type { VirtualCardData } from '@/types/virtual-card';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayUnion, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -36,11 +36,12 @@ export default function VirtualCardsPage() {
       return;
     }
 
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists()) {
-            const data = doc.data();
+  const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot: DocumentSnapshot<DocumentData>) => {
+    if (snapshot.exists()) {
+      const data = snapshot.data() ?? {};
             setCards(data.cards || []);
-            setIsKycVerified(data.kycStatus === 'Verified');
+            const status = data.kycStatus;
+            setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
         }
         setLoadingCards(false);
     });

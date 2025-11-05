@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       country: '',
       countryCode: countryCode || '',
       userType: userType || 'Pending',
-      kycStatus: 'Unverified',
+  kycStatus: 'unverified',
       kycLevel: null,
       riskScore: 0,
       totalSpend: 0,

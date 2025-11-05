@@ -30,7 +30,7 @@ const caseDetails: ComplianceAlert & { user: any; transactions: any[] } = {
         name: 'Liam Johnson',
         email: 'liam@example.com',
         userType: 'Business Owner',
-        kycStatus: 'Verified'
+    kycStatus: 'verified'
     },
     transactions: [
         { id: 'txn_1', type: 'outflow', amount: 999, currency: 'USD', status: 'succeeded', date: '2024-08-14 10:30' },
@@ -49,7 +49,11 @@ const riskConfig: Record<ComplianceAlert['riskLevel'], { className: string }> = 
 
 export default function CaseDetailsPage({ params }: { params: { id: string } }) {
     const caseData = caseDetails; // Fetch by params.id in real app
-    const risk = riskConfig[caseData.riskLevel];
+    const risk = riskConfig[caseData.riskLevel] ?? { className: 'text-muted-foreground' };
+
+    const details = caseData.details;
+    const geoData = details?.geoData;
+    const device = details?.device;
 
     return (
         <>
@@ -82,8 +86,10 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
                             <Badge variant="destructive">{caseData.status}</Badge>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm">{caseData.details.description}</p>
-                            <p className="text-xs text-muted-foreground mt-2">Matched Rule: {caseData.details.matchedRule}</p>
+                            <p className="text-sm">{details?.description ?? 'No additional details provided.'}</p>
+                            {details?.matchedRule ? (
+                                <p className="text-xs text-muted-foreground mt-2">Matched Rule: {details.matchedRule}</p>
+                            ) : null}
                         </CardContent>
                     </Card>
 
@@ -120,9 +126,9 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
                             <CardTitle>Geo & Device Data</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">Location</p><p className="font-medium">{caseData.details.geoData.city}, {caseData.details.geoData.country}</p></div></div>
-                            <div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">IP Address</p><p className="font-mono">{caseData.details.geoData.ip}</p></div></div>
-                            <div className="flex items-center gap-2"><TabletSmartphone className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">Device</p><p className="font-medium">{caseData.details.device.type}</p></div></div>
+                            <div className="flex items-center gap-2"><MapPin className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">Location</p><p className="font-medium">{geoData ? `${geoData.city}, ${geoData.country}` : 'Unknown'}</p></div></div>
+                            <div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">IP Address</p><p className="font-mono">{geoData?.ip ?? '—'}</p></div></div>
+                            <div className="flex items-center gap-2"><TabletSmartphone className="h-5 w-5 text-muted-foreground"/><div><p className="text-muted-foreground">Device</p><p className="font-medium">{device?.type ?? 'Unknown'}</p></div></div>
                         </CardContent>
                     </Card>
                 </div>

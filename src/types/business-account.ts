@@ -1,5 +1,6 @@
+import type { KycStatus } from './kyc';
 
-export type BusinessVerificationStatus = 'Verified' | 'Pending' | 'Rejected' | 'Restricted';
+export type BusinessVerificationStatus = Extract<KycStatus, 'verified' | 'pending' | 'restricted' | 'rejected'>;
 export type BusinessKycTier = 'Tier 1' | 'Tier 2' | 'Tier 3';
 
 export interface BusinessAccountData {

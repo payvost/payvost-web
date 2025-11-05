@@ -321,7 +321,7 @@ export default function DonationPage() {
                                     </Avatar>
                                     <div>
                                         <p className="font-semibold">{creator.name}</p>
-                                        {creator.kycStatus === 'Verified' && (
+                                        {typeof creator.kycStatus === 'string' && creator.kycStatus.toLowerCase() === 'verified' && (
                                             <Badge variant="default" className="mt-1 bg-green-500/20 text-green-700">
                                                 <BadgeCheck className="mr-1 h-3 w-3"/> Verified Creator
                                             </Badge>
