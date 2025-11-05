@@ -5,7 +5,7 @@ import * as path from 'path';
 // Firebase Admin SDK initialization for Next.js API routes
 // Supports both environment variable (production/Vercel) and local file (development)
 
-const LOCAL_SA_FILENAME = 'payvost-ae91662ec061.json';
+const LOCAL_SA_FILENAME = 'payvost-f28db3f2f0bc.json';
 
 function initFirebaseAdmin() {
   if (admin.apps.length) return;
