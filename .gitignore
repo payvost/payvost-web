@@ -38,6 +38,8 @@ yarn-error.log*
 backend/*.json
 !backend/package.json
 !backend/tsconfig.json
+functions/serviceAccountKey.json
+backend/payvost-f28db3f2f0bc.json
 
 # typescript
 *.tsbuildinfo
