@@ -61,7 +61,8 @@ function PaymentLinkTab() {
     }
     const userUnsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
         if(doc.exists()) {
-            setIsKycVerified(doc.data().kycStatus === 'Verified');
+            const status = doc.data().kycStatus;
+            setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
         }
     });
 

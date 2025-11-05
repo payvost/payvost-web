@@ -1,4 +1,6 @@
 
+import type { KycStatus } from './kyc';
+
 export interface BusinessProfile {
     legalName: string;
     industry: string;
@@ -8,5 +10,5 @@ export interface BusinessProfile {
     businessAddress: string;
     website?: string;
     logoUrl?: string;
-    kycStatus: 'Verified' | 'Pending' | 'Rejected';
+    kycStatus: Extract<KycStatus, 'verified' | 'pending' | 'rejected'>;
 }

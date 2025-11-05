@@ -16,11 +16,12 @@ export function EventTicketsTab() {
 
   useEffect(() => {
     if (!user) return;
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists()) {
-            setIsKycVerified(doc.data().kycStatus === 'Verified');
-        }
-    });
+  const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot: any) => {
+    if (snapshot.exists()) {
+      const status = snapshot.data()?.kycStatus;
+      setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
+    }
+  });
     return () => unsub();
   }, [user]);
 

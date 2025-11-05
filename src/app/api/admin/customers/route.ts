@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         name: data.fullName || data.displayName || data.name || data.email || 'Unknown',
         email: data.email || '',
         phone: data.phoneNumber || data.phone || '',
-        kycStatus: data.kycStatus || 'Unverified',
+  kycStatus: typeof data.kycStatus === 'string' ? data.kycStatus.toLowerCase() : 'unverified',
         userType: data.userType || 'Normal User',
         country: data.country || 'Unknown',
         countryCode: data.countryCode || 'US',

@@ -1,22 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/firebase-admin';
+import { requireAuth, HttpError } from '@/lib/api/auth';
 
 export async function PATCH(req: NextRequest) {
   try {
-    // Verify Firebase auth
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(token);
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const { uid } = await requireAuth(req);
 
     const body = await req.json();
     const {
@@ -52,7 +40,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Verify the transaction belongs to the authenticated user
-    if (existingTransaction.userId !== decodedToken.uid) {
+    if (existingTransaction.userId !== uid) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -78,6 +66,10 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ transaction });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     console.error('PATCH /api/external-transactions/update error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },

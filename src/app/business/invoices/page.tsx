@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { CreateBusinessInvoiceForm } from '@/components/create-business-invoice-form';
 import { BusinessInvoiceListView } from '@/components/business-invoice-list-view';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -21,9 +21,10 @@ export default function BusinessInvoicesPage() {
         setLoading(false);
         return;
     };
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists()) {
-            setIsKycVerified(doc.data().kycStatus === 'Verified');
+  const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot: DocumentSnapshot<DocumentData>) => {
+    if (snapshot.exists()) {
+      const status = snapshot.data()?.kycStatus;
+            setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
         }
         setLoading(false);
     });

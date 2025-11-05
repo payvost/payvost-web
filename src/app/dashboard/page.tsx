@@ -26,7 +26,7 @@ import { DashboardLoadingSkeleton, WalletCardSkeleton } from '@/components/skele
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
 import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, type DocumentSnapshot, type QuerySnapshot, type FirestoreError } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -145,12 +145,13 @@ export default function DashboardPage() {
         const data = doc.data();
         setWallets(data.wallets || []);
         
-        const newKycStatus = data.kycStatus;
+    const newKycStatus = data.kycStatus;
+    const normalizedKycStatus = typeof newKycStatus === 'string' ? newKycStatus.toLowerCase() : 'unverified';
         const newBusinessStatus = data.businessProfile?.status;
         const welcomeNotificationSent = data.welcomeNotificationSent || {};
   
         // Welcome notification for personal KYC
-        if (newKycStatus === 'Verified' && !welcomeNotificationSent.personal && user.displayName) {
+    if (normalizedKycStatus === 'verified' && !welcomeNotificationSent.personal && user.displayName) {
             console.log("User KYC verified, sending welcome notification.");
             try {
                 await addDoc(collection(db, "users", user.uid, "notifications"), {
@@ -179,7 +180,7 @@ export default function DashboardPage() {
             }
         }
         
-    setIsKycVerified(newKycStatus === 'Verified');
+    setIsKycVerified(normalizedKycStatus === 'verified');
 
     // Check if transaction PIN is set
     const hasPin = Boolean(data.transactionPinHash);
