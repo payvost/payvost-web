@@ -26,7 +26,8 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { KycStatus } from '@/types/customer';
+import type { KycStatus } from '@/types/kyc';
+import { normalizeKycStatus } from '@/types/kyc';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -35,13 +36,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // 2FA card is intentionally not shown on Profile page. It's available in Settings.
 
 
-const kycStatusConfig: Record<KycStatus | 'Default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    Verified: { color: 'text-green-700', variant: 'default' },
-    Pending: { color: 'text-yellow-700', variant: 'secondary' },
-    Unverified: { color: 'text-gray-700', variant: 'outline' },
-    Restricted: { color: 'text-orange-700', variant: 'destructive' },
-    Rejected: { color: 'text-red-700', variant: 'destructive' },
-    Default: { color: 'text-gray-700', variant: 'outline' },
+const kycStatusConfig: Record<KycStatus | 'default', { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    verified: { color: 'text-green-700', variant: 'default' },
+    pending: { color: 'text-yellow-700', variant: 'secondary' },
+    unverified: { color: 'text-gray-700', variant: 'outline' },
+    restricted: { color: 'text-orange-700', variant: 'destructive' },
+    rejected: { color: 'text-red-700', variant: 'destructive' },
+    default: { color: 'text-gray-700', variant: 'outline' },
 };
 
 
@@ -324,8 +325,9 @@ export default function ProfilePage() {
     setImageFile(null);
   }
   
-  const currentKycStatus: KycStatus = userData?.kycStatus || 'Unverified';
-  const kycStatusBadge = kycStatusConfig[currentKycStatus] || kycStatusConfig.Default;
+    const currentKycStatus: KycStatus = normalizeKycStatus(userData?.kycStatus);
+    const kycStatusBadge = kycStatusConfig[currentKycStatus] || kycStatusConfig.default;
+    const formattedKycStatus = currentKycStatus.charAt(0).toUpperCase() + currentKycStatus.slice(1);
   const userTier = userData?.userType || 'Pending';
   const hasPin = !!userData?.transactionPin;
   
@@ -422,7 +424,7 @@ export default function ProfilePage() {
                         <div className="mt-4 flex items-center gap-2">
                             <Badge variant={kycStatusBadge.variant} className={cn('capitalize', kycStatusBadge.color, kycStatusBadge.color.replace('text-','bg-').replace('-700','-500/20'))}>
                                 <ShieldCheck className="mr-2 h-4 w-4" />
-                                {currentKycStatus}
+                                {formattedKycStatus}
                             </Badge>
                              <Badge variant="secondary">
                                 {userTier}
@@ -627,7 +629,7 @@ export default function ProfilePage() {
                                 <p className="font-medium">{userData.bvn}</p>
                             </div>
                         )}
-                         {currentKycStatus !== 'Verified' && (
+                         {currentKycStatus !== 'verified' && (
                              <div className="border bg-yellow-500/10 border-yellow-500/20 text-yellow-800 dark:text-yellow-300 rounded-lg p-4 flex items-start gap-4 mt-4">
                                 <BadgeInfo className="h-5 w-5 mt-0.5 text-yellow-600"/>
                                 <div>

@@ -29,7 +29,7 @@ const ticketDetails: SupportTicket & { customer: any; messages: TicketMessage[] 
         name: 'Liam Johnson',
         email: 'liam@example.com',
         userType: 'Business Owner',
-        kycStatus: 'Verified'
+    kycStatus: 'verified'
     },
     messages: [
         { id: 'msg_1', author: 'Liam Johnson', content: 'Hi, I sent a transfer of $250 to John Doe yesterday and it still shows as processing. Can you check on this?', timestamp: '2024-08-15 10:30 UTC', type: 'public_reply' },

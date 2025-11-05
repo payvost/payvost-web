@@ -1,6 +1,7 @@
 
 export type MerchantStatus = 'Active' | 'Restricted' | 'Payouts Held' | 'Suspended';
-export type ComplianceStatus = 'Verified' | 'Pending' | 'Needs Review';
+type ComplianceStatusLabel = 'Verified' | 'Pending' | 'Needs Review';
+export type ComplianceStatus = ComplianceStatusLabel | Lowercase<ComplianceStatusLabel>;
 export type PayoutSchedule = 'Daily' | 'Weekly' | 'Monthly';
 
 interface MerchantTransaction {

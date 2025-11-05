@@ -1,3 +1,24 @@
+export type KycStatus = 'pending' | 'verified' | 'unverified' | 'restricted' | 'rejected';
+
+export const VERIFIED_KYC_STATUS: KycStatus = 'verified';
+
+export function normalizeKycStatus(input?: string | null): KycStatus {
+  if (!input) {
+    return 'unverified';
+  }
+
+  const normalized = input.toLowerCase() as KycStatus;
+  if (['pending', 'verified', 'unverified', 'restricted', 'rejected'].includes(normalized)) {
+    return normalized;
+  }
+
+  return 'unverified';
+}
+
+export function isKycVerified(status?: string | null): boolean {
+  return normalizeKycStatus(status) === VERIFIED_KYC_STATUS;
+}
+
 export type KycLevel = 'Basic' | 'Full' | 'Advanced';
 
 export type KycDocKey =
