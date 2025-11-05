@@ -2,9 +2,6 @@
   "name": "payvost-global-pay-backend",
   "private": true,
   "type": "commonjs",
-  "workspaces": [
-    "services/*"
-  ],
   "scripts": {
     "build": "tsc -b",
     "start": "node dist/index.js",
@@ -14,7 +11,6 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
-    "@types/decimal.js": "^7.4.3",
     "@types/jsonwebtoken": "^9.0.10",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
@@ -23,7 +19,6 @@
     "@prisma/client": "^6.18.0",
     "@supabase/ssr": "^0.6.1",
     "@types/express": "^5.0.3",
-    "admin": "^1.4.1",
     "bcrypt": "^6.0.0",
     "decimal.js": "^10.6.0",
     "dotenv": "^17.2.0",
