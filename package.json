@@ -103,7 +103,8 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "topojson-client": "^3.1.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+  "country-state-city": "^3.2.1"
   },
   "devDependencies": {
     "@firebase/auth": "^1.11.1",
