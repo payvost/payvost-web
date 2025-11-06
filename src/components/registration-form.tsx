@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,32 +15,25 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, AtSign, Twitter, Camera, ChevronsUpDown, Check, ShieldCheckIcon, ShieldX } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, Camera, ChevronsUpDown, Check, ShieldX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, addDoc, Timestamp, GeoPoint } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Link from 'next/link';
-import { Textarea } from './ui/textarea';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
-import { Icons } from './icons';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
-import Image from 'next/image';
 import { TransactionPinSetupDialog } from './transaction-pin-setup-dialog';
 import { collection as fsCollection, query as fsQuery, where as fsWhere, limit as fsLimit, getDocs as fsGetDocs } from 'firebase/firestore';
-
-const allCountries = [
-    { name: "United States", code: "US", phone: "1", flag: "US" },
-    { name: "United Kingdom", code: "GB", phone: "44", flag: "GB" },
-    { name: "Nigeria", code: "NG", phone: "234", flag: "NG" },
-    { name: "Canada", code: "CA", phone: "1", flag: "CA" },
-    // Add more countries as needed
-];
-
+import { CountrySelector, CountryOption } from '@/components/location/country-selector';
+import { StateSelector, StateOption } from '@/components/location/state-selector';
+import { CitySelector } from '@/components/location/city-selector';
+import { AddressAutocomplete, AddressSelection } from '@/components/location/address-autocomplete';
+import { SUPPORTED_COUNTRIES, SUPPORTED_COUNTRY_MAP, DEFAULT_KYC_CONFIG, type SupportedCountry } from '@/config/kyc-config';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -123,6 +116,22 @@ export function RegistrationForm() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [newlyCreatedUserId, setNewlyCreatedUserId] = useState<string | null>(null);
+  const countryOptions = SUPPORTED_COUNTRIES;
+  const countriesLoading = false;
+  const [stateOptions, setStateOptions] = useState<StateOption[]>([]);
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [statesLoading, setStatesLoading] = useState(false);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [statesError, setStatesError] = useState<string | null>(null);
+  const [citiesError, setCitiesError] = useState<string | null>(null);
+  const [selectedCountryOption, setSelectedCountryOption] = useState<SupportedCountry | null>(null);
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [autoDetectAttempted, setAutoDetectAttempted] = useState(false);
+  const previousCountryRef = useRef<string | null>(null);
+  const previousStateRef = useRef<string | null>(null);
+  const pendingLocationRef = useRef<{ state?: string; city?: string } | null>(null);
+  const statesAbortControllerRef = useRef<AbortController | null>(null);
+  const citiesAbortControllerRef = useRef<AbortController | null>(null);
 
   const {
     register,
@@ -141,6 +150,18 @@ export function RegistrationForm() {
   });
   // Real-time username availability (debounced)
   const usernameValue = watch('username');
+  const countryValue = watch('country');
+  const stateValue = watch('state');
+  const dialCodeOptions = useMemo(() => {
+    return countryOptions
+      .map((option) => ({
+        iso2: option.iso2,
+        country: option.name,
+        dialCode: option.callingCodes[0] || '',
+      }))
+      .filter((option) => option.dialCode.length > 0)
+      .sort((a, b) => a.country.localeCompare(b.country));
+  }, [countryOptions]);
   useEffect(() => {
     let active = true;
     const check = async () => {
@@ -163,19 +184,358 @@ export function RegistrationForm() {
     return () => { active = false; clearTimeout(t); };
   }, [usernameValue]);
 
+  const applyDetectedCountry = useCallback((isoCode: string) => {
+    if (!isoCode) return;
+    const normalized = isoCode.toUpperCase();
+    const match = countryOptions.find((option) => option.iso2 === normalized);
+    if (!match) return;
+    setValue('country', match.iso2, { shouldValidate: true, shouldDirty: false });
+    if (match.callingCodes.length > 0) {
+      setValue('countryCode', match.callingCodes[0], { shouldValidate: true, shouldDirty: false });
+    }
+    setSelectedCountryOption(match);
+    pendingLocationRef.current = null;
+    setSelectedCoordinates(null);
+  }, [countryOptions, setValue]);
 
   useEffect(() => {
-    fetch('https://ip-api.com/json/?fields=countryCode,country')
-        .then(res => res.json())
-        .then(data => {
-            const detectedCountry = allCountries.find(c => c.code === data.countryCode);
-            if (detectedCountry) {
-                setValue('countryCode', detectedCountry.phone);
-                setValue('country', detectedCountry.code);
-            }
-        })
-        .catch(err => console.error("Could not fetch user location", err));
-  }, [setValue]);
+    if (autoDetectAttempted || countryValue) {
+      return;
+    }
+
+    const detect = async () => {
+      setAutoDetectAttempted(true);
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation unavailable'));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
+        });
+
+        const { latitude, longitude } = position.coords;
+        const reverseResponse = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+        if (reverseResponse.ok) {
+          const reverseData = await reverseResponse.json();
+          if (reverseData?.countryCode) {
+            applyDetectedCountry(reverseData.countryCode);
+            return;
+          }
+        }
+      } catch (error) {
+        // Fall back to IP-based lookup below
+      }
+
+      try {
+        const ipResponse = await fetch('https://ip-api.com/json/?fields=countryCode');
+        if (ipResponse.ok) {
+          const ipData = await ipResponse.json();
+          if (ipData?.countryCode) {
+            applyDetectedCountry(ipData.countryCode);
+          }
+        }
+      } catch (error) {
+        console.error('Could not detect user location', error);
+      }
+    };
+
+    void detect();
+  }, [applyDetectedCountry, autoDetectAttempted, countryValue]);
+
+  const fetchStatesForCountry = useCallback(async (country: SupportedCountry | null) => {
+    if (!country) {
+      setStateOptions([]);
+      setCityOptions([]);
+      setStatesError(null);
+      setCitiesError(null);
+      return;
+    }
+
+    statesAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    statesAbortControllerRef.current = controller;
+    setStatesLoading(true);
+    setStateOptions([]);
+    setCityOptions([]);
+    setStatesError(null);
+    setCitiesError(null);
+
+    try {
+      const response = await fetch('/api/location/states', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          countryIso: country.iso2,
+          countryName: country.name,
+        }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch states: ${response.status}`);
+      }
+      const result = await response.json();
+      if (result?.error) {
+        setStateOptions([]);
+        setStatesError('No states available for the selected country. Please enter details manually.');
+        return;
+      }
+      const parsed: StateOption[] = Array.isArray(result?.data?.states)
+        ? result.data.states
+            .filter((state: any) => typeof state?.name === 'string' && state.name.trim().length > 0)
+            .map((state: any) => ({
+              name: state.name.trim(),
+              code:
+                typeof state.state_code === 'string' && state.state_code.trim().length > 0
+                  ? state.state_code.trim()
+                  : typeof state.isoCode === 'string' && state.isoCode.trim().length > 0
+                    ? state.isoCode.trim()
+                    : undefined,
+            }))
+            .sort((a: StateOption, b: StateOption) => a.name.localeCompare(b.name))
+        : [];
+      setStateOptions(parsed);
+      if (parsed.length === 0) {
+        setStatesError('No states available for the selected country. Please enter details manually.');
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load states', error);
+      setStateOptions([]);
+      setStatesError('We could not load regions for this country. Please enter the state manually.');
+    } finally {
+      setStatesLoading(false);
+      statesAbortControllerRef.current = null;
+    }
+  }, []);
+
+  const fetchCitiesForState = useCallback(async (country: CountryOption | null, stateName: string) => {
+    if (!country || !stateName) {
+      setCityOptions([]);
+      setCitiesError(null);
+      return;
+    }
+
+    citiesAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    citiesAbortControllerRef.current = controller;
+    setCitiesLoading(true);
+    setCityOptions([]);
+    setCitiesError(null);
+
+    try {
+      const matchedState = stateOptions.find((option) => option.name === stateName);
+
+      const response = await fetch('/api/location/cities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          countryIso: country.iso2,
+          countryName: country.name,
+          stateName,
+          stateCode: matchedState?.code,
+        }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch cities: ${response.status}`);
+      }
+      const result = await response.json();
+      if (result?.error) {
+        setCityOptions([]);
+        setCitiesError('No cities found for the selected state. You can type it manually.');
+        return;
+      }
+      const parsed: string[] = Array.isArray(result?.data)
+        ? result.data
+            .filter((city: string) => typeof city === 'string' && city.trim().length > 0)
+            .map((city: string) => city.trim())
+            .sort((a: string, b: string) => a.localeCompare(b))
+        : [];
+      setCityOptions(parsed);
+      if (parsed.length === 0) {
+        setCitiesError('No cities found for the selected state. You can type it manually.');
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load cities', error);
+      setCityOptions([]);
+      setCitiesError('We could not load cities for this state. Please enter the city manually.');
+    } finally {
+      setCitiesLoading(false);
+      citiesAbortControllerRef.current = null;
+    }
+  }, [stateOptions]);
+
+  useEffect(() => {
+    if (!countryValue) {
+      setSelectedCountryOption(null);
+      setStateOptions([]);
+      setCityOptions([]);
+      setStatesLoading(false);
+      setCitiesLoading(false);
+      setStatesError(null);
+      setCitiesError(null);
+      previousCountryRef.current = null;
+      return;
+    }
+
+    const match = countryOptions.find((option) => option.iso2 === countryValue);
+    setSelectedCountryOption(match ?? null);
+
+    if (!match) {
+      setStateOptions([]);
+      setCityOptions([]);
+      setStatesLoading(false);
+      setCitiesLoading(false);
+      setStatesError('This country is not supported for automatic region lookup. Please enter the details manually.');
+      setCitiesError(null);
+      previousCountryRef.current = countryValue;
+      return;
+    }
+
+    const countryChanged = previousCountryRef.current !== countryValue;
+
+    if (match.callingCodes.length > 0) {
+      setValue('countryCode', match.callingCodes[0], { shouldDirty: false, shouldValidate: true });
+    }
+
+    if (countryChanged || stateOptions.length === 0) {
+      void fetchStatesForCountry(match);
+    }
+
+    if (countryChanged) {
+      setSelectedCoordinates(null);
+      setValue('state', '', { shouldDirty: false, shouldValidate: true });
+      setValue('city', '', { shouldDirty: false, shouldValidate: true });
+      setStatesError(null);
+      setCitiesError(null);
+    }
+
+    previousCountryRef.current = countryValue;
+  }, [countryValue, countryOptions, fetchStatesForCountry, setValue, stateOptions.length]);
+
+  useEffect(() => {
+    if (!stateValue) {
+      setCityOptions([]);
+      setCitiesLoading(false);
+      setCitiesError(null);
+      previousStateRef.current = null;
+      return;
+    }
+
+    if (!selectedCountryOption) {
+      previousStateRef.current = stateValue;
+      return;
+    }
+
+    const stateChanged = previousStateRef.current !== stateValue;
+
+    if (stateChanged) {
+      setSelectedCoordinates(null);
+      setValue('city', '', { shouldDirty: false, shouldValidate: true });
+      setCitiesError(null);
+    }
+
+    if (stateChanged || cityOptions.length === 0) {
+      void fetchCitiesForState(selectedCountryOption, stateValue);
+    }
+
+    previousStateRef.current = stateValue;
+  }, [stateValue, selectedCountryOption, fetchCitiesForState, setValue, cityOptions.length]);
+
+  useEffect(() => {
+    const pending = pendingLocationRef.current;
+    if (!pending?.state) {
+      return;
+    }
+    const match = stateOptions.find((option) => option.name.toLowerCase() === pending.state!.toLowerCase());
+    if (match) {
+      setValue('state', match.name, { shouldDirty: true, shouldValidate: true });
+      pending.state = undefined;
+      if (typeof pending.city === 'undefined') {
+        pendingLocationRef.current = null;
+      }
+    }
+  }, [stateOptions, setValue]);
+
+  useEffect(() => {
+    const pending = pendingLocationRef.current;
+    if (!pending?.city) {
+      return;
+    }
+    const match = cityOptions.find((city) => city.toLowerCase() === pending.city!.toLowerCase());
+    if (match) {
+      setValue('city', match, { shouldDirty: true, shouldValidate: true });
+      pending.city = undefined;
+      if (typeof pending.state === 'undefined') {
+        pendingLocationRef.current = null;
+      }
+    }
+  }, [cityOptions, setValue]);
+
+  useEffect(() => {
+    return () => {
+      statesAbortControllerRef.current?.abort();
+      citiesAbortControllerRef.current?.abort();
+    };
+  }, []);
+
+  const handleAddressSelection = useCallback((selection: AddressSelection) => {
+    if (!selection) return;
+
+    const nextStreet = selection.street || selection.fullAddress;
+    setValue('street', nextStreet, { shouldDirty: true, shouldValidate: true });
+
+    if (selection.postalCode) {
+      setValue('zip', selection.postalCode, { shouldDirty: true, shouldValidate: true });
+    }
+
+    setSelectedCoordinates(selection.coordinates ?? null);
+    setStatesError(null);
+    setCitiesError(null);
+
+    const normalizedCountryName = selection.country?.toLowerCase();
+    if (normalizedCountryName) {
+      const matchCountry = countryOptions.find((option) => option.name.toLowerCase() === normalizedCountryName);
+      if (matchCountry && matchCountry.iso2 !== countryValue) {
+        pendingLocationRef.current = {
+          state: selection.state,
+          city: selection.city,
+        };
+        setValue('country', matchCountry.iso2, { shouldDirty: true, shouldValidate: true });
+        return;
+      }
+    }
+
+    if (selection.state) {
+      const hasState = stateOptions.some((option) => option.name.toLowerCase() === selection.state?.toLowerCase());
+      if (hasState) {
+        setValue('state', selection.state, { shouldDirty: true, shouldValidate: true });
+      } else {
+        pendingLocationRef.current = {
+          ...(pendingLocationRef.current ?? {}),
+          state: selection.state,
+        };
+      }
+    }
+
+    if (selection.city) {
+      const hasCity = cityOptions.some((city) => city.toLowerCase() === selection.city?.toLowerCase());
+      if (hasCity) {
+        setValue('city', selection.city, { shouldDirty: true, shouldValidate: true });
+      } else {
+        pendingLocationRef.current = {
+          ...(pendingLocationRef.current ?? {}),
+          city: selection.city,
+        };
+      }
+    }
+  }, [cityOptions, countryOptions, countryValue, setValue, stateOptions]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'idDocument') => {
     const file = e.target.files?.[0];
@@ -264,7 +624,6 @@ export function RegistrationForm() {
   };
 
   const fullName = watch('fullName');
-  const selectedCountry = watch('country');
   const password = watch('password', '');
   const passwordStrength = checkPasswordStrength(password);
   
@@ -360,6 +719,18 @@ export function RegistrationForm() {
       
       // 5. Update the user document in Firestore with additional details
       const userDocRef = doc(db, "users", user.uid);
+      const resolvedCountry = selectedCountryOption ?? countryOptions.find((option) => option.iso2 === data.country) ?? null;
+      const locationPayload: Record<string, unknown> = {
+        addressLine1: data.street,
+        city: data.city,
+        state: data.state,
+        postalCode: data.zip,
+        countryCode: data.country,
+        countryName: resolvedCountry?.name ?? '',
+      };
+      if (selectedCoordinates) {
+        locationPayload.coordinates = new GeoPoint(selectedCoordinates.lat, selectedCoordinates.lng);
+      }
       const firestoreData = {
         uid: user.uid,
         name: data.fullName,
@@ -369,11 +740,13 @@ export function RegistrationForm() {
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
         country: data.country,
+  countryName: resolvedCountry?.name ?? '',
         street: data.street,
         city: data.city,
         state: data.state,
         zip: data.zip,
-  kycStatus: 'pending',
+        location: locationPayload,
+        kycStatus: 'pending',
         userType: 'Pending' as const,
         riskScore: Math.floor(Math.random() * 30),
         totalSpend: 0,
@@ -506,42 +879,50 @@ export function RegistrationForm() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <div className="flex items-center rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring">
                             <Controller
-                            name="countryCode"
-                            control={control}
-                            render={({ field }) => (
+                              name="countryCode"
+                              control={control}
+                              render={({ field }) => (
                                 <Popover open={countryDropdownOpen} onOpenChange={setCountryDropdownOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="ghost" role="combobox" className="w-[120px] justify-between h-9 rounded-r-none">
-                                            {field.value ? `+${field.value}` : "Select..."}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[250px] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search country..." />
-                                            <CommandList>
-                                                <CommandEmpty>No country found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {allCountries.map((country) => (
-                                                        <CommandItem
-                                                            key={country.code}
-                                                            value={country.name}
-                                                            onSelect={() => {
-                                                                setValue("countryCode", country.phone);
-                                                                setCountryDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            <Check className={cn("mr-2 h-4 w-4", field.value === country.phone ? "opacity-100" : "opacity-0")} />
-                                                            {country.name} (+{country.phone})
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      role="combobox"
+                                      className="w-[140px] justify-between h-9 rounded-r-none"
+                                      disabled={isLoading || countriesLoading || dialCodeOptions.length === 0}
+                                    >
+                                      {field.value ? `+${field.value}` : countriesLoading ? 'Loading…' : 'Code'}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[280px] p-0" align="start">
+                                    <Command>
+                                      <CommandInput placeholder="Search dial code..." />
+                                      <CommandList>
+                                        <CommandEmpty>No matches.</CommandEmpty>
+                                        <CommandGroup>
+                                          {dialCodeOptions.map((option) => (
+                                            <CommandItem
+                                              key={`${option.iso2}-${option.dialCode}`}
+                                              value={`${option.country} +${option.dialCode}`}
+                                              onSelect={() => {
+                                                field.onChange(option.dialCode);
+                                                if (!countryValue) {
+                                                  setValue('country', option.iso2, { shouldDirty: true, shouldValidate: true });
+                                                }
+                                                setCountryDropdownOpen(false);
+                                              }}
+                                            >
+                                              <Check className={cn('mr-2 h-4 w-4', field.value === option.dialCode ? 'opacity-100' : 'opacity-0')} />
+                                              {option.country} (+{option.dialCode})
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
                                 </Popover>
-                            )}
-                        />
+                              )}
+                            />
                         <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="Your number" className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"/>
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
@@ -627,41 +1008,148 @@ export function RegistrationForm() {
                   name="country"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                      <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="NG">Nigeria</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <CountrySelector
+                      value={field.value ?? ''}
+                      onChange={(value) => {
+                        pendingLocationRef.current = null;
+                        setSelectedCoordinates(null);
+                        field.onChange(value);
+                      }}
+                      options={countryOptions}
+                      isLoading={countriesLoading}
+                      disabled={isLoading}
+                      placeholder="Select country"
+                    />
                   )}
                 />
                 {errors.country && <p className="text-sm text-destructive">{errors.country.message}</p>}
                 </div>
             </div>
-             <div className="space-y-2">
-              <Label htmlFor="street">Street Address</Label>
-              <Input id="street" {...register('street')} disabled={isLoading} />
-              {errors.street && <p className="text-sm text-destructive">{errors.street.message}</p>}
-            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input id="city" {...register('city')} disabled={isLoading} />
-                {errors.city && <p className="text-sm text-destructive">{errors.city.message}</p>}
+                <Label htmlFor="state">State / Province</Label>
+                <Controller
+                  name="state"
+                  control={control}
+                  render={({ field }) => {
+                    const showDropdown = statesLoading || stateOptions.length > 0;
+                    if (!showDropdown || !countryValue) {
+                      const placeholder = !countryValue
+                        ? 'Select a country first'
+                        : statesLoading
+                          ? 'Loading states…'
+                          : 'Enter your state / region';
+                      return (
+                        <Input
+                          id="state"
+                          value={field.value ?? ''}
+                          onChange={(event) => {
+                            pendingLocationRef.current = null;
+                            setSelectedCoordinates(null);
+                            field.onChange(event.target.value);
+                          }}
+                          disabled={isLoading || !countryValue}
+                          placeholder={placeholder}
+                        />
+                      );
+                    }
+
+                    return (
+                      <StateSelector
+                        value={field.value ?? ''}
+                        onChange={(value) => {
+                          pendingLocationRef.current = null;
+                          setSelectedCoordinates(null);
+                          field.onChange(value);
+                        }}
+                        options={stateOptions}
+                        isLoading={statesLoading}
+                        disabled={isLoading}
+                        placeholder={countryValue ? 'Select state / region' : 'Select a country first'}
+                      />
+                    );
+                  }}
+                />
+                {errors.state && <p className="text-sm text-destructive">{errors.state.message}</p>}
+                {!errors.state && statesError && (
+                  <p className="text-xs text-muted-foreground">{statesError}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="state">State / Province</Label>
-                <Input id="state" {...register('state')} disabled={isLoading} />
-                {errors.state && <p className="text-sm text-destructive">{errors.state.message}</p>}
+                <Label htmlFor="city">City</Label>
+                <Controller
+                  name="city"
+                  control={control}
+                  render={({ field }) => {
+                    const showDropdown = citiesLoading || cityOptions.length > 0;
+                    if (!showDropdown || !stateValue) {
+                      const placeholder = !stateValue
+                        ? 'Select a state first'
+                        : citiesLoading
+                          ? 'Loading cities…'
+                          : 'Enter your city';
+                      return (
+                        <Input
+                          id="city"
+                          value={field.value ?? ''}
+                          onChange={(event) => {
+                            pendingLocationRef.current = null;
+                            setSelectedCoordinates(null);
+                            field.onChange(event.target.value);
+                          }}
+                          disabled={isLoading || !stateValue}
+                          placeholder={placeholder}
+                        />
+                      );
+                    }
+
+                    return (
+                      <CitySelector
+                        value={field.value ?? ''}
+                        onChange={(value) => {
+                          pendingLocationRef.current = null;
+                          setSelectedCoordinates(null);
+                          field.onChange(value);
+                        }}
+                        options={cityOptions}
+                        isLoading={citiesLoading}
+                        disabled={isLoading}
+                        placeholder={stateValue ? 'Select a city' : 'Select a state first'}
+                      />
+                    );
+                  }}
+                />
+                {errors.city && <p className="text-sm text-destructive">{errors.city.message}</p>}
+                {!errors.city && citiesError && (
+                  <p className="text-xs text-muted-foreground">{citiesError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="zip">ZIP / Postal Code</Label>
                 <Input id="zip" {...register('zip')} disabled={isLoading} />
                 {errors.zip && <p className="text-sm text-destructive">{errors.zip.message}</p>}
               </div>
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="street">Address</Label>
+              <Controller
+                name="street"
+                control={control}
+                render={({ field }) => (
+                  <AddressAutocomplete
+                    value={field.value ?? ''}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      setSelectedCoordinates(null);
+                      pendingLocationRef.current = null;
+                    }}
+                    onAddressSelected={handleAddressSelection}
+                    countryCode={countryValue}
+                    disabled={isLoading}
+                    error={errors.street?.message}
+                  />
+                )}
+              />
             </div>
           </div>
         )}
@@ -709,7 +1197,7 @@ export function RegistrationForm() {
                  {errors.idDocument && <p className="text-sm text-destructive">{String(errors.idDocument.message)}</p>}
             </div>
 
-            {selectedCountry === 'NG' && (
+      {countryValue === 'NG' && (
                  <div className="space-y-2">
                     <Label htmlFor="bvn">Bank Verification Number (BVN)</Label>
                     <Input id="bvn" {...register('bvn')} disabled={isLoading} />
