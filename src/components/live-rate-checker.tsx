@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRightLeft, TrendingUp, TrendingDown, RefreshCw, ExternalLink } from 'lucide-react';
+import { ArrowRightLeft, TrendingUp, RefreshCw, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,7 +24,12 @@ const POPULAR_CURRENCIES = [
   { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '/flag/AU.png' },
 ];
 
-export function LiveRateChecker() {
+type LiveRateCheckerProps = {
+  autoFetch?: boolean;
+  sendMoneyHref?: string;
+};
+
+export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' }: LiveRateCheckerProps) {
   const [amount, setAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('NGN');
@@ -33,8 +38,14 @@ export function LiveRateChecker() {
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+  const hasFetchedRef = useRef(autoFetch);
 
-  const fetchRate = async () => {
+  useEffect(() => {
+    hasFetchedRef.current = hasFetched;
+  }, [hasFetched]);
+
+  const fetchRate = useCallback(async () => {
     if (!amount || isNaN(parseFloat(amount))) return;
     
     setIsLoading(true);
@@ -61,6 +72,7 @@ export function LiveRateChecker() {
         setRate(data.rate);
         setConvertedAmount(data.result);
         setLastUpdate(new Date(data.timestamp * 1000));
+        setHasFetched(true);
       } else {
         throw new Error(data.error || 'Invalid response from server');
       }
@@ -70,15 +82,17 @@ export function LiveRateChecker() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [amount, fromCurrency, toCurrency]);
 
-  // Fetch on mount and when currencies change
+  // Fetch on mount and when currencies change after first manual fetch or if autoFetch is enabled
   useEffect(() => {
+    if (!autoFetch && !hasFetchedRef.current) return;
     fetchRate();
-  }, [fromCurrency, toCurrency]);
+  }, [fromCurrency, toCurrency, autoFetch, fetchRate]);
 
   // Fetch when amount changes with debounce
   useEffect(() => {
+    if (!autoFetch && !hasFetchedRef.current) return;
     const timer = setTimeout(() => {
       if (amount && !isNaN(parseFloat(amount))) {
         fetchRate();
@@ -86,7 +100,7 @@ export function LiveRateChecker() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [amount]);
+  }, [amount, autoFetch, fetchRate]);
 
   const swapCurrencies = () => {
     setFromCurrency(toCurrency);
@@ -277,15 +291,28 @@ export function LiveRateChecker() {
         ) : null}
 
         {/* Refresh Button */}
-        <Button
-          onClick={fetchRate}
-          disabled={isLoading || !amount}
-          className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
-          size="lg"
-        >
-          <RefreshCw className={cn('h-5 w-5 mr-2', isLoading && 'animate-spin')} />
-          {isLoading ? 'Fetching Rate...' : 'Get Live Rate'}
-        </Button>
+        {hasFetched ? (
+          <Button
+            asChild
+            className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+            size="lg"
+          >
+            <Link href={sendMoneyHref} className="flex items-center justify-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" />
+              {'> Send Money'}
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            onClick={fetchRate}
+            disabled={isLoading || !amount}
+            className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+            size="lg"
+          >
+            <RefreshCw className={cn('h-5 w-5 mr-2', isLoading && 'animate-spin')} />
+            {isLoading ? 'Fetching Rate...' : 'Get Live Rate'}
+          </Button>
+        )}
 
         {/* Quick Info */}
         <div className="text-center space-y-2 pt-2">
