@@ -10,7 +10,8 @@ import {
   Settings,
   LineChart,
   Globe,
-  FileText
+  FileText,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -41,6 +42,13 @@ export function AdminHeader() {
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <FileText />, label: 'System Status' },
         ]
       },
+        {
+          group: 'Support Tools',
+          items: [
+            { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
+            { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <FileText />, label: 'Support Center' },
+          ],
+        },
       // ... other menu groups can be added here for the mobile view if needed
     ];
 

@@ -119,7 +119,7 @@ export default function DashboardPage() {
     const fetchExternalStats = async () => {
       try {
         const stats = await externalTransactionService.getStats(user.uid);
-        setExternalTxStats(stats);
+        setExternalTxStats(stats as { total: number; completed: number; pending: number; failed: number; totalAmount: number });
       } catch (error) {
         console.error('Failed to fetch external transaction stats:', error);
       }

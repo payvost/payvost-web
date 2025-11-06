@@ -41,6 +41,7 @@ import {
   Search,
   PanelLeft,
   CreditCard,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -115,6 +116,7 @@ export function AdminSidebar() {
       {
         group: 'Support Tools',
         items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <HelpingHand />, label: 'Customer Support' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/dispute-resolution', icon: <Gavel />, label: 'Dispute Resolution' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' },
