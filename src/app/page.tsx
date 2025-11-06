@@ -4,14 +4,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Zap, Lock, Globe, ArrowRightLeft, Twitter, Facebook, Linkedin, MoreHorizontal, Star } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
@@ -37,7 +36,7 @@ const testimonials = [
     company: "Innovate Inc.",
     image: { src: "https://picsum.photos/seed/t1/100/100", hint: "woman portrait" },
     rating: 5,
-    quote: "Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad."
+    quote: "Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad.",
   },
   {
     name: "Michael Chen",
@@ -45,7 +44,7 @@ const testimonials = [
     company: "Chen Designs",
     image: { src: "https://picsum.photos/seed/t2/100/100", hint: "man smiling" },
     rating: 5,
-    quote: "As a freelancer working with international clients, Payvost has simplified my life. Getting paid is now fast and hassle-free."
+    quote: "As a freelancer working with international clients, Payvost has simplified my life. Getting paid is now fast and hassle-free.",
   },
   {
     name: "David Rodriguez",
@@ -53,7 +52,7 @@ const testimonials = [
     company: "Tech Solutions",
     image: { src: "https://picsum.photos/seed/t3/100/100", hint: "person portrait" },
     rating: 4,
-    quote: "The API is well-documented and easy to integrate. We were able to get up and running in just a couple of days. Solid platform."
+    quote: "The API is well-documented and easy to integrate. We were able to get up and running in just a couple of days. Solid platform.",
   },
   {
     name: "Emily White",
@@ -61,70 +60,206 @@ const testimonials = [
     company: "The Shop",
     image: { src: "https://picsum.photos/seed/t4/100/100", hint: "woman in cafe" },
     rating: 5,
-    quote: "I love the multi-currency wallet feature. It makes managing payments from different countries so much easier."
-  }
+    quote: "I love the multi-currency wallet feature. It makes managing payments from different countries so much easier.",
+  },
+];
+
+const heroMetrics = [
+  { value: "120K+", label: "Verified customers", helper: "Serving scale-ups, platforms, and global payroll teams" },
+  { value: "$5.2B", label: "Processed volume", helper: "Settled across 12 clearing partners in the past 12 months" },
+  { value: "180+", label: "Payout corridors", helper: "Real-time payments, mobile wallets, and cash pickup coverage" },
+];
+
+const heroStacks = [
+  "Node.js SDK",
+  "Python SDK",
+  "React Native Kit",
+  "Webhook Sandbox",
+  "GraphQL (beta)",
+];
+
+const heroFeatureTiles = [
+  {
+    icon: Code2,
+    title: "SDKs & client libraries",
+    description: "Ship global payouts with maintained packages for TypeScript, Python, and mobile stacks.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Regulated everywhere",
+    description: "Licensed MSB coverage, bank-grade compliance, and layered fraud controls ready out of the box.",
+  },
+  {
+    icon: BarChart3,
+    title: "Treasury analytics",
+    description: "Monitor FX spreads, settlement windows, and liquidity in real-time dashboards.",
+  },
+];
+
+const heroPartnerLogos = [
+  { name: "Google", src: "/Partners/Google_2015_logo.svg.png", priority: true },
+  { name: "Visa", src: "/Partners/Visa_Inc._logo.svg.png" },
+  { name: "Mastercard", src: "/Partners/Mastercard-logo.png" },
 ];
 
 
 export default function LandingPage() {
   const { blog: blogImages } = placeholderImageData;
-  const [sendAmount, setSendAmount] = useState('');
-  const [recipientGets, setRecipientGets] = useState('');
-  const [sendCurrency, setSendCurrency] = useState('USD');
-  const [receiveCurrency, setReceiveCurrency] = useState('NGN');
+  const [showLiveRate, setShowLiveRate] = useState(false);
+  const rateCardRef = useRef<HTMLDivElement | null>(null);
 
-  const exchangeRates: Record<string, Record<string, number>> = {
-      USD: { NGN: 1450.50, GHS: 14.50, KES: 130.25 },
-      GBP: { NGN: 1850.75, GHS: 18.50, KES: 165.80 },
-      EUR: { NGN: 1600.20, GHS: 16.00, KES: 143.50 },
-  };
+  useEffect(() => {
+    if (showLiveRate && rateCardRef.current) {
+      rateCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showLiveRate]);
 
-  const handleCheckPricing = (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      const amount = parseFloat(sendAmount);
-      if (!isNaN(amount) && amount > 0 && exchangeRates[sendCurrency] && exchangeRates[sendCurrency][receiveCurrency]) {
-        const rate = exchangeRates[sendCurrency][receiveCurrency];
-        const convertedAmount = amount * rate;
-        setRecipientGets(convertedAmount.toFixed(2));
-      } else {
-        setRecipientGets('');
-      }
+  const handleRevealLiveRate = () => {
+    if (!showLiveRate) {
+      setShowLiveRate(true);
+    }
   };
-  
-  const currentRate = exchangeRates[sendCurrency]?.[receiveCurrency] || 0;
 
   return (
     <div className="flex flex-col min-h-screen">
       <SiteHeader />
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-20 md:py-28 lg:py-32 rounded-b-[15px] bg-card">
-          <div className="container mx-auto max-w-screen-xl px-4 md:px-6">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:gap-10 xl:gap-12">
-              <div className="flex flex-col justify-center space-y-4 text-center lg:text-left">
+  <section className="relative overflow-hidden -mt-6 md:-mt-8 lg:-mt-10">
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-[-18rem] right-[-14rem] h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
+            <div className="absolute bottom-[-16rem] left-[-12rem] h-[24rem] w-[24rem] rounded-full bg-secondary/25 blur-3xl" />
+            <div className="absolute inset-x-0 top-10 h-32 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+          </div>
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-12 pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
+            <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+              <div className="relative z-10 flex flex-col justify-center space-y-8 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary">
+                  Borderless payments, orchestrated
+                </Badge>
                 <div className="space-y-4">
-                  <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                    Send money instantly, securely — anywhere in the world
+                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl">
+                    Move money in minutes with enterprise-grade FX infrastructure
                   </h1>
-                  <p className="max-w-[600px] text-muted-foreground md:text-xl mx-auto lg:mx-0">
-                    We integrated all your financial needs in one place. Joint thousands of satisfied customers across the globe using Payvost.
+                  <p className="max-w-2xl text-muted-foreground md:text-lg lg:text-xl">
+                    Payvost fuses global banking partners, instant wallet payouts, and developer-first tooling so your teams can onboard customers, price FX, and settle funds without friction.
                   </p>
                 </div>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
-                  <Button asChild size="lg">
-                    <Link href="/register">
-                      Create Account
-                    </Link>
-                  </Button>
-                   <Button asChild size="lg" variant="outline">
-                    <Link href="/track-transfer">
-                      Track Transfer
-                    </Link>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                  {!showLiveRate ? (
+                    <Button size="lg" className="px-8" onClick={handleRevealLiveRate}>
+                      Get Live Rate
+                    </Button>
+                  ) : (
+                    <Button asChild size="lg" className="px-8">
+                      <Link href="/register">{"> Send Money"}</Link>
+                    </Button>
+                  )}
+                  <Button asChild size="lg" variant="outline" className="px-8">
+                    <Link href="/track-transfer">Track a Transfer</Link>
                   </Button>
                 </div>
+                <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>Built for treasury, fintech, and payroll teams shipping cross-border flows.</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-6">
+                  {heroStacks.map((stack) => (
+                    <Badge
+                      key={stack}
+                      variant="secondary"
+                      className="bg-primary/10 text-primary border-primary/20"
+                    >
+                      {stack}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="grid gap-4 pt-8 sm:grid-cols-3">
+                  {heroMetrics.map((metric) => (
+                    <Card key={metric.label} className="border-border/40 bg-background/70 backdrop-blur-md shadow-[0_20px_70px_-35px_rgba(11,81,255,0.7)]">
+                      <CardContent className="px-6 py-5">
+                        <p className="text-2xl font-semibold text-foreground sm:text-3xl">{metric.value}</p>
+                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground/90">
+                          {metric.label}
+                        </p>
+                        {metric.helper ? (
+                          <p className="mt-2 text-xs text-muted-foreground/80">
+                            {metric.helper}
+                          </p>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-5 pt-10" id="partners">
+                  <div className="flex items-center justify-center lg:justify-start gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground/80">
+                    <ArrowUpRight className="h-4 w-4" />
+                    <span>Our partners</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6">
+                    {heroPartnerLogos.map((logo) => (
+                      <div key={logo.name} className="relative h-10 w-28 sm:h-12 sm:w-32 opacity-80 transition hover:opacity-100">
+                        <Image
+                          src={logo.src}
+                          alt={logo.name}
+                          fill
+                          sizes="128px"
+                          className="object-contain"
+                          priority={logo.priority}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-center lg:justify-end">
-                <LiveRateChecker />
+              <div className="relative flex items-center justify-center lg:justify-end">
+                <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
+                <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
+                <div ref={rateCardRef} className="relative w-full max-w-xl">
+                  {showLiveRate ? (
+                    <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
+                      <LiveRateChecker autoFetch sendMoneyHref="/register" />
+                    </div>
+                  ) : (
+                    <Card className="border-border/40 bg-background/85 backdrop-blur-2xl shadow-[0_32px_120px_-60px_rgba(0,0,0,0.65)]">
+                      <CardContent className="space-y-6 p-8">
+                        <div className="flex items-center gap-3">
+                          <Sparkles className="h-5 w-5 text-primary" />
+                          <div>
+                            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-primary/80">
+                              Live FX sandbox
+                            </p>
+                            <p className="text-lg font-semibold text-foreground">
+                              Activate live rates to reveal market depth and real spreads
+                            </p>
+                          </div>
+                        </div>
+                        <ul className="space-y-4">
+                          {heroFeatureTiles.map((feature) => {
+                            const Icon = feature.icon;
+                            return (
+                              <li key={feature.title} className="flex items-start gap-3">
+                                <Icon className="mt-1 h-5 w-5 text-primary" />
+                                <div>
+                                  <p className="text-sm font-semibold text-foreground">{feature.title}</p>
+                                  <p className="text-sm text-muted-foreground">{feature.description}</p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-4">
+                          {heroMetrics.slice(0, 2).map((metric) => (
+                            <div key={`preview-${metric.label}`} className="rounded-xl border border-border/40 bg-muted/30 p-4">
+                              <p className="text-lg font-semibold text-foreground">{metric.value}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{metric.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
             </div>
           </div>
