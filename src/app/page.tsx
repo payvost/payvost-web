@@ -122,25 +122,49 @@ const faqs = [
     value: "pricing",
     question: "How much does Payvost charge per transfer?",
     answer:
-      "Fees vary by corridor and payment rail. We provide transparent pricing per quote and offer volume discounts for enterprise partners. Contact sales for custom pricing.",
+      "Fees vary by corridor and payment rail. We display fees and FX spreads per quote and offer volume discounts for enterprise partners.",
   },
   {
     value: "settlement",
     question: "How long does settlement take?",
     answer:
-      "Settlement time depends on the payout method and corridor. Many instant wallet routes are immediate; local bank payouts typically settle within 1-3 business days. We provide status events for every transfer.",
+      "Instant for many wallet routes; local bank payouts usually settle in 1–3 business days. Every state change emits a webhook/event.",
   },
   {
     value: "kyc",
     question: "What KYC/KYB do you require?",
     answer:
-      "We support both individual and business KYC/KYB flows. Requirements depend on customer type and corridor. Our onboarding guides show exact document requirements for each country.",
+      "Document + biometric checks for individuals; corporate docs, UBO, and sanction screening for businesses. Requirements vary by corridor.",
   },
   {
     value: "integration",
     question: "How can I integrate Payvost into my platform?",
     answer:
-      "Use our SDKs (TypeScript, Python, mobile) or hit the REST/GraphQL APIs. Sandbox accounts, developer docs, and SDK samples are available to speed up integration.",
+      "Use our TypeScript, Python, or mobile SDKs, or call the REST/GraphQL APIs directly. Sandbox mirrors production risk and ledger logic.",
+  },
+  {
+    value: "limits",
+    question: "What are the sending limits?",
+    answer:
+      "Default daily and monthly limits apply post-KYC. Higher programmatic limits can be requested based on volume, risk profile, and jurisdiction.",
+  },
+  {
+    value: "currencies",
+    question: "Which currencies do you support?",
+    answer:
+      "70+ payout currencies across bank, wallet, and cash pickup routes. A live matrix and corridor map is available in the dashboard.",
+  },
+  {
+    value: "security",
+    question: "How do you keep funds and data secure?",
+    answer:
+      "Encryption in transit/at rest, segregated client balances, real-time fraud heuristics, and continuous monitoring with audit trails.",
+  },
+  {
+    value: "support",
+    question: "Do you offer 24/7 support?",
+    answer:
+      "Yes. Live chat and critical incident escalation are available 24/7; dedicated success managers for qualified enterprise accounts.",
   },
 ];
 
