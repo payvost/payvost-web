@@ -238,7 +238,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="relative flex items-center justify-center lg:justify-end">
+              <div className="relative flex items-center justify-center order-2 mt-6 sm:mt-8 lg:order-none lg:justify-end lg:mt-0">
                 <div className="hidden md:block">
                   <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
                   <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
