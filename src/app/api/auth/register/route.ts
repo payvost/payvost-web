@@ -5,16 +5,19 @@ const FieldValue = admin.firestore.FieldValue;
 
 export async function POST(request: Request) {
   try {
+    console.log('[Register API] Request received');
     const { email, password, displayName, phoneNumber, countryCode, userType } = await request.json();
 
     // Validate required fields
     if (!email || !password || !displayName) {
+      console.log('[Register API] Missing required fields');
       return NextResponse.json(
         { error: 'Missing required fields: email, password, displayName' },
         { status: 400 }
       );
     }
 
+    console.log('[Register API] Creating user with Firebase Admin SDK for email:', email);
     // Create user with Firebase Admin SDK (bypasses client restrictions)
     const userRecord = await adminAuth.createUser({
       email,
@@ -23,6 +26,7 @@ export async function POST(request: Request) {
       phoneNumber: phoneNumber || undefined,
       emailVerified: false,
     });
+    console.log('[Register API] User created successfully:', userRecord.uid);
 
     // Create user document in Firestore
     await adminDb.collection('users').doc(userRecord.uid).set({
@@ -51,7 +55,12 @@ export async function POST(request: Request) {
       customToken,
     });
   } catch (error: any) {
-    console.error('User creation error:', error);
+    console.error('[Register API] User creation error:', error);
+    console.error('[Register API] Error details:', {
+      code: error?.code,
+      message: error?.message,
+      stack: error?.stack?.split('\n').slice(0, 3).join('\n')
+    });
     
     // Handle specific Firebase errors
     if (error.code === 'auth/email-already-exists') {
@@ -76,7 +85,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to create user account' },
+      { error: 'Failed to create user account', details: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }
