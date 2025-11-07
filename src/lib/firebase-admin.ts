@@ -34,14 +34,34 @@ function initFirebaseAdmin() {
       }
       credential = admin.credential.cert(parsed as admin.ServiceAccount);
     } else {
-      // Development: use local file
-      const serviceAccountPath = path.resolve(process.cwd(), 'backend', LOCAL_SA_FILENAME);
+      // Development: use local file - try multiple possible paths
+      const possiblePaths = [
+        path.resolve(process.cwd(), 'backend', LOCAL_SA_FILENAME),
+        path.resolve(process.cwd(), LOCAL_SA_FILENAME),
+        path.resolve(__dirname, '..', '..', 'backend', LOCAL_SA_FILENAME),
+      ];
       
-      if (!fs.existsSync(serviceAccountPath)) {
-        throw new Error(`Service account file not found at: ${serviceAccountPath}`);
+      console.log('Firebase Admin SDK: Looking for service account file');
+      console.log('Firebase Admin SDK: Current working directory:', process.cwd());
+      console.log('Firebase Admin SDK: __dirname:', __dirname);
+      
+      let serviceAccountPath: string | null = null;
+      for (const tryPath of possiblePaths) {
+        console.log('Firebase Admin SDK: Trying path:', tryPath);
+        if (fs.existsSync(tryPath)) {
+          serviceAccountPath = tryPath;
+          console.log('Firebase Admin SDK: Found service account at:', tryPath);
+          break;
+        }
+      }
+      
+      if (!serviceAccountPath) {
+        console.error('Firebase Admin SDK: Service account file not found in any of the expected locations');
+        console.error('Firebase Admin SDK: Tried paths:', possiblePaths);
+        throw new Error(`Service account file not found. Tried: ${possiblePaths.join(', ')}`);
       }
 
-      console.log(`Firebase Admin SDK: Using local service account file: ${LOCAL_SA_FILENAME}`);
+      console.log(`Firebase Admin SDK: Using local service account file: ${serviceAccountPath}`);
       const fileContents = fs.readFileSync(serviceAccountPath, 'utf8');
       const serviceAccount = JSON.parse(fileContents);
       if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {

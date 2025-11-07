@@ -212,7 +212,11 @@ export function RegistrationForm() {
     resolver: zodResolver(registrationSchema),
     mode: 'onTouched',
     defaultValues: {
-        agreeTerms: false
+        agreeTerms: false,
+        countryCode: '',
+        country: '',
+        state: '',
+        city: ''
     }
   });
   // Real-time username availability (debounced)
