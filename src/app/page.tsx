@@ -193,7 +193,7 @@ export default function LandingPage() {
           </div>
           <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-              <div className="relative z-10 flex flex-col justify-center space-y-5 sm:space-y-8 text-center lg:text-left order-2 lg:order-1">
+              <div className="relative z-10 flex flex-col justify-center space-y-5 sm:space-y-8 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm px-3 py-1">
                   Borderless payments, orchestrated
                 </Badge>
@@ -238,7 +238,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="relative flex items-center justify-center lg:justify-end order-1 lg:order-2">
+              <div className="relative flex items-center justify-center lg:justify-end">
                 <div className="hidden md:block">
                   <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
                   <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
@@ -412,7 +412,7 @@ export default function LandingPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+               ))}
             </div>
 
             <div className="mt-8 sm:mt-10 flex flex-col gap-4 items-center text-center">
@@ -432,57 +432,59 @@ export default function LandingPage() {
         </section>
         
         {/* Testimonials Section */}
-        <section id="testimonials" className="relative w-full py-16 md:py-28 lg:py-32 overflow-hidden">
+  <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.35em]">
+            <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
                 Customer stories
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">What our customers say</h2>
-              <p className="max-w-3xl text-muted-foreground md:text-lg">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+                What our customers say
+              </h2>
+              <p className="max-w-3xl text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed">
                 Payvost powers remittance, payroll, and treasury teams around the world. Hear how builders ship faster and move capital with confidence.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-[0.55fr_0.45fr] xl:grid-cols-[0.5fr_0.5fr] items-center">
-              <div className="relative">
+            <div className="mt-10 sm:mt-12 grid gap-6 lg:grid-cols-[0.55fr_0.45fr] xl:grid-cols-[0.5fr_0.5fr] items-stretch">
+              <div className="relative w-full max-w-xl mx-auto lg:max-w-none lg:mx-0">
                 <div className="hidden md:block">
                   <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
                   <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
                 </div>
-                <Card className="relative rounded-3xl border-border/40 bg-background/80 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)]">
-                  <CardContent className="space-y-6 p-10">
-                    <div className="flex items-center gap-3">
+                <Card className="relative w-full rounded-3xl border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)] h-full">
+                  <CardContent className="space-y-6 p-6 sm:p-8 lg:p-10">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-center sm:text-left justify-center sm:justify-start">
                       <Sparkles className="h-5 w-5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-[0.4em] text-primary/80">
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.32em] sm:tracking-[0.4em] text-primary/80">
                         Featured customer
                       </span>
                     </div>
-                    <blockquote className="text-2xl font-semibold leading-relaxed text-foreground">
+                    <blockquote className="text-xl sm:text-2xl font-semibold leading-relaxed text-foreground">
                       “Payvost let us launch local payouts in three new markets in under a quarter. Our finance team finally has real-time visibility across every transfer.”
                     </blockquote>
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-14 w-14">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 text-center sm:text-left">
+                      <Avatar className="mx-auto sm:mx-0 h-16 w-16">
                         <AvatarImage src={testimonials[0].image.src} alt={testimonials[0].name} />
                         <AvatarFallback>{testimonials[0].name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-base font-semibold text-foreground">{testimonials[0].name}</p>
+                        <p className="text-base sm:text-lg font-semibold text-foreground">{testimonials[0].name}</p>
                         <p className="text-sm text-muted-foreground">{testimonials[0].role}, {testimonials[0].company}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-amber-400">
+                    <div className="flex justify-center sm:justify-start items-center gap-1 text-amber-400">
                       {Array.from({ length: 5 }).map((_, idx) => (
-                        <Star key={idx} className="h-4 w-4 fill-current" />
+                        <Star key={idx} className="h-3.5 w-3.5 fill-current" />
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="relative">
-                <div className="relative rounded-3xl border border-border/30 bg-background/80 backdrop-blur-md p-6 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
+              <div className="relative w-full max-w-xl mx-auto lg:max-w-none lg:mx-0">
+                <div className="relative h-full w-full rounded-3xl border border-border/30 bg-background/85 backdrop-blur-md p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
                   <Carousel
                     opts={{
                       align: "start",
@@ -490,10 +492,10 @@ export default function LandingPage() {
                     }}
                     className="w-full"
                   >
-                    <CarouselContent className="-ml-2 sm:-ml-3">
+                    <CarouselContent className="-ml-1.5 sm:-ml-3">
                       {testimonials.slice(1).map((testimonial, index) => (
-                        <CarouselItem key={testimonial.name} className="pl-2 sm:pl-3 sm:basis-1 md:basis-1/2">
-                          <div className="h-full rounded-2xl border border-border/30 bg-muted/40 p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60">
+                        <CarouselItem key={testimonial.name} className="pl-1.5 sm:pl-3 basis-full md:basis-1/2">
+                          <div className="h-full rounded-2xl border border-border/30 bg-muted/40 p-5 sm:p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-12 w-12">
                                 <AvatarImage src={testimonial.image.src} alt={testimonial.name} />
@@ -516,19 +518,19 @@ export default function LandingPage() {
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselPrevious className="-left-4 hidden sm:flex" />
-                    <CarouselNext className="-right-4 hidden sm:flex" />
+                    <CarouselPrevious className="-left-3 hidden sm:flex" />
+                    <CarouselNext className="-right-3 hidden sm:flex" />
                   </Carousel>
-                  <div className="mt-6 grid gap-2 text-left text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       <span>Customer satisfaction rating: 4.9 / 5</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       <span>Net promoter score above 70</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
                       <span>Dedicated success managers for enterprise accounts</span>
                     </div>
