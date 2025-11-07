@@ -185,9 +185,11 @@ export default function LandingPage() {
     {/* Hero Section */}
     <section className="relative overflow-hidden -mt-6 md:-mt-8 lg:-mt-10">
           <div className="absolute inset-0 -z-10">
-            <div className="absolute top-[-18rem] right-[-14rem] h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
-            <div className="absolute bottom-[-16rem] left-[-12rem] h-[24rem] w-[24rem] rounded-full bg-secondary/25 blur-3xl" />
             <div className="absolute inset-x-0 top-10 h-32 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+            <div className="hidden md:block">
+              <div className="absolute top-[-18rem] right-[-14rem] h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
+              <div className="absolute bottom-[-16rem] left-[-12rem] h-[24rem] w-[24rem] rounded-full bg-secondary/25 blur-3xl" />
+            </div>
           </div>
           <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-12 pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
             <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
@@ -220,9 +222,9 @@ export default function LandingPage() {
                     <ArrowUpRight className="h-4 w-4" />
                     <span>Our partners</span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6">
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6">
                     {heroPartnerLogos.map((logo) => (
-                      <div key={logo.name} className="relative h-10 w-28 sm:h-12 sm:w-32 opacity-80 transition hover:opacity-100">
+                      <div key={logo.name} className="relative h-9 w-24 sm:h-12 sm:w-32 opacity-80 transition hover:opacity-100">
                         <Image
                           src={logo.src}
                           alt={logo.name}
@@ -237,9 +239,11 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="relative flex items-center justify-center lg:justify-end">
-                <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-                <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
-                <div ref={rateCardRef} className="relative w-full max-w-xl">
+                <div className="hidden md:block">
+                  <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
+                  <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
+                </div>
+                <div ref={rateCardRef} className="relative w-full max-w-xl mx-auto lg:mx-0">
                   <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
                     <LiveRateChecker autoFetch sendMoneyHref="/register" />
                   </div>
@@ -252,8 +256,8 @@ export default function LandingPage() {
         <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-              <div className="space-y-6 max-w-2xl">
-                <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary">
+              <div className="space-y-6 max-w-2xl text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary">
                   Enterprise-grade orchestration
                 </Badge>
                 <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
@@ -262,7 +266,7 @@ export default function LandingPage() {
                 <p className="text-muted-foreground md:text-lg">
                   From sign-up to settlement, Payvost provides automated workflows, visibility, and controls at every stage of the transfer lifecycle. Launch new corridors without rebuilding core infrastructure each time.
                 </p>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
                   <Button asChild size="lg">
                     <Link href="/register">
                       Launch a demo workspace
@@ -310,8 +314,8 @@ export default function LandingPage() {
         <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-950 text-slate-100">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-              <div className="space-y-6">
-                <Badge variant="outline" className="w-fit border-white/20 bg-white/5 text-white/90">
+              <div className="space-y-6 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/20 bg-white/5 text-white/90">
                   Developer-first infrastructure
                 </Badge>
                 <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
@@ -330,7 +334,7 @@ export default function LandingPage() {
                   </pre>
                 </div>
               </div>
-              <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {developerHighlights.map((highlight) => {
                   const Icon = highlight.icon;
                   return (
@@ -443,8 +447,10 @@ export default function LandingPage() {
 
             <div className="mt-12 grid gap-6 lg:grid-cols-[0.55fr_0.45fr] xl:grid-cols-[0.5fr_0.5fr] items-center">
               <div className="relative">
-                <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
-                <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+                <div className="hidden md:block">
+                  <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
+                  <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+                </div>
                 <Card className="relative rounded-3xl border-border/40 bg-background/80 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)]">
                   <CardContent className="space-y-6 p-10">
                     <div className="flex items-center gap-3">
@@ -484,9 +490,9 @@ export default function LandingPage() {
                     }}
                     className="w-full"
                   >
-                    <CarouselContent className="-ml-3">
+                    <CarouselContent className="-ml-2 sm:-ml-3">
                       {testimonials.slice(1).map((testimonial, index) => (
-                        <CarouselItem key={testimonial.name} className="pl-3 sm:basis-1 lg:basis-1/2">
+                        <CarouselItem key={testimonial.name} className="pl-2 sm:pl-3 sm:basis-1 md:basis-1/2">
                           <div className="h-full rounded-2xl border border-border/30 bg-muted/40 p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-12 w-12">
@@ -537,11 +543,11 @@ export default function LandingPage() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
-              <div className="space-y-8">
-                <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.4em]">
+              <div className="space-y-8 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.4em]">
                   Support center
                 </Badge>
-                <div className="space-y-3 max-w-xl">
+                <div className="space-y-3 max-w-xl mx-auto lg:mx-0">
                   <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Frequently asked questions</h2>
                   <p className="text-muted-foreground md:text-lg">
                     Answers to the questions founders, finance teams, and developers ask before they launch with Payvost.
@@ -714,7 +720,7 @@ export default function LandingPage() {
         <section className="relative w-full py-16 md:py-28 lg:py-32 overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#021d47] via-[#03376e] to-[#056b8c]" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
+            <div className="grid items-center gap-12 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
               <div className="space-y-8 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/40 bg-white/10 text-white/90 uppercase tracking-[0.4em]">
                   Mobile banking in motion
