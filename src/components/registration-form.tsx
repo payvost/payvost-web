@@ -9,13 +9,12 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, FileUp, Camera, ChevronsUpDown, Check, ShieldX } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -33,7 +32,17 @@ import { CountrySelector, CountryOption } from '@/components/location/country-se
 import { StateSelector, StateOption } from '@/components/location/state-selector';
 import { CitySelector } from '@/components/location/city-selector';
 import { AddressAutocomplete, AddressSelection } from '@/components/location/address-autocomplete';
-import { SUPPORTED_COUNTRIES, SUPPORTED_COUNTRY_MAP, DEFAULT_KYC_CONFIG, type SupportedCountry } from '@/config/kyc-config';
+import {
+  SUPPORTED_COUNTRIES,
+  SUPPORTED_COUNTRY_MAP,
+  DEFAULT_KYC_CONFIG,
+  KYC_DYNAMIC_FIELD_NAMES,
+  type CountryKycConfig,
+  type KycTierConfig,
+  type KycTierKey,
+  type SupportedCountry,
+} from '@/config/kyc-config';
+import { Badge } from '@/components/ui/badge';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -49,61 +58,76 @@ const checkPasswordStrength = (password: string): number => {
     return Math.min(100, score);
 }
 
-const registrationSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-  email: z.string().email('Invalid email address'),
-  countryCode: z.string().min(1, 'Country code is required'),
-  phone: z.string().min(5, 'A valid phone number is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters').refine(
-      (password) => checkPasswordStrength(password) >= 80,
-      { message: "Password is not strong enough. Aim for at least 80% strength." }
-  ),
-  confirmPassword: z.string().min(8, 'Passwords must match'),
-  dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
-  country: z.string().min(1, 'Country is required'),
-   photo: z.any()
-    .refine((files) => files?.length > 0, "A profile photo is required.")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
-    .refine(
-      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
-      "Only .jpg, .jpeg, .png and .webp formats are supported."
-    ),
-  street: z.string().min(2, 'Street address is required'),
-  city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State/Province is required'),
-  zip: z.string().min(4, 'ZIP/Postal code is required'),
-  idType: z.string().min(1, 'Please select an ID type'),
-  idNumber: z.string().min(5, 'A valid ID number is required'),
-  idDocument: z.any()
-    .refine((files) => files?.length > 0, "ID document is required.")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max file size is 5MB.`)
-    .refine(
-      (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type) || files?.[0]?.type === 'application/pdf',
-      "Only images and PDFs are supported."
-    ),
-  bvn: z.string().optional(),
-  agreeTerms: z.boolean().refine((val) => val === true, {
-    message: 'You must agree to the terms and conditions',
-  }),
-}).refine((data) => data.password === data.confirmPassword, {
+const dynamicFieldsShape: Record<(typeof KYC_DYNAMIC_FIELD_NAMES)[number], z.ZodOptional<z.ZodString>> =
+  {} as Record<(typeof KYC_DYNAMIC_FIELD_NAMES)[number], z.ZodOptional<z.ZodString>>;
+
+for (const field of KYC_DYNAMIC_FIELD_NAMES) {
+  dynamicFieldsShape[field] = z.string().optional();
+}
+
+const dynamicFieldsSchema = z.object(dynamicFieldsShape);
+
+const registrationSchema = z
+  .object({
+    fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+    email: z.string().email('Invalid email address'),
+    countryCode: z.string().min(1, 'Country code is required'),
+    phone: z.string().min(5, 'A valid phone number is required'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .refine((password) => checkPasswordStrength(password) >= 80, {
+        message: 'Password is not strong enough. Aim for at least 80% strength.',
+      }),
+    confirmPassword: z.string().min(8, 'Passwords must match'),
+    dateOfBirth: z.date({ required_error: 'Date of birth is required' }),
+    country: z.string().min(1, 'Country is required'),
+    photo: z
+      .any()
+      .refine((files) => files?.length > 0, 'A profile photo is required.')
+      .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
+      .refine(
+        (files) => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+        'Only .jpg, .jpeg, .png and .webp formats are supported.',
+      ),
+    street: z.string().min(2, 'Street address is required'),
+    city: z.string().min(2, 'City is required'),
+    state: z.string().min(2, 'State/Province is required'),
+    zip: z.string().min(4, 'ZIP/Postal code is required'),
+    agreeTerms: z.boolean().refine((val) => val === true, {
+      message: 'You must agree to the terms and conditions',
+    }),
+  })
+  .merge(dynamicFieldsSchema)
+  .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
-    path: ["confirmPassword"],
-});
+    path: ['confirmPassword'],
+  });
 
 
 type FormValues = z.infer<typeof registrationSchema>;
 
 const steps = [
-  { id: 1, name: 'Personal & Address', fields: ['fullName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'] },
-  { id: 2, name: 'Identity Verification', fields: ['idType', 'idNumber', 'idDocument', 'bvn', 'agreeTerms'] },
+  {
+    id: 1,
+    name: 'Personal & Address',
+    fields: ['fullName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'],
+  },
+  {
+    id: 2,
+    name: 'Identity Verification',
+    fields: ['agreeTerms'],
+  },
 ];
 
 export function RegistrationForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [idDocumentPreview, setIdDocumentPreview] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -140,6 +164,9 @@ export function RegistrationForm() {
     control,
     watch,
     setValue,
+    getValues,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(registrationSchema),
@@ -162,6 +189,19 @@ export function RegistrationForm() {
       .filter((option) => option.dialCode.length > 0)
       .sort((a, b) => a.country.localeCompare(b.country));
   }, [countryOptions]);
+
+  const activeKycConfig = useMemo<CountryKycConfig>(() => selectedCountryOption?.kyc ?? DEFAULT_KYC_CONFIG, [selectedCountryOption]);
+  const tier1Config = activeKycConfig.tiers.tier1;
+  const tier2Config = activeKycConfig.tiers.tier2;
+  const tier3Config = activeKycConfig.tiers.tier3;
+  const tier1Fields = tier1Config.additionalFields ?? [];
+  const upcomingTierConfigs = useMemo<Array<{ key: KycTierKey; config: KycTierConfig }>>(
+    () => [
+      { key: 'tier2', config: tier2Config },
+      { key: 'tier3', config: tier3Config },
+    ],
+    [tier2Config, tier3Config],
+  );
   useEffect(() => {
     let active = true;
     const check = async () => {
@@ -537,33 +577,25 @@ export function RegistrationForm() {
     }
   }, [cityOptions, countryOptions, countryValue, setValue, stateOptions]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'idDocument') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast({ title: "File too large", description: "Please upload an image smaller than 5MB.", variant: "destructive" });
-        return;
-      }
-      const isImage = ACCEPTED_IMAGE_TYPES.includes(file.type);
-      const isPdf = file.type === 'application/pdf';
-
-      if (type === 'idDocument' && !isImage && !isPdf) {
-          toast({ title: "Invalid File Type", description: "Please upload an image or PDF file.", variant: "destructive" });
-          return;
-      } else if (type === 'photo' && !isImage) {
-          toast({ title: "Invalid File Type", description: "Only image formats are supported for profile photos.", variant: "destructive" });
-          return;
-      }
-
-      if (type === 'photo') {
-        const previewUrl = URL.createObjectURL(file);
-        setPreviewImage(previewUrl);
-        setValue('photo', e.target.files);
-      } else {
-        setIdDocumentPreview(file.name);
-        setValue('idDocument', e.target.files);
-      }
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: 'File too large', description: 'Please upload an image smaller than 5MB.', variant: 'destructive' });
+      return;
+    }
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast({ title: 'Invalid file type', description: 'Only image formats are supported for profile photos.', variant: 'destructive' });
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setPreviewImage(previewUrl);
+    setValue('photo', event.target.files, { shouldDirty: true, shouldValidate: true });
   };
 
 
@@ -615,7 +647,7 @@ export function RegistrationForm() {
                 dataTransfer.items.add(file);
                 
                 setPreviewImage(canvas.toDataURL('image/jpeg'));
-                setValue('photo', dataTransfer.files);
+        setValue('photo', dataTransfer.files, { shouldDirty: true, shouldValidate: true });
                 stopCamera();
                 setShowCamera(false);
             }
@@ -666,6 +698,53 @@ export function RegistrationForm() {
   
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsLoading(true);
+
+    const tier1AdditionalValues: Record<string, string> = {};
+    let tier1ValidationFailed = false;
+
+    for (const field of tier1Fields) {
+      const fieldName = field.name as keyof FormValues;
+      const rawValue = data[fieldName];
+      const stringValue = typeof rawValue === 'string' ? rawValue.trim() : '';
+      const normalizedValue = field.normalize ? field.normalize(stringValue) : stringValue;
+
+      if (field.normalize && normalizedValue !== stringValue) {
+        setValue(fieldName, normalizedValue, { shouldDirty: true, shouldValidate: true });
+        (data as Record<string, unknown>)[field.name] = normalizedValue;
+      }
+
+      if (field.required && !normalizedValue) {
+        setError(fieldName, { type: 'manual', message: `${field.label} is required` });
+        tier1ValidationFailed = true;
+        continue;
+      }
+
+      if (normalizedValue && field.pattern && !field.pattern.test(normalizedValue)) {
+        setError(fieldName, {
+          type: 'manual',
+          message: field.patternMessage ?? `Enter a valid value for ${field.label}.`,
+        });
+        tier1ValidationFailed = true;
+        continue;
+      }
+
+      clearErrors(fieldName);
+
+      if (normalizedValue) {
+        tier1AdditionalValues[field.name] = normalizedValue;
+      }
+    }
+
+    if (tier1ValidationFailed) {
+      toast({
+        title: 'Check identity details',
+        description: 'Please review the highlighted Tier 1 fields before continuing.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Re-validate username availability to prevent race conditions
       const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', data.username.trim()), fsLimit(1));
@@ -731,6 +810,14 @@ export function RegistrationForm() {
       if (selectedCoordinates) {
         locationPayload.coordinates = new GeoPoint(selectedCoordinates.lat, selectedCoordinates.lng);
       }
+      const tier1Submission = {
+        status: 'submitted' as const,
+        submittedAt: serverTimestamp(),
+        summary: tier1Config.summary,
+        requirements: tier1Config.requirements,
+        additionalFields: tier1AdditionalValues,
+      };
+
       const firestoreData = {
         uid: user.uid,
         name: data.fullName,
@@ -739,14 +826,37 @@ export function RegistrationForm() {
         phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
-        country: data.country,
-  countryName: resolvedCountry?.name ?? '',
+    country: data.country,
+    countryName: resolvedCountry?.name ?? '',
         street: data.street,
         city: data.city,
         state: data.state,
         zip: data.zip,
         location: locationPayload,
-        kycStatus: 'pending',
+        kycStatus: 'tier1_pending_review',
+        kycTier: 'tier1' as const,
+        kycProfile: {
+          countryIso: data.country,
+          countryName: resolvedCountry?.name ?? '',
+          currentTier: 'tier1' as const,
+          status: 'pending_review' as const,
+          availableUpgrades: upcomingTierConfigs.map(({ key }) => key),
+          tiers: {
+            tier1: tier1Submission,
+            tier2: {
+              status: 'locked' as const,
+              summary: tier2Config.summary,
+              requirements: tier2Config.requirements,
+              documents: tier2Config.documents ?? [],
+            },
+            tier3: {
+              status: 'locked' as const,
+              summary: tier3Config.summary,
+              requirements: tier3Config.requirements,
+              documents: tier3Config.documents ?? [],
+            },
+          },
+        },
         userType: 'Pending' as const,
         riskScore: Math.floor(Math.random() * 30),
         totalSpend: 0,
@@ -754,32 +864,14 @@ export function RegistrationForm() {
         transactions: [],
         beneficiaries: [],
         createdAt: serverTimestamp(),
-        bvn: data.bvn || '',
-        idType: data.idType,
-        idNumber: data.idNumber,
+        bvn: tier1AdditionalValues.bvn ?? '',
       };
       await setDoc(userDocRef, firestoreData);
 
   // Open PIN setup dialog before redirecting
   setNewlyCreatedUserId(user.uid);
   setPinDialogOpen(true);
-      
-      // 5. Upload ID document and create KYC subcollection document
-      const idFile = data.idDocument?.[0];
-      if (idFile) {
-         const idStorageRef = ref(storage, `id_documents/${user.uid}/${idFile.name}`);
-         await uploadBytes(idStorageRef, idFile);
-         const idDocumentURL = await getDownloadURL(idStorageRef);
 
-         const kycDocRef = collection(db, "users", user.uid, "kycDocuments");
-         await addDoc(kycDocRef, {
-             idType: data.idType,
-             idNumber: data.idNumber,
-             filePath: idDocumentURL,
-             status: 'pending',
-             submittedAt: serverTimestamp()
-         });
-      }
 
       // 6. Send welcome notification
       const notificationsColRef = collection(db, "users", user.uid, "notifications");
@@ -843,7 +935,7 @@ export function RegistrationForm() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={(e) => handleFileChange(e, 'photo')} disabled={isLoading} />
+                    <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoChange} disabled={isLoading} />
                     <p className="text-xs text-muted-foreground">Upload a clear photo of yourself. PNG, JPG up to 5MB.</p>
                      {errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
                 </div>
@@ -1155,70 +1247,99 @@ export function RegistrationForm() {
         )}
 
         {currentStep === 1 && (
-          <div className="space-y-4">
-             <h3 className="text-lg font-semibold">Step 2: Identity Verification</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="idType">ID Type</Label>
-                    <Controller
-                    name="idType"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                            <SelectTrigger><SelectValue placeholder="Select ID Type" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="passport">Passport</SelectItem>
-                                <SelectItem value="license">Driver's License</SelectItem>
-                                <SelectItem value="national-id">National ID</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    )}
-                    />
-                    {errors.idType && <p className="text-sm text-destructive">{errors.idType.message}</p>}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Step 2: Identity Verification</h3>
+
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">{tier1Config.label}</p>
+                  <p className="text-sm text-muted-foreground">{tier1Config.summary}</p>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="idNumber">ID Number</Label>
-                    <Input id="idNumber" {...register('idNumber')} disabled={isLoading} />
-                    {errors.idNumber && <p className="text-sm text-destructive">{errors.idNumber.message}</p>}
-                </div>
-            </div>
-            
-            <div className="space-y-2">
-                <Label htmlFor="id-document-upload">Upload ID Document</Label>
-                <Label htmlFor="id-document-upload" className="cursor-pointer">
-                    <div className="p-4 border-2 border-dashed rounded-lg text-center hover:bg-muted/50">
-                        <FileUp className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <p className="mt-2 text-sm text-muted-foreground">
-                            {idDocumentPreview ? `Selected: ${idDocumentPreview}` : 'Click to upload a clear image of your ID'}
-                        </p>
-                    </div>
-                </Label>
-                 <Input id="id-document-upload" type="file" className="hidden" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, 'idDocument')} disabled={isLoading} />
-                 {errors.idDocument && <p className="text-sm text-destructive">{String(errors.idDocument.message)}</p>}
+                <Badge variant="secondary">Tier 1</Badge>
+              </div>
+              <ul className="grid gap-2 text-sm text-muted-foreground">
+                {tier1Config.requirements.map((requirement) => (
+                  <li key={requirement} className="flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-primary" />
+                    <span>{requirement}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-      {countryValue === 'NG' && (
-                 <div className="space-y-2">
-                    <Label htmlFor="bvn">Bank Verification Number (BVN)</Label>
-                    <Input id="bvn" {...register('bvn')} disabled={isLoading} />
-                    {errors.bvn && <p className="text-sm text-destructive">{errors.bvn.message}</p>}
+            {tier1Fields.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold">Country-specific fields</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {tier1Fields.map((field) => {
+                    const fieldName = field.name as keyof FormValues;
+                    const fieldRegister = register(fieldName, {
+                      onBlur: (event) => {
+                        if (!field.normalize) {
+                          return;
+                        }
+                        const normalizedValue = field.normalize(event.target.value);
+                        if (normalizedValue !== event.target.value) {
+                          setValue(fieldName, normalizedValue, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }
+                      },
+                      onChange: () => {
+                        clearErrors(fieldName);
+                      },
+                    });
+                    const fieldError = errors[fieldName];
+                    const errorMessage =
+                      fieldError && typeof fieldError === 'object' && 'message' in fieldError
+                        ? (fieldError as { message?: string }).message
+                        : undefined;
+
+                    return (
+                      <div key={field.name} className="space-y-2">
+                        <Label htmlFor={field.name}>
+                          {field.label}
+                          {!field.required && (
+                            <span className="ml-2 text-xs text-muted-foreground">(Optional)</span>
+                          )}
+                        </Label>
+                        <Input
+                          id={field.name}
+                          placeholder={field.placeholder}
+                          inputMode={field.inputMode}
+                          maxLength={field.maxLength}
+                          disabled={isLoading}
+                          {...fieldRegister}
+                        />
+                        {field.helperText && (
+                          <p className="text-xs text-muted-foreground">{field.helperText}</p>
+                        )}
+                        {fieldError && (
+                          <p className="text-sm text-destructive">{errorMessage ?? 'Please check this value.'}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              </div>
             )}
             <div className="flex items-center space-x-2">
-                <Controller
-                    name="agreeTerms"
-                    control={control}
-                    render={({ field }) => (
-                        <Checkbox 
-                            id="agreeTerms"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isLoading}
-                        />
-                    )}
-                />
+              <Controller
+                name="agreeTerms"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="agreeTerms"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={isLoading}
+                  />
+                )}
+              />
               <Label htmlFor="agreeTerms">
-                I agree to the{" "}
+                I agree to the{' '}
                 <Link href="/terms" className="underline hover:text-primary" target="_blank">
                   terms and conditions
                 </Link>
