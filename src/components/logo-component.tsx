@@ -19,9 +19,9 @@ export function LogoComponent(props: Omit<React.ComponentProps<typeof Image>, 's
     <Image
       src={logoSrc}
       alt="Payvost Logo"
-      width={110}
-      height={150}
-      style={{ width: 'auto' }}
+      width={32}
+      height={32}
+      style={{ width: 'auto', height: '2rem' }}
       {...props}
     />
   );

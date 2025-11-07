@@ -7,16 +7,17 @@ import type { CSSProperties } from "react";
 export const LogoComponent = dynamic(() => import('./logo-component').then(mod => mod.LogoComponent), {
   ssr: false,
   loading: (props) => {
-    const { style, ...rest } = (props ?? {}) as { style?: CSSProperties } & Record<string, unknown>;
+    const { style, className, ...rest } = (props ?? {}) as { style?: CSSProperties; className?: string } & Record<string, unknown>;
 
     return (
       <img
         {...rest}
         src="/payvost.png"
         alt="Payvost Logo"
-        width={110}
-        height={150}
-        style={{ width: 'auto', ...(style ?? {}) }}
+        width={32}
+        height={32}
+        className={className}
+        style={{ width: 'auto', height: '2rem', ...(style ?? {}) }}
       />
     );
   },

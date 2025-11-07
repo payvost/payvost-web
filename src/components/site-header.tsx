@@ -206,7 +206,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 <Icons.logo className="h-8" />
             </Link>
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex gap-6 ml-8">
+            <nav className="hidden lg:flex gap-6 mx-auto">
                 <NavigationMenu>
                     <NavigationMenuList>
                         <NavigationMenuItem>
