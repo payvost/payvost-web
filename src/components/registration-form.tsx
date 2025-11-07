@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
@@ -164,7 +163,6 @@ export function RegistrationForm() {
     control,
     watch,
     setValue,
-    getValues,
     setError,
     clearErrors,
     formState: { errors },
@@ -1275,22 +1273,15 @@ export function RegistrationForm() {
                   {tier1Fields.map((field) => {
                     const fieldName = field.name as keyof FormValues;
                     const fieldRegister = register(fieldName, {
-                      onBlur: (event) => {
-                        if (!field.normalize) {
-                          return;
-                        }
-                        const normalizedValue = field.normalize(event.target.value);
-                        if (normalizedValue !== event.target.value) {
-                          setValue(fieldName, normalizedValue, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                        }
-                      },
-                      onChange: () => {
-                        clearErrors(fieldName);
-                      },
+                      required: field.required ? `${field.label} is required` : false,
+                      pattern: field.pattern
+                        ? { value: field.pattern, message: field.patternMessage ?? 'Invalid format.' }
+                        : undefined,
+                      setValueAs: field.normalize
+                        ? (value) => field.normalize!(typeof value === 'string' ? value : '')
+                        : undefined,
                     });
+                    const { onBlur, onChange, ...fieldRest } = fieldRegister;
                     const fieldError = errors[fieldName];
                     const errorMessage =
                       fieldError && typeof fieldError === 'object' && 'message' in fieldError
@@ -1311,7 +1302,23 @@ export function RegistrationForm() {
                           inputMode={field.inputMode}
                           maxLength={field.maxLength}
                           disabled={isLoading}
-                          {...fieldRegister}
+                          {...fieldRest}
+                          onBlur={(event) => {
+                            onBlur?.(event);
+                            if (field.normalize) {
+                              const normalizedValue = field.normalize(event.target.value);
+                              if (normalizedValue !== event.target.value) {
+                                setValue(fieldName, normalizedValue, {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                });
+                              }
+                            }
+                          }}
+                          onChange={(event) => {
+                            onChange?.(event);
+                            clearErrors(fieldName);
+                          }}
                         />
                         {field.helperText && (
                           <p className="text-xs text-muted-foreground">{field.helperText}</p>
