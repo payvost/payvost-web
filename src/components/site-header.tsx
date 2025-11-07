@@ -254,29 +254,6 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
 
                         <NavigationMenuItem>
-                            <NavigationMenuTrigger>Developers</NavigationMenuTrigger>
-                            <NavigationMenuContent>
-                                <ul className="w-[320px] p-4 space-y-1">
-                                    {developerLinks.map(d => (
-                                        <li key={d.title}>
-                                            <NavigationMenuLink asChild>
-                                                <Link href={d.href} className="block rounded-md p-2 hover:bg-accent">
-                                                    <div className="text-sm font-medium">{d.title}</div>
-                                                </Link>
-                                            </NavigationMenuLink>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </NavigationMenuContent>
-                        </NavigationMenuItem>
-
-                        <NavigationMenuItem>
-                            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                                <Link href="/pricing">Pricing</Link>
-                            </NavigationMenuLink>
-                        </NavigationMenuItem>
-
-                        <NavigationMenuItem>
                             <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
                             <NavigationMenuContent>
                                 <ul className="w-[320px] p-4 space-y-1">
@@ -411,27 +388,6 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
-
-                                {/* Developers */}
-                                <Collapsible>
-                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
-                                        <span>Developers</span>
-                                        <ChevronRight className="h-4 w-4" />
-                                    </CollapsibleTrigger>
-                                    <CollapsibleContent className="border-b">
-                                        <div className="py-2 space-y-1">
-                                            {developerLinks.map(d => (
-                                                <Link key={d.title} href={d.href} className="block p-3 rounded-md hover:bg-accent">
-                                                    <div className="text-sm font-medium">{d.title}</div>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
-
-                                <Link href="/pricing" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
-                                    Pricing
-                                </Link>
 
                                 {/* Resources */}
                                 <Collapsible>
