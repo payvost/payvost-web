@@ -191,45 +191,45 @@ export default function LandingPage() {
               <div className="absolute bottom-[-16rem] left-[-12rem] h-[24rem] w-[24rem] rounded-full bg-secondary/25 blur-3xl" />
             </div>
           </div>
-          <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-12 pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
-            <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-              <div className="relative z-10 flex flex-col justify-center space-y-8 text-center lg:text-left">
-                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary">
+          <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
+            <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+              <div className="relative z-10 flex flex-col justify-center space-y-5 sm:space-y-8 text-center lg:text-left order-2 lg:order-1">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm px-3 py-1">
                   Borderless payments, orchestrated
                 </Badge>
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl">
+                <div className="space-y-3 sm:space-y-4">
+                  <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl xl:text-6xl leading-tight">
                     Move money in minutes with enterprise-grade FX infrastructure
                   </h1>
-                  <p className="max-w-2xl text-muted-foreground md:text-lg lg:text-xl">
+                  <p className="max-w-2xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground md:text-lg lg:text-xl leading-relaxed">
                     Payvost fuses global banking partners, instant wallet payouts, and developer-first tooling so your teams can onboard customers, price FX, and settle funds without friction.
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                  <Button size="lg" className="px-8" onClick={handleScrollToLiveRate}>
+                  <Button size="lg" className="px-6 sm:px-8 h-12 text-base" onClick={handleScrollToLiveRate}>
                     Get Live Rate
                   </Button>
-                  <Button asChild size="lg" variant="outline" className="px-8">
+                  <Button asChild size="lg" variant="outline" className="px-6 sm:px-8 h-12 text-base">
                     <Link href="/track-transfer">Track a Transfer</Link>
                   </Button>
                 </div>
-                <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span>Built for treasury, fintech, and payroll teams shipping cross-border flows.</span>
+                <div className="flex items-center justify-center lg:justify-start gap-2 text-xs sm:text-sm text-muted-foreground px-2">
+                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="leading-relaxed">Built for treasury, fintech, and payroll teams shipping cross-border flows.</span>
                 </div>
-                <div className="flex flex-col gap-5 pt-10" id="partners">
-                  <div className="flex items-center justify-center lg:justify-start gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground/80">
-                    <ArrowUpRight className="h-4 w-4" />
+                <div className="flex flex-col gap-4 sm:gap-5 pt-6 sm:pt-10" id="partners">
+                  <div className="flex items-center justify-center lg:justify-start gap-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] sm:tracking-[0.35em] text-muted-foreground/80">
+                    <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Our partners</span>
                   </div>
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6">
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-4 md:gap-6">
                     {heroPartnerLogos.map((logo) => (
-                      <div key={logo.name} className="relative h-9 w-24 sm:h-12 sm:w-32 opacity-80 transition hover:opacity-100">
+                      <div key={logo.name} className="relative h-8 w-20 sm:h-9 sm:w-24 md:h-12 md:w-32 opacity-80 transition hover:opacity-100">
                         <Image
                           src={logo.src}
                           alt={logo.name}
                           fill
-                          sizes="128px"
+                          sizes="(max-width: 640px) 80px, (max-width: 768px) 96px, 128px"
                           className="object-contain"
                           priority={logo.priority}
                         />
@@ -238,7 +238,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              <div className="relative flex items-center justify-center lg:justify-end">
+              <div className="relative flex items-center justify-center lg:justify-end order-1 lg:order-2">
                 <div className="hidden md:block">
                   <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
                   <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
@@ -253,52 +253,52 @@ export default function LandingPage() {
           </div>
         </section>
         {/* Workflow Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
+        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-              <div className="space-y-6 max-w-2xl text-center lg:text-left">
-                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary">
+            <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+              <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm px-3 py-1">
                   Enterprise-grade orchestration
                 </Badge>
-                <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">
                   How Payvost orchestrates every transfer
                 </h2>
-                <p className="text-muted-foreground md:text-lg">
+                <p className="text-sm sm:text-base text-muted-foreground md:text-lg leading-relaxed">
                   From sign-up to settlement, Payvost provides automated workflows, visibility, and controls at every stage of the transfer lifecycle. Launch new corridors without rebuilding core infrastructure each time.
                 </p>
-                <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
-                  <Button asChild size="lg">
+                <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 lg:justify-start pt-2">
+                  <Button asChild size="lg" className="h-12 text-base">
                     <Link href="/register">
                       Launch a demo workspace
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" size="lg">
+                  <Button asChild variant="outline" size="lg" className="h-12 text-base">
                     <Link href="/support">
                       Talk to a payments expert
                     </Link>
                   </Button>
                 </div>
               </div>
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
                 {workflowStages.map((stage) => {
                   const Icon = stage.icon;
                   return (
                     <div
                       key={stage.title}
-                      className="group relative overflow-hidden rounded-2xl border border-primary/10 bg-background/80 p-6 shadow-[0_18px_60px_-48px_rgba(15,46,85,0.65)] transition hover:border-primary hover:shadow-[0_20px_70px_-40px_rgba(15,46,85,0.45)]"
+                      className="group relative overflow-hidden rounded-2xl border border-primary/10 bg-background/80 p-5 sm:p-6 shadow-[0_18px_60px_-48px_rgba(15,46,85,0.65)] transition hover:border-primary hover:shadow-[0_20px_70px_-40px_rgba(15,46,85,0.45)]"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                           <Icon className="h-5 w-5" />
                         </div>
-                        <span className="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground">
+                        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] sm:tracking-[0.4em] text-muted-foreground">
                           {stage.step}
                         </span>
                       </div>
-                      <h3 className="mt-6 text-lg font-semibold text-foreground">
+                      <h3 className="mt-4 sm:mt-6 text-base sm:text-lg font-semibold text-foreground">
                         {stage.title}
                       </h3>
-                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      <p className="mt-2 sm:mt-3 text-sm leading-relaxed text-muted-foreground">
                         {stage.description}
                       </p>
                       <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent opacity-0 transition group-hover:opacity-100" />
@@ -311,43 +311,43 @@ export default function LandingPage() {
         </section>
 
         {/* Developer Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-950 text-slate-100">
+        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-slate-950 text-slate-100">
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-              <div className="space-y-6 text-center lg:text-left">
-                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/20 bg-white/5 text-white/90">
+            <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+              <div className="space-y-4 sm:space-y-6 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/20 bg-white/5 text-white/90 text-xs sm:text-sm px-3 py-1">
                   Developer-first infrastructure
                 </Badge>
-                <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">
                   Ship cross-border experiences with clean, modern APIs
                 </h2>
-                <p className="text-slate-300 md:text-lg">
+                <p className="text-sm sm:text-base text-slate-300 md:text-lg leading-relaxed">
                   Build production-grade remittance flows, wallets, and compliance automations with Payvost SDKs, comprehensive documentation, and tooling that surfaces everything your engineers need.
                 </p>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-6 shadow-[0_24px_90px_-50px_rgba(0,0,0,0.75)]">
-                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6 shadow-[0_24px_90px_-50px_rgba(0,0,0,0.75)]">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] sm:tracking-[0.35em] text-slate-400">
                     <span>TypeScript SDK</span>
-                    <span>payments.ts</span>
+                    <span className="hidden sm:inline">payments.ts</span>
                   </div>
-                  <pre className="mt-4 overflow-x-auto text-sm leading-relaxed text-slate-100">
+                  <pre className="mt-3 sm:mt-4 overflow-x-auto text-xs sm:text-sm leading-relaxed text-slate-100">
                     <code>{developerCodeSample}</code>
                   </pre>
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 {developerHighlights.map((highlight) => {
                   const Icon = highlight.icon;
                   return (
-                    <div key={highlight.title} className="rounded-2xl border border-white/10 bg-slate-900/60 p-6">
+                    <div key={highlight.title} className="rounded-2xl border border-white/10 bg-slate-900/60 p-5 sm:p-6">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-                          <Icon className="h-6 w-6" />
+                        <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-primary/20 text-primary flex-shrink-0">
+                          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <div className="space-y-2">
-                          <h3 className="text-lg font-semibold text-white">
+                        <div className="space-y-1 sm:space-y-2">
+                          <h3 className="text-base sm:text-lg font-semibold text-white">
                             {highlight.title}
                           </h3>
-                          <p className="text-sm text-slate-300">
+                          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                             {highlight.description}
                           </p>
                         </div>
@@ -361,69 +361,69 @@ export default function LandingPage() {
         </section>
 
         {/* Countries Section */}
-        <section id="countries" className="relative w-full py-16 md:py-28 lg:py-32">
+        <section id="countries" className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="mx-auto flex flex-col items-center text-center space-y-4 max-w-3xl">
-              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.4em]">
+            <div className="mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 max-w-3xl">
+              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                 Global corridors
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Send money across the globe</h2>
-              <p className="text-muted-foreground md:text-lg">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">Send money across the globe</h2>
+              <p className="text-sm sm:text-base text-muted-foreground md:text-lg leading-relaxed px-2">
                 We combine local settlement rails, mobile wallets, and cash pickup networks to move value into the markets your customers care about most.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-8 sm:mt-12 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
               {popularCountries.map((country) => (
                 <Card
                   key={country.name}
                   className="group h-full overflow-hidden border-border/30 bg-background/70 backdrop-blur-md shadow-[0_20px_70px_-45px_rgba(10,70,95,0.35)] transition hover:border-primary/40 hover:shadow-[0_30px_90px_-40px_rgba(10,70,95,0.45)]"
                 >
-                  <CardContent className="p-6 flex flex-col gap-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative h-12 w-12 overflow-hidden rounded-full border border-border/50">
+                  <CardContent className="p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="relative h-10 w-10 sm:h-12 sm:w-12 overflow-hidden rounded-full border border-border/50 flex-shrink-0">
                           <Image
                             src={`/flag/${country.flag}`}
                             alt={`${country.name} flag`}
                             fill
-                            sizes="64px"
+                            sizes="(max-width: 640px) 40px, 48px"
                             className="object-cover"
                           />
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-foreground">{country.name}</p>
-                          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Popular route</p>
+                        <div className="min-w-0">
+                          <p className="text-base sm:text-lg font-semibold text-foreground truncate">{country.name}</p>
+                          <p className="text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[0.35em] text-muted-foreground">Popular route</p>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-primary/20">
+                      <Badge variant="secondary" className="rounded-full bg-primary/10 text-primary border-primary/20 text-xs whitespace-nowrap flex-shrink-0">
                         {country.currency}
                       </Badge>
                     </div>
-                    <div className="rounded-xl border border-dashed border-primary/20 bg-primary/5 p-4 text-left">
-                      <p className="text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-dashed border-primary/20 bg-primary/5 p-3 sm:p-4 text-left">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {country.hint}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Instant wallet, bank transfer</span>
-                      <ArrowRight className="h-4 w-4 text-primary group-hover:translate-x-1 transition" />
+                    <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+                      <span className="truncate">Instant wallet, bank transfer</span>
+                      <ArrowRight className="h-4 w-4 text-primary group-hover:translate-x-1 transition flex-shrink-0 ml-2" />
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="mt-8 sm:mt-10 flex flex-col gap-4 items-center text-center">
+              <div className="text-xs sm:text-sm text-muted-foreground px-4 leading-relaxed">
                 Coverage spans 180+ payout corridors across 70+ countries. More regions launch every quarter.
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild variant="outline" size="lg" className="border-primary/60 text-primary hover:bg-primary/10">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
+                <Button asChild variant="outline" size="lg" className="border-primary/60 text-primary hover:bg-primary/10 h-12 text-base">
                   <Link href="/support">Talk to corridor specialist</Link>
                 </Button>
-                <Button asChild size="lg">
+                <Button asChild size="lg" className="h-12 text-base">
                   <Link href="/fx-rates">View full corridor map</Link>
                 </Button>
               </div>
@@ -539,64 +539,64 @@ export default function LandingPage() {
           </div>
         </section>
         {/* FAQ Section */}
-        <section id="faq" className="relative w-full py-16 md:py-24 lg:py-32">
+        <section id="faq" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
-              <div className="space-y-8 text-center lg:text-left">
-                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.4em]">
+            <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
+              <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                   Support center
                 </Badge>
-                <div className="space-y-3 max-w-xl mx-auto lg:mx-0">
-                  <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Frequently asked questions</h2>
-                  <p className="text-muted-foreground md:text-lg">
+                <div className="space-y-2 sm:space-y-3 max-w-xl mx-auto lg:mx-0">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">Frequently asked questions</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground md:text-lg leading-relaxed">
                     Answers to the questions founders, finance teams, and developers ask before they launch with Payvost.
                   </p>
                 </div>
                 <div className="grid gap-4">
                   <Card className="border border-primary/30 bg-background/80 backdrop-blur-md shadow-[0_24px_80px_-50px_rgba(10,70,95,0.45)]">
-                    <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                        <MessageCircle className="h-6 w-6" />
+                    <CardContent className="flex flex-col gap-4 p-5 sm:p-6 sm:flex-row sm:items-start">
+                      <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary mx-auto sm:mx-0 flex-shrink-0">
+                        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-3 text-center sm:text-left">
                         <div className="space-y-1">
-                          <h3 className="text-lg font-semibold text-foreground">Chat with our specialists</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="text-base sm:text-lg font-semibold text-foreground">Chat with our specialists</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                             Live customer engineers are available 24/7 for launch-critical questions and integration guidance.
                           </p>
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                          <Button asChild size="sm">
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 justify-center sm:justify-start">
+                          <Button asChild size="sm" className="h-10 text-sm">
                             <Link href="/support">Start live chat</Link>
                           </Button>
-                          <Button asChild variant="outline" size="sm" className="border-primary/40 text-primary">
+                          <Button asChild variant="outline" size="sm" className="border-primary/40 text-primary h-10 text-sm">
                             <Link href="/docs">Browse docs</Link>
                           </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Card className="border border-border/40 bg-background/70 p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <CheckCircle2 className="h-5 w-5" />
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                    <Card className="border border-border/40 bg-background/70 p-4 sm:p-5">
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
+                          <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-foreground">Avg. response time</p>
-                          <p className="text-xs text-muted-foreground">Under 8 minutes during business hours</p>
+                          <p className="text-xs sm:text-sm font-semibold text-foreground">Avg. response time</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Under 8 minutes during business hours</p>
                         </div>
                       </div>
                     </Card>
-                    <Card className="border border-border/40 bg-background/70 p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <PhoneCall className="h-5 w-5" />
+                    <Card className="border border-border/40 bg-background/70 p-4 sm:p-5">
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
+                          <PhoneCall className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-foreground">Dedicated onboarding</p>
-                          <p className="text-xs text-muted-foreground">Enterprise teams receive a success manager from day one</p>
+                          <p className="text-xs sm:text-sm font-semibold text-foreground">Dedicated onboarding</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Enterprise teams receive a success manager from day one</p>
                         </div>
                       </div>
                     </Card>
@@ -604,18 +604,18 @@ export default function LandingPage() {
                 </div>
               </div>
               <Card className="border border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-50px_rgba(15,46,85,0.45)]">
-                <CardContent className="p-4 sm:p-6">
-                  <Accordion type="single" collapsible className="grid gap-4">
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                  <Accordion type="single" collapsible className="grid gap-3 sm:gap-4">
                     {faqs.map((faq) => (
                       <AccordionItem
                         key={faq.value}
                         value={faq.value}
                         className="overflow-hidden rounded-2xl border border-border/40 bg-background/70 transition-all data-[state=open]:border-primary/50 data-[state=open]:bg-primary/5"
                       >
-                        <AccordionTrigger className="px-5 py-4 text-left text-base font-semibold leading-snug text-foreground hover:text-primary data-[state=open]:text-primary">
+                        <AccordionTrigger className="px-4 sm:px-5 py-3 sm:py-4 text-left text-sm sm:text-base font-semibold leading-snug text-foreground hover:text-primary data-[state=open]:text-primary">
                           {faq.question}
                         </AccordionTrigger>
-                        <AccordionContent className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
+                        <AccordionContent className="px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
                           {faq.answer}
                         </AccordionContent>
                       </AccordionItem>
@@ -717,66 +717,66 @@ export default function LandingPage() {
         </section>
 
         {/* App Download CTA */}
-        <section className="relative w-full py-16 md:py-28 lg:py-32 overflow-hidden">
+        <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#021d47] via-[#03376e] to-[#056b8c]" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid items-center gap-12 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
-              <div className="space-y-8 text-center lg:text-left">
-                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/40 bg-white/10 text-white/90 uppercase tracking-[0.4em]">
+            <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
+              <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
+                <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-white/40 bg-white/10 text-white/90 uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                   Mobile banking in motion
                 </Badge>
-                <div className="space-y-4">
-                  <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Download the Payvost app</h2>
-                  <p className="max-w-xl text-base md:text-lg text-primary-foreground/85 mx-auto lg:mx-0">
+                <div className="space-y-3 sm:space-y-4">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">Download the Payvost app</h2>
+                  <p className="max-w-xl text-sm sm:text-base md:text-lg text-primary-foreground/85 mx-auto md:mx-0 leading-relaxed">
                     Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
                   </p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                   <Card className="border-white/10 bg-white/10 text-white">
-                    <CardContent className="flex items-start gap-3 p-5">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
-                        <Zap className="h-5 w-5" />
+                    <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
+                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/20 flex-shrink-0">
+                        <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
-                      <div className="space-y-1 text-left">
-                        <p className="text-sm font-semibold">Instant wallet funding</p>
-                        <p className="text-xs text-white/75">Move money in seconds with real-time notifications and smart retries.</p>
+                      <div className="space-y-0.5 sm:space-y-1 text-left">
+                        <p className="text-xs sm:text-sm font-semibold">Instant wallet funding</p>
+                        <p className="text-[10px] sm:text-xs text-white/75 leading-relaxed">Move money in seconds with real-time notifications and smart retries.</p>
                       </div>
                     </CardContent>
                   </Card>
                   <Card className="border-white/10 bg-white/10 text-white">
-                    <CardContent className="flex items-start gap-3 p-5">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
-                        <ShieldCheck className="h-5 w-5" />
+                    <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
+                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/20 flex-shrink-0">
+                        <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
-                      <div className="space-y-1 text-left">
-                        <p className="text-sm font-semibold">Enterprise-grade security</p>
-                        <p className="text-xs text-white/75">Biometric login, device attestation, and real-time fraud monitoring.</p>
+                      <div className="space-y-0.5 sm:space-y-1 text-left">
+                        <p className="text-xs sm:text-sm font-semibold">Enterprise-grade security</p>
+                        <p className="text-[10px] sm:text-xs text-white/75 leading-relaxed">Biometric login, device attestation, and real-time fraud monitoring.</p>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-start sm:gap-6">
-                  <div className="flex gap-4">
-                    <Link href="#" className="transform transition hover:scale-105">
-                      <Image src="/App Store.png" alt="Download on the App Store" width={180} height={54} className="drop-shadow-xl" />
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+                    <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
+                      <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
                     </Link>
-                    <Link href="#" className="transform transition hover:scale-105">
-                      <Image src="/Google Play (2).png" alt="Get it on Google Play" width={180} height={54} className="drop-shadow-xl" />
+                    <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
+                      <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
                     </Link>
                   </div>
-                  <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-                      <QrCode className="h-5 w-5" />
+                  <div className="flex items-center gap-2 sm:gap-3 rounded-2xl border border-white/20 bg-white/10 px-3 sm:px-4 py-2 sm:py-3">
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 flex-shrink-0">
+                      <QrCode className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <div className="text-left text-xs">
-                      <p className="font-semibold uppercase tracking-[0.3em] text-white/80">Scan to download</p>
-                      <p className="text-white/70">Open camera &amp; point at QR to get the app</p>
+                    <div className="text-left text-[10px] sm:text-xs">
+                      <p className="font-semibold uppercase tracking-[0.25em] sm:tracking-[0.3em] text-white/80">Scan to download</p>
+                      <p className="text-white/70 leading-relaxed hidden sm:block">Open camera &amp; point at QR to get the app</p>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="relative flex justify-center lg:justify-end">
-                <div className="relative mx-auto w-full max-w-md lg:mx-0">
+              <div className="relative flex justify-center md:justify-end order-1 md:order-2">
+                <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
                   <Image
                     src="/Dashboard.png"
                     alt="Payvost dashboard preview"
@@ -790,41 +790,41 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="bg-muted text-muted-foreground py-12">
+      <footer className="bg-muted text-muted-foreground py-10 sm:py-12">
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="w-full md:w-[30%] space-y-4">
               <Link href="#" className="flex items-center space-x-2">
-                <Icons.logo className="h-8" />
+                <Icons.logo className="h-7 sm:h-8" />
               </Link>
-              <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
+              <p className="text-xs sm:text-sm leading-relaxed">Stay up to date with the latest news, announcements, and articles.</p>
               <form className="flex w-full max-w-sm space-x-2">
-                <Input type="email" placeholder="Enter your email" />
-                <Button type="submit">Subscribe</Button>
+                <Input type="email" placeholder="Enter your email" className="text-sm h-10" />
+                <Button type="submit" className="h-10 text-sm px-4">Subscribe</Button>
               </form>
             </div>
-            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
-                <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Product</h4>
-                <ul className="space-y-2">
+            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+                <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-sm sm:text-base font-semibold text-foreground">Product</h4>
+                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><Link href="#features" className="hover:text-primary transition-colors">Features</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
                 </ul>
                 </div>
-                <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Company</h4>
-                <ul className="space-y-2">
+                <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-sm sm:text-base font-semibold text-foreground">Company</h4>
+                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
                     <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
                     <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
                     <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
                 </ul>
                 </div>
-                <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Resources</h4>
-                <ul className="space-y-2">
+                <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-sm sm:text-base font-semibold text-foreground">Resources</h4>
+                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
                     <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
                     <li><Link href="/fx-rates" className="hover:text-primary transition-colors">Live FX Rates</Link></li>
@@ -832,23 +832,23 @@ export default function LandingPage() {
                     <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
                 </ul>
                 </div>
-                <div className="space-y-4">
-                <h4 className="font-semibold text-foreground">Policies</h4>
-                <ul className="space-y-2">
+                <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-sm sm:text-base font-semibold text-foreground">Policies</h4>
+                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                     <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
                     <li><Link href="/terms" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
                 </ul>
                 </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-            <div className="text-sm text-center sm:text-left">
+          <div className="mt-8 pt-6 sm:pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-xs sm:text-sm text-center sm:text-left">
                 <p>&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
             </div>
-            <div className="flex space-x-4 mt-4 sm:mt-0">
-              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
+            <div className="flex space-x-4">
+              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
+              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
+              <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
             </div>
           </div>
         </div>
