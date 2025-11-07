@@ -183,7 +183,7 @@ export default function LandingPage() {
       <SiteHeader />
       <main className="flex-1">
     {/* Hero Section */}
-  <section className="relative overflow-hidden -mt-8 md:-mt-8 lg:-mt-10 pt-6 sm:pt-8">
+  <section className="relative overflow-hidden -mt-12 md:-mt-8 lg:-mt-10 pt-6 sm:pt-8">
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-x-0 top-10 h-32 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
             <div className="hidden md:block">
@@ -324,7 +324,7 @@ export default function LandingPage() {
                 <p className="text-sm sm:text-base text-slate-300 md:text-lg leading-relaxed">
                   Build production-grade remittance flows, wallets, and compliance automations with Payvost SDKs, comprehensive documentation, and tooling that surfaces everything your engineers need.
                 </p>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6 shadow-[0_24px_90px_-50px_rgba(0,0,0,0.75)]">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6 shadow-[0_24px_90px_-50px_rgba(0,0,0,0.75)] text-left">
                   <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] sm:tracking-[0.35em] text-slate-400">
                     <span>TypeScript SDK</span>
                     <span className="hidden sm:inline">payments.ts</span>
