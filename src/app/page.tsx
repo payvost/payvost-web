@@ -183,7 +183,7 @@ export default function LandingPage() {
       <SiteHeader />
       <main className="flex-1">
     {/* Hero Section */}
-  <section className="relative overflow-hidden -mt-3 md:-mt-8 lg:-mt-10">
+  <section className="relative overflow-hidden -mt-8 md:-mt-8 lg:-mt-10">
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-x-0 top-10 h-32 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
             <div className="hidden md:block">
