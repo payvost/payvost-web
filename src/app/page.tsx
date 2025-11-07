@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, Wallet2, Layers, Users, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, PenSquare } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, Wallet2, Layers, Users, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { LiveRateChecker } from "@/components/live-rate-checker";
@@ -208,46 +208,52 @@ const faqs = [
   },
 ];
 
-const blogPosts = [
-  {
-    slug: "/blog/payvost-partners-with-google",
-    badge: "Product news",
-    title: "Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management",
-    subtitle: "Payvost partners with Google",
-    summary:
-      "A brief summary of the blog post goes here. Catch the reader's interest and give them a reason to click and read more about this exciting topic.",
-    image: {
-      src: "https://images.unsplash.com/photo-1523475472560-d2df97ec485c?auto=format&fit=crop&w=1200&q=80",
-      hint: "team collaborating in modern office",
-    },
-  },
-  {
-    slug: "/blog/ai-in-remittance",
-    badge: "AI in remittance",
-    title: "The Future of Remittances: How AI is Changing the Game",
-    subtitle: "AI in remittance",
-    summary:
-      "Discover the revolutionary impact of artificial intelligence on cross-border payments.",
-    image: {
-      src: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
-      hint: "developer working with data visualization",
-    },
-  },
-  {
-    slug: "/blog/secure-transfers",
-    badge: "Security",
-    title: "5 Tips for Secure International Money Transfers",
-    subtitle: "Secure transfers",
-    summary:
-      "Protect your money and personal information with these essential security tips.",
-    image: {
-      src: "https://images.unsplash.com/photo-1517430816045-df4b7de11d1d?auto=format&fit=crop&w=1200&q=80",
-      hint: "secure vault with blue lighting",
-    },
-  },
-];
+const developerCodeSample = `import { Payvost } from \'@payvost/sdk\';
 
-/* Hero Section */
+const client = new Payvost({
+  apiKey: process.env.PAYVOST_API_KEY!,
+  environment: 'sandbox',
+});
+
+const quote = await client.fx.createQuote({
+  sourceCurrency: 'USD',
+  targetCurrency: 'NGN',
+  amount: '5000',
+  customerReference: 'INV-59210',
+  expiresInSeconds: 120,
+});
+
+await client.payouts.create({
+  quoteId: quote.id,
+  beneficiaryId: 'bene_48f0a9',
+  idempotencyKey: crypto.randomUUID(),
+});
+
+console.log('Transfer committed:', quote.lockedRate);`;
+
+
+export default function LandingPage() {
+  const { blog: blogImages } = placeholderImageData;
+  const [showLiveRate, setShowLiveRate] = useState(false);
+  const rateCardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (showLiveRate && rateCardRef.current) {
+      rateCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showLiveRate]);
+
+  const handleRevealLiveRate = () => {
+    if (!showLiveRate) {
+      setShowLiveRate(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <SiteHeader />
+      <main className="flex-1">
+    {/* Hero Section */}
     <section className="relative overflow-hidden -mt-6 md:-mt-8 lg:-mt-10">
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-18rem] right-[-14rem] h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
