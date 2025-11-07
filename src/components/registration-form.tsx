@@ -33,7 +33,6 @@ import { CitySelector } from '@/components/location/city-selector';
 import { AddressAutocomplete, AddressSelection } from '@/components/location/address-autocomplete';
 import {
   SUPPORTED_COUNTRIES,
-  SUPPORTED_COUNTRY_MAP,
   DEFAULT_KYC_CONFIG,
   KYC_DYNAMIC_FIELD_NAMES,
   type CountryKycConfig,
@@ -65,6 +64,49 @@ for (const field of KYC_DYNAMIC_FIELD_NAMES) {
 }
 
 const dynamicFieldsSchema = z.object(dynamicFieldsShape);
+
+interface RemoteStateResponse {
+  name: string;
+  state_code?: string;
+  isoCode?: string;
+}
+
+const isRemoteState = (value: unknown): value is RemoteStateResponse => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.name !== 'string' || record.name.trim().length === 0) {
+    return false;
+  }
+
+  if (record.state_code !== undefined && typeof record.state_code !== 'string') {
+    return false;
+  }
+
+  if (record.isoCode !== undefined && typeof record.isoCode !== 'string') {
+    return false;
+  }
+
+  return true;
+};
+
+type ErrorWithCode = {
+  code?: string;
+  message?: string;
+};
+
+const isErrorWithCode = (value: unknown): value is ErrorWithCode => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  const hasCode = typeof record.code === 'string';
+  const hasMessage = typeof record.message === 'string';
+  return hasCode || hasMessage;
+};
 
 const registrationSchema = z
   .object({
@@ -211,7 +253,7 @@ export function RegistrationForm() {
         const snap = await fsGetDocs(q);
         if (!active) return;
         setUsernameAvailable(snap.empty);
-      } catch (e) {
+      } catch {
         if (!active) return;
         setUsernameAvailable(null);
       } finally {
@@ -261,7 +303,7 @@ export function RegistrationForm() {
             return;
           }
         }
-      } catch (error) {
+      } catch {
         // Fall back to IP-based lookup below
       }
 
@@ -273,7 +315,7 @@ export function RegistrationForm() {
             applyDetectedCountry(ipData.countryCode);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Could not detect user location', error);
       }
     };
@@ -319,17 +361,16 @@ export function RegistrationForm() {
         return;
       }
       const parsed: StateOption[] = Array.isArray(result?.data?.states)
-        ? result.data.states
-            .filter((state: any) => typeof state?.name === 'string' && state.name.trim().length > 0)
-            .map((state: any) => ({
-              name: state.name.trim(),
-              code:
-                typeof state.state_code === 'string' && state.state_code.trim().length > 0
-                  ? state.state_code.trim()
-                  : typeof state.isoCode === 'string' && state.isoCode.trim().length > 0
-                    ? state.isoCode.trim()
-                    : undefined,
-            }))
+        ? (result.data.states as unknown[])
+            .filter(isRemoteState)
+            .map((state) => {
+              const stateCode = state.state_code?.trim();
+              const isoCode = state.isoCode?.trim();
+              return {
+                name: state.name.trim(),
+                code: stateCode && stateCode.length > 0 ? stateCode : isoCode && isoCode.length > 0 ? isoCode : undefined,
+              };
+            })
             .sort((a: StateOption, b: StateOption) => a.name.localeCompare(b.name))
         : [];
       setStateOptions(parsed);
@@ -387,9 +428,9 @@ export function RegistrationForm() {
         return;
       }
       const parsed: string[] = Array.isArray(result?.data)
-        ? result.data
-            .filter((city: string) => typeof city === 'string' && city.trim().length > 0)
-            .map((city: string) => city.trim())
+        ? (result.data as unknown[])
+            .filter((city): city is string => typeof city === 'string' && city.trim().length > 0)
+            .map((city) => city.trim())
             .sort((a: string, b: string) => a.localeCompare(b))
         : [];
       setCityOptions(parsed);
@@ -772,7 +813,7 @@ export function RegistrationForm() {
         throw new Error(error.error || 'Registration failed');
       }
 
-      const { uid, customToken } = await registerResponse.json();
+  const { customToken } = await registerResponse.json();
 
       // 2. Sign in with custom token
       await signInWithCustomToken(auth, customToken);
@@ -883,15 +924,16 @@ export function RegistrationForm() {
       
       // We will send verification email after PIN is set (in onPinCompleted)
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration process failed:", error);
       let errorMessage = "An unknown error occurred during registration.";
-      if (error.code === 'auth/email-already-in-use') {
+      const errorDetails = isErrorWithCode(error) ? error : null;
+      if (errorDetails?.code === 'auth/email-already-in-use') {
         errorMessage = 'This email is already registered. Please login or use a different email.';
-      } else if (error.code === 'storage/unauthorized') {
+      } else if (errorDetails?.code === 'storage/unauthorized') {
         errorMessage = 'There was a permission issue uploading your documents. Please check storage rules.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (errorDetails?.message) {
+        errorMessage = errorDetails.message;
       }
       toast({
         title: "Registration Failed",
@@ -1382,8 +1424,14 @@ export function RegistrationForm() {
           try {
             await sendEmailVerification(auth.currentUser);
             toast({ title: 'Registration Successful!', description: 'A verification link has been sent to your email.' });
-          } catch (e: any) {
-            toast({ title: 'Could not send verification email', description: e?.message || 'Please check your email later.' });
+          } catch (error: unknown) {
+            let message = 'Please check your email later.';
+            if (isErrorWithCode(error) && error.message) {
+              message = error.message;
+            } else if (error instanceof Error && error.message) {
+              message = error.message;
+            }
+            toast({ title: 'Could not send verification email', description: message });
           }
           router.push('/verify-email');
         }}
