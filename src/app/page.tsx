@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -264,8 +263,8 @@ export default function LandingPage() {
               </div>
               <div className="relative flex items-center justify-center order-2 mt-6 sm:mt-8 lg:order-none lg:justify-end lg:mt-0">
                 <div className="hidden md:block">
-                  <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
-                  <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
+                  <div className="absolute -top-10 left-14 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
+                  <div className="absolute -bottom-10 right-10 h-32 w-32 rounded-full bg-primary/25 blur-3xl" />
                 </div>
                 <div ref={rateCardRef} className="relative w-full max-w-xl mx-auto lg:mx-0">
                   <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
