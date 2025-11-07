@@ -818,29 +818,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-
-        {/* Final CTA */}
-        <section className="w-full py-12 md:py-20 lg:py-28">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="rounded-2xl bg-gradient-to-r from-primary to-secondary p-8 md:p-12 text-white shadow-lg">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div>
-                  <h2 className="text-2xl md:text-3xl font-bold">Ready to power global payouts?</h2>
-                  <p className="mt-2 text-primary-foreground/90">Start with a sandbox, or talk to our team about large-volume onboarding and custom integrations.</p>
-                </div>
-                <div className="flex gap-3">
-                  <Button asChild size="lg">
-                    <Link href="/register">Get Started — It's free</Link>
-                  </Button>
-                  <Button asChild variant="outline" size="lg">
-                    <Link href="/contact">Contact Sales</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Blog Section */}
         <section id="blog" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6">
