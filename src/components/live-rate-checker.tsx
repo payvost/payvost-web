@@ -112,8 +112,8 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
   };
 
   return (
-    <Card className="w-full border-2 shadow-xl">
-      <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-background pb-4">
+    <Card className="w-full border-2">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-2xl font-bold">Check Live Rates</CardTitle>
@@ -261,7 +261,7 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
         ) : convertedAmount !== null && rate !== null ? (
           <div className="space-y-4">
             {/* Exchange Rate Display */}
-            <div className="p-5 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 rounded-xl border-2 border-primary/10 shadow-sm">
+            <div className="p-5 rounded-xl border-2 border-primary/10 bg-muted/30">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">

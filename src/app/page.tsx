@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, Wallet2, Layers, Users, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall } from "lucide-react";
-import React, { useState, useEffect, useRef } from "react";
+import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers } from "lucide-react";
+import React, { useRef } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
@@ -65,75 +65,11 @@ const testimonials = [
   },
 ];
 
-const heroMetrics = [
-  { value: "120K+", label: "Verified customers", helper: "Serving scale-ups, platforms, and global payroll teams" },
-  { value: "$5.2B", label: "Processed volume", helper: "Settled across 12 clearing partners in the past 12 months" },
-  { value: "180+", label: "Payout corridors", helper: "Real-time payments, mobile wallets, and cash pickup coverage" },
-];
-
-const heroStacks = [
-  "Node.js SDK",
-  "Python SDK",
-  "React Native Kit",
-  "Webhook Sandbox",
-  "GraphQL (beta)",
-];
-
-const heroFeatureTiles = [
-  {
-    icon: Code2,
-    title: "SDKs & client libraries",
-    description: "Ship global payouts with maintained packages for TypeScript, Python, and mobile stacks.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Regulated everywhere",
-    description: "Licensed MSB coverage, bank-grade compliance, and layered fraud controls ready out of the box.",
-  },
-  {
-    icon: BarChart3,
-    title: "Treasury analytics",
-    description: "Monitor FX spreads, settlement windows, and liquidity in real-time dashboards.",
-  },
-];
-
 const heroPartnerLogos = [
   { name: "Google", src: "/Partners/Google_2015_logo.svg.png", priority: true },
   { name: "Visa", src: "/Partners/Visa_Inc._logo.svg.png" },
   { name: "Mastercard", src: "/Partners/Mastercard-logo.png" },
-];
-
-const platformPillars = [
-  {
-    title: "Unified treasury workspace",
-    description: "Monitor liquidity, automate reconciliations, and manage counterparties from a single control plane.",
-    icon: Wallet2,
-    bullets: [
-      "Real-time balances across nostro, mobile wallet, and card endpoints",
-      "Configurable approval chains for treasury and compliance teams",
-      "Dynamic markups with smart FX hedging windows",
-    ],
-  },
-  {
-    title: "Programmable payouts & FX",
-    description: "Price, split, and settle money movement with flexible routing rules and smart retries.",
-    icon: Layers,
-    bullets: [
-      "Route via local settlement rails or instant wallets automatically",
-      "Guarantee idempotent payouts with contextual error handling",
-      "Expose customer-ready rate quotes in less than 200 ms",
-    ],
-  },
-  {
-    title: "Customer lifecycle automation",
-    description: "Onboard, verify, and retain global users with guided KYC and proactive communications.",
-    icon: Users,
-    bullets: [
-      "KYC/KYB orchestration with rules per corridor",
-      "Risk scoring blended with machine learning fraud signals",
-      "Lifecycle messaging and webhook triggers for every status change",
-    ],
-  },
+  { name: "Microsoft", src: "/Partners/Microsoft_logo_(2012).svg.png" },
 ];
 
 const workflowStages = [
@@ -234,18 +170,11 @@ console.log('Transfer committed:', quote.lockedRate);`;
 
 export default function LandingPage() {
   const { blog: blogImages } = placeholderImageData;
-  const [showLiveRate, setShowLiveRate] = useState(false);
   const rateCardRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (showLiveRate && rateCardRef.current) {
+  const handleScrollToLiveRate = () => {
+    if (rateCardRef.current) {
       rateCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [showLiveRate]);
-
-  const handleRevealLiveRate = () => {
-    if (!showLiveRate) {
-      setShowLiveRate(true);
     }
   };
 
@@ -275,15 +204,9 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                  {!showLiveRate ? (
-                    <Button size="lg" className="px-8" onClick={handleRevealLiveRate}>
-                      Get Live Rate
-                    </Button>
-                  ) : (
-                    <Button asChild size="lg" className="px-8">
-                      <Link href="/register">{"> Send Money"}</Link>
-                    </Button>
-                  )}
+                  <Button size="lg" className="px-8" onClick={handleScrollToLiveRate}>
+                    Get Live Rate
+                  </Button>
                   <Button asChild size="lg" variant="outline" className="px-8">
                     <Link href="/track-transfer">Track a Transfer</Link>
                   </Button>
@@ -291,34 +214,6 @@ export default function LandingPage() {
                 <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span>Built for treasury, fintech, and payroll teams shipping cross-border flows.</span>
-                </div>
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-6">
-                  {heroStacks.map((stack) => (
-                    <Badge
-                      key={stack}
-                      variant="secondary"
-                      className="bg-primary/10 text-primary border-primary/20"
-                    >
-                      {stack}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="grid gap-4 pt-8 sm:grid-cols-3">
-                  {heroMetrics.map((metric) => (
-                    <Card key={metric.label} className="border-border/40 bg-background/70 backdrop-blur-md shadow-[0_20px_70px_-35px_rgba(11,81,255,0.7)]">
-                      <CardContent className="px-6 py-5">
-                        <p className="text-2xl font-semibold text-foreground sm:text-3xl">{metric.value}</p>
-                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground/90">
-                          {metric.label}
-                        </p>
-                        {metric.helper ? (
-                          <p className="mt-2 text-xs text-muted-foreground/80">
-                            {metric.helper}
-                          </p>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-                  ))}
                 </div>
                 <div className="flex flex-col gap-5 pt-10" id="partners">
                   <div className="flex items-center justify-center lg:justify-start gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground/80">
@@ -345,107 +240,14 @@ export default function LandingPage() {
                 <div className="absolute -top-24 left-14 h-64 w-64 rounded-full bg-primary/15 blur-3xl" />
                 <div className="absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
                 <div ref={rateCardRef} className="relative w-full max-w-xl">
-                  {showLiveRate ? (
-                    <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
-                      <LiveRateChecker autoFetch sendMoneyHref="/register" />
-                    </div>
-                  ) : (
-                    <Card className="border-border/40 bg-background/85 backdrop-blur-2xl shadow-[0_32px_120px_-60px_rgba(0,0,0,0.65)]">
-                      <CardContent className="space-y-6 p-8">
-                        <div className="flex items-center gap-3">
-                          <Sparkles className="h-5 w-5 text-primary" />
-                          <div>
-                            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.4em] text-primary/80">
-                              Live FX sandbox
-                            </p>
-                            <p className="text-lg font-semibold text-foreground">
-                              Activate live rates to reveal market depth and real spreads
-                            </p>
-                          </div>
-                        </div>
-                        <ul className="space-y-4">
-                          {heroFeatureTiles.map((feature) => {
-                            const Icon = feature.icon;
-                            return (
-                              <li key={feature.title} className="flex items-start gap-3">
-                                <Icon className="mt-1 h-5 w-5 text-primary" />
-                                <div>
-                                  <p className="text-sm font-semibold text-foreground">{feature.title}</p>
-                                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        <div className="grid grid-cols-2 gap-4 border-t border-border/30 pt-4">
-                          {heroMetrics.slice(0, 2).map((metric) => (
-                            <div key={`preview-${metric.label}`} className="rounded-xl border border-border/40 bg-muted/30 p-4">
-                              <p className="text-lg font-semibold text-foreground">{metric.value}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{metric.label}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                  <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
+                    <LiveRateChecker autoFetch sendMoneyHref="/register" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
-        {/* Platform Overview Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="mx-auto max-w-3xl text-center space-y-4">
-              <Badge variant="outline" className="mx-auto w-fit border-primary/40 bg-primary/10 text-primary">
-                Built for treasury, fintech & platforms
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
-                An operating system for cross-border money movement
-              </h2>
-              <p className="text-muted-foreground md:text-lg">
-                Payvost brings global banking partners, programmatic FX, and compliance automation under one roof so you can launch new corridors, products, and revenue lines faster than ever.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {platformPillars.map((pillar) => {
-                const Icon = pillar.icon;
-                return (
-                  <Card
-                    key={pillar.title}
-                    className="relative h-full border-border/40 bg-background/80 backdrop-blur-md shadow-[0_20px_70px_-45px_rgba(10,70,95,0.35)]"
-                  >
-                    <CardHeader className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                          {pillar.title}
-                        </CardTitle>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {pillar.description}
-                      </p>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <ul className="space-y-3">
-                        {pillar.bullets.map((bullet) => (
-                          <li key={bullet} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
         {/* Workflow Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
           <div className="container mx-auto px-4 md:px-6">
@@ -909,34 +711,74 @@ export default function LandingPage() {
         </section>
 
         {/* App Download CTA */}
-        <section className="w-full py-12 md:py-24 lg:py-32">
+        <section className="relative w-full py-16 md:py-28 lg:py-32 overflow-hidden">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#021d47] via-[#03376e] to-[#056b8c]" />
           <div className="container mx-auto px-4 md:px-6">
-            <div className="relative bg-[#002f70] text-primary-foreground rounded-[15px] p-8 md:p-12 overflow-hidden">
-              <div className="grid lg:grid-cols-2 gap-8 items-center">
-                  <div className="text-center lg:text-left z-10">
-                      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Download the mobile app</h2>
-                      <p className="mt-4 max-w-xl text-lg text-primary-foreground/80 mx-auto lg:mx-0">
-                          Send money locally, pay bills globally, receive money, save, pay bills and do more with the Payvost app.
-                      </p>
-                      <div className="mt-8 flex justify-center lg:justify-start gap-4">
-                          <Link href="#">
-                              <Image src="/App Store.png" alt="Download on the App Store" width={180} height={54} />
-                          </Link>
-                           <Link href="#">
-                              <Image src="/Google Play (2).png" alt="Get it on Google Play" width={180} height={54} />
-                          </Link>
+            <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
+              <div className="space-y-8 text-center lg:text-left">
+                <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/40 bg-white/10 text-white/90 uppercase tracking-[0.4em]">
+                  Mobile banking in motion
+                </Badge>
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Download the Payvost app</h2>
+                  <p className="max-w-xl text-base md:text-lg text-primary-foreground/85 mx-auto lg:mx-0">
+                    Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Card className="border-white/10 bg-white/10 text-white">
+                    <CardContent className="flex items-start gap-3 p-5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+                        <Zap className="h-5 w-5" />
                       </div>
+                      <div className="space-y-1 text-left">
+                        <p className="text-sm font-semibold">Instant wallet funding</p>
+                        <p className="text-xs text-white/75">Move money in seconds with real-time notifications and smart retries.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-white/10 bg-white/10 text-white">
+                    <CardContent className="flex items-start gap-3 p-5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1 text-left">
+                        <p className="text-sm font-semibold">Enterprise-grade security</p>
+                        <p className="text-xs text-white/75">Biometric login, device attestation, and real-time fraud monitoring.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-start sm:gap-6">
+                  <div className="flex gap-4">
+                    <Link href="#" className="transform transition hover:scale-105">
+                      <Image src="/App Store.png" alt="Download on the App Store" width={180} height={54} className="drop-shadow-xl" />
+                    </Link>
+                    <Link href="#" className="transform transition hover:scale-105">
+                      <Image src="/Google Play (2).png" alt="Get it on Google Play" width={180} height={54} className="drop-shadow-xl" />
+                    </Link>
                   </div>
-                  <div className="absolute -right-24 -bottom-24 opacity-20 lg:opacity-100 lg:static flex justify-center items-end">
-                    <Image
-                      src="/Payvost mockup.png"
-                      alt="Payvost App Dashboard"
-                      width={400}
-                      height={300}
-                      data-ai-hint="app dashboard"
-                      className="rounded-lg shadow-2xl"
-                    />
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                      <QrCode className="h-5 w-5" />
+                    </div>
+                    <div className="text-left text-xs">
+                      <p className="font-semibold uppercase tracking-[0.3em] text-white/80">Scan to download</p>
+                      <p className="text-white/70">Open camera &amp; point at QR to get the app</p>
+                    </div>
                   </div>
+                </div>
+              </div>
+              <div className="relative flex justify-center lg:justify-end">
+                <div className="relative mx-auto w-full max-w-md lg:mx-0">
+                  <Image
+                    src="/Dashboard.png"
+                    alt="Payvost dashboard preview"
+                    width={480}
+                    height={360}
+                    className="h-auto w-full rounded-3xl"
+                  />
+                </div>
               </div>
             </div>
           </div>
