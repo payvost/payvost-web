@@ -6,6 +6,13 @@ export const dynamic = 'force-dynamic';
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    { error: 'This endpoint requires POST with country and state information' },
+    { status: 400 }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json().catch(() => ({}));
