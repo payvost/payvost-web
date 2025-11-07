@@ -5,7 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { Globe, Wallet, BarChart, Landmark, ChevronDown } from "lucide-react";
+import { Globe, Wallet, BarChart, Landmark, ChevronDown, CreditCard, FileText, Code, Users, ShieldCheck, DollarSign } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -14,30 +14,87 @@ import { countries, Country } from "@/lib/countries";
 import { ThemeSwitcher } from './theme-switcher';
 
 const products: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
-  {
-    title: "International Transfers",
-    href: "/#",
-    description: "Send money across borders with competitive exchange rates and low fees.",
-    icon: <Globe className="h-5 w-5" />
-  },
-  {
-    title: "Multi-Currency Wallets",
-    href: "/dashboard",
-    description: "Hold, manage, and spend in multiple currencies from a single account.",
-    icon: <Wallet className="h-5 w-5" />
-  },
-  {
-    title: "Live Exchange Rates",
-    href: "/fx-rates",
-    description: "Get real-time FX rates to make informed decisions for your transfers.",
-    icon: <BarChart className="h-5 w-5" />
-  },
-  {
-    title: "Local Bank Payouts",
-    href: "/#countries",
-    description: "Send funds directly to bank accounts in over 150 countries.",
-    icon: <Landmark className="h-5 w-5" />
-  },
+    {
+        title: "Payments",
+        href: "/payments",
+        description: "Accept and send money globally with robust reconciliation and low fees.",
+        icon: <CreditCard className="h-5 w-5" />
+    },
+    {
+        title: "Payouts",
+        href: "/payouts",
+        description: "Fast international settlements to bank accounts and cards.",
+        icon: <DollarSign className="h-5 w-5" />
+    },
+    {
+        title: "Accounts",
+        href: "/accounts",
+        description: "Business and multi-currency accounts with local details in major markets.",
+        icon: <Wallet className="h-5 w-5" />
+    },
+    {
+        title: "Cards",
+        href: "/cards",
+        description: "Issue physical and virtual cards with spend controls and reporting.",
+        icon: <CreditCard className="h-5 w-5" />
+    },
+    {
+        title: "Invoicing",
+        href: "/invoicing",
+        description: "Create, send and track invoices — built for businesses at scale.",
+        icon: <FileText className="h-5 w-5" />
+    },
+    {
+        title: "Developer Tools",
+        href: "/developers",
+        description: "APIs, SDKs, and sandbox environments for deep integrations.",
+        icon: <Code className="h-5 w-5" />
+    },
+    {
+        title: "Escrow",
+        href: "/escrow",
+        description: "Secure funds in transit for marketplaces and high-value deals.",
+        icon: <ShieldCheck className="h-5 w-5" />
+    },
+    {
+        title: "Analytics & Automation",
+        href: "/analytics",
+        description: "Insights, reporting and automation to optimize cashflow.",
+        icon: <BarChart className="h-5 w-5" />
+    },
+];
+
+const solutions: { title: string; href: string; description?: string }[] = [
+    { title: "For Businesses", href: "/solutions/business", description: "Manage global payments, payroll and compliance." },
+    { title: "For Individuals", href: "/solutions/individuals", description: "Personal accounts, saving and sending money abroad." },
+    { title: "For Startups", href: "/solutions/startups", description: "Scale quickly with embedded finance and flexible APIs." },
+    { title: "For Developers", href: "/solutions/developers", description: "Tools, SDKs, and sample integrations to ship faster." },
+    { title: "For Marketplaces", href: "/solutions/marketplaces", description: "Handle multi-party flows, split payments and fees." },
+];
+
+const company: { title: string; href: string }[] = [
+    { title: "About Us", href: "/about" },
+    { title: "Careers", href: "/careers" },
+    { title: "Partners", href: "/partners" },
+    { title: "Press & Media", href: "/press" },
+    { title: "Compliance & Security", href: "/compliance" },
+];
+
+const resources: { title: string; href: string }[] = [
+    { title: "Blog", href: "/blog" },
+    { title: "Help Center", href: "/help" },
+    { title: "Documentation", href: "/docs" },
+    { title: "Learning Hub", href: "/academy" },
+    { title: "Case Studies", href: "/case-studies" },
+    { title: "Community", href: "/community" },
+];
+
+const developerLinks: { title: string; href: string }[] = [
+    { title: "API Reference", href: "/docs/api" },
+    { title: "SDKs & Libraries", href: "/docs/sdks" },
+    { title: "Webhooks & Sandbox", href: "/docs/webhooks" },
+    { title: "Status", href: "/status" },
+    { title: "Integration Guides", href: "/docs/guides" },
 ];
 
 const ListItem = React.forwardRef<
@@ -149,7 +206,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 <Icons.logo className="h-8" />
             </Link>
             {/* Desktop Navigation */}
-            <nav className="ml-auto hidden lg:flex gap-4 sm:gap-6">
+            <nav className="hidden lg:flex gap-6 ml-8">
                 <NavigationMenu>
                     <NavigationMenuList>
                         <NavigationMenuItem>
@@ -157,18 +214,19 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                 <Link href="/">Home</Link>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
+
                         <NavigationMenuItem>
                             <NavigationMenuTrigger>Products</NavigationMenuTrigger>
                             <NavigationMenuContent>
-                                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                                <ul className="grid w-[520px] gap-3 p-4 md:w-[700px] md:grid-cols-2 lg:w-[820px]">
                                     {products.map((product) => (
                                         <ListItem
                                             key={product.title}
                                             title={product.title}
                                             href={product.href}
                                         >
-                                            <div className="flex items-start gap-2">
-                                                {product.icon}
+                                            <div className="flex items-start gap-3">
+                                                <div className="text-muted-foreground mt-0.5">{product.icon}</div>
                                                 <span className="text-sm">{product.description}</span>
                                             </div>
                                         </ListItem>
@@ -176,15 +234,80 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                 </ul>
                             </NavigationMenuContent>
                         </NavigationMenuItem>
+
+                        <NavigationMenuItem>
+                            <NavigationMenuTrigger>Solutions</NavigationMenuTrigger>
+                            <NavigationMenuContent>
+                                <ul className="w-[300px] p-4 space-y-1">
+                                    {solutions.map(s => (
+                                        <li key={s.title}>
+                                            <NavigationMenuLink asChild>
+                                                <Link href={s.href} className="block rounded-md p-2 hover:bg-accent">
+                                                    <div className="text-sm font-medium">{s.title}</div>
+                                                    <div className="text-xs text-muted-foreground">{s.description}</div>
+                                                </Link>
+                                            </NavigationMenuLink>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </NavigationMenuContent>
+                        </NavigationMenuItem>
+
+                        <NavigationMenuItem>
+                            <NavigationMenuTrigger>Developers</NavigationMenuTrigger>
+                            <NavigationMenuContent>
+                                <ul className="w-[320px] p-4 space-y-1">
+                                    {developerLinks.map(d => (
+                                        <li key={d.title}>
+                                            <NavigationMenuLink asChild>
+                                                <Link href={d.href} className="block rounded-md p-2 hover:bg-accent">
+                                                    <div className="text-sm font-medium">{d.title}</div>
+                                                </Link>
+                                            </NavigationMenuLink>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </NavigationMenuContent>
+                        </NavigationMenuItem>
+
                         <NavigationMenuItem>
                             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                                <Link href="/about">About Us</Link>
+                                <Link href="/pricing">Pricing</Link>
                             </NavigationMenuLink>
                         </NavigationMenuItem>
+
                         <NavigationMenuItem>
-                            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                                <Link href="/blog">Blog</Link>
-                            </NavigationMenuLink>
+                            <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
+                            <NavigationMenuContent>
+                                <ul className="w-[320px] p-4 space-y-1">
+                                    {resources.map(r => (
+                                        <li key={r.title}>
+                                            <NavigationMenuLink asChild>
+                                                <Link href={r.href} className="block rounded-md p-2 hover:bg-accent">
+                                                    <div className="text-sm font-medium">{r.title}</div>
+                                                </Link>
+                                            </NavigationMenuLink>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </NavigationMenuContent>
+                        </NavigationMenuItem>
+
+                        <NavigationMenuItem>
+                            <NavigationMenuTrigger>Company</NavigationMenuTrigger>
+                            <NavigationMenuContent>
+                                <ul className="w-[300px] p-4 space-y-1">
+                                    {company.map(c => (
+                                        <li key={c.title}>
+                                            <NavigationMenuLink asChild>
+                                                <Link href={c.href} className="block rounded-md p-2 hover:bg-accent">
+                                                    <div className="text-sm font-medium">{c.title}</div>
+                                                </Link>
+                                            </NavigationMenuLink>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </NavigationMenuContent>
                         </NavigationMenuItem>
                     </NavigationMenuList>
                 </NavigationMenu>
@@ -199,8 +322,8 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </Button>
                 )}
                 {showRegister && (
-                    <Button asChild>
-                        <Link href="/register">Get Started</Link>
+                    <Button className="bg-primary text-white hover:opacity-95" asChild>
+                        <Link href="/register">Create account</Link>
                     </Button>
                 )}
             </nav>
@@ -241,11 +364,11 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                             </div>
                             
                             {/* Navigation Links */}
-                            <nav className="flex flex-col px-4 py-3 overflow-y-auto flex-1">
+                            <nav className="flex flex-col px-4 py-3 overflow-y-auto flex-1 space-y-1">
                                 <Link href="/" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
                                     Home
                                 </Link>
-                                
+
                                 {/* Products Collapsible */}
                                 <Collapsible open={productsOpen} onOpenChange={setProductsOpen}>
                                     <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
@@ -270,13 +393,79 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
-                                
-                                <Link href="/about" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
-                                    About Us
+
+                                {/* Solutions */}
+                                <Collapsible>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                        <span>Solutions</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="border-b">
+                                        <div className="py-2 space-y-1">
+                                            {solutions.map(s => (
+                                                <Link key={s.title} href={s.href} className="block p-3 rounded-md hover:bg-accent">
+                                                    <div className="text-sm font-medium">{s.title}</div>
+                                                    <div className="text-xs text-muted-foreground">{s.description}</div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                {/* Developers */}
+                                <Collapsible>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                        <span>Developers</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="border-b">
+                                        <div className="py-2 space-y-1">
+                                            {developerLinks.map(d => (
+                                                <Link key={d.title} href={d.href} className="block p-3 rounded-md hover:bg-accent">
+                                                    <div className="text-sm font-medium">{d.title}</div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                <Link href="/pricing" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                    Pricing
                                 </Link>
-                                <Link href="/blog" className="py-3 text-base font-medium hover:text-primary transition-colors border-b">
-                                    Blog
-                                </Link>
+
+                                {/* Resources */}
+                                <Collapsible>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                        <span>Resources</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="border-b">
+                                        <div className="py-2 space-y-1">
+                                            {resources.map(r => (
+                                                <Link key={r.title} href={r.href} className="block p-3 rounded-md hover:bg-accent">
+                                                    <div className="text-sm font-medium">{r.title}</div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                {/* Company */}
+                                <Collapsible>
+                                    <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-base font-medium hover:text-primary transition-colors border-b">
+                                        <span>Company</span>
+                                        <ChevronRight className="h-4 w-4" />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="border-b">
+                                        <div className="py-2 space-y-1">
+                                            {company.map(c => (
+                                                <Link key={c.title} href={c.href} className="block p-3 rounded-md hover:bg-accent">
+                                                    <div className="text-sm font-medium">{c.title}</div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
                             </nav>
                         </div>
                     </SheetContent>
