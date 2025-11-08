@@ -830,7 +830,7 @@ export default function LandingPage() {
                   </Card>
                 </div>
                 <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+                  <div className="flex flex-row flex-wrap gap-1 sm:gap-4 w-full sm:w-auto justify-center items-center">
                     <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
                       <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
                     </Link>
