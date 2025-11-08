@@ -111,7 +111,7 @@ const developerHighlights = [
   },
   {
     title: "Sandbox parity",
-    description: "Test against the same FX engine, risk rules, and ledger primitives that run in production.",
+    description: "Test against the same FX engine, risk rules, and ledger primitives that run in production. - from grid to list on desktop and align well.",
     icon: Layers,
   },
 ];
