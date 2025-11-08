@@ -1,6 +1,5 @@
 
 // src/components/icons.tsx
-import type { LucideProps } from "lucide-react";
 import { LogoComponent } from './logo-dynamic';
 
 export const Icons = {
