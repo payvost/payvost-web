@@ -29,9 +29,14 @@ export function LogoComponent(props: Omit<React.ComponentProps<typeof Image>, 's
       alt="Payvost Logo"
       width={dimensions.width}
       height={dimensions.height}
-      // Use auto sizing to let className control dimensions without aspect ratio warnings
+      // Let Tailwind height classes control the rendered size while preserving aspect ratio
       className={className}
-      style={{ width: 'auto', height: 'auto', ...style }}
+      style={{
+        width: 'auto',
+        objectFit: 'contain',
+        maxHeight: '100%',
+        ...style,
+      }}
       {...rest}
     />
   );

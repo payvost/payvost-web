@@ -19,7 +19,12 @@ export const LogoComponent = dynamic(() => import('./logo-component').then(mod =
         height={114}
         priority
         className={className}
-        style={{ width: 'auto', height: 'auto', ...(style ?? {}) }}
+        style={{ 
+          width: 'auto', 
+          objectFit: 'contain',
+          maxHeight: '100%',
+          ...(style ?? {}) 
+        }}
       />
     );
   },
