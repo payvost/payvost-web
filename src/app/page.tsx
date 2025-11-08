@@ -111,8 +111,13 @@ const developerHighlights = [
   },
   {
     title: "Sandbox parity",
-    description: "Test against the same FX engine, risk rules, and ledger primitives that run in production. - from grid to list on desktop and align well.",
+    description: "Test against the same FX engine, risk rules, and ledger primitives that run in production.",
     icon: Layers,
+  },
+  {
+    title: "Comprehensive docs",
+    description: "Get started quickly with step-by-step guides, API references, and code samples for every integration.",
+    icon: FileCheck,
   },
 ];
 
@@ -380,7 +385,7 @@ export default function LandingPage() {
                   </pre>
                 </div>
               </div>
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 max-w-3xl mx-auto items-center justify-center lg:place-items-center lg:mx-auto lg:my-0 lg:mt-24 lg:mb-24 lg:py-20">
                 {developerHighlights.map((highlight) => {
                   const Icon = highlight.icon;
                   return (
