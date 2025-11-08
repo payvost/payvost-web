@@ -852,7 +852,7 @@ export default function LandingPage() {
               <div className="relative flex justify-center md:justify-end order-1 md:order-2">
                 <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
                   <Image
-                    src="/Dashboard.png"
+                    src="/optimized/Dashboard.jpg"
                     alt="Payvost dashboard preview"
                     width={480}
                     height={360}
