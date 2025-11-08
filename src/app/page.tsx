@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "@/components/ui/carousel";
 import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers } from "lucide-react";
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
@@ -194,12 +194,35 @@ console.log('Transfer committed:', quote.lockedRate);`;
 export default function LandingPage() {
   const { blog: blogImages } = placeholderImageData;
   const rateCardRef = useRef<HTMLDivElement | null>(null);
+  // Testimonials carousel state
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [snapCount, setSnapCount] = useState(0);
 
   const handleScrollToLiveRate = () => {
     if (rateCardRef.current) {
       rateCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
+
+  useEffect(() => {
+    if (!carouselApi) return;
+    setSnapCount(carouselApi.scrollSnapList().length);
+    setSelectedIndex(carouselApi.selectedScrollSnap());
+
+    const onSelect = () => setSelectedIndex(carouselApi.selectedScrollSnap());
+    const onReInit = () => {
+      setSnapCount(carouselApi.scrollSnapList().length);
+      setSelectedIndex(carouselApi.selectedScrollSnap());
+    };
+
+    carouselApi.on('select', onSelect);
+    carouselApi.on('reInit', onReInit);
+    return () => {
+      carouselApi.off('select', onSelect);
+      carouselApi.off('reInit', onReInit);
+    };
+  }, [carouselApi]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -506,7 +529,7 @@ export default function LandingPage() {
                 </Card>
               </div>
 
-              <div className="relative w-full max-w-xl mx-auto lg:max-w-none lg:mx-0">
+              <div className="relative w-full max-w-full mx-0 lg:max-w-none lg:mx-0">
                 <div className="relative h-full w-full rounded-3xl border border-border/30 bg-background/85 backdrop-blur-md p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
                   <Carousel
                     opts={{
@@ -514,10 +537,11 @@ export default function LandingPage() {
                       loop: true,
                     }}
                     className="w-full"
+                    setApi={setCarouselApi}
                   >
-                    <CarouselContent className="-ml-1.5 sm:-ml-3">
+                    <CarouselContent className="ml-0 sm:-ml-3">
                       {testimonials.slice(1).map((testimonial, index) => (
-                        <CarouselItem key={testimonial.name} className="pl-1.5 sm:pl-3 basis-full md:basis-1/2">
+                        <CarouselItem key={testimonial.name} className="pl-1.5 sm:pl-3 basis-full lg:basis-1/2">
                           <div className="h-full rounded-2xl border border-border/30 bg-muted/40 p-5 sm:p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-12 w-12">
@@ -544,6 +568,26 @@ export default function LandingPage() {
                     <CarouselPrevious className="-left-3 hidden sm:flex" />
                     <CarouselNext className="-right-3 hidden sm:flex" />
                   </Carousel>
+                  {snapCount > 1 && (
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      {Array.from({ length: snapCount }).map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => carouselApi?.scrollTo(i)}
+                          aria-label={`Go to slide ${i + 1}`}
+                          aria-current={selectedIndex === i}
+                          className={
+                            selectedIndex === i
+                              ? 'h-2.5 w-6 rounded-full bg-primary transition-all'
+                              : 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors'
+                          }
+                        >
+                          <span className="sr-only">Slide {i + 1}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-6 grid gap-3 sm:grid-cols-2">
                     <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
