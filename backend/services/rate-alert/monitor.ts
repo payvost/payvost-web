@@ -1,4 +1,4 @@
-import { prisma } from '../../common/prisma';
+import { prisma } from '../common/prisma';
 import { sendRateAlertEmail } from '../../common/mailgun';
 import { sendRateAlertPush } from '../../common/webpush';
 import axios from 'axios';
