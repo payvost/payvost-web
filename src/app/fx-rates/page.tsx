@@ -71,6 +71,50 @@ export default function FXRatesPage() {
   const [selectedCurrency, setSelectedCurrency] = useState<ExchangeRate | null>(null);
   const [showDetailChart, setShowDetailChart] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
+  // Rate Alert Dialog State
+  const [showRateAlertDialog, setShowRateAlertDialog] = useState(false);
+  const [alertForm, setAlertForm] = useState({
+    sourceCurrency: baseCurrency,
+    targetCurrency: '',
+    targetRate: '',
+    email: '',
+    pushOptIn: false,
+  });
+  const [alertStatus, setAlertStatus] = useState<'idle'|'loading'|'success'|'error'>('idle');
+  const [alertMessage, setAlertMessage] = useState('');
+
+  function handleAlertInput(e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) {
+    const { name, value, type } = e.target;
+    setAlertForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' && e.target instanceof HTMLInputElement ? e.target.checked : value,
+    }));
+  }
+
+  async function handleAlertSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setAlertStatus('loading');
+    setAlertMessage('');
+    try {
+      const res = await fetch('/api/rate-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alertForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAlertStatus('success');
+        setAlertMessage('Alert set! You will be notified when the rate is reached.');
+        setAlertForm({ sourceCurrency: baseCurrency, targetCurrency: '', targetRate: '', email: '', pushOptIn: false });
+      } else {
+        setAlertStatus('error');
+        setAlertMessage('Failed to set alert. Please try again.');
+      }
+    } catch {
+      setAlertStatus('error');
+      setAlertMessage('Network error. Please try again.');
+    }
+  }
 
   // Fetch real exchange rates from Payvost Exchange Engine (OpenExchangeRates API)
   const fetchExchangeRates = useCallback(async () => {
@@ -625,11 +669,100 @@ export default function FXRatesPage() {
                   Sign up to receive notifications when exchange rates reach your target levels.
                   Never miss the perfect moment to transfer money.
                 </p>
-                <Button>Set Up Rate Alerts</Button>
+                <Button onClick={() => setShowRateAlertDialog(true)}>Set Up Rate Alerts</Button>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Rate Alert Dialog */}
+        <Dialog open={showRateAlertDialog} onOpenChange={setShowRateAlertDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Set Up Rate Alert</DialogTitle>
+              <DialogDescription>
+                Get notified by email or browser push when your target FX rate is reached. No account required.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="flex flex-col gap-4" onSubmit={handleAlertSubmit}>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="sourceCurrency">Source Currency</Label>
+                <select
+                  name="sourceCurrency"
+                  id="sourceCurrency"
+                  value={alertForm.sourceCurrency}
+                  onChange={handleAlertInput}
+                  className="h-10 px-2 border rounded"
+                  required
+                >
+                  {CURRENCIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="targetCurrency">Target Currency</Label>
+                <select
+                  name="targetCurrency"
+                  id="targetCurrency"
+                  value={alertForm.targetCurrency}
+                  onChange={handleAlertInput}
+                  className="h-10 px-2 border rounded"
+                  required
+                >
+                  <option value="" disabled>Select currency</option>
+                  {CURRENCIES.filter(c => c.code !== alertForm.sourceCurrency).map(c => (
+                    <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="targetRate">Target Rate</Label>
+                <Input
+                  name="targetRate"
+                  id="targetRate"
+                  value={alertForm.targetRate}
+                  onChange={handleAlertInput}
+                  required
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  placeholder="e.g. 1200.50"
+                  className="h-10 text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">Email (for alerts)</Label>
+                <Input
+                  name="email"
+                  id="email"
+                  value={alertForm.email}
+                  onChange={handleAlertInput}
+                  type="email"
+                  placeholder="your@email.com"
+                  className="h-10 text-sm"
+                />
+              </div>
+              <div className="flex flex-row items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="pushOptIn"
+                  id="pushOptIn"
+                  checked={alertForm.pushOptIn}
+                  onChange={handleAlertInput}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="pushOptIn" className="text-sm">Enable browser push notification</Label>
+              </div>
+              <Button type="submit" className="h-10 text-base w-full" disabled={alertStatus==='loading'}>
+                {alertStatus==='loading' ? 'Setting Alert...' : 'Set Up Rate Alert'}
+              </Button>
+              {alertMessage && (
+                <div className={`text-sm mt-2 ${alertStatus==='success' ? 'text-green-600' : 'text-red-600'}`}>{alertMessage}</div>
+              )}
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Currency Comparison */}
         {favoriteRates.length > 0 && (
