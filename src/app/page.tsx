@@ -243,6 +243,8 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
+            {/* Internal top padding for mobile */}
+            <div className="block sm:hidden h-10" />
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
               <div className="relative z-10 flex flex-col justify-center space-y-5 sm:space-y-8 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm px-3 py-1">
@@ -484,134 +486,137 @@ export default function LandingPage() {
         
         {/* Testimonials Section */}
   <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
-              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
-                Customer stories
-              </Badge>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-                What our customers say
-              </h2>
-              <p className="max-w-3xl text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed">
-                Payvost powers remittance, payroll, and treasury teams around the world. Hear how builders ship faster and move capital with confidence.
-              </p>
-            </div>
+    <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
+    <div className="container mx-auto px-4 md:px-6">
+      <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+        <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
+          Customer stories
+        </Badge>
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+          What our customers say
+        </h2>
+        <p className="max-w-3xl text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed">
+          Payvost powers remittance, payroll, and treasury teams around the world. Hear how builders ship faster and move capital with confidence.
+        </p>
+      </div>
 
-            <div className="mt-10 sm:mt-12 grid gap-6 lg:grid-cols-[0.55fr_0.45fr] xl:grid-cols-[0.5fr_0.5fr] items-stretch">
-              <div className="relative w-full max-w-xl mx-auto lg:max-w-none lg:mx-0">
-                <div className="hidden md:block">
-                  <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
-                  <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+      <div className="mt-10 sm:mt-12 grid gap-6 grid-cols-1 lg:grid-cols-2 items-stretch">
+        {/* Featured Testimonial Card */}
+        <div className="relative w-full max-w-full mx-auto lg:mx-0 flex flex-col">
+          {/* Decorative background only on large screens */}
+          <div className="hidden md:block">
+            <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
+            <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
+          </div>
+          <Card className="relative w-full rounded-3xl border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)]">
+            <CardContent className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 lg:p-10">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-center sm:text-left justify-center sm:justify-start">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.32em] sm:tracking-[0.4em] text-primary/80">
+                  Featured customer
+                </span>
+              </div>
+              <blockquote className="text-lg sm:text-xl md:text-2xl font-semibold leading-relaxed text-foreground">
+                “Payvost let us launch local payouts in three new markets in under a quarter. Our finance team finally has real-time visibility across every transfer.”
+              </blockquote>
+              <div className="flex flex-col xs:flex-row xs:items-center gap-4 xs:gap-5 text-center xs:text-left w-full">
+                <Avatar className="mx-auto xs:mx-0 h-16 w-16 flex-shrink-0" >
+                  <AvatarImage src={testimonials[0].image.src} alt={testimonials[0].name} />
+                  <AvatarFallback>{testimonials[0].name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-center xs:items-start gap-1">
+                  <p className="text-base sm:text-lg font-semibold text-foreground break-words">{testimonials[0].name}</p>
+                  <p className="text-sm text-muted-foreground break-words">{testimonials[0].role}, {testimonials[0].company}</p>
                 </div>
-                <Card className="relative w-full rounded-3xl border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)] h-full">
-                  <CardContent className="space-y-6 p-6 sm:p-8 lg:p-10">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-center sm:text-left justify-center sm:justify-start">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.32em] sm:tracking-[0.4em] text-primary/80">
-                        Featured customer
-                      </span>
-                    </div>
-                    <blockquote className="text-xl sm:text-2xl font-semibold leading-relaxed text-foreground">
-                      “Payvost let us launch local payouts in three new markets in under a quarter. Our finance team finally has real-time visibility across every transfer.”
-                    </blockquote>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 text-center sm:text-left">
-                      <Avatar className="mx-auto sm:mx-0 h-16 w-16">
-                        <AvatarImage src={testimonials[0].image.src} alt={testimonials[0].name} />
-                        <AvatarFallback>{testimonials[0].name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-base sm:text-lg font-semibold text-foreground">{testimonials[0].name}</p>
-                        <p className="text-sm text-muted-foreground">{testimonials[0].role}, {testimonials[0].company}</p>
+              </div>
+              <div className="flex justify-center xs:justify-start items-center gap-1 text-amber-400">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <Star key={idx} className="h-3.5 w-3.5 fill-current" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Carousel Testimonials */}
+        <div className="relative w-full max-w-full mx-0 lg:mx-0 flex flex-col">
+          <div className="relative w-full rounded-3xl border border-border/30 bg-background/85 backdrop-blur-md p-4 sm:p-6 md:p-8 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+              setApi={setCarouselApi}
+            >
+              <CarouselContent className="ml-0 sm:-ml-3">
+                {testimonials.slice(1).map((testimonial, index) => (
+                  <CarouselItem key={testimonial.name} className="pl-1.5 sm:pl-3 basis-full lg:basis-1/2">
+                    <div className="flex flex-col rounded-2xl border border-border/30 bg-muted/40 p-4 sm:p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60 min-h-[180px]">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 w-full">
+                        <Avatar className="h-12 w-12 flex-shrink-0 mx-auto sm:mx-0">
+                          <AvatarImage src={testimonial.image.src} alt={testimonial.name} />
+                          <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col items-center sm:items-start gap-1 w-full">
+                          <p className="text-sm font-semibold text-foreground break-words">{testimonial.name}</p>
+                          <p className="text-xs text-muted-foreground break-words">{testimonial.role}, {testimonial.company}</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground break-words">
+                        “{testimonial.quote}”
+                      </p>
+                      <div className="mt-4 flex items-center gap-1 text-amber-400">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`h-3.5 w-3.5 ${i < testimonial.rating ? 'fill-current' : 'text-muted-foreground/40'}`} />
+                        ))}
                       </div>
                     </div>
-                    <div className="flex justify-center sm:justify-start items-center gap-1 text-amber-400">
-                      {Array.from({ length: 5 }).map((_, idx) => (
-                        <Star key={idx} className="h-3.5 w-3.5 fill-current" />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="relative w-full max-w-full mx-0 lg:max-w-none lg:mx-0">
-                <div className="relative h-full w-full rounded-3xl border border-border/30 bg-background/85 backdrop-blur-md p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
-                  <Carousel
-                    opts={{
-                      align: "start",
-                      loop: true,
-                    }}
-                    className="w-full"
-                    setApi={setCarouselApi}
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="-left-3 hidden sm:flex" />
+              <CarouselNext className="-right-3 hidden sm:flex" />
+            </Carousel>
+            {snapCount > 1 && (
+              <div className="mt-4 flex items-center justify-center gap-2">
+                {Array.from({ length: snapCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => carouselApi?.scrollTo(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    aria-current={selectedIndex === i}
+                    className={
+                      selectedIndex === i
+                        ? 'h-2.5 w-6 rounded-full bg-primary transition-all'
+                        : 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors'
+                    }
                   >
-                    <CarouselContent className="ml-0 sm:-ml-3">
-                      {testimonials.slice(1).map((testimonial, index) => (
-                        <CarouselItem key={testimonial.name} className="pl-1.5 sm:pl-3 basis-full lg:basis-1/2">
-                          <div className="h-full rounded-2xl border border-border/30 bg-muted/40 p-5 sm:p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={testimonial.image.src} alt={testimonial.name} />
-                                <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="text-sm font-semibold text-foreground">{testimonial.name}</p>
-                                <p className="text-xs text-muted-foreground">{testimonial.role}, {testimonial.company}</p>
-                              </div>
-                            </div>
-                            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                              “{testimonial.quote}”
-                            </p>
-                            <div className="mt-4 flex items-center gap-1 text-amber-400">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`h-3.5 w-3.5 ${i < testimonial.rating ? 'fill-current' : 'text-muted-foreground/40'}`} />
-                              ))}
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="-left-3 hidden sm:flex" />
-                    <CarouselNext className="-right-3 hidden sm:flex" />
-                  </Carousel>
-                  {snapCount > 1 && (
-                    <div className="mt-4 flex items-center justify-center gap-2">
-                      {Array.from({ length: snapCount }).map((_, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => carouselApi?.scrollTo(i)}
-                          aria-label={`Go to slide ${i + 1}`}
-                          aria-current={selectedIndex === i}
-                          className={
-                            selectedIndex === i
-                              ? 'h-2.5 w-6 rounded-full bg-primary transition-all'
-                              : 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors'
-                          }
-                        >
-                          <span className="sr-only">Slide {i + 1}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span>Customer satisfaction rating: 4.9 / 5</span>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span>Net promoter score above 70</span>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span>Dedicated success managers for enterprise accounts</span>
-                    </div>
-                  </div>
-                </div>
+                    <span className="sr-only">Slide {i + 1}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>Customer satisfaction rating: 4.9 / 5</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>Net promoter score above 70</span>
+              </div>
+              <div className="flex items-center gap-2 rounded-2xl border border-border/40 bg-background/60 px-4 py-3 text-left text-xs sm:text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span>Dedicated success managers for enterprise accounts</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
+    </div>
+  </section>
         {/* FAQ Section */}
         <section id="faq" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
@@ -830,22 +835,13 @@ export default function LandingPage() {
                   </Card>
                 </div>
                 <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
-                  <div className="flex flex-row flex-wrap gap-1 sm:gap-4 w-full sm:w-auto justify-center items-center">
+                  <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center items-center">
                     <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
                       <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
                     </Link>
                     <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
                       <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
                     </Link>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 rounded-2xl border border-white/20 bg-white/10 px-3 sm:px-4 py-2 sm:py-3">
-                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 flex-shrink-0">
-                      <QrCode className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </div>
-                    <div className="text-left text-[10px] sm:text-xs">
-                      <p className="font-semibold uppercase tracking-[0.25em] sm:tracking-[0.3em] text-white/80">Scan to download</p>
-                      <p className="text-white/70 leading-relaxed hidden sm:block">Open camera &amp; point at QR to get the app</p>
-                    </div>
                   </div>
                 </div>
               </div>
