@@ -788,7 +788,7 @@ export default function LandingPage() {
 
         {/* App Download CTA */}
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
-          <div className="w-full bg-accent px-2 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl">
+          <div className="w-full bg-accent px-2 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl mx-2 sm:mx-4 md:mx-8 lg:mx-16">
             <div className="container mx-auto px-4 md:px-6">
               <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
                 <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
@@ -828,10 +828,10 @@ export default function LandingPage() {
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
                     <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center items-center">
                       <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
+                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
                       </Link>
                       <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="drop-shadow-xl sm:w-[180px] sm:h-[54px]" />
+                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
                       </Link>
                     </div>
                   </div>
