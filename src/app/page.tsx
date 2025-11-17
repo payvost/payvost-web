@@ -788,10 +788,10 @@ export default function LandingPage() {
 
         {/* App Download CTA */}
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
-          <div className="w-full bg-accent px-2 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl mx-2 sm:mx-4 md:mx-8 lg:mx-16">
+          <div className="w-full bg-accent px-5 sm:px-8 md:px-12 lg:px-20 py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl ml-5 sm:ml-8 md:ml-12 lg:ml-20 mr-5 sm:mr-8 md:mr-12 lg:mr-20 transition-all duration-300">
             <div className="container mx-auto px-4 md:px-6">
               <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
+                <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1 px-6 sm:px-8 md:px-10 lg:px-12">
                   <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-muted/40 bg-muted/10 text-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                     Mobile banking in motion
                   </Badge>
@@ -837,7 +837,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="relative flex justify-center md:justify-end order-1 md:order-2">
-                  <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
+                  <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0 px-6 sm:px-8 md:px-10 lg:px-12">
                     <Image
                       src="/optimized/Dashboard.jpg"
                       alt="Payvost dashboard preview"
