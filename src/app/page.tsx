@@ -235,13 +235,6 @@ export default function LandingPage() {
       <main className="flex-1">
     {/* Hero Section */}
   <section className="relative overflow-hidden -mt-12 md:-mt-8 lg:-mt-10 pt-6 sm:pt-8">
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute inset-x-0 top-10 h-32 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-            <div className="hidden md:block">
-              <div className="absolute top-[-18rem] right-[-14rem] h-[28rem] w-[28rem] rounded-full bg-primary/15 blur-3xl" />
-              <div className="absolute bottom-[-16rem] left-[-12rem] h-[24rem] w-[24rem] rounded-full bg-secondary/25 blur-3xl" />
-            </div>
-          </div>
           <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
             {/* Internal top padding for mobile */}
             <div className="block sm:hidden h-10" />
@@ -795,7 +788,7 @@ export default function LandingPage() {
 
         {/* App Download CTA */}
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
-          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#021d47] via-[#03376e] to-[#056b8c]" />
+          {/* Gradient background removed as requested */}
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
               <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
