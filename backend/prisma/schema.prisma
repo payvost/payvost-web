@@ -520,17 +520,14 @@ model EscrowDocument {
 
 // Rate alert model for user-submitted alerts (email or push)
 model RateAlert {
-  id               String   @id @default(uuid())
-  email            String?  @unique
+  id             String   @id @default(uuid())
+  sourceCurrency String
+  targetCurrency String
+  targetRate     Decimal
+  email          String?
   pushSubscription Json?
-  sourceCurrency   String
-  targetCurrency   String
-  targetRate       Decimal  @db.Decimal(30, 12)
-  isActive         Boolean  @default(true)
-  notifiedAt       DateTime?
-  notifiedCount    Int      @default(0)
-  createdAt        DateTime @default(now())
-
-  @@index([sourceCurrency, targetCurrency])
-  @@index([email])
+  isActive       Boolean  @default(true)
+  notifiedAt     DateTime?
+  notifiedCount  Int      @default(0)
+  createdAt      DateTime @default(now())
 }
