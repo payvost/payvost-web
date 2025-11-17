@@ -790,37 +790,37 @@ export default function LandingPage() {
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
           {/* Gradient background removed as requested */}
           <div className="container mx-auto px-4 md:px-6">
-            <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr] text-primary-foreground">
+            <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
               <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
-                <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-white/40 bg-white/10 text-white/90 uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
+                <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-muted/40 bg-muted/10 text-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                   Mobile banking in motion
                 </Badge>
                 <div className="space-y-3 sm:space-y-4">
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">Download the Payvost app</h2>
-                  <p className="max-w-xl text-sm sm:text-base md:text-lg text-primary-foreground/85 mx-auto md:mx-0 leading-relaxed">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight text-foreground">Download the Payvost app</h2>
+                  <p className="max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground mx-auto md:mx-0 leading-relaxed">
                     Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                  <Card className="border-white/10 bg-white/10 text-white">
+                  <Card className="border-muted/10 bg-muted/10">
                     <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
-                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/20 flex-shrink-0">
-                        <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-muted/20 flex-shrink-0">
+                        <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="space-y-0.5 sm:space-y-1 text-left">
-                        <p className="text-xs sm:text-sm font-semibold">Instant wallet funding</p>
-                        <p className="text-[10px] sm:text-xs text-white/75 leading-relaxed">Move money in seconds with real-time notifications and smart retries.</p>
+                        <p className="text-xs sm:text-sm font-semibold text-foreground">Instant wallet funding</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Move money in seconds with real-time notifications and smart retries.</p>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="border-white/10 bg-white/10 text-white">
+                  <Card className="border-muted/10 bg-muted/10">
                     <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
-                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/20 flex-shrink-0">
-                        <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-muted/20 flex-shrink-0">
+                        <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="space-y-0.5 sm:space-y-1 text-left">
-                        <p className="text-xs sm:text-sm font-semibold">Enterprise-grade security</p>
-                        <p className="text-[10px] sm:text-xs text-white/75 leading-relaxed">Biometric login, device attestation, and real-time fraud monitoring.</p>
+                        <p className="text-xs sm:text-sm font-semibold text-foreground">Enterprise-grade security</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Biometric login, device attestation, and real-time fraud monitoring.</p>
                       </div>
                     </CardContent>
                   </Card>
