@@ -788,65 +788,67 @@ export default function LandingPage() {
 
         {/* App Download CTA */}
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
-          <div className="w-full bg-accent px-5 sm:px-8 md:px-12 lg:px-20 py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl ml-5 sm:ml-8 md:ml-12 lg:ml-20 mr-5 sm:mr-8 md:mr-12 lg:mr-20 transition-all duration-300">
-            <div className="container mx-auto px-4 md:px-6">
-              <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
-                  <div className="lg:pl-4 xl:pl-8">
-                    <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-muted/40 bg-muted/10 text-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
-                    Mobile banking in motion
-                  </Badge>
-                  <div className="space-y-3 sm:space-y-4">
-                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight text-foreground">Download the Payvost app</h2>
-                    <p className="max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground mx-auto md:mx-0 leading-relaxed">
-                      Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
-                    </p>
-                  </div>
-                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                    <Card className="border-muted/10 bg-muted/10">
-                      <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
-                        <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-muted/20 flex-shrink-0">
-                          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                        </div>
-                        <div className="space-y-0.5 sm:space-y-1 text-left">
-                          <p className="text-xs sm:text-sm font-semibold text-foreground">Instant wallet funding</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Move money in seconds with real-time notifications and smart retries.</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-muted/10 bg-muted/10">
-                      <CardContent className="flex items-start gap-2 sm:gap-3 p-4 sm:p-5">
-                        <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-muted/20 flex-shrink-0">
-                          <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                        </div>
-                        <div className="space-y-0.5 sm:space-y-1 text-left">
-                          <p className="text-xs sm:text-sm font-semibold text-foreground">Enterprise-grade security</p>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Biometric login, device attestation, and real-time fraud monitoring.</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
-                    <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center items-center">
-                      <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
-                      </Link>
-                      <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
-                      </Link>
+          <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 xl:px-20">
+            <div className="bg-accent py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl transition-all duration-300">
+              <div className="container mx-auto px-4 md:px-6">
+                <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
+                  <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
+                    <div className="lg:pl-4 xl:pl-8">
+                      <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-muted/40 bg-muted/10 text-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
+                      Mobile banking in motion
+                    </Badge>
+                    <div className="space-y-3 sm:space-y-4">
+                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight text-foreground">Download the Payvost app</h2>
+                      <p className="max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground mx-auto md:mx-0 leading-relaxed">
+                        Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                      <Card className="border border-primary/20 bg-background/80 shadow-[0_8px_32px_-8px_rgba(15,46,85,0.10)] rounded-2xl transition-all duration-300 hover:border-primary/40 hover:shadow-[0_12px_40px_-10px_rgba(15,46,85,0.18)] w-full max-w-lg mx-auto">
+                        <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
+                          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
+                            <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                          </div>
+                          <div className="space-y-2 text-left w-full">
+                            <p className="text-sm font-semibold text-foreground">Instant wallet funding</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">Move money in seconds with real-time notifications and smart retries.</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="border border-primary/20 bg-background/80 shadow-[0_8px_32px_-8px_rgba(15,46,85,0.10)] rounded-2xl transition-all duration-300 hover:border-primary/40 hover:shadow-[0_12px_40px_-10px_rgba(15,46,85,0.18)] w-full max-w-md mx-auto md:max-w-lg lg:max-w-xl">
+                        <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
+                          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
+                            <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                          </div>
+                          <div className="space-y-2 text-left w-full">
+                            <p className="text-sm font-semibold text-foreground">Enterprise-grade security</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">Biometric login, device attestation, and real-time fraud monitoring.</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
+                      <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center items-center mt-6 md:mt-10">
+                        <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
+                          <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
+                        </Link>
+                        <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
+                          <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
+                        </Link>
+                      </div>
+                    </div>
                     </div>
                   </div>
-                  </div>
-                </div>
-                <div className="relative flex justify-center md:justify-end order-1 md:order-2">
-                  <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
-                    <Image
-                      src="/optimized/Dashboard.jpg"
-                      alt="Payvost dashboard preview"
-                      width={480}
-                      height={360}
-                      className="h-auto w-full rounded-3xl"
-                    />
+                  <div className="relative flex justify-center md:justify-end order-1 md:order-2">
+                    <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
+                      <Image
+                        src="/optimized/Dashboard.jpg"
+                        alt="Payvost dashboard preview"
+                        width={480}
+                        height={360}
+                        className="h-auto w-full rounded-3xl"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
