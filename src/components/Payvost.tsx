@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowRightLeft, Landmark, Users, AtSign, ArrowDown } from 'lucide-react';
+import { ArrowRightLeft, Landmark, Users, AtSign, ArrowDown, TrendingUp, TrendingDown, Info, Zap, DollarSign } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { SendToBankForm } from './send-to-bank-form';
 import { SendToUserForm } from './send-to-user-form';
@@ -28,8 +27,21 @@ import { PaymentConfirmationDialog } from './payment-confirmation-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { walletService, transactionService, currencyService, type Account } from '@/services';
+import { walletService, transactionService, currencyService, type Account, type UserProfile } from '@/services';
 import { TransferPageSkeleton } from '@/components/skeletons/transfer-page-skeleton';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface FeeBreakdown {
+  feeAmount: string;
+  breakdown: {
+    fixedFees: string;
+    percentageFees: string;
+    discounts: string;
+    total: string;
+  };
+}
 
 export function Payvost() {
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +57,20 @@ export function Payvost() {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<string | undefined>(undefined);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [rateTrend, setRateTrend] = useState<'up' | 'down' | 'neutral'>('neutral');
+  const [previousRate, setPreviousRate] = useState<number | null>(null);
   const { toast } = useToast();
+  
+  // Payment ID (user) transfer state
+  const [paymentIdRecipient, setPaymentIdRecipient] = useState<UserProfile | null>(null);
+  const [paymentIdAmount, setPaymentIdAmount] = useState('');
+  const [paymentIdNote, setPaymentIdNote] = useState('');
+  const [activeTab, setActiveTab] = useState('user'); // Default to Payment ID tab
+  
+  // Fee calculation state
+  const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
+  const [loadingFees, setLoadingFees] = useState(false);
+  const [isPaymentIdTransfer, setIsPaymentIdTransfer] = useState(false);
 
   // Fetch wallets from backend
   useEffect(() => {
@@ -76,25 +101,39 @@ export function Payvost() {
 
   useEffect(() => {
     const selectedWallet = wallets.find((w) => w.currency === fromWallet);
-    const amount = parseFloat(sendAmount);
+    const amount = parseFloat(sendAmount || paymentIdAmount || '0');
 
     if (selectedWallet && !isNaN(amount) && amount > selectedWallet.balance) {
       setAmountError('Insufficient balance.');
     } else {
       setAmountError('');
     }
-  }, [sendAmount, fromWallet, wallets]);
+  }, [sendAmount, paymentIdAmount, fromWallet, wallets]);
 
   // Fetch exchange rate when currencies change
   useEffect(() => {
     const fetchRate = async () => {
       if (!fromWallet || !receiveCurrency || fromWallet === receiveCurrency) {
         setExchangeRate(1);
+        setPreviousRate(1);
         return;
       }
 
       try {
         const rate = await currencyService.getRate(fromWallet, receiveCurrency);
+        
+        // Determine trend
+        if (previousRate !== null) {
+          if (rate > previousRate) {
+            setRateTrend('up');
+          } else if (rate < previousRate) {
+            setRateTrend('down');
+          } else {
+            setRateTrend('neutral');
+          }
+        }
+        
+        setPreviousRate(rate);
         setExchangeRate(rate);
       } catch (error) {
         console.error('Error fetching exchange rate:', error);
@@ -104,7 +143,9 @@ export function Payvost() {
           EUR: { NGN: 1600.2, GHS: 16.0, KES: 143.5 },
           GBP: { NGN: 1850.75, GHS: 18.5, KES: 165.8 },
         };
-        setExchangeRate(fallbackRates[fromWallet]?.[receiveCurrency] || 0);
+        const rate = fallbackRates[fromWallet]?.[receiveCurrency] || 0;
+        setExchangeRate(rate);
+        setPreviousRate(rate);
       }
     };
 
@@ -113,16 +154,144 @@ export function Payvost() {
 
   // Calculate recipient amount when send amount or rate changes
   useEffect(() => {
-    const amount = parseFloat(sendAmount);
+    const amount = parseFloat(sendAmount || paymentIdAmount || '0');
     if (!isNaN(amount) && amount > 0 && exchangeRate > 0) {
       const convertedAmount = amount * exchangeRate;
       setRecipientGets(convertedAmount.toFixed(2));
     } else {
       setRecipientGets('0.00');
     }
-  }, [sendAmount, exchangeRate]);
+  }, [sendAmount, paymentIdAmount, exchangeRate]);
+
+  // Calculate fees when amount or transfer type changes
+  useEffect(() => {
+    const calculateFees = async () => {
+      const amount = parseFloat(sendAmount || paymentIdAmount || '0');
+      const isPaymentId = activeTab === 'user' && paymentIdRecipient !== null;
+      
+      setIsPaymentIdTransfer(isPaymentId);
+      
+      // Payment ID transfers are free
+      if (isPaymentId) {
+        setFeeBreakdown({
+          feeAmount: '0.00',
+          breakdown: {
+            fixedFees: '0.00',
+            percentageFees: '0.00',
+            discounts: '0.00',
+            total: '0.00',
+          },
+        });
+        return;
+      }
+
+      if (!amount || amount <= 0 || !fromWallet || !user) {
+        setFeeBreakdown(null);
+        return;
+      }
+
+      setLoadingFees(true);
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/transaction/calculate-fees', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount,
+            currency: fromWallet,
+            transactionType: 'REMITTANCE',
+            fromCountry: 'US', // TODO: Get from user profile
+            toCountry: 'NG', // TODO: Get from recipient country
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setFeeBreakdown(data);
+        } else {
+          // Fallback to default fee
+          setFeeBreakdown({
+            feeAmount: '5.00',
+            breakdown: {
+              fixedFees: '5.00',
+              percentageFees: '0.00',
+              discounts: '0.00',
+              total: '5.00',
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error calculating fees:', error);
+        // Fallback to default fee
+        setFeeBreakdown({
+          feeAmount: '5.00',
+          breakdown: {
+            fixedFees: '5.00',
+            percentageFees: '0.00',
+            discounts: '0.00',
+            total: '5.00',
+          },
+        });
+      } finally {
+        setLoadingFees(false);
+      }
+    };
+
+    calculateFees();
+  }, [sendAmount, paymentIdAmount, fromWallet, activeTab, paymentIdRecipient, user]);
 
   const handleSendMoney = async () => {
+    // Handle Payment ID transfer
+    if (activeTab === 'user' && paymentIdRecipient) {
+      if (!fromWallet || !paymentIdAmount || parseFloat(paymentIdAmount) <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Please enter a valid amount',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const selectedAccount = wallets.find((w) => w.currency === fromWallet);
+        if (!selectedAccount) {
+          throw new Error('Selected wallet not found');
+        }
+
+        // TODO: Implement Payment ID transfer via backend
+        // For now, this is a placeholder
+        toast({
+          title: 'Transfer Initiated!',
+          description: `Sending ${paymentIdAmount} ${fromWallet} to ${paymentIdRecipient.fullName || paymentIdRecipient.username}`,
+        });
+
+        // Reset form
+        setPaymentIdAmount('');
+        setPaymentIdNote('');
+        setPaymentIdRecipient(null);
+        
+        // Refresh wallets
+        const updatedAccounts = await walletService.getAccounts();
+        setWallets(updatedAccounts);
+      } catch (error) {
+        console.error('Transfer error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Transfer failed. Please try again.';
+        toast({
+          title: 'Transfer Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Handle beneficiary transfer
     if (!fromWallet || !selectedBeneficiary) {
       toast({
         title: 'Error',
@@ -134,13 +303,11 @@ export function Payvost() {
 
     setIsLoading(true);
     try {
-      // Get the account ID for the selected wallet
       const selectedAccount = wallets.find((w) => w.currency === fromWallet);
       if (!selectedAccount) {
         throw new Error('Selected wallet not found');
       }
 
-      // Create transaction via backend
       const transaction = await transactionService.create({
         fromAccountId: selectedAccount.id,
         toBeneficiaryId: selectedBeneficiary,
@@ -160,11 +327,9 @@ export function Payvost() {
         description: `Sent ${sendAmount} ${fromWallet} to ${recipientName}`,
       });
 
-      // Refresh wallets to show updated balance
       const updatedAccounts = await walletService.getAccounts();
       setWallets(updatedAccounts);
 
-      // Reset form
       setSendAmount('0.00');
       setSelectedBeneficiary(undefined);
     } catch (error) {
@@ -181,16 +346,22 @@ export function Payvost() {
   };
 
   const recipientName =
-    beneficiaries.find((b) => b.id === selectedBeneficiary)?.name || 'N/A';
+    activeTab === 'user' && paymentIdRecipient
+      ? paymentIdRecipient.fullName || paymentIdRecipient.username || 'User'
+      : beneficiaries.find((b) => b.id === selectedBeneficiary)?.name || 'N/A';
+
+  const currentAmount = activeTab === 'user' ? paymentIdAmount : sendAmount;
+  const feeAmount = feeBreakdown?.feeAmount || '0.00';
+  const isFreeTransfer = isPaymentIdTransfer;
 
   const transactionDetails = {
-    sendAmount: parseFloat(sendAmount).toFixed(2),
+    sendAmount: parseFloat(currentAmount || '0').toFixed(2),
     sendCurrency: fromWallet || '',
     recipientGets: recipientGets,
     recipientCurrency: receiveCurrency,
     recipientName: recipientName,
     exchangeRate: `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`,
-    fee: '$5.00', // TODO: Calculate dynamic fee from backend
+    fee: isFreeTransfer ? 'Free' : `$${feeAmount}`,
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -206,13 +377,15 @@ export function Payvost() {
     !isKycVerified ||
     isLoading ||
     !!amountError ||
-    parseFloat(sendAmount) <= 0 ||
-    !selectedBeneficiary;
-    
+    parseFloat(currentAmount || '0') <= 0 ||
+    (activeTab === 'user' ? !paymentIdRecipient : !selectedBeneficiary);
+
   const currentRate =
     fromWallet && receiveCurrency && exchangeRate > 0
       ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
       : 'Not available';
+
+  const RateIcon = rateTrend === 'up' ? TrendingUp : rateTrend === 'down' ? TrendingDown : null;
 
   // Show loading skeleton while data is being fetched
   if (loadingData) {
@@ -227,10 +400,19 @@ export function Payvost() {
           Choose a recipient and send money in just a few clicks.
         </CardDescription>
       </CardHeader>
-      <Tabs defaultValue="beneficiary">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <CardContent className="pb-0">
-             <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="beneficiary">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="user" className="relative">
+              <AtSign className="mr-2 h-4 w-4" />
+              Payment ID
+              {isPaymentIdTransfer && (
+                <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                  Free
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="beneficiary">
               <Users className="mr-2 h-4 w-4" />
               To Beneficiary
             </TabsTrigger>
@@ -238,12 +420,140 @@ export function Payvost() {
               <Landmark className="mr-2 h-4 w-4" />
               Send to Bank
             </TabsTrigger>
-            <TabsTrigger value="user">
-              <AtSign className="mr-2 h-4 w-4" />
-              Send to User
-            </TabsTrigger>
           </TabsList>
         </CardContent>
+
+        {/* Payment ID Tab - Default and Promoted */}
+        <TabsContent value="user">
+          <CardContent className="space-y-4 pt-4">
+            {/* Payment ID Benefits Banner */}
+            <Alert className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 border-green-200 dark:border-green-800">
+              <Zap className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertDescription className="text-sm">
+                <strong>Send to Payment ID for free instant transfers!</strong> No fees, instant delivery, and secure transfers to verified Payvost users.
+              </AlertDescription>
+            </Alert>
+
+            {/* Wallet and Currency Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="from-wallet-user">From Wallet</Label>
+                {loadingData ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={fromWallet} onValueChange={setFromWallet} disabled={!isKycVerified}>
+                    <SelectTrigger id="from-wallet-user">
+                      <SelectValue placeholder="Select a wallet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets.map((wallet) => (
+                        <SelectItem
+                          key={wallet.currency}
+                          value={wallet.currency}
+                        >
+                          {wallet.currency} Wallet ({formatCurrency(
+                            wallet.balance,
+                            wallet.currency
+                          )})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recipient-currency-user">Recipient Currency</Label>
+                <Select
+                  value={receiveCurrency}
+                  onValueChange={setReceiveCurrency}
+                  disabled={!isKycVerified}
+                >
+                  <SelectTrigger id="recipient-currency-user">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NGN">Nigerian Naira (NGN)</SelectItem>
+                    <SelectItem value="GHS">Ghanaian Cedi (GHS)</SelectItem>
+                    <SelectItem value="KES">Kenyan Shilling (KES)</SelectItem>
+                    <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                    <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                    <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* SendToUserForm Component */}
+            <SendToUserForm
+              onRecipientChange={setPaymentIdRecipient}
+              onAmountChange={setPaymentIdAmount}
+              onNoteChange={setPaymentIdNote}
+              disabled={!isKycVerified}
+              defaultAmount={paymentIdAmount}
+              defaultNote={paymentIdNote}
+            />
+
+            {/* Exchange Rate and Fee Display */}
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Exchange Rate:</span>
+                <div className="flex items-center gap-2">
+                  {RateIcon && (
+                    <RateIcon className={cn(
+                      "h-4 w-4",
+                      rateTrend === 'up' ? "text-green-600" : "text-red-600"
+                    )} />
+                  )}
+                  <span className="font-medium">{currentRate}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Transfer Fee:</span>
+                <div className="flex items-center gap-2">
+                  {isFreeTransfer ? (
+                    <>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <Zap className="h-3 w-3 mr-1" />
+                        Free
+                      </Badge>
+                      <span className="text-xs text-muted-foreground line-through">$5.00</span>
+                    </>
+                  ) : (
+                    <span className="font-medium">
+                      {loadingFees ? 'Calculating...' : `$${feeAmount}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {isFreeTransfer && (
+                <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300 mt-2">
+                  <Info className="h-3 w-3" />
+                  <span>You save $5.00 by using Payment ID</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter>
+            <PaymentConfirmationDialog
+              onConfirm={handleSendMoney}
+              transactionDetails={transactionDetails}
+              isLoading={isLoading}
+            >
+              <Button className="w-full" disabled={isButtonDisabled}>
+                {isFreeTransfer ? (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" />
+                    Send Free Transfer
+                  </>
+                ) : (
+                  'Send to User'
+                )}
+              </Button>
+            </PaymentConfirmationDialog>
+          </CardFooter>
+        </TabsContent>
+
+        {/* Beneficiary Tab */}
         <TabsContent value="beneficiary">
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
@@ -265,7 +575,7 @@ export function Payvost() {
                     ))
                   ) : (
                     <SelectItem value="no-recipients" disabled>
-                        No saved recipients
+                      No saved recipients
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -360,10 +670,32 @@ export function Payvost() {
               <Input id="note" placeholder="e.g., For school fees" disabled={!isKycVerified}/>
             </div>
 
-            <div className="text-sm text-muted-foreground pt-2">
-              <p>
-                Exchange rate: {currentRate} | Fee: $5.00
-              </p>
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Exchange Rate:</span>
+                <div className="flex items-center gap-2">
+                  {RateIcon && (
+                    <RateIcon className={cn(
+                      "h-4 w-4",
+                      rateTrend === 'up' ? "text-green-600" : "text-red-600"
+                    )} />
+                  )}
+                  <span className="font-medium">{currentRate}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Transfer Fee:</span>
+                <span className="font-medium">
+                  {loadingFees ? 'Calculating...' : `$${feeAmount}`}
+                </span>
+              </div>
+              {feeBreakdown && parseFloat(feeBreakdown.breakdown.fixedFees) > 0 && (
+                <div className="text-xs text-muted-foreground mt-2">
+                  Fee breakdown: ${feeBreakdown.breakdown.fixedFees} fixed
+                  {parseFloat(feeBreakdown.breakdown.percentageFees) > 0 && 
+                    ` + ${((parseFloat(feeBreakdown.breakdown.percentageFees) / parseFloat(sendAmount || '1')) * 100).toFixed(2)}%`}
+                </div>
+              )}
             </div>
           </CardContent>
           <CardFooter>
@@ -378,6 +710,7 @@ export function Payvost() {
             </PaymentConfirmationDialog>
           </CardFooter>
         </TabsContent>
+
         <TabsContent value="bank">
           <CardContent className="space-y-4 pt-4">
             <SendToBankForm />
@@ -396,16 +729,6 @@ export function Payvost() {
               </Button>
             </PaymentConfirmationDialog>
           </CardFooter>
-        </TabsContent>
-        <TabsContent value="user">
-          <CardContent className="space-y-4 pt-4">
-            <SendToUserForm />
-          </CardContent>
-          <CardFooter>
-                 <PaymentConfirmationDialog onConfirm={handleSendMoney} transactionDetails={{...transactionDetails, recipientName: "Payvost User"}} isLoading={isLoading}>
-                    <Button className="w-full" disabled={isLoading || !isKycVerified}>Send to User</Button>
-                 </PaymentConfirmationDialog>
-            </CardFooter>
         </TabsContent>
       </Tabs>
     </Card>

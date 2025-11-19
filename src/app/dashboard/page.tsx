@@ -343,24 +343,92 @@ export default function DashboardPage() {
 
     if (!hasWallets) {
         return (
-            <div className="relative">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 blur-sm pointer-events-none">
-                    <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-                </div>
-                 <div className="absolute inset-0 flex items-center justify-center">
-                    <Card className="w-full max-w-sm text-center bg-background/80 backdrop-blur-sm p-4">
-                        <CardHeader className="p-0">
-                            <Wallet className="mx-auto h-8 w-8 text-primary" />
-                            <CardTitle className="text-base">Create Your First Wallet</CardTitle>
-                            <CardDescription className="text-xs">Get started by adding a currency wallet.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 mt-4">
-                            <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
-                                <Button size="sm" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
-                            </CreateWalletDialog>
-                        </CardContent>
-                    </Card>
-                </div>
+            <div className="w-full">
+                <Card className="border-2 border-dashed bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden relative">
+                    {/* Decorative background elements */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                    </div>
+                    
+                    <CardContent className="p-8 lg:p-12 relative">
+                        <div className="flex flex-col items-center text-center space-y-6 max-w-2xl mx-auto">
+                            {/* Icon with animated background */}
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse"></div>
+                                <div className="relative p-6 bg-primary/10 rounded-full">
+                                    <Wallet className="h-12 w-12 text-primary" />
+                                </div>
+                            </div>
+                            
+                            {/* Heading */}
+                            <div className="space-y-2">
+                                <CardTitle className="text-2xl lg:text-3xl font-bold">
+                                    Start Your Global Journey
+                                </CardTitle>
+                                <CardDescription className="text-base lg:text-lg max-w-lg">
+                                    Create your first currency wallet to send, receive, and manage money across borders instantly.
+                                </CardDescription>
+                            </div>
+
+                            {/* Benefits Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mt-4">
+                                <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                    <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                        <ArrowRightLeft className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h4 className="font-semibold text-sm mb-1">Instant Transfers</h4>
+                                    <p className="text-xs text-muted-foreground text-center">Send money globally in seconds</p>
+                                </div>
+                                <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                    <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                        <LineChart className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h4 className="font-semibold text-sm mb-1">Multi-Currency</h4>
+                                    <p className="text-xs text-muted-foreground text-center">Hold multiple currencies in one place</p>
+                                </div>
+                                <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                    <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                        <ShieldAlert className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h4 className="font-semibold text-sm mb-1">Secure & Safe</h4>
+                                    <p className="text-xs text-muted-foreground text-center">Bank-level security for your funds</p>
+                                </div>
+                            </div>
+
+                            {/* CTA Button */}
+                            <div className="pt-4">
+                                <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                    <Button 
+                                        size="lg" 
+                                        disabled={!isKycVerified}
+                                        className="min-w-[200px] shadow-lg hover:shadow-xl transition-shadow"
+                                    >
+                                        <PlusCircle className="mr-2 h-5 w-5" />
+                                        Create Your First Wallet
+                                    </Button>
+                                </CreateWalletDialog>
+                                {!isKycVerified && (
+                                    <p className="text-xs text-muted-foreground mt-3">
+                                        Complete KYC verification to create a wallet
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Popular currencies hint */}
+                            <div className="pt-2">
+                                <p className="text-xs text-muted-foreground mb-2">Popular currencies to get started:</p>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {['USD', 'EUR', 'GBP', 'NGN'].map((currency) => (
+                                        <Badge key={currency} variant="secondary" className="text-xs">
+                                            {currency}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         )
     }
@@ -415,6 +483,11 @@ export default function DashboardPage() {
   }
   
   const renderDesktopWalletCards = () => {
+    // If no wallets, return empty state (handled by renderWalletCards for mobile, but desktop needs it too)
+    if (!hasWallets) {
+        return null; // Desktop empty state is handled in the main render
+    }
+    
     const cards = [];
     wallets.slice(0, 4).forEach(wallet => {
         cards.push(<CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={getFlagCode(wallet.currency)} />);
@@ -488,9 +561,103 @@ export default function DashboardPage() {
                     />
                 )}
 
+        {/* Mobile wallet cards */}
         {renderWalletCards()}
+        
+        {/* Desktop wallet cards */}
         <div className="hidden lg:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                            {renderDesktopWalletCards()}
+            {!hasWallets ? (
+                // Desktop empty state - spans full width, reuse the same empty state design
+                <div className="col-span-5">
+                    <Card className="border-2 border-dashed bg-gradient-to-br from-primary/5 via-background to-background overflow-hidden relative">
+                        {/* Decorative background elements */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                        </div>
+                        
+                        <CardContent className="p-8 lg:p-12 relative">
+                            <div className="flex flex-col items-center text-center space-y-6 max-w-2xl mx-auto">
+                                {/* Icon with animated background */}
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse"></div>
+                                    <div className="relative p-6 bg-primary/10 rounded-full">
+                                        <Wallet className="h-12 w-12 text-primary" />
+                                    </div>
+                                </div>
+                                
+                                {/* Heading */}
+                                <div className="space-y-2">
+                                    <CardTitle className="text-2xl lg:text-3xl font-bold">
+                                        Start Your Global Journey
+                                    </CardTitle>
+                                    <CardDescription className="text-base lg:text-lg max-w-lg">
+                                        Create your first currency wallet to send, receive, and manage money across borders instantly.
+                                    </CardDescription>
+                                </div>
+
+                                {/* Benefits Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mt-4">
+                                    <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                        <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                            <ArrowRightLeft className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm mb-1">Instant Transfers</h4>
+                                        <p className="text-xs text-muted-foreground text-center">Send money globally in seconds</p>
+                                    </div>
+                                    <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                        <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                            <LineChart className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm mb-1">Multi-Currency</h4>
+                                        <p className="text-xs text-muted-foreground text-center">Hold multiple currencies in one place</p>
+                                    </div>
+                                    <div className="flex flex-col items-center p-4 rounded-lg bg-background/50 border border-border/50 backdrop-blur-sm">
+                                        <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                                            <ShieldAlert className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <h4 className="font-semibold text-sm mb-1">Secure & Safe</h4>
+                                        <p className="text-xs text-muted-foreground text-center">Bank-level security for your funds</p>
+                                    </div>
+                                </div>
+
+                                {/* CTA Button */}
+                                <div className="pt-4">
+                                    <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                        <Button 
+                                            size="lg" 
+                                            disabled={!isKycVerified}
+                                            className="min-w-[200px] shadow-lg hover:shadow-xl transition-shadow"
+                                        >
+                                            <PlusCircle className="mr-2 h-5 w-5" />
+                                            Create Your First Wallet
+                                        </Button>
+                                    </CreateWalletDialog>
+                                    {!isKycVerified && (
+                                        <p className="text-xs text-muted-foreground mt-3">
+                                            Complete KYC verification to create a wallet
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Popular currencies hint */}
+                                <div className="pt-2">
+                                    <p className="text-xs text-muted-foreground mb-2">Popular currencies to get started:</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {['USD', 'EUR', 'GBP', 'NGN'].map((currency) => (
+                                            <Badge key={currency} variant="secondary" className="text-xs">
+                                                {currency}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : (
+                renderDesktopWalletCards()
+            )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/icons";
-import { Twitter, Facebook, Linkedin } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
 
 const sections = [
   { id: 'introduction', title: '1. Introduction' },
@@ -101,67 +101,7 @@ export default function TermsPage() {
             </div>
         </div>
       </main>
-
-       <footer className="bg-muted text-muted-foreground py-12">
-            <div className="container mx-auto px-4 md:px-6">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-[30%] space-y-4">
-                  <Link href="#" className="flex items-center space-x-2">
-                    <Icons.logo className="h-8" />
-                  </Link>
-                  <p className="text-sm">Stay up to date with the latest news, announcements, and articles.</p>
-                  <form className="flex w-full max-w-sm space-x-2">
-                    <Input type="email" placeholder="Enter your email" />
-                    <Button type="submit">Subscribe</Button>
-                  </form>
-                </div>
-                <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-8">
-                    <div className="space-y-4">
-                    <h4 className="font-semibold text-foreground">Product</h4>
-                    <ul className="space-y-2">
-                        <li><Link href="/#features" className="hover:text-primary transition-colors">Features</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
-                    </ul>
-                    </div>
-                    <div className="space-y-4">
-                    <h4 className="font-semibold text-foreground">Company</h4>
-                    <ul className="space-y-2">
-                        <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                        <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                        <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
-                        <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
-                    </ul>
-                    </div>
-                    <div className="space-y-4">
-                    <h4 className="font-semibold text-foreground">Resources</h4>
-                    <ul className="space-y-2">
-                        <li><Link href="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                        <li><Link href="/support" className="hover:text-primary transition-colors">Help Center</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
-                    </ul>
-                    </div>
-                    <div className="space-y-4">
-                    <h4 className="font-semibold text-foreground">Policies</h4>
-                    <ul className="space-y-2">
-                        <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                        <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
-                    </ul>
-                    </div>
-                </div>
-              </div>
-              <div className="mt-8 pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center">
-                <p className="text-sm">&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
-                <div className="flex space-x-4 mt-4 sm:mt-0">
-                  <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-5 w-5" /></Link>
-                  <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-5 w-5" /></Link>
-                  <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-5 w-5" /></Link>
-                </div>
-              </div>
-            </div>
-        </footer>
+      <SiteFooter />
     </div>
   );
 }
