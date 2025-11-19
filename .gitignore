@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 **/node_modules/
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -41,12 +42,20 @@ backend/*.json
 functions/serviceAccountKey.json
 backend/payvost-f28db3f2f0bc.json
 
+# Firebase service account keys (sensitive credentials)
+backend/*.json
+!backend/package.json
+!backend/tsconfig.json
+functions/serviceAccountKey.json
+backend/payvost-f28db3f2f0bc.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 .genkit/*
 .env*
+!.env.example
 !.env.example
 
 # firebase
