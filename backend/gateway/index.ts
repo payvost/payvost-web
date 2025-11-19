@@ -1,7 +1,11 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { createRequire } from 'module';
 import path from 'path';
+import { logger, requestLogger, logError } from '../common/logger';
+import { sentryRequestHandler, sentryErrorHandler } from '../common/sentry';
+import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
 
 // Domain-specific error classes
 export class AuthenticationError extends Error {
@@ -46,7 +50,13 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
-  console.error('Error:', err);
+  const correlationId = (req as any).correlationId || 'unknown';
+  logError(err, {
+    correlationId,
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+  });
 
   // Handle specific error types
   if (err instanceof AuthenticationError) {
@@ -91,31 +101,46 @@ export function errorHandler(
   });
 }
 
-// Request logger middleware
-export function requestLogger(req: Request, res: Response, next: NextFunction) {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(
-      `[${new Date().toISOString()}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`
-    );
-  });
-  next();
-}
+// Re-export requestLogger from logger module
+export { requestLogger };
 
 // Create and configure the gateway router
 export function createGateway() {
   const app = express();
 
-  // Middleware
+  // Sentry request handler (must be first)
+  app.use(sentryRequestHandler());
+
+  // Security headers
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Allow embedding for API usage
+  }));
+
+  // CORS
   app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
     credentials: true,
   }));
-  app.use(express.json());
+
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Request logging (with correlation IDs)
   app.use(requestLogger);
+
+  // Rate limiting
+  app.use(generalLimiter);
 
   // Health check
   app.get('/health', (req, res) => {
@@ -135,6 +160,9 @@ export function createGateway() {
     });
   });
 
+  // Sentry error handler (must be before other error handlers)
+  app.use(sentryErrorHandler());
+
   return app;
 }
 
@@ -145,8 +173,11 @@ export function registerServiceRoutes(
   routePath: string,
   routes: express.Router
 ) {
-  console.log(`Registering ${serviceName} routes at ${routePath}`);
+  logger.info({ serviceName, routePath }, 'Registering service routes');
   app.use(routePath, routes);
 }
+
+// Export rate limiters for use in specific routes
+export { authLimiter, transactionLimiter, generalLimiter };
 
 export default createGateway;

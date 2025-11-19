@@ -107,13 +107,13 @@ const ListItem = React.forwardRef<
         <a
           ref={ref}
           className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            "block select-none space-y-1 rounded-lg p-4 leading-none no-underline outline-none transition-all hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground group",
             className
           )}
           {...props}
         >
-          <div className="text-sm font-medium leading-none">{title}</div>
-          <div className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+          <div className="text-sm font-semibold leading-none group-hover:text-primary transition-colors">{title}</div>
+          <div className="line-clamp-2 text-sm leading-snug text-muted-foreground mt-1.5">
             {children}
           </div>
         </a>
@@ -216,9 +216,11 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
 
                         <NavigationMenuItem>
-                            <NavigationMenuTrigger>Products</NavigationMenuTrigger>
+                            <NavigationMenuTrigger className="data-[state=open]:bg-accent/50">
+                                Products
+                            </NavigationMenuTrigger>
                             <NavigationMenuContent>
-                                <ul className="grid w-[520px] gap-3 p-4 md:w-[700px] md:grid-cols-2 lg:w-[820px]">
+                                <ul className="grid w-[520px] gap-3 p-6 md:w-[700px] md:grid-cols-2 lg:w-[820px]">
                                     {products.map((product) => (
                                         <ListItem
                                             key={product.title}
@@ -226,8 +228,10 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                             href={product.href}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className="text-muted-foreground mt-0.5">{product.icon}</div>
-                                                <span className="text-sm">{product.description}</span>
+                                                <div className="text-primary mt-0.5 transition-transform group-hover:scale-110">
+                                                    {product.icon}
+                                                </div>
+                                                <span className="text-sm leading-relaxed">{product.description}</span>
                                             </div>
                                         </ListItem>
                                     ))}
@@ -236,15 +240,26 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
 
                         <NavigationMenuItem>
-                            <NavigationMenuTrigger>Solutions</NavigationMenuTrigger>
+                            <NavigationMenuTrigger className="data-[state=open]:bg-accent/50">
+                                Solutions
+                            </NavigationMenuTrigger>
                             <NavigationMenuContent>
-                                <ul className="w-[300px] p-4 space-y-1">
+                                <ul className="w-[320px] p-6 space-y-1">
                                     {solutions.map(s => (
                                         <li key={s.title}>
                                             <NavigationMenuLink asChild>
-                                                <Link href={s.href} className="block rounded-md p-2 hover:bg-accent">
-                                                    <div className="text-sm font-medium">{s.title}</div>
-                                                    <div className="text-xs text-muted-foreground">{s.description}</div>
+                                                <Link 
+                                                    href={s.href} 
+                                                    className="block rounded-md p-3 hover:bg-accent transition-colors group"
+                                                >
+                                                    <div className="text-sm font-medium group-hover:text-primary transition-colors">
+                                                        {s.title}
+                                                    </div>
+                                                    {s.description && (
+                                                        <div className="text-xs text-muted-foreground mt-1">
+                                                            {s.description}
+                                                        </div>
+                                                    )}
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>
@@ -254,14 +269,21 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
 
                         <NavigationMenuItem>
-                            <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
+                            <NavigationMenuTrigger className="data-[state=open]:bg-accent/50">
+                                Resources
+                            </NavigationMenuTrigger>
                             <NavigationMenuContent>
-                                <ul className="w-[320px] p-4 space-y-1">
+                                <ul className="w-[280px] p-6 space-y-1">
                                     {resources.map(r => (
                                         <li key={r.title}>
                                             <NavigationMenuLink asChild>
-                                                <Link href={r.href} className="block rounded-md p-2 hover:bg-accent">
-                                                    <div className="text-sm font-medium">{r.title}</div>
+                                                <Link 
+                                                    href={r.href} 
+                                                    className="block rounded-md p-3 hover:bg-accent transition-colors group"
+                                                >
+                                                    <div className="text-sm font-medium group-hover:text-primary transition-colors">
+                                                        {r.title}
+                                                    </div>
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>
@@ -271,14 +293,21 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                         </NavigationMenuItem>
 
                         <NavigationMenuItem>
-                            <NavigationMenuTrigger>Company</NavigationMenuTrigger>
+                            <NavigationMenuTrigger className="data-[state=open]:bg-accent/50">
+                                Company
+                            </NavigationMenuTrigger>
                             <NavigationMenuContent>
-                                <ul className="w-[300px] p-4 space-y-1">
+                                <ul className="w-[280px] p-6 space-y-1">
                                     {company.map(c => (
                                         <li key={c.title}>
                                             <NavigationMenuLink asChild>
-                                                <Link href={c.href} className="block rounded-md p-2 hover:bg-accent">
-                                                    <div className="text-sm font-medium">{c.title}</div>
+                                                <Link 
+                                                    href={c.href} 
+                                                    className="block rounded-md p-3 hover:bg-accent transition-colors group"
+                                                >
+                                                    <div className="text-sm font-medium group-hover:text-primary transition-colors">
+                                                        {c.title}
+                                                    </div>
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>

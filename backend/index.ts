@@ -9,6 +9,17 @@ config({ path: path.resolve(__dirname, '.env') });
 import { createRequire } from 'module';
 import './firebase';
 
+// Initialize monitoring and infrastructure
+import { initSentry } from './common/sentry';
+import { initRedis } from './common/redis';
+import { logger } from './common/logger';
+
+// Initialize Sentry (must be early)
+initSentry();
+
+// Initialize Redis
+initRedis();
+
 // Initialize Firebase first
 const localRequire = createRequire(__filename);
 
@@ -44,7 +55,7 @@ let paymentRoutes: any;
 let escrowRoutes: any;
 
 try {
-  console.log('✅ Firebase Admin SDK initialized');
+  logger.info('Firebase Admin SDK initialized');
   // Load service routes
   userRoutes = loadService('./services/user/routes/userRoutes');
   walletRoutes = loadService('./services/wallet/routes');
@@ -54,9 +65,9 @@ try {
   currencyRoutes = loadService('./services/currency/routes');
   paymentRoutes = loadService('./services/payment/src/routes');
   escrowRoutes = loadService('./services/escrow/routes');
-  console.log('✅ All service routes loaded');
+  logger.info('All service routes loaded');
 } catch (err) {
-  console.error('❌ Failed to load backend modules:', err);
+  logger.error({ err }, 'Failed to load backend modules');
   process.exit(1);
 }
 
@@ -100,9 +111,9 @@ try {
     registerServiceRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes);
   }
   
-  console.log('✅ All service routes registered');
+  logger.info('All service routes registered');
 } catch (err) {
-  console.error('❌ Failed to register service routes:', err);
+  logger.error({ err }, 'Failed to register service routes');
   process.exit(1);
 }
 
@@ -120,13 +131,13 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
       url.searchParams.set('origin', origin);
     }
     
-    console.log(`[Gateway] Proxying PDF request to: ${url.toString()}`);
+    logger.debug({ url: url.toString() }, 'Proxying PDF request');
     
     const response = await fetch(url.toString());
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[Gateway] PDF service error: ${response.status} - ${errorText}`);
+      logger.error({ status: response.status, error: errorText }, 'PDF service error');
       return res.status(response.status).json({
         error: 'PDF generation failed',
         message: errorText,
@@ -140,7 +151,7 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
     const buffer = Buffer.from(await response.arrayBuffer());
     res.send(buffer);
   } catch (error: any) {
-    console.error('[Gateway] PDF proxy error:', error);
+    logger.error({ err: error }, 'PDF proxy error');
     res.status(500).json({
       error: 'Failed to connect to PDF service',
       message: error.message,
@@ -165,6 +176,5 @@ app.get('/api/pdf/health', async (_req, res) => {
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`🚀 Payvost API Gateway running on port ${port}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info({ port, env: process.env.NODE_ENV || 'development' }, 'Payvost API Gateway started');
 });

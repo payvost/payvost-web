@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "@/components/ui/carousel";
-import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, Twitter, Facebook, Linkedin, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
 import placeholderImageData from '@/app/lib/placeholder-images.json';
@@ -235,7 +236,7 @@ export default function LandingPage() {
       <main className="flex-1">
     {/* Hero Section */}
   <section className="relative overflow-hidden -mt-12 md:-mt-8 lg:-mt-10 pt-6 sm:pt-8">
-          <div className="container mx-auto max-w-screen-xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6 pt-8 pb-12 sm:pt-12 sm:pb-20 md:pt-16 md:pb-28 lg:pt-20 lg:pb-32">
             {/* Internal top padding for mobile */}
             <div className="block sm:hidden h-10" />
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
@@ -300,7 +301,7 @@ export default function LandingPage() {
         </section>
         {/* Workflow Section */}
         <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
-          <div className="container mx-auto px-4 md:px-6">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
               <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary text-xs sm:text-sm px-3 py-1">
@@ -358,7 +359,7 @@ export default function LandingPage() {
 
         {/* Developer Section */}
         <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-slate-950 text-slate-100">
-          <div className="container mx-auto px-2 sm:px-4 md:px-6">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 lg:items-start">
               <div className="flex-1 space-y-4 sm:space-y-6 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-white/20 bg-white/5 text-white/90 text-xs sm:text-sm px-3 py-1">
@@ -407,7 +408,7 @@ export default function LandingPage() {
         {/* Countries Section */}
         <section id="countries" className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
-          <div className="container mx-auto px-4 md:px-6">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 max-w-3xl">
               <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
                 Global corridors
@@ -478,7 +479,7 @@ export default function LandingPage() {
         {/* Testimonials Section */}
   <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
     <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
-    <div className="container mx-auto px-4 md:px-6">
+    <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
       <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
         <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
           Customer stories
@@ -611,7 +612,7 @@ export default function LandingPage() {
         {/* FAQ Section */}
         <section id="faq" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
-          <div className="container mx-auto px-4 md:px-6">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
               <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
                 <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
@@ -698,14 +699,14 @@ export default function LandingPage() {
         </section>
         {/* Blog Section */}
         <section id="blog" className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container mx-auto px-4 md:px-6">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">From the Blog</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Stay updated with the latest news and insights from the world of finance.
               </p>
             </div>
-            <div className="mx-auto grid max-w-7xl items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+            <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
               <Link href="/blog/payvost-partners-with-google" className="group">
                 <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 group-hover:shadow-lg">
                     <div className="relative aspect-video w-full">
@@ -788,9 +789,9 @@ export default function LandingPage() {
 
         {/* App Download CTA */}
         <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
-          <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-12 xl:px-20">
+          <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="bg-accent py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl transition-all duration-300">
-              <div className="container mx-auto px-4 md:px-6">
+              <div className="px-4 md:px-6">
                 <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
                   <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
                     <div className="lg:pl-4 xl:pl-8">
@@ -856,69 +857,7 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-      <footer className="bg-muted text-muted-foreground py-10 sm:py-12">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="w-full md:w-[30%] space-y-4">
-              <Link href="#" className="flex items-center space-x-2">
-                <Icons.logo className="h-7 sm:h-8" />
-              </Link>
-              <p className="text-xs sm:text-sm leading-relaxed">Stay up to date with the latest news, announcements, and articles.</p>
-              <form className="flex w-full max-w-sm space-x-2">
-                <Input type="email" placeholder="Enter your email" className="text-sm h-10" />
-                <Button type="submit" className="h-10 text-sm px-4">Subscribe</Button>
-              </form>
-            </div>
-            <div className="w-full md:w-[70%] grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-                <div className="space-y-3 sm:space-y-4">
-                <h4 className="text-sm sm:text-base font-semibold text-foreground">Product</h4>
-                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                    <li><Link href="#features" className="hover:text-primary transition-colors">Features</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Integrations</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">API</Link></li>
-                </ul>
-                </div>
-                <div className="space-y-3 sm:space-y-4">
-                <h4 className="text-sm sm:text-base font-semibold text-foreground">Company</h4>
-                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                    <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-                    <li><Link href="/careers" className="hover:text-primary transition-colors">Careers</Link></li>
-                    <li><Link href="/press" className="hover:text-primary transition-colors">Press</Link></li>
-                    <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
-                </ul>
-                </div>
-                <div className="space-y-3 sm:space-y-4">
-                <h4 className="text-sm sm:text-base font-semibold text-foreground">Resources</h4>
-                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                    <li><Link href="#blog" className="hover:text-primary transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Help Center</Link></li>
-                    <li><Link href="/fx-rates" className="hover:text-primary transition-colors">Live FX Rates</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Developers</Link></li>
-                    <li><Link href="#" className="hover:text-primary transition-colors">Security</Link></li>
-                </ul>
-                </div>
-                <div className="space-y-3 sm:space-y-4">
-                <h4 className="text-sm sm:text-base font-semibold text-foreground">Policies</h4>
-                <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                    <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                    <li><Link href="/terms" className="hover:text-primary transition-colors">Terms &amp; Conditions</Link></li>
-                </ul>
-                </div>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 sm:pt-8 border-t border-muted-foreground/20 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-xs sm:text-sm text-center sm:text-left">
-                <p>&copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.</p>
-            </div>
-            <div className="flex space-x-4">
-              <Link href="https://x.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Twitter className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
-              <Link href="https://facebook.com/payvost" rel="nofollow" target="_blank" className="hover:text-primary transition-colors"><Facebook className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
-              <Link href="#" className="hover:text-primary transition-colors"><Linkedin className="h-4 w-4 sm:h-5 sm:w-5" /></Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

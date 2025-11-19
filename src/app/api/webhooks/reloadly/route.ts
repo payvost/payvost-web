@@ -41,7 +41,8 @@ interface WebhookPayload {
 }
 
 /**
- * Verify webhook signature
+ * Verify webhook signature using constant-time comparison
+ * Prevents timing attacks
  */
 function verifyWebhookSignature(
   payload: string,
@@ -50,7 +51,17 @@ function verifyWebhookSignature(
 ): boolean {
   const hmac = createHmac('sha256', secret);
   const digest = hmac.update(payload).digest('hex');
-  return digest === signature;
+  
+  // Use constant-time comparison to prevent timing attacks
+  if (signature.length !== digest.length) {
+    return false;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature.charCodeAt(i) ^ digest.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 /**

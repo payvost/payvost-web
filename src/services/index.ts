@@ -79,3 +79,7 @@ export type {
   CreateExternalTransactionDto,
   UpdateExternalTransactionDto,
 } from './externalTransactionService';
+
+// User Service
+export { userService } from './userService';
+export type { UserProfile } from './userService';

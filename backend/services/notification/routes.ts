@@ -9,6 +9,8 @@ import {
   subscribeToTopic,
   unsubscribeFromTopic,
 } from './fcm';
+import { sendSMS, initTwilio } from './twilio';
+import { logger } from '../../common/logger';
 
 const router = Router();
 
@@ -26,14 +28,11 @@ const emailTransporter = nodemailer.createTransport({
 // Check if email service is configured
 const isEmailConfigured = !!( process.env.MAILGUN_SMTP_LOGIN && process.env.MAILGUN_SMTP_PASSWORD);
 if (!isEmailConfigured) {
-  console.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
+  logger.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
 }
 
-// Check if Twilio SMS is configured
-const isSMSConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
-if (!isSMSConfigured) {
-  console.warn('Twilio not configured. SMS notifications will be disabled.');
-}
+// Initialize Twilio
+initTwilio();
 
 /**
  * POST /api/notification/send
@@ -59,7 +58,7 @@ router.post('/send', verifyFirebaseToken, async (req: AuthenticatedRequest, res:
       messageId: result.messageId,
     });
   } catch (error: any) {
-    console.error('Error sending notification:', error);
+    logger.error({ err: error }, 'Error sending notification');
     res.status(500).json({ error: error.message || 'Failed to send notification' });
   }
 });
@@ -88,7 +87,7 @@ router.post('/send-email', verifyFirebaseToken, async (req: AuthenticatedRequest
       messageId: result.messageId,
     });
   } catch (error: any) {
-    console.error('Error sending email:', error);
+    logger.error({ err: error }, 'Error sending email');
     res.status(500).json({ error: error.message || 'Failed to send email' });
   }
 });
@@ -125,7 +124,7 @@ router.post('/send-batch', verifyFirebaseToken, async (req: AuthenticatedRequest
       failed,
     });
   } catch (error: any) {
-    console.error('Error sending batch notifications:', error);
+    logger.error({ err: error }, 'Error sending batch notifications');
     res.status(500).json({ error: error.message || 'Failed to send batch notifications' });
   }
 });
@@ -153,7 +152,7 @@ router.post('/send-sms', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       error: result.error,
     });
   } catch (error: any) {
-    console.error('Error sending SMS:', error);
+    logger.error({ err: error }, 'Error sending SMS');
     res.status(500).json({ error: error.message || 'Failed to send SMS' });
   }
 });
@@ -309,14 +308,14 @@ router.post('/preferences', verifyFirebaseToken, async (req: AuthenticatedReques
     };
 
     // TODO: Save to database
-    console.log('Updated notification preferences:', preferences);
+    logger.info({ userId, preferences }, 'Updated notification preferences');
 
     res.status(200).json({
       success: true,
       preferences,
     });
   } catch (error: any) {
-    console.error('Error updating preferences:', error);
+    logger.error({ err: error }, 'Error updating preferences');
     res.status(500).json({ error: error.message || 'Failed to update preferences' });
   }
 });
@@ -333,7 +332,7 @@ async function sendEmailNotification(params: {
   const { email, subject, template, variables } = params;
 
   if (!isEmailConfigured) {
-    console.warn('Email service not configured, skipping email notification');
+    logger.warn('Email service not configured, skipping email notification');
     return { success: false, error: 'Email service not configured' };
   }
 
@@ -347,49 +346,23 @@ async function sendEmailNotification(params: {
       html,
     });
 
-    console.log('Email sent successfully:', info.messageId);
+    logger.info({ messageId: info.messageId, email }, 'Email sent successfully');
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    console.error('Email sending error:', error);
+    logger.error({ err: error, email }, 'Email sending error');
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Helper function to send SMS notification (Twilio placeholder)
+ * Helper function to send SMS notification via Twilio
  */
 async function sendSMSNotification(params: {
   phoneNumber: string;
   message: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const { phoneNumber, message } = params;
-
-  if (!isSMSConfigured) {
-    console.warn('Twilio not configured, SMS will not be sent');
-    return { success: false, error: 'SMS service not configured. Twilio integration pending.' };
-  }
-
-  try {
-    // TODO: Implement actual Twilio integration
-    // const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    // const messageResult = await twilioClient.messages.create({
-    //   body: message,
-    //   from: process.env.TWILIO_PHONE_NUMBER,
-    //   to: phoneNumber
-    // });
-    
-    console.log('SMS would be sent to:', phoneNumber);
-    console.log('Message:', message);
-    
-    return { 
-      success: true, 
-      messageId: 'placeholder-' + Date.now(),
-      error: 'Twilio integration pending'
-    };
-  } catch (error: any) {
-    console.error('SMS error:', error);
-    return { success: false, error: error.message };
-  }
+  return sendSMS(phoneNumber, message);
 }
 
 /**
