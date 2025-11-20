@@ -7,8 +7,24 @@ import * as path from 'path';
 
 const LOCAL_SA_FILENAME = 'payvost-f28db3f2f0bc.json';
 
+let initialized = false;
+
 function initFirebaseAdmin() {
-  if (admin.apps.length) return;
+  if (admin.apps.length) {
+    initialized = true;
+    return;
+  }
+
+  // Skip initialization during build time (Next.js build process)
+  // Check for build phase or if we're in a build context without credentials
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || 
+                       process.env.NEXT_PHASE === 'phase-export' ||
+                       (process.env.NODE_ENV === 'production' && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 && !fs.existsSync(path.resolve(process.cwd(), 'backend', LOCAL_SA_FILENAME)));
+  
+  if (isBuildPhase) {
+    console.warn('Firebase Admin SDK: Skipping initialization during build phase');
+    return;
+  }
 
   try {
     let credential;
@@ -41,21 +57,21 @@ function initFirebaseAdmin() {
         path.resolve(__dirname, '..', '..', 'backend', LOCAL_SA_FILENAME),
       ];
       
-      console.log('Firebase Admin SDK: Looking for service account file');
-      console.log('Firebase Admin SDK: Current working directory:', process.cwd());
-      console.log('Firebase Admin SDK: __dirname:', __dirname);
-      
       let serviceAccountPath: string | null = null;
       for (const tryPath of possiblePaths) {
-        console.log('Firebase Admin SDK: Trying path:', tryPath);
         if (fs.existsSync(tryPath)) {
           serviceAccountPath = tryPath;
-          console.log('Firebase Admin SDK: Found service account at:', tryPath);
           break;
         }
       }
       
       if (!serviceAccountPath) {
+        // During build, just warn instead of throwing
+        const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_PHASE === 'phase-export';
+        if (isBuildPhase) {
+          console.warn('Firebase Admin SDK: Service account file not found during build. This is expected in CI/CD.');
+          return;
+        }
         console.error('Firebase Admin SDK: Service account file not found in any of the expected locations');
         console.error('Firebase Admin SDK: Tried paths:', possiblePaths);
         throw new Error(`Service account file not found. Tried: ${possiblePaths.join(', ')}`);
@@ -75,18 +91,63 @@ function initFirebaseAdmin() {
       databaseURL: process.env.FIREBASE_DATABASE_URL || "https://payvost-default-rtdb.firebaseio.com"
     });
     
+    initialized = true;
     console.log('Firebase Admin SDK initialized successfully');
   } catch (error) {
+    // During build, just warn instead of throwing
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_PHASE === 'phase-export';
+    if (isBuildPhase) {
+      console.warn("Firebase Admin SDK: Failed to initialize during build (this is expected):", error);
+      return;
+    }
     console.error("Failed to initialize Firebase Admin SDK:", error);
     throw error;
   }
 }
 
+// Lazy initialization - only initialize when actually needed
+function ensureInitialized() {
+  if (!initialized && !admin.apps.length) {
+    initFirebaseAdmin();
+  }
+}
+
+// Try to initialize, but don't fail during build
 initFirebaseAdmin();
 
-// New explicit exports
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
+// Lazy getters that ensure initialization
+function getAdminDb() {
+  ensureInitialized();
+  if (!admin.apps.length) {
+    throw new Error('Firebase Admin SDK not initialized. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable or provide service account file.');
+  }
+  return admin.firestore();
+}
+
+function getAdminAuth() {
+  ensureInitialized();
+  if (!admin.apps.length) {
+    throw new Error('Firebase Admin SDK not initialized. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable or provide service account file.');
+  }
+  return admin.auth();
+}
+
+// New explicit exports with lazy initialization using Proxy
+export const adminDb = new Proxy({} as admin.firestore.Firestore, {
+  get(_target, prop) {
+    const db = getAdminDb();
+    const value = db[prop as keyof admin.firestore.Firestore];
+    return typeof value === 'function' ? value.bind(db) : value;
+  }
+});
+
+export const adminAuth = new Proxy({} as admin.auth.Auth, {
+  get(_target, prop) {
+    const auth = getAdminAuth();
+    const value = auth[prop as keyof admin.auth.Auth];
+    return typeof value === 'function' ? value.bind(auth) : value;
+  }
+});
 
 // Backward compatibility exports for existing API routes
 export const db = adminDb;
