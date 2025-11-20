@@ -1,4 +1,5 @@
-import { Prisma, EscrowStatus, EscrowPartyRole, MilestoneStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { EscrowStatus, EscrowPartyRole, MilestoneStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import DecimalJS from 'decimal.js';
 import {
@@ -673,7 +674,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
       performedByRole: a.performedByRole || undefined,
       createdAt: a.createdAt,
     })),
-    disputes: escrow.disputes.map((d) => ({
+    disputes: escrow.disputes.map((d: any) => ({
       id: d.id,
       reason: d.reason,
       description: d.description,

@@ -1,4 +1,5 @@
-import { PrismaClient, Prisma, InvoiceStatus, InvoiceType, PaymentMethod } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+import type { InvoiceStatus, InvoiceType, PaymentMethod } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 export interface CreateInvoiceInput {
