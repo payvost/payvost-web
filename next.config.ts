@@ -40,7 +40,9 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config: any, { webpack }: { webpack: any }) => {
+  // Webpack config is only used when NOT using Turbopack
+  // When --turbopack flag is used, this config is ignored
+  webpack: (config: any, { webpack, isServer }: { webpack: any; isServer: boolean }) => {
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^@opentelemetry\/exporter-jaeger$/,
@@ -50,6 +52,17 @@ const nextConfig = {
       ...config.resolve.alias,
       handlebars: 'handlebars/dist/cjs/handlebars.js',
     };
+    
+    // Fix webpack cache issues on Windows
+    if (!isServer) {
+      config.cache = {
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+      };
+    }
+    
     return config;
   },
 };
