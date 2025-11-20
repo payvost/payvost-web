@@ -45,14 +45,14 @@ export class AccountingEngine {
     ]);
 
     // Calculate totals by currency
-    const transferTotals = transfers.reduce((acc, transfer) => {
+    const transferTotals = transfers.reduce((acc: Record<string, number>, transfer: any) => {
       const { currency, amount } = transfer;
       acc[currency] = (acc[currency] || 0) + Number(amount);
       return acc;
     }, {} as Record<string, number>);
 
     // Calculate balance changes by account
-    const accountBalanceChanges = ledgerEntries.reduce((acc, entry) => {
+    const accountBalanceChanges = ledgerEntries.reduce((acc: Record<string, number>, entry: any) => {
       const { accountId, amount } = entry;
       acc[accountId] = (acc[accountId] || 0) + Number(amount);
       return acc;
@@ -82,7 +82,7 @@ export class AccountingEngine {
     for (const account of accounts) {
       // Calculate balance from ledger entries
       const calculatedBalance = account.ledgerEntries.reduce(
-        (sum, entry) => sum + Number(entry.amount),
+        (sum: number, entry: any) => sum + Number(entry.amount),
         0
       );
 
@@ -122,19 +122,19 @@ export class AccountingEngine {
       accountId: account.id,
       currency: account.currency,
       debitTotal: account.ledgerEntries
-        .filter(entry => entry.type === 'DEBIT')
-        .reduce((sum, entry) => sum + Number(entry.amount), 0),
+        .filter((entry: any) => entry.type === 'DEBIT')
+        .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0),
       creditTotal: account.ledgerEntries
-        .filter(entry => entry.type === 'CREDIT')
-        .reduce((sum, entry) => sum + Number(entry.amount), 0),
+        .filter((entry: any) => entry.type === 'CREDIT')
+        .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0),
       balance: account.balance
     }));
 
     return {
       date: new Date(),
       entries: trialBalance,
-      totalDebit: trialBalance.reduce((sum, entry) => sum + entry.debitTotal, 0),
-      totalCredit: trialBalance.reduce((sum, entry) => sum + entry.creditTotal, 0)
+      totalDebit: trialBalance.reduce((sum: number, entry: any) => sum + entry.debitTotal, 0),
+      totalCredit: trialBalance.reduce((sum: number, entry: any) => sum + entry.creditTotal, 0)
     };
   }
 }

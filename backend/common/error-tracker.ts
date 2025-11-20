@@ -176,13 +176,17 @@ export async function captureException(
  */
 export async function captureMessage(
   message: string,
-  level: 'info' | 'warning' | 'error' = 'info',
+  level: 'info' | 'warn' | 'error' = 'info',
   context?: ErrorContext
 ): Promise<void> {
   try {
     const environment = process.env.NODE_ENV || 'development';
     if (environment === 'development' && !process.env.ENABLE_ERROR_TRACKING) {
-      logger[level]({ ...context }, message);
+      if (level === 'warn') {
+        logger.warn({ ...context }, message);
+      } else {
+        logger[level]({ ...context }, message);
+      }
       return;
     }
     
@@ -208,7 +212,11 @@ export async function captureMessage(
       },
     });
     
-    logger[level]({ ...context }, message);
+    if (level === 'warn') {
+      logger.warn({ ...context }, message);
+    } else {
+      logger[level]({ ...context }, message);
+    }
   } catch (error) {
     logger.error({ err: error }, 'Failed to capture message');
   }

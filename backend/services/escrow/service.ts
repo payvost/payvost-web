@@ -1,4 +1,10 @@
-import { EscrowStatus, MilestoneStatus, EscrowPartyRole, Escrow as PrismaEscrow } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
+// Use Prisma enum values
+const EscrowStatus = Prisma.EscrowStatus;
+const MilestoneStatus = Prisma.MilestoneStatus;
+const EscrowPartyRole = Prisma.EscrowPartyRole;
+type Escrow = Prisma.Escrow;
 import Decimal from 'decimal.js';
 import {
   CreateEscrowInput,
@@ -77,14 +83,14 @@ export async function createEscrow(
   creatorUserId: string
 ): Promise<EscrowDetails> {
   // Calculate total amount from milestones
-  const totalAmount = input.milestones.reduce((sum, m) => sum + m.amount, 0);
+  const totalAmount = input.milestones.reduce((sum: number, m: any) => sum + m.amount, 0);
   
   // Calculate platform fee
   const platformFeePercent = new Decimal(2.5); // 2.5%
   const platformFee = new Decimal(totalAmount).mul(platformFeePercent).div(100);
 
   // Create escrow with parties and milestones in a transaction
-  const escrow = await prisma.$transaction(async (tx) => {
+  const escrow = await prisma.$transaction(async (tx: any) => {
     // Create the escrow
     const newEscrow = await tx.escrow.create({
       data: {
@@ -210,7 +216,7 @@ export async function acceptEscrow(
 
     // Check if all parties have accepted
     const allParties = await tx.escrowParty.findMany({ where: { escrowId } });
-    const allAccepted = allParties.every((p) => p.hasAccepted);
+    const allAccepted = allParties.every((p: any) => p.hasAccepted);
 
     if (allAccepted) {
       // Transition to awaiting funding
@@ -422,7 +428,7 @@ export async function releaseMilestone(
 
     // Check if all milestones are released
     const allMilestones = await tx.milestone.findMany({ where: { escrowId } });
-    const allReleased = allMilestones.every((m) => m.status === MilestoneStatus.RELEASED);
+    const allReleased = allMilestones.every((m: any) => m.status === MilestoneStatus.RELEASED);
 
     if (allReleased) {
       await tx.escrow.update({
@@ -611,9 +617,9 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
 
   if (!escrow) throw new Error('Escrow not found');
 
-  const buyer = escrow.parties.find((p) => p.role === EscrowPartyRole.BUYER);
-  const seller = escrow.parties.find((p) => p.role === EscrowPartyRole.SELLER);
-  const mediator = escrow.parties.find((p) => p.role === EscrowPartyRole.MEDIATOR);
+  const buyer = escrow.parties.find((p: any) => p.role === EscrowPartyRole.BUYER);
+  const seller = escrow.parties.find((p: any) => p.role === EscrowPartyRole.SELLER);
+  const mediator = escrow.parties.find((p: any) => p.role === EscrowPartyRole.MEDIATOR);
 
   return {
     id: escrow.id,
@@ -649,7 +655,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
           acceptedAt: mediator.acceptedAt || undefined,
         }
       : undefined,
-    milestones: escrow.milestones.map((m) => ({
+    milestones: escrow.milestones.map((m: any) => ({
       id: m.id,
       title: m.title,
       description: m.description || undefined,

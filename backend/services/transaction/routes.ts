@@ -78,7 +78,7 @@ router.get('/transfers', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       select: { id: true },
     });
 
-    const accountIds = accounts.map(a => a.id);
+    const accountIds = accounts.map((a: any) => a.id);
 
     // Build where clause
     const where: any = {
@@ -146,7 +146,7 @@ router.get('/transfers/:id', verifyFirebaseToken, async (req: AuthenticatedReque
       select: { id: true },
     });
 
-    const accountIds = accounts.map(a => a.id);
+    const accountIds = accounts.map((a: any) => a.id);
 
     const transfer = await prisma.transfer.findFirst({
       where: {

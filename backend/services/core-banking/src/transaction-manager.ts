@@ -2,6 +2,9 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import { Decimal } from 'decimal.js';
 
+// Use Decimal from decimal.js - Prisma accepts Decimal instances in v6
+const PrismaDecimal = Decimal;
+
 export class TransactionManager {
   private prisma: PrismaClient;
 
@@ -114,7 +117,7 @@ export class TransactionManager {
         data: {
           fromAccountId,
           toAccountId,
-          amount: new Prisma.Decimal(amount),
+          amount: new PrismaDecimal(amount),
           currency,
           status: 'COMPLETED',
           type: 'INTERNAL_TRANSFER',
@@ -150,7 +153,7 @@ export class TransactionManager {
           },
           {
             accountId: toAccountId,
-            amount: new Prisma.Decimal(amount),
+            amount: new PrismaDecimal(amount),
             balanceAfter: new Prisma.Decimal(toNewBalance.toString()),
             type: 'CREDIT',
             description: `Transfer from ${fromAccountId}`,

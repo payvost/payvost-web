@@ -42,7 +42,7 @@ export class ForeignExchangeManager {
       rate
     });
 
-    return await this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx: any) => {
       // Mock FX transfer existence check (replace with DB when available)
       // if (idempotencyKey) return { id: 'mock', status: 'COMPLETED' };
 
