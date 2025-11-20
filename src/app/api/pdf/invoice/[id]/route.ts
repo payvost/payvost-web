@@ -4,6 +4,9 @@ import React from 'react';
 import { renderToStream } from '@react-pdf/renderer';
 import InvoiceDocument from '@/lib/pdf/InvoiceDocument';
 
+// Ensure we're using the correct React version for React-PDF
+const ReactPDF = require('@react-pdf/renderer');
+
 // Increase timeout for PDF generation (Vercel Pro allows up to 60s)
 export const maxDuration = 60;
 
@@ -43,15 +46,28 @@ export async function GET(
       // For now, we'll allow it if the request has proper auth
     }
 
-    // Normalize Firestore timestamps to Date objects
+    // Normalize Firestore timestamps to ISO strings (React-PDF works better with strings)
     const normalizeInvoice = (data: any) => {
-      const normalizeDate = (date: any) => {
+      const normalizeDate = (date: any): string | null => {
         if (!date) return null;
-        if (date && typeof date.toDate === 'function') return date.toDate();
-        if (date && date._seconds) return new Date(date._seconds * 1000);
-        if (typeof date === 'string') return new Date(date);
-        if (date instanceof Date) return date;
-        return null;
+        let dateObj: Date;
+        try {
+          if (date && typeof date.toDate === 'function') {
+            dateObj = date.toDate();
+          } else if (date && date._seconds) {
+            dateObj = new Date(date._seconds * 1000);
+          } else if (typeof date === 'string') {
+            dateObj = new Date(date);
+          } else if (date instanceof Date) {
+            dateObj = date;
+          } else {
+            dateObj = new Date(date);
+          }
+          if (isNaN(dateObj.getTime())) return null;
+          return dateObj.toISOString();
+        } catch (e) {
+          return null;
+        }
       };
 
       // Ensure items are properly formatted
@@ -110,14 +126,25 @@ export async function GET(
     }
 
     // Validate normalized invoice data - ensure all values are primitives
+    // Dates are already ISO strings from normalizeDate, so JSON serialization is safe
     const sanitizedInvoice = JSON.parse(JSON.stringify(normalizedInvoice));
     console.log('[PDF] Sanitized invoice data keys:', Object.keys(sanitizedInvoice));
+    
+    // Double-check: ensure all nested objects are plain objects (not Date instances)
+    const finalInvoice = {
+      ...sanitizedInvoice,
+      items: sanitizedInvoice.items.map((item: any) => ({
+        description: String(item.description || 'Item'),
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.price) || 0,
+      })),
+    };
 
     // Generate PDF using React-PDF
     // Use React.createElement to create the component element
     try {
       const invoiceDocElement = React.createElement(InvoiceDocument, { 
-        invoice: sanitizedInvoice 
+        invoice: finalInvoice 
       });
       
       if (!invoiceDocElement) {
@@ -125,7 +152,9 @@ export async function GET(
       }
       
       console.log('[PDF] Created React element, rendering to stream...');
-      const stream = await renderToStream(invoiceDocElement);
+      
+      // Use ReactPDF's renderToStream directly with the element
+      const stream = await ReactPDF.renderToStream(invoiceDocElement);
 
       // Convert stream to buffer
       const chunks: Buffer[] = [];
