@@ -45,7 +45,11 @@ exports.optionalAuth = optionalAuth;
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
 const jwt = __importStar(require("jsonwebtoken"));
 const index_1 = require("./index");
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+    throw new Error('JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
+        'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+}
 /**
  * Middleware to verify Firebase ID tokens
  */
@@ -89,6 +93,7 @@ function verifyJWT(req, res, next) {
             throw new index_1.AuthenticationError('Missing or invalid authorization header');
         }
         const token = authHeader.substring(7);
+        // JWT_SECRET is validated at module load time, so it's safe to use here
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = {
             uid: decoded.userId,

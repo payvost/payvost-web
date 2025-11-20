@@ -11,6 +11,14 @@ const path_1 = __importDefault(require("path"));
 (0, dotenv_1.config)({ path: path_1.default.resolve(__dirname, '.env') });
 const module_1 = require("module");
 require("./firebase");
+// Initialize monitoring and infrastructure
+const error_tracker_1 = require("./common/error-tracker");
+const redis_1 = require("./common/redis");
+const logger_1 = require("./common/logger");
+// Initialize error tracking (must be early)
+(0, error_tracker_1.initErrorTracker)();
+// Initialize Redis
+(0, redis_1.initRedis)();
 // Initialize Firebase first
 const localRequire = (0, module_1.createRequire)(__filename);
 // Helper to load modules in both TS (dev) and JS (prod) builds
@@ -27,7 +35,9 @@ function loadService(modPath) {
             const m = localRequire(p);
             return m && m.default ? m.default : m;
         }
-        catch {
+        catch (error) {
+            const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+            console.warn(`⚠️  Failed to load module candidate ${p}: ${detail}`);
             // try next candidate
         }
     }
@@ -40,8 +50,11 @@ let fraudRoutes;
 let notificationRoutes;
 let currencyRoutes;
 let paymentRoutes;
+let escrowRoutes;
+let errorTrackerRoutes;
+let invoiceRoutes;
 try {
-    console.log('✅ Firebase Admin SDK initialized');
+    logger_1.logger.info('Firebase Admin SDK initialized');
     // Load service routes
     userRoutes = loadService('./services/user/routes/userRoutes');
     walletRoutes = loadService('./services/wallet/routes');
@@ -50,10 +63,13 @@ try {
     notificationRoutes = loadService('./services/notification/routes');
     currencyRoutes = loadService('./services/currency/routes');
     paymentRoutes = loadService('./services/payment/src/routes');
-    console.log('✅ All service routes loaded');
+    escrowRoutes = loadService('./services/escrow/routes');
+    errorTrackerRoutes = loadService('./services/error-tracker/routes');
+    invoiceRoutes = loadService('./services/invoice/routes');
+    logger_1.logger.info('All service routes loaded');
 }
 catch (err) {
-    console.error('❌ Failed to load backend modules:', err);
+    logger_1.logger.error({ err }, 'Failed to load backend modules');
     process.exit(1);
 }
 // Create gateway application
@@ -83,10 +99,19 @@ try {
     if (paymentRoutes) {
         (0, index_1.registerServiceRoutes)(app, 'Payment Service', '/api/payment', paymentRoutes);
     }
-    console.log('✅ All service routes registered');
+    if (escrowRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Escrow Service', '/api/escrow', escrowRoutes);
+    }
+    if (errorTrackerRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes);
+    }
+    if (invoiceRoutes) {
+        (0, index_1.registerServiceRoutes)(app, 'Invoice Service', '/api/invoices', invoiceRoutes);
+    }
+    logger_1.logger.info('All service routes registered');
 }
 catch (err) {
-    console.error('❌ Failed to register service routes:', err);
+    logger_1.logger.error({ err }, 'Failed to register service routes');
     process.exit(1);
 }
 // PDF Service Proxy
@@ -100,11 +125,11 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
         if (origin) {
             url.searchParams.set('origin', origin);
         }
-        console.log(`[Gateway] Proxying PDF request to: ${url.toString()}`);
+        logger_1.logger.debug({ url: url.toString() }, 'Proxying PDF request');
         const response = await fetch(url.toString());
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[Gateway] PDF service error: ${response.status} - ${errorText}`);
+            logger_1.logger.error({ status: response.status, error: errorText }, 'PDF service error');
             return res.status(response.status).json({
                 error: 'PDF generation failed',
                 message: errorText,
@@ -117,7 +142,7 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
         res.send(buffer);
     }
     catch (error) {
-        console.error('[Gateway] PDF proxy error:', error);
+        logger_1.logger.error({ err: error }, 'PDF proxy error');
         res.status(500).json({
             error: 'Failed to connect to PDF service',
             message: error.message,
@@ -140,6 +165,5 @@ app.get('/api/pdf/health', async (_req, res) => {
 // Global error handler (must be last)
 app.use(index_1.errorHandler);
 app.listen(port, () => {
-    console.log(`🚀 Payvost API Gateway running on port ${port}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger_1.logger.info({ port, env: process.env.NODE_ENV || 'development' }, 'Payvost API Gateway started');
 });

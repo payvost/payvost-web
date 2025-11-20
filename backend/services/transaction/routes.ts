@@ -3,7 +3,7 @@ import { TransactionManager } from '../core-banking/src/transaction-manager';
 import { FeeEngine } from '../core-banking/src/fee-engine';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 import { prisma } from '../../common/prisma';
 
 const router = Router();

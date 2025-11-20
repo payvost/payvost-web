@@ -1,7 +1,7 @@
 // Open Exchange Rates API Service
 // Provides real-time exchange rates from openexchangerates.org
 
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 const OXR_APP_ID = process.env.OPEN_EXCHANGE_RATES_APP_ID;
 const OXR_BASE_URL = 'https://openexchangerates.org/api/';

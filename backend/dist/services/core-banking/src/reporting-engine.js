@@ -31,8 +31,8 @@ class ReportingEngine {
                 }
             });
             const accountIds = [...new Set([
-                    ...transfers.map(t => t.fromAccountId),
-                    ...transfers.map(t => t.toAccountId)
+                    ...transfers.map((t) => t.fromAccountId),
+                    ...transfers.map((t) => t.toAccountId)
                 ])];
             const accounts = await tx.account.findMany({
                 where: {
@@ -42,8 +42,8 @@ class ReportingEngine {
                     user: true
                 }
             });
-            const accountMap = new Map(accounts.map(a => [a.id, a]));
-            return transfers.map(t => ({
+            const accountMap = new Map(accounts.map((a) => [a.id, a]));
+            return transfers.map((t) => ({
                 ...t,
                 fromAccount: accountMap.get(t.fromAccountId),
                 toAccount: accountMap.get(t.toAccountId)
@@ -55,7 +55,7 @@ class ReportingEngine {
         const aggregates = {
             totalTransactions: transactions.length,
             totalVolume: transactions.reduce((sum, t) => sum + Number(t.amount), 0),
-            highValueTransactions: transactions.filter(t => Number(t.amount) > 10000).length,
+            highValueTransactions: transactions.filter((t) => Number(t.amount) > 10000).length,
             // We'll implement cross-border detection when country field is added
             crossBorderTransactions: 0,
             suspiciousActivityReports: complianceAlerts.length
@@ -115,13 +115,13 @@ class ReportingEngine {
         // Calculate statement metrics
         const metrics = {
             totalCredits: ledgerEntries
-                .filter(e => e.type === 'CREDIT')
+                .filter((e) => e.type === 'CREDIT')
                 .reduce((sum, e) => sum + Number(e.amount), 0),
             totalDebits: ledgerEntries
-                .filter(e => e.type === 'DEBIT')
+                .filter((e) => e.type === 'DEBIT')
                 .reduce((sum, e) => sum + Number(e.amount), 0),
             totalTransactions: transactions.length,
-            largestTransaction: Math.max(...transactions.map(t => Number(t.amount)))
+            largestTransaction: Math.max(...transactions.map((t) => Number(t.amount)))
         };
         return {
             statementPeriod: {
@@ -140,7 +140,7 @@ class ReportingEngine {
                 net: Number(closingBalance) - Number(openingBalance)
             },
             metrics,
-            transactions: transactions.map(t => ({
+            transactions: transactions.map((t) => ({
                 id: t.id,
                 date: (0, date_fns_1.format)(t.createdAt, 'yyyy-MM-dd HH:mm:ss'),
                 type: t.fromAccountId === accountId ? 'DEBIT' : 'CREDIT',
@@ -179,23 +179,23 @@ class ReportingEngine {
     }
     summarizeTransactions(transactions) {
         return {
-            volumeByCountry: this.groupBy(transactions, t => t.fromAccount.user.country),
-            volumeByCurrency: this.groupBy(transactions, t => t.currency),
+            volumeByCountry: this.groupBy(transactions, (t) => t.fromAccount.user.country),
+            volumeByCurrency: this.groupBy(transactions, (t) => t.currency),
             volumeByAmount: {
-                small: transactions.filter(t => Number(t.amount) <= 1000).length,
-                medium: transactions.filter(t => Number(t.amount) > 1000 && Number(t.amount) <= 10000).length,
-                large: transactions.filter(t => Number(t.amount) > 10000).length
+                small: transactions.filter((t) => Number(t.amount) <= 1000).length,
+                medium: transactions.filter((t) => Number(t.amount) > 1000 && Number(t.amount) <= 10000).length,
+                large: transactions.filter((t) => Number(t.amount) > 10000).length
             }
         };
     }
     summarizeCompliance(alerts) {
         return {
-            byType: this.groupBy(alerts, a => a.type),
-            bySeverity: this.groupBy(alerts, a => a.severity),
+            byType: this.groupBy(alerts, (a) => a.type),
+            bySeverity: this.groupBy(alerts, (a) => a.severity),
             resolution: {
-                resolved: alerts.filter(a => a.status === 'RESOLVED').length,
-                pending: alerts.filter(a => a.status === 'PENDING').length,
-                escalated: alerts.filter(a => a.status === 'ESCALATED').length
+                resolved: alerts.filter((a) => a.status === 'RESOLVED').length,
+                pending: alerts.filter((a) => a.status === 'PENDING').length,
+                escalated: alerts.filter((a) => a.status === 'ESCALATED').length
             }
         };
     }

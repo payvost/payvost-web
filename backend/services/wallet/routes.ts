@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
 import { prisma } from '../../common/prisma';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -203,7 +204,7 @@ router.post('/deduct', verifyFirebaseToken, requireKYC, async (req: Authenticate
     }
 
     // Deduct balance in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Lock account for update
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance
@@ -300,7 +301,7 @@ router.post('/refund', verifyFirebaseToken, async (req: AuthenticatedRequest, re
     }
 
     // Refund balance in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Lock account for update
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance

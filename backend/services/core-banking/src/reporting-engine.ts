@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 // Define interfaces for our custom models that aren't in Prisma yet
 interface ComplianceAlert {

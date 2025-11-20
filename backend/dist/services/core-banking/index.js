@@ -4,7 +4,16 @@ exports.transferFunds = transferFunds;
 exports.getAccountBalance = getAccountBalance;
 exports.createAccount = createAccount;
 const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../../common/prisma");
+// Use Prisma enum - fallback to string if not available
+const TransactionTypeEnum = client_1.TransactionType || {
+    INTERNAL_TRANSFER: 'INTERNAL_TRANSFER',
+    EXTERNAL_TRANSFER: 'EXTERNAL_TRANSFER',
+    CARD_PAYMENT: 'CARD_PAYMENT',
+    ATM_WITHDRAWAL: 'ATM_WITHDRAWAL',
+    DEPOSIT: 'DEPOSIT',
+    CURRENCY_EXCHANGE: 'CURRENCY_EXCHANGE',
+};
 /**
  * Idempotent funds transfer between accounts using Prisma transactions.
  * - Ensures idempotency via idempotencyKey stored on Transfer
@@ -15,12 +24,12 @@ async function transferFunds(fromAccountId, toAccountId, amount, currency, idemp
     try {
         // Quick idempotency check outside tx to avoid unnecessary work
         if (idempotencyKey) {
-            const existing = await prisma.transfer.findUnique({ where: { idempotencyKey } });
+            const existing = await prisma_1.prisma.transfer.findUnique({ where: { idempotencyKey } });
             if (existing) {
                 return { success: true, transferId: existing.id };
             }
         }
-        const transfer = await prisma.$transaction(async (tx) => {
+        const transfer = await prisma_1.prisma.$transaction(async (tx) => {
             // Lock the two accounts to perform safe balance checks and updates
             const lockedRows = await tx.$queryRaw `
         SELECT id, balance
@@ -50,7 +59,7 @@ async function transferFunds(fromAccountId, toAccountId, amount, currency, idemp
                     amount: amountStr,
                     currency,
                     status: 'completed',
-                    type: client_1.TransactionType.INTERNAL_TRANSFER,
+                    type: TransactionTypeEnum.INTERNAL_TRANSFER,
                     idempotencyKey: idempotencyKey ?? null,
                     description: description ?? null,
                 },
@@ -90,13 +99,13 @@ async function transferFunds(fromAccountId, toAccountId, amount, currency, idemp
     }
 }
 async function getAccountBalance(accountId) {
-    const res = await prisma.account.findUnique({ where: { id: accountId }, select: { balance: true, currency: true } });
+    const res = await prisma_1.prisma.account.findUnique({ where: { id: accountId }, select: { balance: true, currency: true } });
     if (!res)
         return null;
     return res;
 }
 async function createAccount(userId, currency) {
-    const res = await prisma.account.create({ data: { userId, currency, balance: '0' } });
+    const res = await prisma_1.prisma.account.create({ data: { userId, currency, balance: '0' } });
     return res.id;
 }
-exports.default = prisma;
+exports.default = prisma_1.prisma;

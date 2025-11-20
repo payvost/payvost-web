@@ -1,12 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
 const decimal_js_1 = require("decimal.js");
+const prisma_1 = require("../../common/prisma");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 /**
  * Transaction Risk Levels
  */
@@ -57,13 +56,13 @@ router.get('/alerts', middleware_1.verifyFirebaseToken, (0, middleware_1.require
             where.status = status;
         if (severity)
             where.severity = severity;
-        const alerts = await prisma.complianceAlert.findMany({
+        const alerts = await prisma_1.prisma.complianceAlert.findMany({
             where,
             orderBy: { createdAt: 'desc' },
             take: parseInt(limit),
             skip: parseInt(offset),
         });
-        const total = await prisma.complianceAlert.count({ where });
+        const total = await prisma_1.prisma.complianceAlert.count({ where });
         res.status(200).json({
             alerts,
             pagination: {
@@ -86,7 +85,7 @@ router.post('/alerts/:id/resolve', middleware_1.verifyFirebaseToken, (0, middlew
     try {
         const { id } = req.params;
         const { resolution } = req.body;
-        const alert = await prisma.complianceAlert.update({
+        const alert = await prisma_1.prisma.complianceAlert.update({
             where: { id },
             data: {
                 status: 'RESOLVED',
@@ -113,7 +112,7 @@ router.get('/risk-score/:accountId', middleware_1.verifyFirebaseToken, async (re
         const { accountId } = req.params;
         const userId = req.user?.uid;
         // Verify account belongs to user (unless admin)
-        const account = await prisma.account.findFirst({
+        const account = await prisma_1.prisma.account.findFirst({
             where: { id: accountId },
             include: { user: true },
         });
@@ -145,7 +144,7 @@ async function calculateRiskScore(params) {
     const factors = [];
     // Check transaction velocity (transactions in last hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentTransfers = await prisma.transfer.count({
+    const recentTransfers = await prisma_1.prisma.transfer.count({
         where: {
             fromAccountId,
             createdAt: { gte: oneHourAgo },
@@ -160,7 +159,7 @@ async function calculateRiskScore(params) {
         factors.push('Elevated transaction velocity');
     }
     // Check unusual amount (compare to account's average)
-    const avgTransfer = await prisma.transfer.aggregate({
+    const avgTransfer = await prisma_1.prisma.transfer.aggregate({
         where: { fromAccountId, status: 'COMPLETED' },
         _avg: { amount: true },
     });
@@ -177,7 +176,7 @@ async function calculateRiskScore(params) {
         }
     }
     // Check for new recipient
-    const previousToRecipient = await prisma.transfer.count({
+    const previousToRecipient = await prisma_1.prisma.transfer.count({
         where: {
             fromAccountId,
             toAccountId,
@@ -189,7 +188,7 @@ async function calculateRiskScore(params) {
         factors.push('New recipient');
     }
     // Check account age
-    const fromAccount = await prisma.account.findUnique({
+    const fromAccount = await prisma_1.prisma.account.findUnique({
         where: { id: fromAccountId },
     });
     if (fromAccount) {
@@ -205,7 +204,7 @@ async function calculateRiskScore(params) {
         }
     }
     // Check KYC status
-    const user = await prisma.user.findUnique({
+    const user = await prisma_1.prisma.user.findUnique({
         where: { id: fromAccount?.userId },
     });
     if (user?.kycStatus !== 'verified') {
@@ -233,7 +232,7 @@ async function calculateRiskScore(params) {
     }
     // Create compliance alert for high-risk transactions
     if (score >= 50) {
-        await prisma.complianceAlert.create({
+        await prisma_1.prisma.complianceAlert.create({
             data: {
                 type: 'HIGH_RISK_TRANSACTION',
                 severity: level,
@@ -258,7 +257,7 @@ async function calculateRiskScore(params) {
 async function calculateAccountRiskScore(accountId) {
     let score = 0;
     const factors = [];
-    const account = await prisma.account.findUnique({
+    const account = await prisma_1.prisma.account.findUnique({
         where: { id: accountId },
         include: { user: true },
     });
@@ -279,19 +278,19 @@ async function calculateAccountRiskScore(accountId) {
     }
     // Check transaction patterns
     const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentTransfers = await prisma.transfer.findMany({
+    const recentTransfers = await prisma_1.prisma.transfer.findMany({
         where: {
             OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
             createdAt: { gte: last30Days },
         },
     });
-    const failedTransfers = recentTransfers.filter(t => t.status === 'FAILED').length;
+    const failedTransfers = recentTransfers.filter((t) => t.status === 'FAILED').length;
     if (failedTransfers > 5) {
         score += 25;
         factors.push('Multiple failed transactions');
     }
     // Check for compliance alerts
-    const alerts = await prisma.complianceAlert.count({
+    const alerts = await prisma_1.prisma.complianceAlert.count({
         where: {
             accountId,
             status: 'PENDING',

@@ -4,9 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionManager = void 0;
-const client_1 = require("@prisma/client");
 const crypto_1 = __importDefault(require("crypto"));
 const decimal_js_1 = require("decimal.js");
+// Use Decimal from decimal.js - Prisma accepts Decimal instances in v6
+const PrismaDecimal = decimal_js_1.Decimal;
 class TransactionManager {
     constructor(prisma) {
         this.prisma = prisma;
@@ -91,7 +92,7 @@ class TransactionManager {
                 data: {
                     fromAccountId,
                     toAccountId,
-                    amount: new client_1.Prisma.Decimal(amount),
+                    amount: new PrismaDecimal(amount),
                     currency,
                     status: 'COMPLETED',
                     type: 'INTERNAL_TRANSFER',
@@ -103,13 +104,13 @@ class TransactionManager {
             await tx.account.update({
                 where: { id: fromAccountId },
                 data: {
-                    balance: { decrement: new client_1.Prisma.Decimal(amount) },
+                    balance: { decrement: new PrismaDecimal(amount) },
                 },
             });
             await tx.account.update({
                 where: { id: toAccountId },
                 data: {
-                    balance: { increment: new client_1.Prisma.Decimal(amount) },
+                    balance: { increment: new PrismaDecimal(amount) },
                 },
             });
             // Create ledger entries - Remove 'transferId' field
@@ -117,15 +118,15 @@ class TransactionManager {
                 data: [
                     {
                         accountId: fromAccountId,
-                        amount: new client_1.Prisma.Decimal(-amount),
-                        balanceAfter: new client_1.Prisma.Decimal(fromNewBalance.toString()),
+                        amount: new PrismaDecimal(-amount),
+                        balanceAfter: new PrismaDecimal(fromNewBalance.toString()),
                         type: 'DEBIT',
                         description: `Transfer to ${toAccountId}`,
                     },
                     {
                         accountId: toAccountId,
-                        amount: new client_1.Prisma.Decimal(amount),
-                        balanceAfter: new client_1.Prisma.Decimal(toNewBalance.toString()),
+                        amount: new PrismaDecimal(amount),
+                        balanceAfter: new PrismaDecimal(toNewBalance.toString()),
                         type: 'CREDIT',
                         description: `Transfer from ${fromAccountId}`,
                     },

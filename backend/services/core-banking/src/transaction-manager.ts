@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import crypto from 'crypto';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 // Use Decimal from decimal.js - Prisma accepts Decimal instances in v6
 const PrismaDecimal = Decimal;
