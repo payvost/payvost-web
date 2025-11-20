@@ -128,6 +128,13 @@ export default function FXRatesPage() {
         throw new Error('Failed to fetch exchange rates');
       }
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Expected JSON response but received ${contentType || 'unknown content type'}`);
+      }
+
       const data = await response.json();
       
       if (!data.success) {

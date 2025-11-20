@@ -10,12 +10,20 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const prisma = global.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+let prismaInstance: PrismaClient;
 
-if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma;
+if (process.env.NODE_ENV === 'production') {
+  prismaInstance = new PrismaClient({
+    log: ['error'],
+  });
+} else {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient({
+      log: ['query', 'error', 'warn'],
+    });
+  }
+  prismaInstance = global.prisma;
 }
 
+export const prisma = prismaInstance;
 export default prisma;

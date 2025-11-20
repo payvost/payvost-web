@@ -303,11 +303,34 @@ class ReloadlyService {
       },
     });
 
+    // Check content type before parsing
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json') || contentType.includes(acceptHeader);
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      let error: any = {};
+      if (isJson) {
+        try {
+          error = await response.json();
+        } catch {
+          const text = await response.text().catch(() => '');
+          error = { message: text || `HTTP ${response.status} Error` };
+        }
+      } else {
+        const text = await response.text().catch(() => '');
+        error = { message: text || `HTTP ${response.status} Error` };
+      }
       const baseMsg = error.message || error.error || 'Reloadly API request failed';
       const envHint = ` (service: ${service}, env: ${ENV_VARIABLES.RELOADLY_ENV}, url: ${baseUrl}${endpoint})`;
       throw new ReloadlyError(baseMsg + envHint, response.status, error);
+    }
+
+    if (!isJson) {
+      const text = await response.text();
+      throw new ReloadlyError(
+        `Expected JSON response but received ${contentType || 'unknown content type'}`,
+        response.status
+      );
     }
 
     return await response.json();

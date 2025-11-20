@@ -14,16 +14,28 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
+  // Try to use service account file first, fall back to env vars
+  const serviceAccountPath = require('path').join(__dirname, '../../payvost-f28db3f2f0bc.json');
+  try {
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error) {
+    // Fall back to environment variables
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
+    });
+  }
 }
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 const db = admin.firestore();
 
 interface FirestoreInvoice {
@@ -91,7 +103,7 @@ function mapPaymentMethod(method: string | undefined): PaymentMethod {
   return methodMap[method || ''] || 'PAYVOST';
 }
 
-async function migrateCollection(collectionName: string, invoiceType: InvoiceType) {
+async function migrateCollection(collectionName: string, invoiceType: 'USER' | 'BUSINESS') {
   console.log(`\n📦 Migrating ${collectionName} collection...`);
   
   const snapshot = await db.collection(collectionName).get();
@@ -107,6 +119,10 @@ async function migrateCollection(collectionName: string, invoiceType: InvoiceTyp
       const id = doc.id;
 
       // Skip if already migrated (check by invoice number or ID)
+      // Debug: Check if invoice model exists
+      if (!prisma.invoice) {
+        throw new Error('Prisma client does not have Invoice model. Make sure Prisma client is generated with the Invoice model.');
+      }
       const existing = await prisma.invoice.findFirst({
         where: {
           OR: [
@@ -225,10 +241,10 @@ async function main() {
 
   try {
     // Migrate user invoices
-    const userResult = await migrateCollection('invoices', InvoiceType.USER);
+    const userResult = await migrateCollection('invoices', 'USER' as InvoiceType);
     
     // Migrate business invoices
-    const businessResult = await migrateCollection('businessInvoices', InvoiceType.BUSINESS);
+    const businessResult = await migrateCollection('businessInvoices', 'BUSINESS' as InvoiceType);
 
     console.log('\n📊 Migration Summary:');
     console.log(`   Total Success: ${userResult.successCount + businessResult.successCount}`);

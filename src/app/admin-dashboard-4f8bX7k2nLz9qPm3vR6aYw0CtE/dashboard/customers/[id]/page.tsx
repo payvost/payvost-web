@@ -52,6 +52,11 @@ export default function CustomerDetailsPage() {
     const [kycSubmissions, setKycSubmissions] = useState<any[]>([]);
     const [loadingKyc, setLoadingKyc] = useState(false);
     const [processingDecision, setProcessingDecision] = useState<string | null>(null);
+    
+    // Tier1 approval state
+    const [processingTier1Decision, setProcessingTier1Decision] = useState(false);
+    const [tier1RejectReason, setTier1RejectReason] = useState('');
+    const [tier1RejectDialogOpen, setTier1RejectDialogOpen] = useState(false);
 
     // Helpers
     const toDate = (date: any): Date | null => {
@@ -130,30 +135,61 @@ export default function CustomerDetailsPage() {
         }
     }, [id]);
 
-    // Fetch KYC submissions
+    // Fetch KYC submissions - only for users who have submitted documents (tier2+)
     useEffect(() => {
         const fetchKycSubmissions = async () => {
-            if (!id) return;
+            if (!id || !customer) return;
+            
+            // Only fetch KYC submissions if:
+            // 1. User is not tier1 (tier1 users don't submit documents)
+            // 2. OR user has upgraded and has a kycProfile with tier2/tier3 status that's not locked
+            const isTier1Only = customer.kycTier === 'tier1' && 
+                               (customer.kycStatus === 'tier1_pending_review' || 
+                                customer.kycStatus === 'tier1_verified' ||
+                                customer.userType === 'Pending' ||
+                                customer.userType === 'Tier 1');
+            
+            // Check if user has upgraded tiers (tier2 or tier3 unlocked)
+            const hasUpgradedTier = customer.kycProfile?.tiers && (
+                (customer.kycProfile.tiers.tier2 && customer.kycProfile.tiers.tier2.status !== 'locked') ||
+                (customer.kycProfile.tiers.tier3 && customer.kycProfile.tiers.tier3.status !== 'locked')
+            );
+            
+            // Skip fetching if user is tier1 only and hasn't upgraded
+            if (isTier1Only && !hasUpgradedTier) {
+                setKycSubmissions([]);
+                setLoadingKyc(false);
+                return;
+            }
+            
             try {
                 setLoadingKyc(true);
                 const response = await axios.get(`/api/admin/kyc/submissions?userId=${id}`);
                 setKycSubmissions(response.data || []);
-            } catch (err) {
-                console.error('Error fetching KYC submissions:', err);
-                toast({
-                    title: 'Error',
-                    description: 'Failed to load KYC documents',
-                    variant: 'destructive',
-                });
+            } catch (err: any) {
+                // Only show error if it's not a storage bucket error (which is expected for tier1 users)
+                if (err.response?.status !== 500 || 
+                    !err.response?.data?.details?.includes('Bucket name not specified')) {
+                    console.error('Error fetching KYC submissions:', err);
+                    // Don't show toast for tier1 users without documents
+                    if (!isTier1Only) {
+                        toast({
+                            title: 'Error',
+                            description: 'Failed to load KYC documents',
+                            variant: 'destructive',
+                        });
+                    }
+                }
+                setKycSubmissions([]);
             } finally {
                 setLoadingKyc(false);
             }
         };
 
-        if (id) {
+        if (id && customer) {
             fetchKycSubmissions();
         }
-    }, [id, toast]);
+    }, [id, customer, toast]);
 
     // Handle KYC decision
     const handleKycDecision = async (submissionId: string, decision: 'approved' | 'rejected', reason?: string, level?: string) => {
@@ -190,6 +226,38 @@ export default function CustomerDetailsPage() {
             });
         } finally {
             setProcessingDecision(null);
+        }
+    };
+
+    // Handle Tier1 approval/rejection
+    const handleTier1Decision = async (decision: 'approved' | 'rejected', reason?: string) => {
+        try {
+            setProcessingTier1Decision(true);
+            await axios.post(`/api/admin/users/${id}/approve-tier1`, {
+                decision,
+                reason,
+            });
+            
+            toast({
+                title: `Tier 1 ${decision === 'approved' ? 'Approved' : 'Rejected'}`,
+                description: `User status has been updated.`,
+            });
+
+            // Refresh customer data
+            const customerResponse = await axios.get(`/api/admin/customers/${id}`);
+            setCustomer(customerResponse.data);
+
+            setTier1RejectDialogOpen(false);
+            setTier1RejectReason('');
+        } catch (err: any) {
+            console.error('Error processing tier1 decision:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to process tier1 decision',
+                variant: 'destructive',
+            });
+        } finally {
+            setProcessingTier1Decision(false);
         }
     };
 
@@ -320,6 +388,141 @@ export default function CustomerDetailsPage() {
                                                 )}
                     </Card>
 
+                    {/* Tier1 Review Card - Show for tier1 pending users */}
+                    {customer.kycTier === 'tier1' && 
+                     (customer.kycStatus === 'tier1_pending_review' || customer.userType === 'Pending') &&
+                     customer.kycProfile?.tiers?.tier1 && 
+                     (customer.kycProfile.tiers.tier1.status === 'submitted' || customer.kycProfile.tiers.tier1.status === 'pending_review') && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <IdCard className="h-5 w-5" />
+                                    Tier 1 Registration Review
+                                </CardTitle>
+                                <CardDescription>
+                                    Review and approve/reject tier1 user registration. No documents uploaded - only basic information provided.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Status</p>
+                                        <Badge variant="secondary">
+                                            {customer.kycProfile.tiers.tier1.status || 'submitted'}
+                                        </Badge>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Submitted At</p>
+                                        <p className="text-sm font-medium">
+                                            {customer.kycProfile.tiers.tier1.submittedAt 
+                                                ? (typeof customer.kycProfile.tiers.tier1.submittedAt === 'string' 
+                                                    ? new Date(customer.kycProfile.tiers.tier1.submittedAt).toLocaleString()
+                                                    : customer.kycProfile.tiers.tier1.submittedAt.toDate?.().toLocaleString() || 'N/A')
+                                                : 'N/A'}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <Separator />
+                                
+                                <div>
+                                    <p className="text-sm font-medium mb-3">Identity Information</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {customer.bvn && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground mb-1">BVN (Bank Verification Number)</p>
+                                                <p className="text-sm font-mono font-medium">{customer.bvn}</p>
+                                            </div>
+                                        )}
+                                        {customer.kycProfile.tiers.tier1.additionalFields && Object.entries(customer.kycProfile.tiers.tier1.additionalFields).map(([key, value]) => (
+                                            key !== 'bvn' && (
+                                                <div key={key}>
+                                                    <p className="text-xs text-muted-foreground mb-1">
+                                                        {key.split(/(?=[A-Z])/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                    </p>
+                                                    <p className="text-sm font-mono font-medium">{String(value)}</p>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                <div>
+                                    <p className="text-sm font-medium mb-2">Requirements Met</p>
+                                    <ul className="text-sm space-y-1 text-muted-foreground">
+                                        {customer.kycProfile.tiers.tier1.requirements?.map((req: string, idx: number) => (
+                                            <li key={idx} className="flex items-center gap-2">
+                                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                {req}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <Separator />
+
+                                <div className="flex gap-2 justify-end">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleTier1Decision('approved')}
+                                        disabled={processingTier1Decision}
+                                    >
+                                        {processingTier1Decision ? (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        )}
+                                        Approve Tier 1
+                                    </Button>
+                                    <Dialog open={tier1RejectDialogOpen} onOpenChange={setTier1RejectDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="destructive"
+                                                disabled={processingTier1Decision}
+                                            >
+                                                <XCircle className="h-4 w-4 mr-2" />
+                                                Reject Tier 1
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Reject Tier 1 Registration</DialogTitle>
+                                                <DialogDescription>
+                                                    Provide a reason for rejection. The user will be notified.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div>
+                                                <textarea 
+                                                    className="w-full border rounded-md p-2 min-h-[100px]" 
+                                                    placeholder="Reason for rejection (e.g., Invalid BVN, Information mismatch, etc.)" 
+                                                    value={tier1RejectReason} 
+                                                    onChange={e => setTier1RejectReason(e.target.value)} 
+                                                />
+                                            </div>
+                                            <DialogFooter>
+                                                <Button variant="secondary" onClick={() => { setTier1RejectDialogOpen(false); setTier1RejectReason(''); }}>
+                                                    Cancel
+                                                </Button>
+                                                <Button 
+                                                    variant="destructive"
+                                                    onClick={() => handleTier1Decision('rejected', tier1RejectReason)}
+                                                    disabled={processingTier1Decision}
+                                                >
+                                                    {processingTier1Decision ? (
+                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    ) : null}
+                                                    Reject
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* KYC Documents Card */}
                     <Card>
                         <CardHeader>
@@ -440,7 +643,12 @@ export default function CustomerDetailsPage() {
                             ) : (
                                 <div className="text-center py-8 text-muted-foreground">
                                     <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                    <p>No KYC submissions found</p>
+                                    <p>
+                                        {customer.kycTier === 'tier1' && 
+                                         (customer.kycStatus === 'tier1_pending_review' || customer.userType === 'Pending' || customer.userType === 'Tier 1')
+                                         ? 'No document submissions. Tier 1 users only provide basic information (BVN, SSN, etc.) during registration.'
+                                         : 'No KYC submissions found'}
+                                    </p>
                                 </div>
                             )}
                         </CardContent>

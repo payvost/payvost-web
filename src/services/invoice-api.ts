@@ -5,7 +5,12 @@
  * Replaces direct Firestore queries.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Use relative URLs for client-side to hit Next.js API routes
+// Use backend URL for server-side
+const isServer = typeof window === 'undefined';
+const API_BASE_URL = isServer 
+  ? (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:3001')
+  : ''; // Empty string means relative to current domain
 
 export interface InvoiceItem {
   description: string;
@@ -145,9 +150,45 @@ async function apiRequest<T>(
     headers,
   });
 
+  // Check content type before parsing
+  const contentType = response.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    let error: any = { error: 'Unknown error' };
+    if (isJson) {
+      try {
+        error = await response.json();
+      } catch {
+        const text = await response.text().catch(() => '');
+        error = { error: text || `HTTP ${response.status} Error` };
+      }
+    } else {
+      const text = await response.text().catch(() => '');
+      // If we get HTML, it's likely a 404 page or error page
+      if (contentType.includes('text/html')) {
+        if (response.status === 404) {
+          error = { error: `API endpoint not found: ${endpoint}. Please check if the backend service is running.` };
+        } else {
+          error = { error: `Server returned HTML instead of JSON (Status: ${response.status}). The API endpoint may not be available.` };
+        }
+      } else {
+        error = { error: text || `HTTP ${response.status} Error` };
+      }
+    }
     throw new Error(error.error || error.message || `HTTP ${response.status}`);
+  }
+
+  // If response is OK but not JSON, something is wrong
+  if (!isJson) {
+    const text = await response.text();
+    // Provide more helpful error message
+    if (contentType.includes('text/html')) {
+      throw new Error(
+        `API endpoint returned HTML instead of JSON. This usually means the endpoint doesn't exist or the backend service isn't running. Endpoint: ${endpoint}`
+      );
+    }
+    throw new Error(`Expected JSON response but received ${contentType || 'unknown content type'}`);
   }
 
   return response.json();
@@ -206,10 +247,48 @@ export class InvoiceAPI {
    */
   static async getPublicInvoice(idOrNumber: string): Promise<Invoice> {
     const response = await fetch(`${API_BASE_URL}/api/invoices/public/${idOrNumber}`);
+    
+    // Check content type before parsing
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      let error: any = { error: 'Unknown error' };
+      if (isJson) {
+        try {
+          error = await response.json();
+        } catch {
+          const text = await response.text().catch(() => '');
+          error = { error: text || `HTTP ${response.status} Error` };
+        }
+      } else {
+        const text = await response.text().catch(() => '');
+        // If we get HTML, it's likely a 404 page or error page
+        if (contentType.includes('text/html')) {
+          if (response.status === 404) {
+            error = { error: `Invoice not found: ${idOrNumber}` };
+          } else {
+            error = { error: `Server returned HTML instead of JSON (Status: ${response.status}). The API endpoint may not be available.` };
+          }
+        } else {
+          error = { error: text || `HTTP ${response.status} Error` };
+        }
+      }
       throw new Error(error.error || error.message || `HTTP ${response.status}`);
     }
+
+    // If response is OK but not JSON, something is wrong
+    if (!isJson) {
+      const text = await response.text();
+      // Provide more helpful error message
+      if (contentType.includes('text/html')) {
+        throw new Error(
+          `API endpoint returned HTML instead of JSON. This usually means the endpoint doesn't exist or the backend service isn't running. Endpoint: /api/invoices/public/${idOrNumber}`
+        );
+      }
+      throw new Error(`Expected JSON response but received ${contentType || 'unknown content type'}`);
+    }
+
     return response.json();
   }
 

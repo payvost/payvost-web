@@ -158,7 +158,7 @@ export default function Dashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{item.value}</div>
-                            <p className="text-xs text-muted-foreground">{item.change}</p>
+                            <div className="text-xs text-muted-foreground">{item.change}</div>
                         </CardContent>
                     </Card>
                 ))}
