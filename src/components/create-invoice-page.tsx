@@ -244,6 +244,16 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         if (savedInvoiceId) {
             const docRef = doc(db, 'invoices', savedInvoiceId);
             await updateDoc(docRef, firestoreData);
+            
+            // Trigger PDF regeneration if status changed to non-draft
+            if (status !== 'Draft') {
+              fetch('/api/generate-invoice-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invoiceId: savedInvoiceId }),
+              }).catch(err => console.error('Failed to trigger PDF generation:', err));
+            }
+            
             return savedInvoiceId;
         } else {
             const docRef = await addDoc(collection(db, 'invoices'), {
@@ -255,6 +265,16 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             const publicUrl = `${siteUrl}/invoice/${newId}`;
             await updateDoc(docRef, { publicUrl });
             setSavedInvoiceId(newId);
+            
+            // Trigger PDF generation for non-draft invoices (async, don't wait)
+            if (status !== 'Draft') {
+              fetch('/api/generate-invoice-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invoiceId: newId }),
+              }).catch(err => console.error('Failed to trigger PDF generation:', err));
+            }
+            
             return newId;
         }
     };
