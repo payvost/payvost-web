@@ -60,6 +60,7 @@
     "@radix-ui/react-use-is-hydrated": "^0.1.0",
     "@radix-ui/react-use-previous": "^1.1.1",
     "@radix-ui/react-use-size": "^1.1.1",
+    "@react-pdf/renderer": "^3.4.5",
     "@stripe/react-stripe-js": "^5.0.0",
     "@stripe/stripe-js": "^8.0.0",
     "@supabase/ssr": "^0.6.1",

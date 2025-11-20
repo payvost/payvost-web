@@ -27,7 +27,6 @@ import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
 import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
 import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, type DocumentSnapshot, type QuerySnapshot, type FirestoreError } from 'firebase/firestore';
-import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -73,7 +72,7 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
   const [spendingData, setSpendingData] = useState(defaultSpendingData);
   const [hasTransactionData, setHasTransactionData] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<DocumentData[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
@@ -211,23 +210,25 @@ export default function DashboardPage() {
         setLoadingWallets(false);
     });
     
-    // Fetch invoices using API
-    const fetchInvoices = async () => {
-        try {
-            const result = await InvoiceAPI.listInvoices({ limit: 4 });
-            setInvoices(result.invoices);
-        } catch (error) {
-            console.error('Error fetching invoices:', error);
-            setInvoices([]);
-        } finally {
-            setLoadingInvoices(false);
-        }
-    };
+    const invoicesQuery = query(
+        collection(db, "invoices"), 
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc"), 
+        limit(4)
+    );
 
-    fetchInvoices();
-    
-    // Poll for updates every 30 seconds
-    const unsubInvoices = setInterval(fetchInvoices, 30000);
+    const unsubInvoices = onSnapshot(invoicesQuery, (snapshot) => {
+        const fetchedInvoices: DocumentData[] = [];
+        snapshot.forEach(doc => {
+            fetchedInvoices.push({ id: doc.id, ...doc.data() });
+        });
+        setInvoices(fetchedInvoices);
+        setLoadingInvoices(false);
+    },
+    (error) => {
+        console.error("Error fetching invoices:", error);
+        setLoadingInvoices(false);
+    });
 
     const disputesQuery = query(collection(db, "disputes"), where("userId", "==", user.uid));
     const unsubDisputes = onSnapshot(disputesQuery, (snapshot) => {
@@ -242,7 +243,7 @@ export default function DashboardPage() {
 
     return () => {
         unsubUser();
-        clearInterval(unsubInvoices);
+        unsubInvoices();
         unsubDisputes();
     };
   }, [user, authLoading]);
@@ -769,21 +770,19 @@ export default function DashboardPage() {
                                     {invoices.map((invoice) => (
                                         <TableRow key={invoice.id}>
                                             <TableCell>
-                                                <div className="font-medium">{invoice.toInfo.name}</div>
+                                                <div className="font-medium">{invoice.toName}</div>
                                                 <div className="text-sm text-muted-foreground hidden md:inline">{invoice.invoiceNumber}</div>
                                             </TableCell>
-                                            <TableCell className="text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}</TableCell>
+                                            <TableCell className="text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
                                             <TableCell className="text-right">
                                                 <Badge 
                                                     variant={
-                                                    invoice.status === 'PAID' ? 'default' : 
-                                                    invoice.status === 'PENDING' ? 'secondary' : 'destructive'
+                                                    invoice.status === 'Paid' ? 'default' : 
+                                                    invoice.status === 'Pending' ? 'secondary' : 'destructive'
                                                     }
                                                     className="capitalize"
                                                 >
-                                                    {invoice.status === 'PAID' ? 'Paid' : 
-                                                     invoice.status === 'PENDING' ? 'Pending' : 
-                                                     invoice.status === 'OVERDUE' ? 'Overdue' : 'Draft'}
+                                                    {invoice.status}
                                                 </Badge>
                                             </TableCell>
                                         </TableRow>

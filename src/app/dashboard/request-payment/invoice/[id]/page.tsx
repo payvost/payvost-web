@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
+import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -36,9 +37,8 @@ export default function InvoiceDetailsPage() {
     const params = useParams();
     const id = params.id as string;
     const { user } = useAuth();
-    const [invoice, setInvoice] = useState<Invoice | null>(null);
+    const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
-    const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
 
     useEffect(() => {
@@ -47,24 +47,21 @@ export default function InvoiceDetailsPage() {
             return;
         }
 
-        const fetchInvoice = async () => {
-            try {
-                setLoading(true);
-                const invoiceData = await InvoiceAPI.getInvoice(id);
-                setInvoice(invoiceData);
-            } catch (error: any) {
-                console.error("Error fetching invoice:", error);
+        const docRef = doc(db, 'invoices', id);
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists() && docSnap.data().userId === user.uid) {
+                setInvoice({ id: docSnap.id, ...docSnap.data() });
+            } else {
+                console.log("No such document or insufficient permissions!");
                 setInvoice(null);
-            } finally {
-                setLoading(false);
             }
-        };
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching invoice:", error);
+            setLoading(false);
+        });
 
-        fetchInvoice();
-        
-        // Poll for updates every 30 seconds
-        const interval = setInterval(fetchInvoice, 30000);
-        return () => clearInterval(interval);
+        return () => unsubscribe();
     }, [user, id]);
     
     if (loading) {
@@ -93,14 +90,7 @@ export default function InvoiceDetailsPage() {
         )
     }
 
-    // Map API status to display status
-    const statusMap: Record<string, Status> = {
-        'PAID': 'Paid',
-        'PENDING': 'Pending',
-        'OVERDUE': 'Overdue',
-        'DRAFT': 'Draft',
-    };
-    const currentStatus = statusMap[invoice.status] || 'Pending';
+    const currentStatus = invoice.status as Status;
     const currentStatusInfo = statusInfo[currentStatus];
 
     const formatCurrency = (amount: number, currency: string) => {
@@ -118,9 +108,7 @@ export default function InvoiceDetailsPage() {
     };
 
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
-    const taxRate = Number(invoice.taxRate) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const grandTotal = Number(invoice.grandTotal) || (subtotal + taxAmount);
+    const taxAmount = invoice.grandTotal - subtotal;
 
     return (
         <DashboardLayout language={'en'} setLanguage={() => {}}>
@@ -138,7 +126,7 @@ export default function InvoiceDetailsPage() {
                     </div>
                      <div className="flex gap-2">
                         <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                        <a href={`${functionsBase}/download/invoice/${id}`} download>
+                        <a href={`/api/pdf/invoice/${id}`} download>
                             <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                         </a>
                         <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>
@@ -161,18 +149,18 @@ export default function InvoiceDetailsPage() {
                          <div className="grid grid-cols-3 gap-8">
                             <div className="space-y-1">
                                 <h3 className="font-semibold">Billed To</h3>
-                                <p className="text-sm">{invoice.toInfo.name}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.toInfo.address}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.toInfo.email}</p>
+                                <p className="text-sm">{invoice.toName}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
                             </div>
                             <div className="space-y-1">
                                 <h3 className="font-semibold">From</h3>
-                                <p className="text-sm">{invoice.fromInfo.name}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.fromInfo.address}</p>
+                                <p className="text-sm">{invoice.fromName}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
                             </div>
                             <div className="space-y-1 text-right">
-                                <p><strong className="font-semibold">Issue Date:</strong> {format(new Date(invoice.issueDate), 'PPP')}</p>
-                                <p><strong className="font-semibold">Due Date:</strong> {format(new Date(invoice.dueDate), 'PPP')}</p>
+                                <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate.toDate(), 'PPP')}</p>
+                                <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate.toDate(), 'PPP')}</p>
                             </div>
                          </div>
                         <Table>
@@ -198,9 +186,9 @@ export default function InvoiceDetailsPage() {
                          <div className="flex justify-end">
                             <div className="w-full max-w-sm space-y-2">
                                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
-                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
                                 <Separator className="my-2" />
-                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(grandTotal, invoice.currency)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
                             </div>
                         </div>
                         {invoice.notes && (
