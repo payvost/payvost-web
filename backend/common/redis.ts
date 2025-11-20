@@ -16,7 +16,7 @@ export function initRedis(): Redis | null {
 
   try {
     redisClient = new Redis(redisUrl, {
-      retryStrategy: (times) => {
+      retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
         logger.warn({ delay, attempt: times }, 'Redis connection retry');
         return delay;
@@ -34,7 +34,7 @@ export function initRedis(): Redis | null {
       logger.info('Redis client ready');
     });
 
-    redisClient.on('error', (error) => {
+    redisClient.on('error', (error: Error) => {
       logger.error({ err: error }, 'Redis client error');
     });
 
@@ -43,7 +43,7 @@ export function initRedis(): Redis | null {
     });
 
     // Connect to Redis
-    redisClient.connect().catch((error) => {
+    redisClient.connect().catch((error: Error) => {
       logger.error({ err: error }, 'Failed to connect to Redis');
       redisClient = null;
     });

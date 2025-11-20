@@ -78,7 +78,8 @@ export function verifyJWT(
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    // JWT_SECRET is validated at module load time, so it's safe to use here
+    const decoded = jwt.verify(token, JWT_SECRET!) as any;
 
     req.user = {
       uid: decoded.userId,
