@@ -6,8 +6,12 @@
 import { getMessaging, getToken, onMessage, Messaging, MessagePayload } from 'firebase/messaging';
 import { app } from './firebase';
 
-// Your FCM configuration
-const VAPID_KEY = process.env.NEXT_PUBLIC_FCM_VAPID_KEY || 'BAKeRtjRfqpfK7Mb0Q4HhlH7iJcITKQF6-5zsdGyDjY56ZeK7CCcvKE23YvFPWUKcSqT8hMZE1ZBWwEeFILPv5M'; // You'll need to generate this from Firebase Console
+// FCM VAPID Key - must be set via environment variable
+const VAPID_KEY = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
+
+if (!VAPID_KEY) {
+  console.error('NEXT_PUBLIC_FCM_VAPID_KEY is not set. Push notifications will not work.');
+}
 
 let messaging: Messaging | null = null;
 
@@ -70,6 +74,11 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     console.log('Service Worker registered:', registration);
 
     // Get FCM token
+    if (!VAPID_KEY) {
+      console.error('FCM VAPID key not configured. Cannot get notification token.');
+      return null;
+    }
+
     const token = await getToken(messagingInstance, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration

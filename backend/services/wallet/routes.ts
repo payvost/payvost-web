@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
+import { prisma } from '../../common/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/wallet/accounts

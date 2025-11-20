@@ -3,7 +3,14 @@ import admin from 'firebase-admin';
 import * as jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError, KYCError } from './index';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+  throw new Error(
+    'JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
+    'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+  );
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: {
