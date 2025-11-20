@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
 type Status = 'Paid' | 'Pending' | 'Overdue' | 'Draft';
 
@@ -39,6 +40,7 @@ export default function BusinessInvoiceDetailsPage() {
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
     const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
 
@@ -123,6 +125,19 @@ export default function BusinessInvoiceDetailsPage() {
     const grandTotal = invoice.grandTotal || 0;
     const taxAmount = grandTotal - subtotal;
 
+    const handlePrint = () => {
+        if (!id) return;
+        
+        // Open PDF in new window for printing
+        const pdfUrl = `/api/pdf/invoice/${id}`;
+        window.open(pdfUrl, '_blank');
+        
+        toast({
+            title: "Opening PDF",
+            description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+        });
+    };
+
     return (
         <div className="space-y-4">
              <div className="flex items-center justify-between">
@@ -137,8 +152,8 @@ export default function BusinessInvoiceDetailsPage() {
                     </div>
                 </div>
                  <div className="flex gap-2">
-                    <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                    <a href={`${functionsBase}/download/invoice/${id}`} download>
+                    <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
+                    <a href={`/api/pdf/invoice/${id}`} download>
                         <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                     </a>
                     <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>

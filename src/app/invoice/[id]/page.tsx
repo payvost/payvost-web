@@ -183,6 +183,20 @@ export default function PublicInvoicePage() {
       });
   };
 
+  // Print invoice PDF
+  const handlePrint = () => {
+    if (!id) return;
+    
+    // Open PDF in new window for printing
+    const pdfUrl = `/api/pdf/invoice/${id}`;
+    window.open(pdfUrl, '_blank');
+    
+    toast({
+      title: "Opening PDF",
+      description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+    });
+  };
+
   // Pay Now button handler
   const handlePayNow = () => {
     if (!invoice) return;
@@ -299,7 +313,7 @@ export default function PublicInvoicePage() {
         <SiteHeader />
         <main className="flex-1 py-12 px-4">
           <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2 no-print">
-            <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4"/>Print</Button>
+            <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
             <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
             <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
           </div>

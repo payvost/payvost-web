@@ -58,6 +58,19 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
     navigator.clipboard.writeText(invoiceData.publicUrl);
     toast({ title: 'Link Copied!' });
   }
+
+  const handlePrint = () => {
+    if (!invoiceId) return;
+    
+    // Open PDF in new window for printing
+    const pdfUrl = `/api/pdf/invoice/${invoiceId}`;
+    window.open(pdfUrl, '_blank');
+    
+    toast({
+      title: "Opening PDF",
+      description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+    });
+  };
   
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -107,7 +120,7 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
                 <div className="space-y-2 pt-4">
                      <div className="grid grid-cols-2 gap-2">
                         <Button asChild type="button" variant="outline"><a href={`/api/pdf/invoice/${invoiceData.id}`} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>Download PDF</a></Button>
-                        <Button type="button" variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
+                        <Button type="button" variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
                      </div>
                 </div>
             )}

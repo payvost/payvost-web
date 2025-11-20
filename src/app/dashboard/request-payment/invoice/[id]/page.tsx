@@ -39,6 +39,7 @@ export default function InvoiceDetailsPage() {
     const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
 
 
     useEffect(() => {
@@ -110,6 +111,19 @@ export default function InvoiceDetailsPage() {
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = invoice.grandTotal - subtotal;
 
+    const handlePrint = () => {
+        if (!id) return;
+        
+        // Open PDF in new window for printing
+        const pdfUrl = `/api/pdf/invoice/${id}`;
+        window.open(pdfUrl, '_blank');
+        
+        toast({
+            title: "Opening PDF",
+            description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+        });
+    };
+
     return (
         <DashboardLayout language={'en'} setLanguage={() => {}}>
             <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -125,7 +139,7 @@ export default function InvoiceDetailsPage() {
                         </div>
                     </div>
                      <div className="flex gap-2">
-                        <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
+                        <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
                         <a href={`/api/pdf/invoice/${id}`} download>
                             <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                         </a>
