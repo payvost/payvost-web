@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
-import { DocumentData } from 'firebase/firestore';
+import { doc, getDoc, DocumentData, query, collection, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import StripeCheckout from '@/components/StripeCheckout';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function PublicInvoicePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [invoice, setInvoice] = useState<DocumentData | null>(null);
   const [businessProfile, setBusinessProfile] = useState<DocumentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -61,44 +61,54 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        // Use public API endpoint
-        const invoiceData = await InvoiceAPI.getPublicInvoice(id);
-        setInvoice(invoiceData);
-        setFoundInCollection('postgresql-api');
+        // Try the invoices collection first
+        let docRef = doc(db, "invoices", id);
+        let docSnap = await getDoc(docRef);
+        console.log('[invoice] checked collection: invoices, exists:', docSnap.exists());
 
-        // Fetch associated business profile (if there is a businessId)
-        if (invoiceData.businessId) {
-          try {
-            const { doc, getDoc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase');
-            const { query, collection, where, getDocs } = await import('firebase/firestore');
+        // If not found in `invoices`, try the business invoices collection
+        if (!docSnap.exists()) {
+          docRef = doc(db, "businessInvoices", id);
+          docSnap = await getDoc(docRef);
+          console.log('[invoice] checked collection: businessInvoices, exists:', docSnap.exists());
+        }
+
+        if (docSnap.exists() && docSnap.data().isPublic) {
+          const invoiceData = docSnap.data();
+          setInvoice(invoiceData);
+          setFoundInCollection(docRef.parent.id || (docRef.path.includes('businessInvoices') ? 'businessInvoices' : 'invoices'));
+
+          // Fetch associated business profile (if there is a businessId)
+          if (invoiceData.businessId) {
             const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
             const bizSnap = await getDocs(bizQuery);
             if (!bizSnap.empty) {
               setBusinessProfile(bizSnap.docs[0].data().businessProfile);
             }
-          } catch (err) {
-            console.error('Error fetching business profile:', err);
           }
-        }
 
-        // If online payment (stripe), fetch Stripe clientSecret
-        if (invoiceData.paymentMethod === 'STRIPE') {
-          const res = await fetch(`${apiBase}/create-payment-intent`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              invoiceId: id,
-              amount: Number(invoiceData.grandTotal) * 100, // convert to cents
-              currency: invoiceData.currency.toLowerCase()
-            })
-          });
-          const data = await res.json();
-          setClientSecret(data.clientSecret);
+          // If online payment (stripe), fetch Stripe clientSecret
+          if (invoiceData.paymentMethod === 'stripe') {
+            const res = await fetch(`${apiBase}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoiceId: id,
+                amount: invoiceData.grandTotal * 100, // convert to cents
+                currency: invoiceData.currency.toLowerCase()
+              })
+            });
+            const data = await res.json();
+            setClientSecret(data.clientSecret);
+          }
+        } else {
+          setInvoice(null);
+          console.log("Invoice not found or not public.");
         }
       } catch (error: any) {
         console.error("Error fetching invoice:", error);
-        setFetchError(error.message || String(error));
+        const code = (error as any)?.code || (error as any)?.message || String(error);
+        setFetchError(String(code));
         setInvoice(null);
       } finally {
         setLoading(false);
@@ -112,8 +122,8 @@ export default function PublicInvoicePage() {
   const handleDownloadInvoice = () => {
     if (!id) return;
 
-    // Use backend PDF service instead of Cloud Functions
-    const downloadUrl = `${apiBase}/api/pdf/invoice/${id}`;
+    // Use Vercel serverless function for PDF generation
+    const downloadUrl = `/api/pdf/invoice/${id}`;
     
     // Show loading toast
     toast({
@@ -177,9 +187,9 @@ export default function PublicInvoicePage() {
   const handlePayNow = () => {
     if (!invoice) return;
 
-    if (invoice.paymentMethod === 'MANUAL') {
+    if (invoice.paymentMethod === 'manual') {
       setIsManualPaymentDialogOpen(true);
-    } else if (invoice.paymentMethod === 'STRIPE') {
+    } else if (invoice.paymentMethod === 'stripe') {
       toast({
         title: "Payment Form Loaded",
         description: "Complete your payment below.",
@@ -225,14 +235,7 @@ export default function PublicInvoicePage() {
     );
   }
 
-  // Map API status to display status
-  const statusMap: Record<string, Status> = {
-    'PAID': 'Paid',
-    'PENDING': 'Pending',
-    'OVERDUE': 'Overdue',
-    'DRAFT': 'Draft',
-  };
-  const currentStatus = statusMap[invoice.status] || 'Pending';
+  const currentStatus = invoice.status as Status;
   const currentStatusInfo = statusInfo[currentStatus];
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -242,9 +245,7 @@ export default function PublicInvoicePage() {
   };
 
   const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
-  const taxRate = Number(invoice.taxRate) || 0;
-  const taxAmount = subtotal * (taxRate / 100);
-  const grandTotal = Number(invoice.grandTotal) || (subtotal + taxAmount);
+  const taxAmount = invoice.grandTotal - subtotal;
 
   return (
     <>
@@ -325,18 +326,18 @@ export default function PublicInvoicePage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
               <div className="space-y-1">
                 <h3 className="font-semibold">Billed To</h3>
-                <p className="text-sm">{invoice.toInfo.name}</p>
-                <p className="text-sm text-muted-foreground">{invoice.toInfo.address}</p>
-                <p className="text-sm text-muted-foreground">{invoice.toInfo.email}</p>
+                <p className="text-sm">{invoice.toName}</p>
+                <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
+                <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
               </div>
               <div className="space-y-1">
                 <h3 className="font-semibold">From</h3>
-                <p className="text-sm">{invoice.fromInfo.name}</p>
-                <p className="text-sm text-muted-foreground">{invoice.fromInfo.address}</p>
+                <p className="text-sm">{invoice.fromName}</p>
+                <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
               </div>
               <div className="space-y-1 text-left md:text-right col-span-2 md:col-span-1">
-                <p><strong className="font-semibold">Issue Date:</strong> {format(new Date(invoice.issueDate), 'PPP')}</p>
-                <p><strong className="font-semibold">Due Date:</strong> {format(new Date(invoice.dueDate), 'PPP')}</p>
+                <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate.toDate(), 'PPP')}</p>
+                <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate.toDate(), 'PPP')}</p>
               </div>
             </div>
 
@@ -364,9 +365,9 @@ export default function PublicInvoicePage() {
             <div className="flex justify-end">
               <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
                 <Separator className="my-2" />
-                <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(grandTotal, invoice.currency)}</span></div>
+                <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
               </div>
             </div>
 
@@ -378,7 +379,7 @@ export default function PublicInvoicePage() {
             )}
 
             {/* ---------------- Stripe Payment Form ---------------- */}
-            {invoice.paymentMethod === 'STRIPE' && clientSecret && invoice.status !== 'PAID' && (
+            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && (
               <div className="mt-8">
                 <StripeCheckout clientSecret={clientSecret} />
               </div>
@@ -387,12 +388,12 @@ export default function PublicInvoicePage() {
 
           <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
             <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-            {(invoice.paymentMethod === 'MANUAL' || invoice.paymentMethod === 'STRIPE') && invoice.status !== 'PAID' && (
+            {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
               <Button size="lg" onClick={handlePayNow}>
-                Pay {formatCurrency(grandTotal, invoice.currency)} Now
+                Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
               </Button>
             )}
-            {invoice.status === 'PAID' && <Button size="lg" disabled>Paid</Button>}
+            {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
           </CardFooter>
         </Card>
 
@@ -414,15 +415,15 @@ export default function PublicInvoicePage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="flex justify-between items-center"><span className="text-muted-foreground">Bank Name:</span><span className="font-semibold">{invoice.manualBankDetails?.bankName || ''}</span></div>
-              <div className="flex justify-between items-center"><span className="text-muted-foreground">Account Name:</span><span className="font-semibold">{invoice.manualBankDetails?.accountName || ''}</span></div>
-              <div className="flex justify-between items-center"><span className="text-muted-foreground">Account Number:</span><span className="font-semibold">{invoice.manualBankDetails?.accountNumber || ''}</span></div>
-              {invoice.manualBankDetails?.otherDetails && <div className="flex justify-between items-center"><span className="text-muted-foreground">Other Details:</span><span className="font-semibold">{invoice.manualBankDetails.otherDetails}</span></div>}
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Bank Name:</span><span className="font-semibold">{invoice.manualBankName}</span></div>
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Account Name:</span><span className="font-semibold">{invoice.manualAccountName}</span></div>
+              <div className="flex justify-between items-center"><span className="text-muted-foreground">Account Number:</span><span className="font-semibold">{invoice.manualAccountNumber}</span></div>
+              {invoice.manualOtherDetails && <div className="flex justify-between items-center"><span className="text-muted-foreground">Other Details:</span><span className="font-semibold">{invoice.manualOtherDetails}</span></div>}
               <Separator className="my-4"/>
               <p className="text-xs text-center text-muted-foreground">Once payment is made, the sender will be notified to confirm receipt.</p>
             </div>
             <DialogFooter>
-              <Button onClick={() => navigator.clipboard.writeText(`Bank: ${invoice.manualBankDetails?.bankName || ''}\nAccount Name: ${invoice.manualBankDetails?.accountName || ''}\nAccount Number: ${invoice.manualBankDetails?.accountNumber || ''}`)} variant="secondary">
+              <Button onClick={() => navigator.clipboard.writeText(`Bank: ${invoice.manualBankName}\nAccount Name: ${invoice.manualAccountName}\nAccount Number: ${invoice.manualAccountNumber}`)} variant="secondary">
                 <Copy className="mr-2 h-4 w-4"/>Copy Details
               </Button>
               <Button onClick={() => setIsManualPaymentDialogOpen(false)}>Close</Button>

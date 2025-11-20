@@ -16,7 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, Download, FileImage, Loader2, Send, QrCode, Share2, Printer } from 'lucide-react';
 import type { InvoiceFormValues } from './create-invoice-page';
 import { useAuth } from '@/hooks/use-auth';
-import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
+import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SendInvoiceDialogProps {
   isOpen: boolean;
@@ -28,27 +29,27 @@ interface SendInvoiceDialogProps {
 export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSend }: SendInvoiceDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [invoiceData, setInvoiceData] = useState<Invoice | null>(null);
+  const [invoiceData, setInvoiceData] = useState<DocumentData | null>(null);
 
   useEffect(() => {
     if (isOpen && invoiceId) {
-      const fetchInvoice = async () => {
-        setLoading(true);
-        try {
-          const invoice = await InvoiceAPI.getInvoice(invoiceId);
-          setInvoiceData(invoice);
-        } catch (error: any) {
-          console.error('Error fetching invoice:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load invoice. Please try again.',
-            variant: 'destructive',
-          });
-        } finally {
-          setLoading(false);
+      setLoading(true);
+      const docRef = doc(db, 'invoices', invoiceId);
+      const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setInvoiceData({ id: docSnap.id, ...docSnap.data() });
         }
-      };
-      fetchInvoice();
+        setLoading(false);
+      }, (error) => {
+        console.error('Error fetching invoice:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load invoice. Please try again.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+      });
+      return () => unsubscribe();
     }
   }, [isOpen, invoiceId, toast]);
 
@@ -105,7 +106,7 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
             {invoiceData && (
                 <div className="space-y-2 pt-4">
                      <div className="grid grid-cols-2 gap-2">
-                        <Button asChild type="button" variant="outline"><a href={`/invoice/${invoiceData.id}/download`} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>Download PDF</a></Button>
+                        <Button asChild type="button" variant="outline"><a href={`/api/pdf/invoice/${invoiceData.id}`} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>Download PDF</a></Button>
                         <Button type="button" variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
                      </div>
                 </div>

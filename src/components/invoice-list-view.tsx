@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2, Trash2, Loader2, Copy, Edit, CheckCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
+import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { ref, deleteObject } from "firebase/storage";
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -41,10 +42,10 @@ interface InvoiceListViewProps {
 
 export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: InvoiceListViewProps) {
   const { user } = useAuth();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<DocumentData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -53,29 +54,26 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
         return;
     }
 
-    const fetchInvoices = async () => {
-      try {
-        setLoading(true);
-        const result = await InvoiceAPI.listInvoices();
-        setInvoices(result.invoices);
-      } catch (error) {
-        console.error("Error fetching invoices: ", error);
-        toast({
-          title: "Error",
-          description: "Failed to load invoices. Please try again.",
-          variant: "destructive",
+    const q = query(collection(db, "invoices"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const invoicesData: DocumentData[] = [];
+        querySnapshot.forEach((doc) => {
+            invoicesData.push({ id: doc.id, ...doc.data() });
         });
-      } finally {
+        invoicesData.sort((a, b) => {
+            const aTime = a.createdAt?.toDate?.() || new Date(0);
+            const bTime = b.createdAt?.toDate?.() || new Date(0);
+            return bTime.getTime() - aTime.getTime();
+        });
+        setInvoices(invoicesData);
         setLoading(false);
-      }
-    };
+    }, (error) => {
+        console.error("Error fetching invoices: ", error);
+        setLoading(false);
+    });
 
-    fetchInvoices();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchInvoices, 30000);
-    return () => clearInterval(interval);
-  }, [user, toast]);
+    return () => unsubscribe();
+  }, [user]);
 
   const handleCopyLink = (link: string) => {
     if (!link) {
@@ -93,7 +91,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     });
   }
 
-  const handleShareInvoice = async (invoice: Invoice) => {
+  const handleShareInvoice = async (invoice: DocumentData) => {
      if (!invoice.publicUrl) {
         toast({
             title: "Link Not Available",
@@ -104,7 +102,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     }
     const shareData = {
         title: `Invoice #${invoice.invoiceNumber}`,
-        text: `Here is the invoice from ${invoice.fromInfo.name} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}.`,
+        text: `Here is the invoice from ${invoice.fromName} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}.`,
         url: invoice.publicUrl
     };
 
@@ -135,7 +133,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     }
   };
 
-  const handleDeleteClick = (invoice: Invoice) => {
+  const handleDeleteClick = (invoice: DocumentData) => {
       setInvoiceToDelete(invoice);
   }
 
@@ -143,8 +141,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
-        await InvoiceAPI.deleteInvoice(invoiceToDelete.id);
-        setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id));
+        await deleteDoc(doc(db, 'invoices', invoiceToDelete.id));
         toast({
             title: "Invoice Deleted",
             description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.`,
@@ -163,9 +160,13 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
 
   const handleMarkAsPaid = async (invoiceId: string) => {
     try {
-        await InvoiceAPI.markAsPaid(invoiceId);
+        const docRef = doc(db, 'invoices', invoiceId);
+        await updateDoc(docRef, { 
+            status: 'Paid',
+            paidAt: serverTimestamp(),
+        });
         setInvoices(invoices.map(inv => 
-            inv.id === invoiceId ? { ...inv, status: 'PAID' as const } : inv
+            inv.id === invoiceId ? { ...inv, status: 'Paid' } : inv
         ));
         toast({
             title: "Invoice Updated",
@@ -249,9 +250,9 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
             {invoices.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                <TableCell>{invoice.toInfo.name}</TableCell>
-                <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}</TableCell>
-                <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
+                <TableCell>{invoice.toName}</TableCell>
+                <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
+                <TableCell>{invoice.dueDate?.toDate?.() ? invoice.dueDate.toDate().toLocaleDateString() : new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                     <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
                 </TableCell>
@@ -265,7 +266,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                                   View Details
                                 </Link>
                             </DropdownMenuItem>
-                            {invoice.status === 'DRAFT' && (
+                            {invoice.status === 'Draft' && (
                                 <DropdownMenuItem onClick={() => onEditClick(invoice.id)}>
                                     <Edit className="mr-2 h-4 w-4"/>Edit
                                 </DropdownMenuItem>
@@ -276,7 +277,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                             <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                 <Share2 className="mr-2 h-4 w-4"/>Share Invoice
                             </DropdownMenuItem>
-                            {invoice.status !== 'PAID' && (
+                            {invoice.status !== 'Paid' && (
                                 <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>
                                     <CheckCircle className="mr-2 h-4 w-4"/>Mark as Paid
                                 </DropdownMenuItem>
