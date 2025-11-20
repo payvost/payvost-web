@@ -113,7 +113,6 @@
     "@firebase/firestore": "^4.9.2",
     "@firebase/storage": "^0.14.0",
     "@types/bcrypt": "^6.0.0",
-    "@types/decimal.js": "^7.4.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
