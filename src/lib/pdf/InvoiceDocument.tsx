@@ -265,9 +265,9 @@ interface InvoiceDocumentProps {
     fromAddress?: string;
     fromEmail?: string;
     items?: Array<{ description: string; quantity: number; price: number }>;
-    issueDate?: any;
-    dueDate?: any;
-    createdAt?: any;
+    issueDate?: string | Date | null;
+    dueDate?: string | Date | null;
+    createdAt?: string | Date | null;
     status?: string;
     currency?: string;
     grandTotal?: number;
