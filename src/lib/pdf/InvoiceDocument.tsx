@@ -281,7 +281,8 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => 
     : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
   
   const subtotal = items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
-  const tax = Number(invoice.tax || 0);
+  const taxRate = Number(invoice.taxRate || 0);
+  const tax = invoice.tax !== undefined ? Number(invoice.tax) : (subtotal * (taxRate / 100));
   const discount = Number(invoice.discount || 0);
   const grandTotal = invoice.grandTotal || (subtotal + tax - discount);
   const currency = invoice.currency || 'USD';
@@ -387,4 +388,7 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => 
     </Document>
   );
 };
+
+export default InvoiceDocument;
+export default InvoiceDocument;
 

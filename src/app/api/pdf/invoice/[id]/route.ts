@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import React from 'react';
 import { renderToStream } from '@react-pdf/renderer';
-import { InvoiceDocument } from '@/lib/pdf/InvoiceDocument';
+import InvoiceDocument from '@/lib/pdf/InvoiceDocument';
 
 // Increase timeout for PDF generation (Vercel Pro allows up to 60s)
 export const maxDuration = 60;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json({ error: 'Missing invoice ID' }, { status: 400 });
@@ -81,6 +81,14 @@ export async function GET(
     };
 
     const normalizedInvoice = normalizeInvoice(invoiceData);
+
+    // Calculate tax if not provided
+    if (!normalizedInvoice.tax && normalizedInvoice.taxRate) {
+      const subtotal = normalizedInvoice.items.reduce((acc: number, item: any) => 
+        acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0
+      );
+      normalizedInvoice.tax = subtotal * (Number(normalizedInvoice.taxRate) / 100);
+    }
 
     // Generate PDF using React-PDF
     const invoiceDocElement = React.createElement(InvoiceDocument, { 
