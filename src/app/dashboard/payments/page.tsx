@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PaymentConfirmationDialog } from '@/components/payment-confirmation-dialog';
-import { reloadlyService, type Biller, type GiftCardProduct, externalTransactionService } from '@/services';
+import { reloadlyService, type Biller, type GiftCardProduct, externalTransactionService, walletService } from '@/services';
 import { useToast } from '@/hooks/use-toast';
 
 const billerData: Record<string, any> = {
@@ -145,17 +145,37 @@ export default function PaymentsPage() {
 
     setIsLoading(true);
     let transactionRecord: any = null;
+    let accountId: string | null = null;
+    let balanceDeducted = false;
     
     try {
+      // Get user's accounts to find matching currency account
+      const accounts = await walletService.getAccounts();
+      const matchingAccount = accounts.find(acc => acc.currency === currentBillerData.currency);
+      
+      if (!matchingAccount) {
+        throw new Error(`No ${currentBillerData.currency} wallet found. Please create one first.`);
+      }
+
+      const paymentAmount = parseFloat(billAmount);
+      
+      // Check balance
+      if (matchingAccount.balance < paymentAmount) {
+        throw new Error(`Insufficient balance. You have ${matchingAccount.balance} ${currentBillerData.currency}, but need ${paymentAmount} ${currentBillerData.currency}.`);
+      }
+
+      accountId = matchingAccount.id;
+
       // Create custom identifier with user info for webhook tracking
-      const customIdentifier = `bill-${user.uid}-wallet-${Date.now()}`;
+      const customIdentifier = `bill-${user.uid}-${accountId}-${Date.now()}`;
       
       // Record the transaction in our database first
       const createResponse = await externalTransactionService.create({
         userId: user.uid,
+        accountId: accountId,
         provider: 'RELOADLY',
         type: 'BILL_PAYMENT',
-        amount: parseFloat(billAmount),
+        amount: paymentAmount,
         currency: currentBillerData.currency,
         recipientDetails: {
           billerName: selectedBiller.name,
@@ -170,11 +190,21 @@ export default function PaymentsPage() {
 
       transactionRecord = createResponse.transaction;
 
+      // Deduct balance from wallet BEFORE calling Reloadly
+      await walletService.deductBalance({
+        accountId: accountId,
+        amount: paymentAmount,
+        currency: currentBillerData.currency,
+        description: `Bill payment to ${selectedBiller.name}`,
+        referenceId: transactionRecord.id,
+      });
+      balanceDeducted = true;
+
       // Make the actual bill payment via Reloadly
       const result = await reloadlyService.payBill({
         billerId: selectedBiller.id,
         subscriberAccountNumber: accountNumber,
-        amount: parseFloat(billAmount),
+        amount: paymentAmount,
         customIdentifier,
       });
 
@@ -198,6 +228,23 @@ export default function PaymentsPage() {
       setSelectedBiller(null);
     } catch (error) {
       console.error('Bill payment failed:', error);
+      
+      // If balance was deducted but Reloadly call failed, refund the user
+      if (balanceDeducted && accountId) {
+        try {
+          await walletService.refundBalance({
+            accountId: accountId,
+            amount: parseFloat(billAmount),
+            currency: currentBillerData.currency,
+            description: `Refund for failed bill payment`,
+            referenceId: transactionRecord?.id || undefined,
+          });
+          console.log('Balance refunded due to failed payment');
+        } catch (refundError) {
+          console.error('Failed to refund balance:', refundError);
+          // Log this for manual review
+        }
+      }
       
       // Update transaction status to failed if we created a record
       if (transactionRecord?.id) {

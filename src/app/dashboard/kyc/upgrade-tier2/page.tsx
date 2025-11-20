@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db, storage } from '@/lib/firebase';
-import { collection, doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -103,19 +103,31 @@ export default function UpgradeTier2Page() {
       for (const [type, docFile] of Object.entries(documents)) {
         if (!docFile.file) continue;
         
-        const storageRef = ref(storage, `kyc_submissions/${user.uid}/${submissionId}/${type}/${docFile.file.name}`);
-        await uploadBytes(storageRef, docFile.file);
-        const url = await getDownloadURL(storageRef);
+        // Sanitize file name to avoid issues with special characters
+        const sanitizedFileName = docFile.file.name
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+          .replace(/\s+/g, '_')
+          .toLowerCase();
         
-        uploadedDocs.push({
-          key: type,
-          name: docFile.file.name,
-          url,
-          type,
-          status: 'submitted',
-          contentType: docFile.file.type,
-          size: docFile.file.size,
-        });
+        const storageRef = ref(storage, `kyc_submissions/${user.uid}/${submissionId}/${type}/${sanitizedFileName}`);
+        
+        try {
+          await uploadBytes(storageRef, docFile.file);
+          const url = await getDownloadURL(storageRef);
+        
+          uploadedDocs.push({
+            key: type,
+            name: docFile.file.name, // Keep original name for display
+            url,
+            type,
+            status: 'submitted',
+            contentType: docFile.file.type,
+            size: docFile.file.size,
+          });
+        } catch (uploadError: any) {
+          console.error(`Error uploading ${type}:`, uploadError);
+          throw new Error(`Failed to upload ${type}: ${uploadError.message || 'Unknown error'}`);
+        }
       }
 
       // Create KYC submission
@@ -138,21 +150,12 @@ export default function UpgradeTier2Page() {
       const currentData = await getDoc(userRef);
       if (currentData.exists()) {
         const currentKycProfile = currentData.data()?.kycProfile || {};
-        await setDoc(userRef, {
-          kycProfile: {
-            ...currentKycProfile,
-            status: 'pending_review',
-            tiers: {
-              ...currentKycProfile.tiers,
-              tier2: {
-                ...currentKycProfile.tiers?.tier2,
-                status: 'submitted',
-                submittedAt: serverTimestamp(),
-              },
-            },
-          },
+        await updateDoc(userRef, {
+          'kycProfile.status': 'pending_review',
+          'kycProfile.tiers.tier2.status': 'submitted',
+          'kycProfile.tiers.tier2.submittedAt': serverTimestamp(),
           updatedAt: serverTimestamp(),
-        }, { merge: true });
+        });
       }
 
       setSubmissionState('submitted');

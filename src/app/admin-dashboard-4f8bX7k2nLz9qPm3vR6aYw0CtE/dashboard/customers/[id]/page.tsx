@@ -725,17 +725,17 @@ export default function CustomerDetailsPage() {
                                                         <CardDescription>Spending trends over the last 6 months</CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
-                                                        <div className="h-64">
+                                                        <div className="h-[300px] w-full">
                                                                 <TransactionChart data={stats.chartData} />
                                                         </div>
                                                         {customer.topCounterparties && customer.topCounterparties.length > 0 && (
-                                                                <div className="mt-6">
-                                                                    <h4 className="font-semibold mb-2">Top Counterparties</h4>
+                                                                <div className="mt-6 pt-6 border-t">
+                                                                    <h4 className="font-semibold mb-3">Top Counterparties</h4>
                                                                     <div className="space-y-2 text-sm">
                                                                         {customer.topCounterparties.slice(0,5).map(cp => (
-                                                                            <div key={cp.name} className="flex justify-between">
-                                                                                <span>{cp.name}</span>
-                                                                                <span className="font-mono">{cp.count} tx • {new Intl.NumberFormat('en-US', { style: 'currency', currency: cp.currency || 'USD' }).format(cp.volume)}</span>
+                                                                            <div key={cp.name} className="flex justify-between items-center py-1">
+                                                                                <span className="text-muted-foreground">{cp.name}</span>
+                                                                                <span className="font-mono text-right">{cp.count} tx • {new Intl.NumberFormat('en-US', { style: 'currency', currency: cp.currency || 'USD' }).format(cp.volume)}</span>
                                                                             </div>
                                                                         ))}
                                                                     </div>
