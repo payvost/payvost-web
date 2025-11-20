@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -725,22 +725,43 @@ export default function CustomerDetailsPage() {
                                                         <CardDescription>Spending trends over the last 6 months</CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
-                                                        <div className="h-[300px] w-full">
-                                                                <TransactionChart data={stats.chartData} />
-                                                        </div>
-                                                        {customer.topCounterparties && customer.topCounterparties.length > 0 && (
-                                                                <div className="mt-6 pt-6 border-t">
-                                                                    <h4 className="font-semibold mb-3">Top Counterparties</h4>
-                                                                    <div className="space-y-2 text-sm">
-                                                                        {customer.topCounterparties.slice(0,5).map(cp => (
-                                                                            <div key={cp.name} className="flex justify-between items-center py-1">
-                                                                                <span className="text-muted-foreground">{cp.name}</span>
-                                                                                <span className="font-mono text-right">{cp.count} tx • {new Intl.NumberFormat('en-US', { style: 'currency', currency: cp.currency || 'USD' }).format(cp.volume)}</span>
-                                                                            </div>
-                                                                        ))}
+                                                        {(() => {
+                                                            const hasData = stats.chartData.some(d => d.income > 0 || d.expense > 0);
+                                                            const hasTransactions = customer.transactions && customer.transactions.length > 0;
+                                                            
+                                                            if (!hasData && !hasTransactions) {
+                                                                return (
+                                                                    <div className="h-[300px] w-full flex flex-col items-center justify-center text-center p-4">
+                                                                        <TrendingUp className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+                                                                        <h3 className="font-semibold text-lg mb-2">No Transaction Data</h3>
+                                                                        <p className="text-muted-foreground text-sm max-w-md">
+                                                                            This customer hasn't made any transactions yet. Spending trends will appear here once transaction activity begins.
+                                                                        </p>
                                                                     </div>
-                                                                </div>
-                                                        )}
+                                                                );
+                                                            }
+                                                            
+                                                            return (
+                                                                <>
+                                                                    <div className="w-full">
+                                                                        <TransactionChart data={stats.chartData} />
+                                                                    </div>
+                                                                    {customer.topCounterparties && customer.topCounterparties.length > 0 && (
+                                                                        <div className="mt-6 pt-6 border-t">
+                                                                            <h4 className="font-semibold mb-3">Top Counterparties</h4>
+                                                                            <div className="space-y-2 text-sm">
+                                                                                {customer.topCounterparties.slice(0,5).map(cp => (
+                                                                                    <div key={cp.name} className="flex justify-between items-center py-1">
+                                                                                        <span className="text-muted-foreground">{cp.name}</span>
+                                                                                        <span className="font-mono text-right">{cp.count} tx • {new Intl.NumberFormat('en-US', { style: 'currency', currency: cp.currency || 'USD' }).format(cp.volume)}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
                                                 </CardContent>
                                         </Card>
                 </div>

@@ -15,13 +15,30 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
+interface DateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  date?: DateRange | undefined;
+  onDateChange?: (date: DateRange | undefined) => void;
+}
+
 export function DateRangePicker({
   className,
-}: React.HTMLAttributes<HTMLDivElement>) {
-  const [date, setDate] = React.useState<DateRange | undefined>({
+  date: controlledDate,
+  onDateChange,
+}: DateRangePickerProps) {
+  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
-  })
+  });
+
+  const date = controlledDate !== undefined ? controlledDate : internalDate;
+  
+  const setDate = React.useCallback((newDate: DateRange | undefined) => {
+    if (onDateChange) {
+      onDateChange(newDate);
+    } else {
+      setInternalDate(newDate);
+    }
+  }, [onDateChange]);
 
   return (
     <div className={cn("grid gap-2", className)}>

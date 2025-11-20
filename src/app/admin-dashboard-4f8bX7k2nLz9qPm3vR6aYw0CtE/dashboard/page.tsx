@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,6 +13,8 @@ import { AdminCurrencyPieChart } from '@/components/admin-currency-pie-chart';
 import { AdminTransactionOverviewChart } from '@/components/admin-transaction-overview-chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import axios from 'axios';
+import type { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 
 interface DashboardStats {
   totalVolume: number;
@@ -37,8 +39,19 @@ interface Transaction {
   currency: string;
   status: string;
   type: string;
-  date: string;
+  date: Date | string;
   description: string;
+}
+
+interface ChartData {
+  month: string;
+  volume: number;
+  payouts: number;
+}
+
+interface CurrencyData {
+  name: string;
+  value: number;
 }
 
 export default function Dashboard() {
@@ -46,31 +59,79 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL');
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [currencyData, setCurrencyData] = useState<CurrencyData[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Build query params
+      const params = new URLSearchParams();
+      params.append('limit', '10');
+      if (dateRange?.from) {
+        params.append('startDate', dateRange.from.toISOString());
+      }
+      if (dateRange?.to) {
+        params.append('endDate', dateRange.to.toISOString());
+      }
+      if (selectedCurrency !== 'ALL') {
+        params.append('currency', selectedCurrency);
+      }
+
+      // Fetch stats and transactions in parallel
+      const [statsResponse, transactionsResponse] = await Promise.all([
+        axios.get(`/api/admin/dashboard/stats?${params.toString()}`),
+        axios.get(`/api/admin/dashboard/transactions?${params.toString()}`),
+      ]);
+
+      setStats(statsResponse.data);
+      setTransactions(transactionsResponse.data.transactions || []);
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.response?.data?.error || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, [dateRange, selectedCurrency]);
+
+  const fetchChartData = useCallback(async () => {
+    try {
+      setChartsLoading(true);
+
+      const params = new URLSearchParams();
+      if (dateRange?.from) {
+        params.append('startDate', dateRange.from.toISOString());
+      }
+      if (dateRange?.to) {
+        params.append('endDate', dateRange.to.toISOString());
+      }
+      if (selectedCurrency !== 'ALL') {
+        params.append('currency', selectedCurrency);
+      }
+
+      const [volumeResponse, currencyResponse] = await Promise.all([
+        axios.get(`/api/admin/dashboard/volume-over-time?${params.toString()}`),
+        axios.get(`/api/admin/dashboard/currency-distribution?${params.toString()}`),
+      ]);
+
+      setChartData(volumeResponse.data.data || []);
+      setCurrencyData(currencyResponse.data.data || []);
+    } catch (err: any) {
+      console.error('Error fetching chart data:', err);
+    } finally {
+      setChartsLoading(false);
+    }
+  }, [dateRange, selectedCurrency]);
 
   useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch stats and transactions in parallel
-        const [statsResponse, transactionsResponse] = await Promise.all([
-          axios.get('/api/admin/dashboard/stats'),
-          axios.get('/api/admin/dashboard/transactions?limit=10'),
-        ]);
-
-        setStats(statsResponse.data);
-        setTransactions(transactionsResponse.data.transactions || []);
-      } catch (err: any) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.response?.data?.error || 'Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchDashboardData();
-  }, []);
+    fetchChartData();
+  }, [fetchDashboardData, fetchChartData]);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -89,6 +150,12 @@ export default function Dashboard() {
       cancelled: 'Failed',
     };
     return statusMap[status.toLowerCase()] || status;
+  };
+
+  const formatDate = (date: Date | string) => {
+    if (!date) return 'N/A';
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return format(dateObj, 'MMM dd, yyyy');
   };
 
   const kpiCards = [
@@ -131,19 +198,32 @@ export default function Dashboard() {
                     <p className="text-muted-foreground">A high-level view of your platform's performance.</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <DateRangePicker />
+                    <DateRangePicker 
+                      date={dateRange}
+                      onDateChange={setDateRange}
+                    />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline">
-                                All Currencies <ChevronDown className="ml-2 h-4 w-4" />
+                                {selectedCurrency === 'ALL' ? 'All Currencies' : selectedCurrency} <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem>All Currencies</DropdownMenuItem>
-                            <DropdownMenuItem>USD</DropdownMenuItem>
-                            <DropdownMenuItem>EUR</DropdownMenuItem>
-                            <DropdownMenuItem>GBP</DropdownMenuItem>
-                            <DropdownMenuItem>NGN</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedCurrency('ALL')}>
+                                All Currencies
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedCurrency('USD')}>
+                                USD
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedCurrency('EUR')}>
+                                EUR
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedCurrency('GBP')}>
+                                GBP
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSelectedCurrency('NGN')}>
+                                NGN
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -168,9 +248,16 @@ export default function Dashboard() {
                 <Card className="lg:col-span-1">
                     <CardHeader>
                         <CardTitle>Transaction Volume</CardTitle>
+                        <CardDescription>Volume and payouts over time</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
-                        <AdminTransactionOverviewChart />
+                        {chartsLoading ? (
+                            <div className="h-[300px] flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : (
+                            <AdminTransactionOverviewChart data={chartData} />
+                        )}
                     </CardContent>
                 </Card>
                 <Card className="lg:col-span-1">
@@ -179,7 +266,13 @@ export default function Dashboard() {
                         <CardDescription>Breakdown of total transaction volume by currency.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                        <AdminCurrencyPieChart />
+                        {chartsLoading ? (
+                            <div className="h-full flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : (
+                            <AdminCurrencyPieChart data={currencyData} />
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -208,6 +301,7 @@ export default function Dashboard() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Customer</TableHead>
+                                    <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
                                 </TableRow>
@@ -218,6 +312,9 @@ export default function Dashboard() {
                                         <TableCell>
                                             <div className="font-medium">{tx.customer}</div>
                                             <div className="text-sm text-muted-foreground">{tx.email}</div>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">
+                                            {formatDate(tx.date)}
                                         </TableCell>
                                         <TableCell>{formatStatus(tx.status)}</TableCell>
                                         <TableCell className="text-right">

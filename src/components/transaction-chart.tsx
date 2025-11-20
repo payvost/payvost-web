@@ -26,12 +26,12 @@ const chartConfig = {
 
 export function TransactionChart({ data }: TransactionChartProps) {
   return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+    <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <BarChart
         data={data}
         margin={{
             top: 20,
-            right: 20,
+            right: 30,
             bottom: 20,
             left: 20,
         }}
