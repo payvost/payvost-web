@@ -78,18 +78,87 @@ export async function POST(request: NextRequest) {
     const userDoc = await userRef.get();
     
     if (userDoc.exists) {
+      const userData = userDoc.data()!;
+      const submissionLevel = submissionData.level || level; // tier2, tier3, etc.
+      
       const userUpdate: any = {
         kycStatus: decision === 'approved' ? 'verified' : 'rejected',
         updatedAt: new Date(),
       };
 
-      // If approved and level is provided, update KYC level
-      if (decision === 'approved' && level) {
-        userUpdate.kycLevel = level;
-      }
-
-      // If rejected, clear KYC level
-      if (decision === 'rejected') {
+      // If approved, update userType, kycTier, and kycLevel based on submission level
+      if (decision === 'approved') {
+        // Update kycTier based on submission level
+        if (submissionLevel === 'tier2') {
+          userUpdate.kycTier = 'tier2';
+          userUpdate.userType = 'Tier 2';
+        } else if (submissionLevel === 'tier3') {
+          userUpdate.kycTier = 'tier3';
+          userUpdate.userType = 'Tier 3';
+        }
+        
+        // Update KYC level if provided
+        if (level) {
+          userUpdate.kycLevel = level;
+        } else if (submissionLevel === 'tier2') {
+          userUpdate.kycLevel = 'Full';
+        } else if (submissionLevel === 'tier3') {
+          userUpdate.kycLevel = 'Advanced';
+        }
+        
+        // Update kycProfile to mark the tier as approved
+        if (userData.kycProfile) {
+          const kycProfile = { ...userData.kycProfile };
+          
+          if (submissionLevel === 'tier2' && kycProfile.tiers?.tier2) {
+            kycProfile.tiers.tier2 = {
+              ...kycProfile.tiers.tier2,
+              status: 'approved',
+              approvedAt: new Date(),
+              approvedBy: decoded.uid,
+            };
+            kycProfile.currentTier = 'tier2';
+            kycProfile.status = 'approved';
+          } else if (submissionLevel === 'tier3' && kycProfile.tiers?.tier3) {
+            kycProfile.tiers.tier3 = {
+              ...kycProfile.tiers.tier3,
+              status: 'approved',
+              approvedAt: new Date(),
+              approvedBy: decoded.uid,
+            };
+            kycProfile.currentTier = 'tier3';
+            kycProfile.status = 'approved';
+          }
+          
+          userUpdate.kycProfile = kycProfile;
+        }
+      } else {
+        // If rejected, update kycProfile to mark the tier as rejected
+        if (userData.kycProfile) {
+          const kycProfile = { ...userData.kycProfile };
+          
+          if (submissionLevel === 'tier2' && kycProfile.tiers?.tier2) {
+            kycProfile.tiers.tier2 = {
+              ...kycProfile.tiers.tier2,
+              status: 'rejected',
+              rejectedAt: new Date(),
+              rejectedBy: decoded.uid,
+              rejectionReason: reason || 'No reason provided',
+            };
+          } else if (submissionLevel === 'tier3' && kycProfile.tiers?.tier3) {
+            kycProfile.tiers.tier3 = {
+              ...kycProfile.tiers.tier3,
+              status: 'rejected',
+              rejectedAt: new Date(),
+              rejectedBy: decoded.uid,
+              rejectionReason: reason || 'No reason provided',
+            };
+          }
+          
+          userUpdate.kycProfile = kycProfile;
+        }
+        
+        // Clear KYC level if rejected
         userUpdate.kycLevel = null;
       }
 

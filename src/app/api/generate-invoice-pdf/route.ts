@@ -36,64 +36,126 @@ export async function POST(req: NextRequest) {
       }, { status: 200 });
     }
 
-    // Generate PDF using existing PDF service
-    // Try multiple PDF service endpoints
-    const pdfServiceUrls = [
-      process.env.PDF_SERVICE_URL,
-      'http://localhost:3005', // Local Puppeteer service
-      'https://us-central1-payvost.cloudfunctions.net/api2/download/invoice', // Cloud Functions (legacy)
-    ].filter(Boolean);
-
-    let pdfBuffer: Buffer | null = null;
-    let lastError: Error | null = null;
-
-    // Try each PDF service URL
-    for (const baseUrl of pdfServiceUrls) {
-      try {
-        // Try different endpoint formats
-        const endpoints = [
-          `${baseUrl}/pdf?invoiceId=${invoiceId}`, // React-PDF service format
-          `${baseUrl}/invoice/${invoiceId}`, // Alternative format
-        ];
-        
-        for (const pdfUrl of endpoints) {
+    // Generate PDF directly using React-PDF in Vercel serverless function
+    console.log(`[PDF Generation] Generating PDF directly in Vercel for invoice: ${invoiceId}`);
+    
+    let pdfBuffer: Buffer;
+    
+    try {
+      // Import React-PDF dynamically to avoid build issues
+      const React = await import('react');
+      const { renderToStream } = await import('@react-pdf/renderer');
+      const { InvoicePDFWrapper } = await import('@/lib/pdf/InvoicePDFWrapper');
+      
+      // Normalize invoice data for PDF
+      const normalizeInvoice = (data: any) => {
+        const normalizeDate = (date: any): string | null => {
+          if (!date) return null;
           try {
-            console.log(`[PDF Generation] Trying PDF service: ${pdfUrl}`);
-            
-            const pdfResponse = await fetch(pdfUrl, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/pdf',
-              },
-            });
-
-            if (pdfResponse.ok) {
-              const arrayBuffer = await pdfResponse.arrayBuffer();
-              pdfBuffer = Buffer.from(arrayBuffer);
-              console.log(`[PDF Generation] Generated via PDF service, size: ${pdfBuffer.length} bytes`);
-              break;
+            let dateObj: Date;
+            if (date && typeof date.toDate === 'function') {
+              dateObj = date.toDate();
+            } else if (date && date._seconds) {
+              dateObj = new Date(date._seconds * 1000);
+            } else if (typeof date === 'string') {
+              dateObj = new Date(date);
+            } else if (date instanceof Date) {
+              dateObj = date;
+            } else {
+              dateObj = new Date(date);
             }
-          } catch (err: any) {
-            console.warn(`[PDF Generation] Endpoint failed (${pdfUrl}): ${err.message}`);
-            continue;
+            if (isNaN(dateObj.getTime())) return null;
+            return dateObj.toISOString();
+          } catch (e) {
+            return null;
           }
-        }
-        
-        if (pdfBuffer) break;
-        
-      } catch (error: any) {
-        console.warn(`[PDF Generation] PDF service failed (${baseUrl}): ${error.message}`);
-        lastError = error;
-        continue;
-      }
-    }
+        };
 
-    if (!pdfBuffer) {
+        const normalizeItems = (items: any) => {
+          if (!Array.isArray(items)) return [];
+          return items.map((item: any) => ({
+            description: String(item.description || item.name || 'Item'),
+            quantity: Number(item.quantity) || 1,
+            price: Number(item.price) || 0,
+          }));
+        };
+
+        const toName = data.toInfo?.name || data.toName || '';
+        const toEmail = data.toInfo?.email || data.toEmail || '';
+        const toAddress = data.toInfo?.address || data.toAddress || '';
+        const fromName = data.fromInfo?.name || data.fromName || '';
+        const fromAddress = data.fromInfo?.address || data.fromAddress || '';
+        const fromEmail = data.fromInfo?.email || data.fromEmail || '';
+
+        return {
+          id: String(invoiceId),
+          invoiceNumber: String(data.invoiceNumber || invoiceId),
+          issueDate: normalizeDate(data.issueDate),
+          dueDate: normalizeDate(data.dueDate),
+          createdAt: normalizeDate(data.createdAt),
+          updatedAt: normalizeDate(data.updatedAt),
+          paidAt: data.paidAt ? normalizeDate(data.paidAt) : null,
+          toName: String(toName),
+          toEmail: String(toEmail),
+          toAddress: String(toAddress),
+          fromName: String(fromName),
+          fromAddress: String(fromAddress),
+          fromEmail: String(fromEmail),
+          items: normalizeItems(data.items),
+          status: String(data.status || 'Pending'),
+          currency: String(data.currency || 'USD'),
+          grandTotal: Number(data.grandTotal) || 0,
+          taxRate: Number(data.taxRate) || 0,
+          tax: Number(data.tax) || 0,
+          discount: Number(data.discount) || 0,
+          notes: String(data.notes || ''),
+          description: String(data.description || ''),
+          amount: Number(data.amount) || 0,
+        };
+      };
+
+      const normalizedInvoice = normalizeInvoice(invoiceData);
+
+      // Calculate tax if not present
+      if (!normalizedInvoice.tax && normalizedInvoice.taxRate) {
+        const subtotal = normalizedInvoice.items.reduce((acc: number, item: any) =>
+          acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0
+        );
+        normalizedInvoice.tax = subtotal * (Number(normalizedInvoice.taxRate) / 100);
+      }
+
+      // Sanitize data
+      const sanitizedInvoice = JSON.parse(JSON.stringify(normalizedInvoice));
+
+      console.log('[PDF Generation] Creating React element...');
+      
+      // Create React element using JSX
+      const invoiceElement = React.createElement(InvoicePDFWrapper, {
+        invoice: sanitizedInvoice
+      });
+
+      console.log('[PDF Generation] Rendering to stream...');
+      
+      // Render to stream
+      const stream = await renderToStream(invoiceElement);
+
+      // Collect chunks into buffer
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk));
+      }
+      pdfBuffer = Buffer.concat(chunks);
+
+      console.log(`[PDF Generation] PDF generated successfully, size: ${pdfBuffer.length} bytes`);
+      
+    } catch (error: any) {
+      console.error('[PDF Generation] React-PDF error:', error);
+      console.error('[PDF Generation] Error stack:', error.stack);
       return NextResponse.json({ 
-        error: 'PDF generation service unavailable',
-        message: 'All PDF services failed. Please ensure a PDF service is running.',
-        details: lastError?.message
-      }, { status: 503 });
+        error: 'Failed to generate PDF',
+        message: 'PDF generation failed. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      }, { status: 500 });
     }
 
     // Upload to Firebase Storage
