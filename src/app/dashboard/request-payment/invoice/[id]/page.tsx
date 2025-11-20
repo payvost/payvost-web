@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, onSnapshot, DocumentData, collection, query, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
 import { useAuth } from '@/hooks/use-auth';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -37,32 +36,35 @@ export default function InvoiceDetailsPage() {
     const params = useParams();
     const id = params.id as string;
     const { user } = useAuth();
-    const [invoice, setInvoice] = useState<DocumentData | null>(null);
+    const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState(true);
     const functionsBase = process.env.NEXT_PUBLIC_FUNCTIONS_URL || 'https://us-central1-payvost.cloudfunctions.net/api2';
 
 
     useEffect(() => {
         if (!user || !id) {
-            setLoading(false); // Ensure loading stops if no user/id
+            setLoading(false);
             return;
+        }
+
+        const fetchInvoice = async () => {
+            try {
+                setLoading(true);
+                const invoiceData = await InvoiceAPI.getInvoice(id);
+                setInvoice(invoiceData);
+            } catch (error: any) {
+                console.error("Error fetching invoice:", error);
+                setInvoice(null);
+            } finally {
+                setLoading(false);
+            }
         };
 
-        const docRef = doc(db, 'invoices', id);
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists() && docSnap.data().userId === user.uid) {
-                setInvoice({ id: docSnap.id, ...docSnap.data() });
-            } else {
-                console.log("No such document or insufficient permissions!");
-                setInvoice(null);
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching invoice:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
+        fetchInvoice();
+        
+        // Poll for updates every 30 seconds
+        const interval = setInterval(fetchInvoice, 30000);
+        return () => clearInterval(interval);
     }, [user, id]);
     
     if (loading) {
@@ -91,7 +93,14 @@ export default function InvoiceDetailsPage() {
         )
     }
 
-    const currentStatus = invoice.status as Status;
+    // Map API status to display status
+    const statusMap: Record<string, Status> = {
+        'PAID': 'Paid',
+        'PENDING': 'Pending',
+        'OVERDUE': 'Overdue',
+        'DRAFT': 'Draft',
+    };
+    const currentStatus = statusMap[invoice.status] || 'Pending';
     const currentStatusInfo = statusInfo[currentStatus];
 
     const formatCurrency = (amount: number, currency: string) => {
@@ -109,7 +118,9 @@ export default function InvoiceDetailsPage() {
     };
 
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
-    const taxAmount = invoice.grandTotal - subtotal;
+    const taxRate = Number(invoice.taxRate) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    const grandTotal = Number(invoice.grandTotal) || (subtotal + taxAmount);
 
     return (
         <DashboardLayout language={'en'} setLanguage={() => {}}>
@@ -150,18 +161,18 @@ export default function InvoiceDetailsPage() {
                          <div className="grid grid-cols-3 gap-8">
                             <div className="space-y-1">
                                 <h3 className="font-semibold">Billed To</h3>
-                                <p className="text-sm">{invoice.toName}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
+                                <p className="text-sm">{invoice.toInfo.name}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.toInfo.address}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.toInfo.email}</p>
                             </div>
                             <div className="space-y-1">
                                 <h3 className="font-semibold">From</h3>
-                                <p className="text-sm">{invoice.fromName}</p>
-                                <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
+                                <p className="text-sm">{invoice.fromInfo.name}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.fromInfo.address}</p>
                             </div>
                             <div className="space-y-1 text-right">
-                                <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate.toDate(), 'PPP')}</p>
-                                <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate.toDate(), 'PPP')}</p>
+                                <p><strong className="font-semibold">Issue Date:</strong> {format(new Date(invoice.issueDate), 'PPP')}</p>
+                                <p><strong className="font-semibold">Due Date:</strong> {format(new Date(invoice.dueDate), 'PPP')}</p>
                             </div>
                          </div>
                         <Table>
@@ -187,9 +198,9 @@ export default function InvoiceDetailsPage() {
                          <div className="flex justify-end">
                             <div className="w-full max-w-sm space-y-2">
                                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
-                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
                                 <Separator className="my-2" />
-                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
+                                <div className="flex justify-between font-bold text-lg"><span >Grand Total</span><span>{formatCurrency(grandTotal, invoice.currency)}</span></div>
                             </div>
                         </div>
                         {invoice.notes && (

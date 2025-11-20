@@ -20,8 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, onSnapshot, query, doc, addDoc, serverTimestamp, Timestamp, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { InvoiceAPI, type CreateInvoiceInput, type UpdateInvoiceInput } from '@/services/invoice-api';
 import { Skeleton } from './ui/skeleton';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Separator } from './ui/separator';
@@ -124,19 +123,42 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         
         if (isEditing && invoiceId) {
             const fetchInvoice = async () => {
-                const docRef = doc(db, 'businessInvoices', invoiceId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists() && docSnap.data().createdBy === user.uid) {
-                    const data = docSnap.data();
-                    reset({
-                        ...data,
-                        issueDate: data.issueDate.toDate(),
-                        dueDate: data.dueDate.toDate(),
+                try {
+                    const invoice = await InvoiceAPI.getInvoice(invoiceId);
+                    if (invoice.createdBy === user.uid && invoice.invoiceType === 'BUSINESS') {
+                        reset({
+                            invoiceNumber: invoice.invoiceNumber,
+                            issueDate: new Date(invoice.issueDate),
+                            dueDate: new Date(invoice.dueDate),
+                            currency: invoice.currency,
+                            fromName: invoice.fromInfo.name,
+                            fromAddress: invoice.fromInfo.address,
+                            toName: invoice.toInfo.name,
+                            toEmail: invoice.toInfo.email,
+                            toAddress: invoice.toInfo.address,
+                            items: invoice.items,
+                            notes: invoice.notes || '',
+                            taxRate: Number(invoice.taxRate),
+                            paymentMethod: invoice.paymentMethod.toLowerCase() as 'payvost' | 'manual',
+                            manualBankName: invoice.manualBankDetails?.bankName || '',
+                            manualAccountName: invoice.manualBankDetails?.accountName || '',
+                            manualAccountNumber: invoice.manualBankDetails?.accountNumber || '',
+                            manualOtherDetails: invoice.manualBankDetails?.otherDetails || '',
+                        });
+                        setBusinessId(invoice.businessId || null);
+                    }
+                } catch (error) {
+                    console.error('Error fetching invoice:', error);
+                    toast({ 
+                        title: 'Error', 
+                        description: 'Failed to load invoice. Please try again.', 
+                        variant: 'destructive' 
                     });
-                     setBusinessId(data.businessId);
+                } finally {
+                    setLoadingUserData(false);
                 }
             };
-            fetchInvoice().finally(() => setLoadingUserData(false));
+            fetchInvoice();
             return;
         }
 
@@ -178,30 +200,48 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         if (!businessId) throw new Error('Business ID not found.');
 
         const data = getValues();
-        const firestoreData = {
-            ...data,
-            issueDate: Timestamp.fromDate(data.issueDate),
-            dueDate: Timestamp.fromDate(data.dueDate),
-            grandTotal,
-            createdBy: user.uid,
+        
+        // Map form data to API format
+        const invoiceData: CreateInvoiceInput | UpdateInvoiceInput = {
+            invoiceNumber: data.invoiceNumber,
+            invoiceType: 'BUSINESS',
             businessId: businessId,
-            status,
-            updatedAt: serverTimestamp(),
-            isPublic: status !== 'Draft',
+            issueDate: data.issueDate,
+            dueDate: data.dueDate,
+            currency: data.currency,
+            fromInfo: {
+                name: data.fromName,
+                address: data.fromAddress,
+            },
+            toInfo: {
+                name: data.toName,
+                email: data.toEmail,
+                address: data.toAddress,
+            },
+            items: data.items,
+            taxRate: watchedTaxRate,
+            notes: data.notes,
+            paymentMethod: data.paymentMethod.toUpperCase() as 'PAYVOST' | 'MANUAL' | 'STRIPE',
+            status: status.toUpperCase() as 'DRAFT' | 'PENDING',
+            ...(data.paymentMethod === 'manual' && data.manualBankName ? {
+                manualBankDetails: {
+                    bankName: data.manualBankName,
+                    accountName: data.manualAccountName || '',
+                    accountNumber: data.manualAccountNumber || '',
+                    otherDetails: data.manualOtherDetails,
+                }
+            } : {}),
         };
 
         if (savedInvoiceId) {
-            const docRef = doc(db, 'businessInvoices', savedInvoiceId);
-            await updateDoc(docRef, firestoreData);
-            return savedInvoiceId;
+            // Update existing invoice
+            const invoice = await InvoiceAPI.updateInvoice(savedInvoiceId, invoiceData);
+            return invoice.id;
         } else {
-            const docRef = await addDoc(collection(db, 'businessInvoices'), {
-                ...firestoreData,
-                createdAt: serverTimestamp(),
-            });
-            const publicUrl = `${window.location.origin}/invoice/${docRef.id}`;
-            await updateDoc(docRef, { publicUrl });
-            return docRef.id;
+            // Create new invoice
+            const invoice = await InvoiceAPI.createInvoice(invoiceData as CreateInvoiceInput);
+            setSavedInvoiceId(invoice.id);
+            return invoice.id;
         }
     };
     

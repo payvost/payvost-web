@@ -67,3 +67,6 @@ firestore-debug.log
 payvost-web.git/
 gitleaks-report.json
 payvost-web.git.bfg-report
+
+# markdown files
+.mdfiles

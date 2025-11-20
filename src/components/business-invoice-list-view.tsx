@@ -9,8 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign, Edit, Trash2, Send, Copy, Eye, CheckCircle, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -44,34 +43,61 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
     const { user } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const [invoices, setInvoices] = useState<DocumentData[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
-    const [invoiceToDelete, setInvoiceToDelete] = useState<DocumentData | null>(null);
+    const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [businessId, setBusinessId] = useState<string | null>(null);
 
-
+    // Get business ID from user profile
     useEffect(() => {
         if (!user) {
             setLoading(false);
             return;
         }
 
-        const q = query(collection(db, "businessInvoices"), where("createdBy", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const invoicesData: DocumentData[] = [];
-            querySnapshot.forEach((doc) => {
-                invoicesData.push({ id: doc.id, ...doc.data() });
-            });
-            invoicesData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
-            setInvoices(invoicesData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching business invoices: ", error);
-            setLoading(false);
+        // Get business ID from user profile (Firestore - this is still needed for business profile)
+        const { doc, onSnapshot } = require('firebase/firestore');
+        const { db } = require('@/lib/firebase');
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (snapshot: any) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const businessProfile = data.businessProfile || {};
+                setBusinessId(businessProfile.id || `biz_${user.uid}`);
+            }
         });
-
-        return () => unsubscribe();
+        return () => unsub();
     }, [user]);
+
+    useEffect(() => {
+        if (!user || !businessId) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchInvoices = async () => {
+            try {
+                setLoading(true);
+                const result = await InvoiceAPI.listBusinessInvoices(businessId);
+                setInvoices(result.invoices);
+            } catch (error) {
+                console.error("Error fetching business invoices: ", error);
+                toast({
+                    title: "Error",
+                    description: "Failed to load invoices. Please try again.",
+                    variant: "destructive",
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInvoices();
+        
+        // Poll for updates every 30 seconds
+        const interval = setInterval(fetchInvoices, 30000);
+        return () => clearInterval(interval);
+    }, [user, businessId, toast]);
 
     const handleCopyLink = (link: string) => {
         if (!link) {
@@ -86,23 +112,22 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
         toast({ title: "Copied!", description: "Public invoice link copied to clipboard." });
     };
 
-    const handleSendReminder = (invoice: DocumentData) => {
+    const handleSendReminder = (invoice: Invoice) => {
         toast({
             title: "Reminder Sent",
-            description: `An email reminder has been sent to ${invoice.toEmail}.`
+            description: `An email reminder has been sent to ${invoice.toInfo.email}.`
         });
     };
     
     const handleMarkAsPaid = async (invoiceId: string) => {
         try {
-            const docRef = doc(db, 'businessInvoices', invoiceId);
-            await updateDoc(docRef, { 
-                status: 'Paid',
-                paidAt: serverTimestamp(),
-            });
+            await InvoiceAPI.markAsPaid(invoiceId);
+            setInvoices(invoices.map(inv => 
+                inv.id === invoiceId ? { ...inv, status: 'PAID' as const, paidAt: new Date() } : inv
+            ));
             toast({ title: 'Success', description: 'Invoice marked as paid.' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to update invoice status.', variant: 'destructive' });
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message || 'Failed to update invoice status.', variant: 'destructive' });
         }
     };
     
@@ -110,26 +135,27 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
         if (!invoiceToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteDoc(doc(db, 'businessInvoices', invoiceToDelete.id));
+            await InvoiceAPI.deleteInvoice(invoiceToDelete.id);
+            setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id));
             toast({ title: 'Invoice Deleted', description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.` });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete invoice.', variant: 'destructive' });
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message || 'Failed to delete invoice.', variant: 'destructive' });
         } finally {
             setIsDeleting(false);
             setInvoiceToDelete(null);
         }
     };
 
-    const outstandingInvoices = invoices.filter(inv => inv.status === 'Pending' || inv.status === 'Overdue');
-    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const outstandingInvoices = invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'OVERDUE');
+    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
 
-    const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue');
-    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+    const overdueInvoices = invoices.filter(inv => inv.status === 'OVERDUE');
+    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
 
-    const paidInvoices = invoices.filter(inv => inv.status === 'Paid' && inv.paidAt && inv.issueDate);
+    const paidInvoices = invoices.filter(inv => inv.status === 'PAID' && inv.paidAt && inv.issueDate);
     const totalPaymentTime = paidInvoices.reduce((sum, inv) => {
-        const issueDate = inv.issueDate.toDate();
-        const paidAt = inv.paidAt.toDate();
+        const issueDate = new Date(inv.issueDate);
+        const paidAt = new Date(inv.paidAt!);
         const diffTime = Math.abs(paidAt.getTime() - issueDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return sum + diffDays;
@@ -222,9 +248,9 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                         ) : invoices.map((invoice) => (
                         <TableRow key={invoice.id}>
                             <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                            <TableCell>{invoice.toName}</TableCell>
-                            <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
-                            <TableCell>{invoice.dueDate.toDate().toLocaleDateString()}</TableCell>
+                            <TableCell>{invoice.toInfo.name}</TableCell>
+                            <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}</TableCell>
+                            <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                             <TableCell className="text-right">
                                 <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
                             </TableCell>
@@ -233,17 +259,17 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem asChild><Link href={`/business/invoices/${invoice.id}`}><FileText className="mr-2 h-4 w-4" />View Details</Link></DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => onEditClick(invoice.id)} disabled={invoice.status !== 'Draft'}>
+                                        <DropdownMenuItem onClick={() => onEditClick(invoice.id)} disabled={invoice.status !== 'DRAFT'}>
                                             <Edit className="mr-2 h-4 w-4" />Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => handleSendReminder(invoice)}>
                                             <Send className="mr-2 h-4 w-4" />Send Reminder
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleCopyLink(invoice.publicUrl)}>
+                                        <DropdownMenuItem onClick={() => handleCopyLink(invoice.publicUrl || '')}>
                                             <Copy className="mr-2 h-4 w-4" />Copy Public Link
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                         <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)} disabled={invoice.status === 'Paid'}>
+                                         <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)} disabled={invoice.status === 'PAID'}>
                                             <CheckCircle className="mr-2 h-4 w-4" />Mark as Paid
                                         </DropdownMenuItem>
                                         <DropdownMenuItem className="text-destructive" onSelect={(e) => {e.preventDefault(); setInvoiceToDelete(invoice);}}>
