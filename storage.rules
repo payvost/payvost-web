@@ -125,7 +125,7 @@ match /invoice_logos/{userId}/{fileName} {
     }
 
     // 🧾 Invoice PDFs (pre-generated and stored)
-    match /invoice_pdfs/{invoiceId}.pdf {
+    match /invoice_pdfs/{allPaths=**} {
       // Public invoices: anyone can read
       // Private invoices: only owner can read
       // Server can write (via Admin SDK)
@@ -157,16 +157,14 @@ match /invoice_logos/{userId}/{fileName} {
     }
     
     // 📂 Disputes evidence
-match /disputes/{userId}/{fileName} {
-  allow create: if request.auth != null
-                && request.auth.uid == userId
-                && request.resource.size < 5 * 1024 * 1024
-                && request.resource.contentType.matches('image/.*|application/pdf');
+    match /disputes/{userId}/{fileName} {
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*|application/pdf');
 
-  allow read: if request.auth != null && request.auth.uid == userId;
-  allow delete: if request.auth != null && request.auth.uid == userId;
-}
-
-    
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

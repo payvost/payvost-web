@@ -350,7 +350,7 @@ export default function CustomerDetailsPage() {
                                                         <CardDescription>Core identity and KYC details</CardDescription>
                                                 </CardHeader>
                                                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> User Type</p><p className="font-medium pl-5">{customer.userType}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> User Type</p><div className="pl-5"><Badge variant="outline">{customer.userType}</Badge></div></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Phone className="h-4 w-4" /> Phone</p><p className="font-medium pl-5">{customer.phone || 'N/A'}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country || 'N/A'}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate)}</p></div>
