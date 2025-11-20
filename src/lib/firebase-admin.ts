@@ -132,6 +132,14 @@ function getAdminAuth() {
   return admin.auth();
 }
 
+function getAdminStorage() {
+  ensureInitialized();
+  if (!admin.apps.length) {
+    throw new Error('Firebase Admin SDK not initialized. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable or provide service account file.');
+  }
+  return admin.storage();
+}
+
 // New explicit exports with lazy initialization using Proxy
 export const adminDb = new Proxy({} as admin.firestore.Firestore, {
   get(_target, prop) {
@@ -146,6 +154,14 @@ export const adminAuth = new Proxy({} as admin.auth.Auth, {
     const auth = getAdminAuth();
     const value = auth[prop as keyof admin.auth.Auth];
     return typeof value === 'function' ? value.bind(auth) : value;
+  }
+});
+
+export const adminStorage = new Proxy({} as admin.storage.Storage, {
+  get(_target, prop) {
+    const storage = getAdminStorage();
+    const value = storage[prop as keyof admin.storage.Storage];
+    return typeof value === 'function' ? value.bind(storage) : value;
   }
 });
 
