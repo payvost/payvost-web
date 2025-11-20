@@ -130,14 +130,14 @@ export class TransactionManager {
       await tx.account.update({
         where: { id: fromAccountId },
         data: {
-          balance: { decrement: new Prisma.Decimal(amount) },
+          balance: { decrement: new PrismaDecimal(amount) },
         },
       });
 
       await tx.account.update({
         where: { id: toAccountId },
         data: {
-          balance: { increment: new Prisma.Decimal(amount) },
+          balance: { increment: new PrismaDecimal(amount) },
         },
       });
 
@@ -146,15 +146,15 @@ export class TransactionManager {
         data: [
           {
             accountId: fromAccountId,
-            amount: new Prisma.Decimal(-amount),
-            balanceAfter: new Prisma.Decimal(fromNewBalance.toString()),
+            amount: new PrismaDecimal(-amount),
+            balanceAfter: new PrismaDecimal(fromNewBalance.toString()),
             type: 'DEBIT',
             description: `Transfer to ${toAccountId}`,
           },
           {
             accountId: toAccountId,
             amount: new PrismaDecimal(amount),
-            balanceAfter: new Prisma.Decimal(toNewBalance.toString()),
+            balanceAfter: new PrismaDecimal(toNewBalance.toString()),
             type: 'CREDIT',
             description: `Transfer from ${fromAccountId}`,
           },

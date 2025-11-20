@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -47,6 +47,11 @@ export default function CustomerDetailsPage() {
     const [approveLevel, setApproveLevel] = useState<'Basic' | 'Full' | 'Advanced'>('Full');
     const [rejectReason, setRejectReason] = useState('');
     const [limits, setLimits] = useState({ daily: 1000, fx: 5000, withdrawal: 2000 });
+
+    // KYC submissions state
+    const [kycSubmissions, setKycSubmissions] = useState<any[]>([]);
+    const [loadingKyc, setLoadingKyc] = useState(false);
+    const [processingDecision, setProcessingDecision] = useState<string | null>(null);
 
     // Helpers
     const toDate = (date: any): Date | null => {
@@ -124,6 +129,69 @@ export default function CustomerDetailsPage() {
             fetchCustomer();
         }
     }, [id]);
+
+    // Fetch KYC submissions
+    useEffect(() => {
+        const fetchKycSubmissions = async () => {
+            if (!id) return;
+            try {
+                setLoadingKyc(true);
+                const response = await axios.get(`/api/admin/kyc/submissions?userId=${id}`);
+                setKycSubmissions(response.data || []);
+            } catch (err) {
+                console.error('Error fetching KYC submissions:', err);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to load KYC documents',
+                    variant: 'destructive',
+                });
+            } finally {
+                setLoadingKyc(false);
+            }
+        };
+
+        if (id) {
+            fetchKycSubmissions();
+        }
+    }, [id, toast]);
+
+    // Handle KYC decision
+    const handleKycDecision = async (submissionId: string, decision: 'approved' | 'rejected', reason?: string, level?: string) => {
+        try {
+            setProcessingDecision(submissionId);
+            await axios.post('/api/admin/kyc/decision', {
+                submissionId,
+                decision,
+                reason,
+                level,
+            });
+            
+            toast({
+                title: `KYC ${decision === 'approved' ? 'Approved' : 'Rejected'}`,
+                description: `User has been notified of the decision.`,
+            });
+
+            // Refresh submissions
+            const response = await axios.get(`/api/admin/kyc/submissions?userId=${id}`);
+            setKycSubmissions(response.data || []);
+
+            // Refresh customer data
+            const customerResponse = await axios.get(`/api/admin/customers/${id}`);
+            setCustomer(customerResponse.data);
+
+            setRejectOpen(false);
+            setApproveOpen(false);
+        } catch (err: any) {
+            console.error('Error processing KYC decision:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to process KYC decision',
+                variant: 'destructive',
+            });
+        } finally {
+            setProcessingDecision(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -250,6 +318,132 @@ export default function CustomerDetailsPage() {
                                                         )}
                                                     </CardContent>
                                                 )}
+                    </Card>
+
+                    {/* KYC Documents Card */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="h-5 w-5" />
+                                KYC Documents
+                            </CardTitle>
+                            <CardDescription>Uploaded verification documents and submissions</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {loadingKyc ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : kycSubmissions.length > 0 ? (
+                                <div className="space-y-4">
+                                    {kycSubmissions.map((submission) => (
+                                        <div key={submission.id} className="border rounded-lg p-4 space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <p className="font-semibold">Level: {submission.level}</p>
+                                                        <Badge 
+                                                            variant={
+                                                                submission.status === 'approved' ? 'default' :
+                                                                submission.status === 'rejected' ? 'destructive' :
+                                                                submission.status === 'in_review' ? 'secondary' :
+                                                                'outline'
+                                                            }
+                                                        >
+                                                            {submission.status}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Country: {submission.countryCode} • 
+                                                        Submitted: {new Date(submission.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                    {submission.decidedAt && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Decided: {new Date(submission.decidedAt).toLocaleDateString()}
+                                                        </p>
+                                                    )}
+                                                    {submission.rejectionReason && (
+                                                        <p className="text-sm text-destructive mt-1">
+                                                            Reason: {submission.rejectionReason}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {submission.status === 'submitted' || submission.status === 'in_review' ? (
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleKycDecision(submission.id, 'approved', undefined, submission.level)}
+                                                            disabled={processingDecision === submission.id}
+                                                        >
+                                                            {processingDecision === submission.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : (
+                                                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                            )}
+                                                            Approve
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const reason = prompt('Enter rejection reason:');
+                                                                if (reason) {
+                                                                    handleKycDecision(submission.id, 'rejected', reason);
+                                                                }
+                                                            }}
+                                                            disabled={processingDecision === submission.id}
+                                                        >
+                                                            {processingDecision === submission.id ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : (
+                                                                <XCircle className="h-4 w-4 mr-2" />
+                                                            )}
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                            <Separator />
+                                            <div>
+                                                <p className="text-sm font-medium mb-2">Documents:</p>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                    {submission.documents?.map((doc: any, idx: number) => (
+                                                        <div key={idx} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
+                                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate">{doc.name || doc.key}</p>
+                                                                    {doc.size && (
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {(doc.size / 1024 / 1024).toFixed(2)} MB
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => window.open(doc.signedUrl || doc.url, '_blank')}
+                                                                className="ml-2 flex-shrink-0"
+                                                            >
+                                                                <ExternalLink className="h-4 w-4 mr-1" />
+                                                                View
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                    <p>No KYC submissions found</p>
+                                </div>
+                            )}
+                        </CardContent>
                     </Card>
 
                     {customer.associatedAccounts && customer.associatedAccounts.length > 0 && (

@@ -118,7 +118,7 @@ export class AccountingEngine {
       }
     });
 
-    const trialBalance = accounts.map(account => ({
+    const trialBalance = accounts.map((account: any) => ({
       accountId: account.id,
       currency: account.currency,
       debitTotal: account.ledgerEntries

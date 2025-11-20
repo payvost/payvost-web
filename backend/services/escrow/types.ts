@@ -1,18 +1,60 @@
 import { Prisma } from '@prisma/client';
 
-// Use Prisma enums
+// Use Prisma enum types
 export type EscrowStatus = Prisma.EscrowStatus;
 export type EscrowPartyRole = Prisma.EscrowPartyRole;
 export type MilestoneStatus = Prisma.MilestoneStatus;
 export type DisputeStatus = Prisma.DisputeStatus;
 export type DisputeResolution = Prisma.DisputeResolution;
 
-// Export enum values for runtime use
-export const EscrowStatusEnum = Prisma.EscrowStatus;
-export const EscrowPartyRoleEnum = Prisma.EscrowPartyRole;
-export const MilestoneStatusEnum = Prisma.MilestoneStatus;
-export const DisputeStatusEnum = Prisma.DisputeStatus;
-export const DisputeResolutionEnum = Prisma.DisputeResolution;
+// Export enum values for runtime use - with fallback
+export const EscrowStatusEnum = (Prisma as any).EscrowStatus || {
+  DRAFT: 'DRAFT',
+  AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
+  AWAITING_FUNDING: 'AWAITING_FUNDING',
+  FUNDED: 'FUNDED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  DISPUTED: 'DISPUTED',
+  REFUNDED: 'REFUNDED',
+};
+
+export const EscrowPartyRoleEnum = (Prisma as any).EscrowPartyRole || {
+  BUYER: 'BUYER',
+  SELLER: 'SELLER',
+  MEDIATOR: 'MEDIATOR',
+  ADMIN: 'ADMIN',
+};
+
+export const MilestoneStatusEnum = (Prisma as any).MilestoneStatus || {
+  PENDING: 'PENDING',
+  AWAITING_FUNDING: 'AWAITING_FUNDING',
+  FUNDED: 'FUNDED',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  APPROVED: 'APPROVED',
+  RELEASED: 'RELEASED',
+  DISPUTED: 'DISPUTED',
+  CANCELLED: 'CANCELLED',
+};
+
+export const DisputeStatusEnum = (Prisma as any).DisputeStatus || {
+  OPEN: 'OPEN',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  EVIDENCE_SUBMITTED: 'EVIDENCE_SUBMITTED',
+  AWAITING_DECISION: 'AWAITING_DECISION',
+  RESOLVED_BUYER: 'RESOLVED_BUYER',
+  RESOLVED_SELLER: 'RESOLVED_SELLER',
+  RESOLVED_PARTIAL: 'RESOLVED_PARTIAL',
+  CLOSED: 'CLOSED',
+};
+
+export const DisputeResolutionEnum = (Prisma as any).DisputeResolution || {
+  REFUND_BUYER: 'REFUND_BUYER',
+  RELEASE_SELLER: 'RELEASE_SELLER',
+  PARTIAL_REFUND: 'PARTIAL_REFUND',
+  CUSTOM_SPLIT: 'CUSTOM_SPLIT',
+};
 
 export interface CreateEscrowInput {
   title: string;
