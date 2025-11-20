@@ -122,13 +122,32 @@ export default function PublicBusinessInvoicePage() {
   const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
   const taxAmount = invoice.grandTotal - subtotal;
 
+  const handlePrint = () => {
+    if (!id) return;
+    
+    // Open PDF in new window for printing
+    const pdfUrl = `/api/pdf/invoice/${id}`;
+    window.open(pdfUrl, '_blank');
+    
+    toast({
+      title: "Opening PDF",
+      description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-muted/10">
       <SiteHeader />
       <main className="flex-1 py-12 px-4">
          <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2">
-          <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-          <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+          <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
+          <Button variant="outline" onClick={() => {
+            const downloadUrl = `/api/pdf/invoice/${id}`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `invoice-${id}.pdf`;
+            link.click();
+          }}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
         </div>
 
         <Card className="max-w-4xl mx-auto w-full">
