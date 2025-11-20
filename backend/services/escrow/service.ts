@@ -1,10 +1,40 @@
 import { Prisma } from '@prisma/client';
 
-// Use Prisma enum values
-const EscrowStatus = Prisma.EscrowStatus;
-const MilestoneStatus = Prisma.MilestoneStatus;
-const EscrowPartyRole = Prisma.EscrowPartyRole;
+// Use Prisma enum values - fallback to string literals if not available
+type EscrowStatus = Prisma.EscrowStatus;
+type MilestoneStatus = Prisma.MilestoneStatus;
+type EscrowPartyRole = Prisma.EscrowPartyRole;
 type Escrow = Prisma.Escrow;
+
+const EscrowStatusEnum = (Prisma as any).EscrowStatus || {
+  DRAFT: 'DRAFT',
+  AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
+  AWAITING_FUNDING: 'AWAITING_FUNDING',
+  FUNDED: 'FUNDED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  DISPUTED: 'DISPUTED',
+  REFUNDED: 'REFUNDED',
+};
+
+const MilestoneStatusEnum = (Prisma as any).MilestoneStatus || {
+  PENDING: 'PENDING',
+  AWAITING_FUNDING: 'AWAITING_FUNDING',
+  FUNDED: 'FUNDED',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  APPROVED: 'APPROVED',
+  RELEASED: 'RELEASED',
+  DISPUTED: 'DISPUTED',
+  CANCELLED: 'CANCELLED',
+};
+
+const EscrowPartyRoleEnum = (Prisma as any).EscrowPartyRole || {
+  BUYER: 'BUYER',
+  SELLER: 'SELLER',
+  MEDIATOR: 'MEDIATOR',
+  ADMIN: 'ADMIN',
+};
 import Decimal from 'decimal.js';
 import {
   CreateEscrowInput,
@@ -96,7 +126,7 @@ export async function createEscrow(
       data: {
         title: input.title,
         description: input.description,
-        status: EscrowStatus.DRAFT,
+        status: EscrowStatusEnum.DRAFT as EscrowStatus,
         currency: input.currency,
         totalAmount: new Decimal(totalAmount),
         platformFee: platformFee,
@@ -120,7 +150,7 @@ export async function createEscrow(
       {
         escrowId: newEscrow.id,
         userId: creatorUserId,
-        role: EscrowPartyRole.BUYER,
+        role: EscrowPartyRoleEnum.BUYER as EscrowPartyRole,
         email: input.buyerEmail,
         name: input.buyerName,
         hasAccepted: true, // Creator automatically accepts
@@ -128,7 +158,7 @@ export async function createEscrow(
       },
       {
         escrowId: newEscrow.id,
-        role: EscrowPartyRole.SELLER,
+        role: EscrowPartyRoleEnum.SELLER as EscrowPartyRole,
         email: input.sellerEmail,
         name: input.sellerName,
         hasAccepted: false,
@@ -138,7 +168,7 @@ export async function createEscrow(
     if (input.mediatorEmail) {
       parties.push({
         escrowId: newEscrow.id,
-        role: EscrowPartyRole.MEDIATOR,
+        role: EscrowPartyRoleEnum.MEDIATOR as EscrowPartyRole,
         email: input.mediatorEmail,
         name: input.mediatorName,
         hasAccepted: false,
@@ -154,7 +184,7 @@ export async function createEscrow(
       title: m.title,
       description: m.description,
       amount: new Decimal(m.amount),
-      status: MilestoneStatus.PENDING,
+      status: MilestoneStatusEnum.PENDING as MilestoneStatus,
       requiresApproval: m.requiresApproval !== false,
       deliverableDescription: m.deliverableDescription,
     }));
@@ -168,7 +198,7 @@ export async function createEscrow(
         type: 'ESCROW_CREATED',
         description: `Escrow agreement created: ${input.title}`,
         performedBy: creatorUserId,
-        performedByRole: EscrowPartyRole.BUYER,
+        performedByRole: EscrowPartyRoleEnum.BUYER as EscrowPartyRole,
       },
     });
 
@@ -223,7 +253,7 @@ export async function acceptEscrow(
       await tx.escrow.update({
         where: { id: escrowId },
         data: {
-          status: EscrowStatus.AWAITING_FUNDING,
+          status: EscrowStatusEnum.AWAITING_FUNDING as EscrowStatus,
           acceptedAt: new Date(),
         },
       });
@@ -269,7 +299,7 @@ export async function fundMilestone(
       where: { id: input.milestoneId },
       data: {
         amountFunded: newFundedAmount,
-        status: isFunded ? MilestoneStatus.FUNDED : MilestoneStatus.AWAITING_FUNDING,
+        status: isFunded ? MilestoneStatusEnum.FUNDED : MilestoneStatusEnum.AWAITING_FUNDING as MilestoneStatus,
         fundedAt: isFunded ? new Date() : undefined,
       },
     });
@@ -298,21 +328,21 @@ export async function fundMilestone(
         type: 'MILESTONE_FUNDED',
         description: `Milestone "${milestone.title}" funded with ${amount} ${milestone.escrow.currency}`,
         performedBy: userId,
-        performedByRole: EscrowPartyRole.BUYER,
+        performedByRole: EscrowPartyRoleEnum.BUYER as EscrowPartyRole,
       },
     });
 
     // Check if escrow should transition to FUNDED
-    if (milestone.escrow.status === EscrowStatus.AWAITING_FUNDING) {
+    if (milestone.escrow.status === EscrowStatusEnum.AWAITING_FUNDING) {
       const firstMilestone = await tx.milestone.findFirst({
         where: { escrowId, order: 1 },
       });
 
-      if (firstMilestone && firstMilestone.status === MilestoneStatus.FUNDED) {
+      if (firstMilestone && firstMilestone.status === MilestoneStatusEnum.FUNDED) {
         await tx.escrow.update({
           where: { id: escrowId },
           data: {
-            status: EscrowStatus.FUNDED,
+            status: EscrowStatusEnum.FUNDED as EscrowStatus,
             fundedAt: new Date(),
           },
         });
@@ -351,7 +381,7 @@ export async function submitDeliverable(
         deliverableSubmitted: true,
         deliverableUrl: input.deliverableUrl,
         deliverableSubmittedAt: new Date(),
-        status: MilestoneStatus.UNDER_REVIEW,
+        status: MilestoneStatusEnum.UNDER_REVIEW as MilestoneStatus,
       },
     });
 
@@ -362,7 +392,7 @@ export async function submitDeliverable(
         type: 'DELIVERABLE_SUBMITTED',
         description: `Deliverable submitted for "${milestone.title}"`,
         performedBy: userId,
-        performedByRole: EscrowPartyRole.SELLER,
+        performedByRole: EscrowPartyRoleEnum.SELLER as EscrowPartyRole,
         metadata: { deliverableUrl: input.deliverableUrl },
       },
     });
@@ -385,14 +415,14 @@ export async function releaseMilestone(
 
     if (!milestone) throw new Error('Milestone not found');
     if (milestone.escrowId !== escrowId) throw new Error('Milestone does not belong to this escrow');
-    if (milestone.status !== MilestoneStatus.FUNDED && milestone.status !== MilestoneStatus.UNDER_REVIEW) {
+    if (milestone.status !== MilestoneStatusEnum.FUNDED && milestone.status !== MilestoneStatusEnum.UNDER_REVIEW) {
       throw new Error('Milestone must be funded before release');
     }
 
     await tx.milestone.update({
       where: { id: input.milestoneId },
       data: {
-        status: MilestoneStatus.RELEASED,
+        status: MilestoneStatusEnum.RELEASED as MilestoneStatus,
         approvedBy: userId,
         approvedAt: new Date(),
         releasedAt: new Date(),
@@ -422,19 +452,19 @@ export async function releaseMilestone(
         type: 'MILESTONE_RELEASED',
         description: `Milestone "${milestone.title}" approved and released`,
         performedBy: userId,
-        performedByRole: EscrowPartyRole.BUYER,
+        performedByRole: EscrowPartyRoleEnum.BUYER as EscrowPartyRole,
       },
     });
 
     // Check if all milestones are released
     const allMilestones = await tx.milestone.findMany({ where: { escrowId } });
-    const allReleased = allMilestones.every((m: any) => m.status === MilestoneStatus.RELEASED);
+    const allReleased = allMilestones.every((m: any) => m.status === MilestoneStatusEnum.RELEASED);
 
     if (allReleased) {
       await tx.escrow.update({
         where: { id: escrowId },
         data: {
-          status: EscrowStatus.COMPLETED,
+          status: EscrowStatusEnum.COMPLETED as EscrowStatus,
           completedAt: new Date(),
         },
       });
@@ -555,7 +585,7 @@ export async function resolveDispute(
         type: 'DISPUTE_RESOLVED',
         description: `Dispute resolved: ${input.resolution}`,
         performedBy: userId,
-        performedByRole: EscrowPartyRole.MEDIATOR,
+        performedByRole: EscrowPartyRoleEnum.MEDIATOR as EscrowPartyRole,
         metadata: { resolution: input.resolution, notes: input.resolutionNotes },
       },
     });
@@ -617,9 +647,9 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
 
   if (!escrow) throw new Error('Escrow not found');
 
-  const buyer = escrow.parties.find((p: any) => p.role === EscrowPartyRole.BUYER);
-  const seller = escrow.parties.find((p: any) => p.role === EscrowPartyRole.SELLER);
-  const mediator = escrow.parties.find((p: any) => p.role === EscrowPartyRole.MEDIATOR);
+  const buyer = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.BUYER);
+  const seller = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.SELLER);
+  const mediator = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.MEDIATOR);
 
   return {
     id: escrow.id,

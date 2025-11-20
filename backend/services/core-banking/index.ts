@@ -1,8 +1,16 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 
-// Use Prisma enum
-const TransactionType = Prisma.TransactionType;
+// Use Prisma enum - fallback to string if not available
+type TransactionType = Prisma.TransactionType;
+const TransactionTypeEnum = (Prisma as any).TransactionType || {
+  INTERNAL_TRANSFER: 'INTERNAL_TRANSFER',
+  EXTERNAL_TRANSFER: 'EXTERNAL_TRANSFER',
+  CARD_PAYMENT: 'CARD_PAYMENT',
+  ATM_WITHDRAWAL: 'ATM_WITHDRAWAL',
+  DEPOSIT: 'DEPOSIT',
+  CURRENCY_EXCHANGE: 'CURRENCY_EXCHANGE',
+};
 
 export interface TransferResult {
   success: boolean;
@@ -70,7 +78,7 @@ export async function transferFunds(
           amount: amountStr,
           currency,
           status: 'completed',
-          type: TransactionType.INTERNAL_TRANSFER,
+          type: TransactionTypeEnum.INTERNAL_TRANSFER as TransactionType,
           idempotencyKey: idempotencyKey ?? null,
           description: description ?? null,
         },

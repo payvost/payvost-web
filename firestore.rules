@@ -9,6 +9,11 @@ service cloud.firestore {
              && get(/databases/$(database)/documents/users/$(userId)).data.kycStatus == "Verified";
     }
 
+    // ✅ Helper: check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     // 🔹 Users collection
     match /users/{userId} {
       allow read: if true; // public profiles visible
@@ -196,6 +201,27 @@ service cloud.firestore {
     match /market_news/{newsId} {
       allow read: if true;
       allow write: if false;
+    }
+
+    // 🪪 KYC Submissions (admin readable, user can read their own)
+    match /kyc_submissions/{submissionId} {
+      // Users can read their own submissions
+      allow read: if request.auth != null 
+                   && request.auth.uid == resource.data.userId;
+      
+      // Admins can read all submissions
+      allow read: if isAdmin();
+      
+      // Users can create their own submissions
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.status == "submitted";
+      
+      // Only system/admins can update (via backend)
+      allow update: if isAdmin();
+      
+      // Prevent deletion
+      allow delete: if false;
     }
   }
 }

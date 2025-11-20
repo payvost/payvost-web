@@ -56,7 +56,7 @@ export class ReportingEngine {
     const { startDate, endDate, currency, country } = params;
 
     // Get all relevant transactions with full user details
-    const transactions = await this.prisma.$transaction(async (tx) => {
+    const transactions = await this.prisma.$transaction(async (tx: any) => {
       const transfers = await tx.transfer.findMany({
         where: {
           createdAt: {
@@ -233,30 +233,30 @@ export class ReportingEngine {
 
   private summarizeTransactions(transactions: any[]): any {
     return {
-      volumeByCountry: this.groupBy(transactions, t => t.fromAccount.user.country),
-      volumeByCurrency: this.groupBy(transactions, t => t.currency),
+      volumeByCountry: this.groupBy(transactions, (t: any) => t.fromAccount.user.country),
+      volumeByCurrency: this.groupBy(transactions, (t: any) => t.currency),
       volumeByAmount: {
-        small: transactions.filter(t => Number(t.amount) <= 1000).length,
-        medium: transactions.filter(t => Number(t.amount) > 1000 && Number(t.amount) <= 10000).length,
-        large: transactions.filter(t => Number(t.amount) > 10000).length
+        small: transactions.filter((t: any) => Number(t.amount) <= 1000).length,
+        medium: transactions.filter((t: any) => Number(t.amount) > 1000 && Number(t.amount) <= 10000).length,
+        large: transactions.filter((t: any) => Number(t.amount) > 10000).length
       }
     };
   }
 
   private summarizeCompliance(alerts: any[]): any {
     return {
-      byType: this.groupBy(alerts, a => a.type),
-      bySeverity: this.groupBy(alerts, a => a.severity),
+      byType: this.groupBy(alerts, (a: any) => a.type),
+      bySeverity: this.groupBy(alerts, (a: any) => a.severity),
       resolution: {
-        resolved: alerts.filter(a => a.status === 'RESOLVED').length,
-        pending: alerts.filter(a => a.status === 'PENDING').length,
-        escalated: alerts.filter(a => a.status === 'ESCALATED').length
+        resolved: alerts.filter((a: any) => a.status === 'RESOLVED').length,
+        pending: alerts.filter((a: any) => a.status === 'PENDING').length,
+        escalated: alerts.filter((a: any) => a.status === 'ESCALATED').length
       }
     };
   }
 
   private groupBy(array: any[], keyFn: (item: any) => string): Record<string, number> {
-    return array.reduce((acc, item) => {
+    return array.reduce((acc: Record<string, number>, item: any) => {
       const key = keyFn(item);
       acc[key] = (acc[key] || 0) + Number(item.amount || 1);
       return acc;

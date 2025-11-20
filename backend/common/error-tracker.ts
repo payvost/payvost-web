@@ -214,8 +214,10 @@ export async function captureMessage(
     
     if (level === 'warn') {
       logger.warn({ ...context }, message);
+    } else if (level === 'error') {
+      logger.error({ ...context }, message);
     } else {
-      logger[level]({ ...context }, message);
+      logger.info({ ...context }, message);
     }
   } catch (error) {
     logger.error({ err: error }, 'Failed to capture message');
