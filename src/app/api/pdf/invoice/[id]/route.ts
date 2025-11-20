@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import React from 'react';
 import { renderToStream } from '@react-pdf/renderer';
-import InvoiceDocument from '@/lib/pdf/InvoiceDocument';
+import { InvoicePDFWrapper } from '@/lib/pdf/InvoicePDFWrapper';
 
 // Increase timeout for PDF generation (Vercel Pro allows up to 60s)
 export const maxDuration = 60;
@@ -149,23 +149,22 @@ export async function GET(
     });
 
     // Generate PDF using React-PDF
-    // Use React.createElement to create the component element
+    // Use React.createElement with the wrapper component
     try {
-      // Verify InvoiceDocument is a function
-      if (typeof InvoiceDocument !== 'function') {
-        throw new Error(`InvoiceDocument is not a function, got: ${typeof InvoiceDocument}`);
+      // Verify InvoicePDFWrapper is a function
+      if (typeof InvoicePDFWrapper !== 'function') {
+        throw new Error(`InvoicePDFWrapper is not a function, got: ${typeof InvoicePDFWrapper}`);
       }
       
-      const invoiceDocElement = React.createElement(InvoiceDocument, { 
+      const invoiceDocElement = React.createElement(InvoicePDFWrapper, { 
         invoice: finalInvoice 
       });
       
       if (!invoiceDocElement) {
-        throw new Error('Failed to create React element for InvoiceDocument');
+        throw new Error('Failed to create React element for InvoicePDFWrapper');
       }
       
-      console.log('[PDF] Created React element, type:', typeof invoiceDocElement);
-      console.log('[PDF] Rendering to stream...');
+      console.log('[PDF] Created React element, rendering to stream...');
       
       // Use the imported renderToStream function
       const stream = await renderToStream(invoiceDocElement);
