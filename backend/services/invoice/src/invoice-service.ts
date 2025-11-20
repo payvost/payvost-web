@@ -377,12 +377,12 @@ export class InvoiceService {
     ]);
 
     const totalOutstanding = allInvoices
-      .filter((inv) => inv.status === 'PENDING' || inv.status === 'OVERDUE')
-      .reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
+      .filter((inv: any) => inv.status === 'PENDING' || inv.status === 'OVERDUE')
+      .reduce((sum: number, inv: any) => sum + Number(inv.grandTotal), 0);
 
     const totalPaid = allInvoices
-      .filter((inv) => inv.status === 'PAID')
-      .reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
+      .filter((inv: any) => inv.status === 'PAID')
+      .reduce((sum: number, inv: any) => sum + Number(inv.grandTotal), 0);
 
     return {
       total,
