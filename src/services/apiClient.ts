@@ -107,9 +107,25 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+
       // Handle non-OK responses
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = {};
+        if (isJson) {
+          try {
+            errorData = await response.json();
+          } catch {
+            // If JSON parsing fails, try to get text
+            const text = await response.text().catch(() => '');
+            errorData = { message: text || `HTTP ${response.status} Error` };
+          }
+        } else {
+          const text = await response.text().catch(() => '');
+          errorData = { message: text || `HTTP ${response.status} Error` };
+        }
         throw new ApiError(
           errorData.message || errorData.error || 'Request failed',
           response.status,
@@ -118,6 +134,14 @@ class ApiClient {
       }
 
       // Parse JSON response
+      if (!isJson) {
+        const text = await response.text();
+        throw new ApiError(
+          `Expected JSON response but received ${contentType || 'unknown content type'}`,
+          response.status
+        );
+      }
+
       const data = await response.json();
       return data as T;
     } catch (error) {

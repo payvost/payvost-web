@@ -62,11 +62,34 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch conversion rate');
+        // Check content type before parsing error
+        const contentType = response.headers.get('content-type') || '';
+        let errorMessage = 'Failed to fetch conversion rate';
+        if (contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If JSON parsing fails, try text
+            const text = await response.text().catch(() => '');
+            errorMessage = text || errorMessage;
+          }
+        } else {
+          const text = await response.text().catch(() => '');
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
+
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Expected JSON response but received ${contentType || 'unknown content type'}`);
+      }
+
+      const data = await response.json();
 
       if (data.success && data.rate && data.result !== undefined) {
         setRate(data.rate);

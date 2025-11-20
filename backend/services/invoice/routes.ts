@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { InvoiceService } from './src/invoice-service';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
+import { prisma } from '../../common/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 const invoiceService = new InvoiceService(prisma);
 
 /**

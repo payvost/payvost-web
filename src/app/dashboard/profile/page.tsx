@@ -660,7 +660,19 @@ export default function ProfilePage() {
                                 </ul>
                             </CardContent>
                              <CardFooter>
-                                <Button className="w-full">Upgrade to Tier 2 <ArrowRight className="ml-2 h-4 w-4"/></Button>
+                                <Button 
+                                    className="w-full" 
+                                    asChild
+                                    disabled={
+                                        userData?.kycTier !== 'tier1' || 
+                                        (userData?.kycStatus !== 'verified' && userData?.kycStatus !== 'tier1_verified') ||
+                                        userData?.kycProfile?.tiers?.tier1?.status !== 'approved'
+                                    }
+                                >
+                                    <Link href="/dashboard/kyc/upgrade-tier2">
+                                        Upgrade to Tier 2 <ArrowRight className="ml-2 h-4 w-4"/>
+                                    </Link>
+                                </Button>
                             </CardFooter>
                         </Card>
                          <Card className="bg-muted/50">

@@ -38,8 +38,19 @@ export async function GET(request: NextRequest) {
     // Execute query
     const snapshot = await query.orderBy('createdAt', 'desc').limit(limit).get();
 
-    // Get storage bucket
-    const bucket = admin.storage().bucket();
+    // Get storage bucket (with error handling)
+    let bucket: any = null;
+    try {
+      const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+      if (storageBucket) {
+        bucket = admin.storage().bucket(storageBucket);
+      } else {
+        bucket = admin.storage().bucket();
+      }
+    } catch (storageError: any) {
+      console.warn('Storage bucket not configured, documents will use original URLs:', storageError.message);
+      bucket = null;
+    }
 
     // Process submissions and generate signed URLs for documents
     const submissions = await Promise.all(
@@ -50,6 +61,11 @@ export async function GET(request: NextRequest) {
         const documentsWithUrls = await Promise.all(
           (data.documents || []).map(async (docItem: any) => {
             try {
+              // If storage bucket is not available, just return the original URL
+              if (!bucket) {
+                return { ...docItem, signedUrl: docItem.url || null, filePath: null };
+              }
+
               // Extract file path from storage URL
               // URL format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media
               let filePath: string | null = null;

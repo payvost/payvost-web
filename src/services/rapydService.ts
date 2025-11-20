@@ -379,6 +379,18 @@ class RapydService {
         body: method !== 'GET' ? body : undefined,
       });
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+
+      if (!isJson) {
+        const text = await response.text();
+        throw new RapydError(
+          `Expected JSON response but received ${contentType || 'unknown content type'}: ${text.substring(0, 200)}`,
+          response.status
+        );
+      }
+
       const result = await response.json();
 
       // Rapyd returns status in the body
