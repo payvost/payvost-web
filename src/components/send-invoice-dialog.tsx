@@ -16,10 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, Download, FileImage, Loader2, Send, QrCode, Share2, Printer } from 'lucide-react';
 import type { InvoiceFormValues } from './create-invoice-page';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, Timestamp, onSnapshot, getDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/lib/error-emitter';
-import { FirestorePermissionError } from '@/lib/errors';
+import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
 
 interface SendInvoiceDialogProps {
   isOpen: boolean;
@@ -31,20 +28,29 @@ interface SendInvoiceDialogProps {
 export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSend }: SendInvoiceDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [invoiceData, setInvoiceData] = useState<Invoice | null>(null);
 
   useEffect(() => {
     if (isOpen && invoiceId) {
-      setLoading(true);
-      const unsub = onSnapshot(doc(db, 'invoices', invoiceId), (doc) => {
-        if (doc.exists()) {
-          setInvoiceData({ id: doc.id, ...doc.data() });
+      const fetchInvoice = async () => {
+        setLoading(true);
+        try {
+          const invoice = await InvoiceAPI.getInvoice(invoiceId);
+          setInvoiceData(invoice);
+        } catch (error: any) {
+          console.error('Error fetching invoice:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load invoice. Please try again.',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
-      });
-      return () => unsub();
+      };
+      fetchInvoice();
     }
-  }, [isOpen, invoiceId]);
+  }, [isOpen, invoiceId, toast]);
 
   const copyLink = () => {
     if (!invoiceData?.publicUrl) return;

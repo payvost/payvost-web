@@ -10,8 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2, Trash2, Loader2, Copy, Edit, CheckCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db, storage } from '@/lib/firebase';
+import { InvoiceAPI, type Invoice } from '@/services/invoice-api';
 import { ref, deleteObject } from "firebase/storage";
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -42,38 +41,41 @@ interface InvoiceListViewProps {
 
 export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: InvoiceListViewProps) {
   const { user } = useAuth();
-  const [invoices, setInvoices] = useState<DocumentData[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [invoiceToDelete, setInvoiceToDelete] = useState<DocumentData | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
         setLoading(false);
         return;
+    }
+
+    const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const result = await InvoiceAPI.listInvoices();
+        setInvoices(result.invoices);
+      } catch (error) {
+        console.error("Error fetching invoices: ", error);
+        toast({
+          title: "Error",
+          description: "Failed to load invoices. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const q = query(
-        collection(db, "invoices"), 
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const invoicesData: DocumentData[] = [];
-        querySnapshot.forEach((doc) => {
-            invoicesData.push({ id: doc.id, ...doc.data() });
-        });
-        setInvoices(invoicesData);
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching invoices: ", error);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+    fetchInvoices();
+    
+    // Poll for updates every 30 seconds
+    const interval = setInterval(fetchInvoices, 30000);
+    return () => clearInterval(interval);
+  }, [user, toast]);
 
   const handleCopyLink = (link: string) => {
     if (!link) {
@@ -91,7 +93,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     });
   }
 
-  const handleShareInvoice = async (invoice: DocumentData) => {
+  const handleShareInvoice = async (invoice: Invoice) => {
      if (!invoice.publicUrl) {
         toast({
             title: "Link Not Available",
@@ -102,7 +104,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     }
     const shareData = {
         title: `Invoice #${invoice.invoiceNumber}`,
-        text: `Here is the invoice from ${invoice.fromName} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}.`,
+        text: `Here is the invoice from ${invoice.fromInfo.name} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}.`,
         url: invoice.publicUrl
     };
 
@@ -133,7 +135,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     }
   };
 
-  const handleDeleteClick = (invoice: DocumentData) => {
+  const handleDeleteClick = (invoice: Invoice) => {
       setInvoiceToDelete(invoice);
   }
 
@@ -141,15 +143,16 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
-        await deleteDoc(doc(db, 'invoices', invoiceToDelete.id));
+        await InvoiceAPI.deleteInvoice(invoiceToDelete.id);
+        setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id));
         toast({
             title: "Invoice Deleted",
             description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.`,
         });
-    } catch (error) {
+    } catch (error: any) {
         toast({
             title: "Error",
-            description: "Failed to delete invoice. Please try again.",
+            description: error.message || "Failed to delete invoice. Please try again.",
             variant: "destructive",
         });
     } finally {
@@ -160,18 +163,18 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
 
   const handleMarkAsPaid = async (invoiceId: string) => {
     try {
-        const docRef = doc(db, 'invoices', invoiceId);
-        await updateDoc(docRef, {
-            status: 'Paid',
-        });
+        await InvoiceAPI.markAsPaid(invoiceId);
+        setInvoices(invoices.map(inv => 
+            inv.id === invoiceId ? { ...inv, status: 'PAID' as const } : inv
+        ));
         toast({
             title: "Invoice Updated",
             description: "The invoice has been marked as paid.",
         });
-    } catch (error) {
+    } catch (error: any) {
          toast({
             title: "Error",
-            description: "Could not update the invoice status.",
+            description: error.message || "Could not update the invoice status.",
             variant: "destructive",
         });
     }
@@ -246,9 +249,9 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
             {invoices.map((invoice) => (
               <TableRow key={invoice.id}>
                 <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                <TableCell>{invoice.toName}</TableCell>
-                <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
-                <TableCell>{invoice.dueDate.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>{invoice.toInfo.name}</TableCell>
+                <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(Number(invoice.grandTotal))}</TableCell>
+                <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                     <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
                 </TableCell>
@@ -262,18 +265,18 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                                   View Details
                                 </Link>
                             </DropdownMenuItem>
-                            {invoice.status === 'Draft' && (
+                            {invoice.status === 'DRAFT' && (
                                 <DropdownMenuItem onClick={() => onEditClick(invoice.id)}>
                                     <Edit className="mr-2 h-4 w-4"/>Edit
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => handleCopyLink(invoice.publicUrl)}>
+                            <DropdownMenuItem onClick={() => handleCopyLink(invoice.publicUrl || '')}>
                                 <Copy className="mr-2 h-4 w-4"/>Copy Public Link
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                 <Share2 className="mr-2 h-4 w-4"/>Share Invoice
                             </DropdownMenuItem>
-                            {invoice.status !== 'Paid' && (
+                            {invoice.status !== 'PAID' && (
                                 <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice.id)}>
                                     <CheckCircle className="mr-2 h-4 w-4"/>Mark as Paid
                                 </DropdownMenuItem>

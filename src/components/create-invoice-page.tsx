@@ -20,8 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, onSnapshot, query, doc, addDoc, serverTimestamp, Timestamp, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { InvoiceAPI, type CreateInvoiceInput, type UpdateInvoiceInput } from '@/services/invoice-api';
 import { Skeleton } from './ui/skeleton';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Separator } from './ui/separator';
@@ -133,20 +132,39 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
      useEffect(() => {
         if (isEditing && invoiceId) {
             const fetchInvoice = async () => {
-                const docRef = doc(db, 'invoices', invoiceId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
+                try {
+                    const invoice = await InvoiceAPI.getInvoice(invoiceId);
                     reset({
-                        ...data,
-                        issueDate: data.issueDate.toDate(),
-                        dueDate: data.dueDate.toDate(),
+                        invoiceNumber: invoice.invoiceNumber,
+                        issueDate: new Date(invoice.issueDate),
+                        dueDate: new Date(invoice.dueDate),
+                        currency: invoice.currency,
+                        fromName: invoice.fromInfo.name,
+                        fromAddress: invoice.fromInfo.address,
+                        toName: invoice.toInfo.name,
+                        toEmail: invoice.toInfo.email,
+                        toAddress: invoice.toInfo.address,
+                        items: invoice.items,
+                        notes: invoice.notes || '',
+                        taxRate: Number(invoice.taxRate),
+                        paymentMethod: invoice.paymentMethod.toLowerCase() as 'payvost' | 'manual',
+                        manualBankName: invoice.manualBankDetails?.bankName || '',
+                        manualAccountName: invoice.manualBankDetails?.accountName || '',
+                        manualAccountNumber: invoice.manualBankDetails?.accountNumber || '',
+                        manualOtherDetails: invoice.manualBankDetails?.otherDetails || '',
+                    });
+                } catch (error) {
+                    console.error('Error fetching invoice:', error);
+                    toast({ 
+                        title: 'Error', 
+                        description: 'Failed to load invoice. Please try again.', 
+                        variant: 'destructive' 
                     });
                 }
             };
             fetchInvoice();
         }
-    }, [isEditing, invoiceId, reset]);
+    }, [isEditing, invoiceId, reset, toast]);
     
     useEffect(() => {
         if (!user) {
@@ -207,34 +225,47 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         }
 
         const data = getValues();
-        const firestoreData = {
-            ...data,
-            issueDate: Timestamp.fromDate(data.issueDate),
-            dueDate: Timestamp.fromDate(data.dueDate),
-            grandTotal,
-            userId: user.uid,
-            status,
-            updatedAt: serverTimestamp(),
-            isPublic: status !== 'Draft',
+        
+        // Map form data to API format
+        const invoiceData: CreateInvoiceInput | UpdateInvoiceInput = {
+            invoiceNumber: data.invoiceNumber,
+            invoiceType: 'USER',
+            issueDate: data.issueDate,
+            dueDate: data.dueDate,
+            currency: data.currency,
+            fromInfo: {
+                name: data.fromName,
+                address: data.fromAddress,
+            },
+            toInfo: {
+                name: data.toName,
+                email: data.toEmail,
+                address: data.toAddress,
+            },
+            items: data.items,
+            taxRate: watchedTaxRate,
+            notes: data.notes,
+            paymentMethod: data.paymentMethod.toUpperCase() as 'PAYVOST' | 'MANUAL' | 'STRIPE',
+            status: status.toUpperCase() as 'DRAFT' | 'PENDING',
+            ...(data.paymentMethod === 'manual' && data.manualBankName ? {
+                manualBankDetails: {
+                    bankName: data.manualBankName,
+                    accountName: data.manualAccountName || '',
+                    accountNumber: data.manualAccountNumber || '',
+                    otherDetails: data.manualOtherDetails,
+                }
+            } : {}),
         };
 
         if (savedInvoiceId) {
             // Update existing invoice
-            const docRef = doc(db, 'invoices', savedInvoiceId);
-            await updateDoc(docRef, firestoreData);
-            return savedInvoiceId;
+            const invoice = await InvoiceAPI.updateInvoice(savedInvoiceId, invoiceData);
+            return invoice.id;
         } else {
             // Create new invoice
-            const docRef = await addDoc(collection(db, 'invoices'), {
-                ...firestoreData,
-                createdAt: serverTimestamp(),
-            });
-            const newId = docRef.id;
-            const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-            const publicUrl = `${siteUrl}/invoice/${newId}`;
-            await updateDoc(docRef, { publicUrl });
-            setSavedInvoiceId(newId);
-            return newId;
+            const invoice = await InvoiceAPI.createInvoice(invoiceData as CreateInvoiceInput);
+            setSavedInvoiceId(invoice.id);
+            return invoice.id;
         }
     };
 
