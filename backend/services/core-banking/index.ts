@@ -1,9 +1,17 @@
 import { Prisma } from '@prisma/client';
-import type { TransactionType } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 
+// Define TransactionType locally to avoid Prisma import issues during build
+export type TransactionType = 
+  | 'INTERNAL_TRANSFER'
+  | 'EXTERNAL_TRANSFER'
+  | 'CARD_PAYMENT'
+  | 'ATM_WITHDRAWAL'
+  | 'DEPOSIT'
+  | 'CURRENCY_EXCHANGE';
+
 // Use Prisma enum - fallback to string if not available
-const TransactionTypeEnum = {
+export const TransactionTypeEnum = {
   INTERNAL_TRANSFER: 'INTERNAL_TRANSFER',
   EXTERNAL_TRANSFER: 'EXTERNAL_TRANSFER',
   CARD_PAYMENT: 'CARD_PAYMENT',
@@ -11,8 +19,6 @@ const TransactionTypeEnum = {
   DEPOSIT: 'DEPOSIT',
   CURRENCY_EXCHANGE: 'CURRENCY_EXCHANGE',
 } as const;
-
-type TransactionTypeEnum = typeof TransactionTypeEnum[keyof typeof TransactionTypeEnum];
 
 export interface TransferResult {
   success: boolean;

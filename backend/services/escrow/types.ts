@@ -1,7 +1,46 @@
-import type { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution } from '@prisma/client';
+// Define enum types locally to avoid Prisma import issues during build
+export type EscrowStatus = 
+  | 'DRAFT'
+  | 'AWAITING_ACCEPTANCE'
+  | 'AWAITING_FUNDING'
+  | 'FUNDED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DISPUTED'
+  | 'REFUNDED';
 
-// Export enum types
-export type { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution };
+export type EscrowPartyRole = 
+  | 'BUYER'
+  | 'SELLER'
+  | 'MEDIATOR'
+  | 'ADMIN';
+
+export type MilestoneStatus = 
+  | 'PENDING'
+  | 'AWAITING_FUNDING'
+  | 'FUNDED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'RELEASED'
+  | 'DISPUTED'
+  | 'CANCELLED';
+
+export type DisputeStatus = 
+  | 'OPEN'
+  | 'UNDER_REVIEW'
+  | 'EVIDENCE_SUBMITTED'
+  | 'AWAITING_DECISION'
+  | 'RESOLVED_BUYER'
+  | 'RESOLVED_SELLER'
+  | 'RESOLVED_PARTIAL'
+  | 'CLOSED';
+
+export type DisputeResolution = 
+  | 'REFUND_BUYER'
+  | 'RELEASE_SELLER'
+  | 'PARTIAL_REFUND'
+  | 'CUSTOM_SPLIT';
 
 // Export enum values for runtime use - with fallback
 export const EscrowStatusEnum = {

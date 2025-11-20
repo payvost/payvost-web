@@ -1,6 +1,22 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import type { InvoiceStatus, InvoiceType, PaymentMethod } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// Define enum types locally to avoid Prisma import issues during build
+export type InvoiceStatus = 
+  | 'DRAFT'
+  | 'PENDING'
+  | 'PAID'
+  | 'OVERDUE'
+  | 'CANCELLED';
+
+export type InvoiceType = 
+  | 'USER'
+  | 'BUSINESS';
+
+export type PaymentMethod = 
+  | 'PAYVOST'
+  | 'MANUAL'
+  | 'STRIPE';
 
 export interface CreateInvoiceInput {
   invoiceNumber: string;
