@@ -1,10 +1,10 @@
-import { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution } from '@prisma/client';
+import type { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution } from '@prisma/client';
 
 // Export enum types
 export type { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution };
 
 // Export enum values for runtime use - with fallback
-export const EscrowStatusEnum = EscrowStatus || {
+export const EscrowStatusEnum = {
   DRAFT: 'DRAFT',
   AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
   AWAITING_FUNDING: 'AWAITING_FUNDING',
@@ -16,14 +16,14 @@ export const EscrowStatusEnum = EscrowStatus || {
   REFUNDED: 'REFUNDED',
 };
 
-export const EscrowPartyRoleEnum = EscrowPartyRole || {
+export const EscrowPartyRoleEnum = {
   BUYER: 'BUYER',
   SELLER: 'SELLER',
   MEDIATOR: 'MEDIATOR',
   ADMIN: 'ADMIN',
 };
 
-export const MilestoneStatusEnum = MilestoneStatus || {
+export const MilestoneStatusEnum = {
   PENDING: 'PENDING',
   AWAITING_FUNDING: 'AWAITING_FUNDING',
   FUNDED: 'FUNDED',
@@ -34,7 +34,7 @@ export const MilestoneStatusEnum = MilestoneStatus || {
   CANCELLED: 'CANCELLED',
 };
 
-export const DisputeStatusEnum = DisputeStatus || {
+export const DisputeStatusEnum = {
   OPEN: 'OPEN',
   UNDER_REVIEW: 'UNDER_REVIEW',
   EVIDENCE_SUBMITTED: 'EVIDENCE_SUBMITTED',
@@ -45,7 +45,7 @@ export const DisputeStatusEnum = DisputeStatus || {
   CLOSED: 'CLOSED',
 };
 
-export const DisputeResolutionEnum = DisputeResolution || {
+export const DisputeResolutionEnum = {
   REFUND_BUYER: 'REFUND_BUYER',
   RELEASE_SELLER: 'RELEASE_SELLER',
   PARTIAL_REFUND: 'PARTIAL_REFUND',
