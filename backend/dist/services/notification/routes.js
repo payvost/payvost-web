@@ -8,6 +8,9 @@ const express_1 = require("express");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const fcm_1 = require("./fcm");
+const twilio_1 = require("./twilio");
+const logger_1 = require("../../common/logger");
 const router = (0, express_1.Router)();
 // Initialize Nodemailer with Mailgun SMTP
 const emailTransporter = nodemailer_1.default.createTransport({
@@ -22,13 +25,10 @@ const emailTransporter = nodemailer_1.default.createTransport({
 // Check if email service is configured
 const isEmailConfigured = !!(process.env.MAILGUN_SMTP_LOGIN && process.env.MAILGUN_SMTP_PASSWORD);
 if (!isEmailConfigured) {
-    console.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
+    logger_1.logger.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
 }
-// Check if Twilio SMS is configured
-const isSMSConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
-if (!isSMSConfigured) {
-    console.warn('Twilio not configured. SMS notifications will be disabled.');
-}
+// Initialize Twilio
+(0, twilio_1.initTwilio)();
 /**
  * POST /api/notification/send
  * Send an email notification (replaced push notification)
@@ -51,7 +51,7 @@ router.post('/send', middleware_1.verifyFirebaseToken, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error sending notification:', error);
+        logger_1.logger.error({ err: error }, 'Error sending notification');
         res.status(500).json({ error: error.message || 'Failed to send notification' });
     }
 });
@@ -77,7 +77,7 @@ router.post('/send-email', middleware_1.verifyFirebaseToken, async (req, res) =>
         });
     }
     catch (error) {
-        console.error('Error sending email:', error);
+        logger_1.logger.error({ err: error }, 'Error sending email');
         res.status(500).json({ error: error.message || 'Failed to send email' });
     }
 });
@@ -106,7 +106,7 @@ router.post('/send-batch', middleware_1.verifyFirebaseToken, async (req, res) =>
         });
     }
     catch (error) {
-        console.error('Error sending batch notifications:', error);
+        logger_1.logger.error({ err: error }, 'Error sending batch notifications');
         res.status(500).json({ error: error.message || 'Failed to send batch notifications' });
     }
 });
@@ -131,8 +131,119 @@ router.post('/send-sms', middleware_1.verifyFirebaseToken, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error sending SMS:', error);
+        logger_1.logger.error({ err: error }, 'Error sending SMS');
         res.status(500).json({ error: error.message || 'Failed to send SMS' });
+    }
+});
+/**
+ * POST /api/notification/send-push
+ * Send a push notification to a single device
+ */
+router.post('/send-push', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { token, title, body, data, imageUrl, clickAction } = req.body;
+        if (!token || !title || !body) {
+            throw new index_1.ValidationError('token, title, and body are required');
+        }
+        const result = await (0, fcm_1.sendPushNotification)({
+            token,
+            title,
+            body,
+            data,
+            imageUrl,
+            clickAction,
+        });
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Error sending push notification:', error);
+        res.status(500).json({ error: error.message || 'Failed to send push notification' });
+    }
+});
+/**
+ * POST /api/notification/send-push-batch
+ * Send push notifications to multiple devices
+ */
+router.post('/send-push-batch', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { tokens, title, body, data, imageUrl, clickAction } = req.body;
+        if (!tokens || !Array.isArray(tokens) || !title || !body) {
+            throw new index_1.ValidationError('tokens (array), title, and body are required');
+        }
+        const result = await (0, fcm_1.sendMulticastNotification)({
+            tokens,
+            title,
+            body,
+            data,
+            imageUrl,
+            clickAction,
+        });
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Error sending multicast notification:', error);
+        res.status(500).json({ error: error.message || 'Failed to send multicast notification' });
+    }
+});
+/**
+ * POST /api/notification/send-topic
+ * Send push notification to a topic
+ */
+router.post('/send-topic', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { topic, title, body, data, imageUrl, clickAction } = req.body;
+        if (!topic || !title || !body) {
+            throw new index_1.ValidationError('topic, title, and body are required');
+        }
+        const result = await (0, fcm_1.sendTopicNotification)({
+            topic,
+            title,
+            body,
+            data,
+            imageUrl,
+            clickAction,
+        });
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Error sending topic notification:', error);
+        res.status(500).json({ error: error.message || 'Failed to send topic notification' });
+    }
+});
+/**
+ * POST /api/notification/subscribe-topic
+ * Subscribe tokens to a topic
+ */
+router.post('/subscribe-topic', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { tokens, topic } = req.body;
+        if (!tokens || !Array.isArray(tokens) || !topic) {
+            throw new index_1.ValidationError('tokens (array) and topic are required');
+        }
+        const result = await (0, fcm_1.subscribeToTopic)(tokens, topic);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Error subscribing to topic:', error);
+        res.status(500).json({ error: error.message || 'Failed to subscribe to topic' });
+    }
+});
+/**
+ * POST /api/notification/unsubscribe-topic
+ * Unsubscribe tokens from a topic
+ */
+router.post('/unsubscribe-topic', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { tokens, topic } = req.body;
+        if (!tokens || !Array.isArray(tokens) || !topic) {
+            throw new index_1.ValidationError('tokens (array) and topic are required');
+        }
+        const result = await (0, fcm_1.unsubscribeFromTopic)(tokens, topic);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Error unsubscribing from topic:', error);
+        res.status(500).json({ error: error.message || 'Failed to unsubscribe from topic' });
     }
 });
 /**
@@ -157,14 +268,14 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
             updatedAt: new Date().toISOString(),
         };
         // TODO: Save to database
-        console.log('Updated notification preferences:', preferences);
+        logger_1.logger.info({ userId, preferences }, 'Updated notification preferences');
         res.status(200).json({
             success: true,
             preferences,
         });
     }
     catch (error) {
-        console.error('Error updating preferences:', error);
+        logger_1.logger.error({ err: error }, 'Error updating preferences');
         res.status(500).json({ error: error.message || 'Failed to update preferences' });
     }
 });
@@ -174,7 +285,7 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
 async function sendEmailNotification(params) {
     const { email, subject, template, variables } = params;
     if (!isEmailConfigured) {
-        console.warn('Email service not configured, skipping email notification');
+        logger_1.logger.warn('Email service not configured, skipping email notification');
         return { success: false, error: 'Email service not configured' };
     }
     try {
@@ -185,43 +296,20 @@ async function sendEmailNotification(params) {
             subject,
             html,
         });
-        console.log('Email sent successfully:', info.messageId);
+        logger_1.logger.info({ messageId: info.messageId, email }, 'Email sent successfully');
         return { success: true, messageId: info.messageId };
     }
     catch (error) {
-        console.error('Email sending error:', error);
+        logger_1.logger.error({ err: error, email }, 'Email sending error');
         return { success: false, error: error.message };
     }
 }
 /**
- * Helper function to send SMS notification (Twilio placeholder)
+ * Helper function to send SMS notification via Twilio
  */
 async function sendSMSNotification(params) {
     const { phoneNumber, message } = params;
-    if (!isSMSConfigured) {
-        console.warn('Twilio not configured, SMS will not be sent');
-        return { success: false, error: 'SMS service not configured. Twilio integration pending.' };
-    }
-    try {
-        // TODO: Implement actual Twilio integration
-        // const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        // const messageResult = await twilioClient.messages.create({
-        //   body: message,
-        //   from: process.env.TWILIO_PHONE_NUMBER,
-        //   to: phoneNumber
-        // });
-        console.log('SMS would be sent to:', phoneNumber);
-        console.log('Message:', message);
-        return {
-            success: true,
-            messageId: 'placeholder-' + Date.now(),
-            error: 'Twilio integration pending'
-        };
-    }
-    catch (error) {
-        console.error('SMS error:', error);
-        return { success: false, error: error.message };
-    }
+    return (0, twilio_1.sendSMS)(phoneNumber, message);
 }
 /**
  * Get email template HTML

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, requireRole, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 import { prisma } from '../../common/prisma';
 
 const router = Router();

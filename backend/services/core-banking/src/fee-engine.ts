@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 // Temporary enums until they're added to Prisma schema
 export enum FeeType {

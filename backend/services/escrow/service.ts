@@ -1,5 +1,6 @@
-import { Prisma, Escrow, EscrowStatus, MilestoneStatus, EscrowPartyRole } from '@prisma/client';
-import Decimal from 'decimal.js';
+import { Prisma, EscrowStatus, EscrowPartyRole, MilestoneStatus } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
+import DecimalJS from 'decimal.js';
 import {
   CreateEscrowInput,
   FundMilestoneInput,
@@ -42,7 +43,7 @@ export class EscrowStateMachine {
     toStatus: EscrowStatus,
     userId?: string,
     role?: EscrowPartyRole
-  ): Promise<Escrow> {
+  ) {
     const escrow = await prisma.escrow.findUnique({ where: { id: escrowId } });
     if (!escrow) throw new Error('Escrow not found');
 
@@ -150,7 +151,7 @@ export async function createEscrow(
       order: index + 1,
       title: m.title,
       description: m.description,
-      amount: new Decimal(m.amount),
+      amount: new Decimal(m.amount.toString()),
       status: MilestoneStatusEnum.PENDING as MilestoneStatus,
       requiresApproval: m.requiresApproval !== false,
       deliverableDescription: m.deliverableDescription,
@@ -244,7 +245,7 @@ export async function fundMilestone(
   input: FundMilestoneInput,
   userId: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const milestone = await tx.milestone.findUnique({
       where: { id: input.milestoneId },
       include: { escrow: true },
@@ -253,8 +254,9 @@ export async function fundMilestone(
     if (!milestone) throw new Error('Milestone not found');
     if (milestone.escrowId !== escrowId) throw new Error('Milestone does not belong to this escrow');
 
-    const amount = new Decimal(input.amount);
-    const newFundedAmount = new Decimal(milestone.amountFunded).add(amount);
+    const amount = new DecimalJS(input.amount);
+    const milestoneAmount = new DecimalJS(milestone.amountFunded.toString());
+    const newFundedAmount = milestoneAmount.add(amount);
 
     if (newFundedAmount.gt(milestone.amount)) {
       throw new Error('Funding amount exceeds milestone amount');
@@ -265,7 +267,7 @@ export async function fundMilestone(
     await tx.milestone.update({
       where: { id: input.milestoneId },
       data: {
-        amountFunded: newFundedAmount,
+        amountFunded: new Decimal(newFundedAmount.toString()),
         status: isFunded ? MilestoneStatusEnum.FUNDED : MilestoneStatusEnum.AWAITING_FUNDING as MilestoneStatus,
         fundedAt: isFunded ? new Date() : undefined,
       },
@@ -277,7 +279,7 @@ export async function fundMilestone(
         escrowId,
         milestoneId: input.milestoneId,
         type: 'FUNDING',
-        amount: amount,
+        amount: new Decimal(amount.toString()),
         currency: milestone.escrow.currency,
         status: 'COMPLETED',
         accountId: input.accountId,
@@ -528,8 +530,8 @@ export async function resolveDispute(
         resolutionNotes: input.resolutionNotes,
         resolvedBy: userId,
         resolvedAt: new Date(),
-        refundAmount: input.refundAmount ? new Decimal(input.refundAmount) : undefined,
-        releaseAmount: input.releaseAmount ? new Decimal(input.releaseAmount) : undefined,
+        refundAmount: input.refundAmount ? new Decimal(input.refundAmount.toString()) : undefined,
+        releaseAmount: input.releaseAmount ? new Decimal(input.releaseAmount.toString()) : undefined,
       },
     });
 
@@ -659,7 +661,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
       amount: Number(m.amount),
       status: m.status,
       amountFunded: Number(m.amountFunded),
-      fundingProgress: Number(new Decimal(m.amountFunded).div(m.amount).mul(100)),
+      fundingProgress: Number(new DecimalJS(m.amountFunded.toString()).div(m.amount.toString()).mul(100)),
       deliverableSubmitted: m.deliverableSubmitted,
       deliverableUrl: m.deliverableUrl || undefined,
     })),

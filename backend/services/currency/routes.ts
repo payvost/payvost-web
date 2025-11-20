@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, optionalAuth, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 const router = Router();
 

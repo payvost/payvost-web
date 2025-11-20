@@ -1,4 +1,4 @@
-import { PrismaClient, Invoice, InvoiceStatus, InvoiceType, PaymentMethod } from '@prisma/client';
+import { PrismaClient, Prisma, InvoiceStatus, InvoiceType, PaymentMethod } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 export interface CreateInvoiceInput {
@@ -79,7 +79,7 @@ export class InvoiceService {
   /**
    * Create a new invoice
    */
-  async createInvoice(input: CreateInvoiceInput): Promise<Invoice> {
+  async createInvoice(input: CreateInvoiceInput) {
     const { items, taxRate = 0, status = 'DRAFT', ...rest } = input;
     
     // Calculate totals
@@ -115,7 +115,7 @@ export class InvoiceService {
   /**
    * Get invoice by ID
    */
-  async getInvoiceById(id: string, userId?: string): Promise<Invoice | null> {
+  async getInvoiceById(id: string, userId?: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
     });
@@ -133,7 +133,7 @@ export class InvoiceService {
   /**
    * Get invoice by invoice number
    */
-  async getInvoiceByNumber(invoiceNumber: string, userId?: string): Promise<Invoice | null> {
+  async getInvoiceByNumber(invoiceNumber: string, userId?: string) {
     const invoice = await this.prisma.invoice.findUnique({
       where: { invoiceNumber },
     });
@@ -151,7 +151,7 @@ export class InvoiceService {
   /**
    * Get public invoice (for public pages)
    */
-  async getPublicInvoice(idOrNumber: string): Promise<Invoice | null> {
+  async getPublicInvoice(idOrNumber: string) {
     // Try by ID first
     let invoice = await this.prisma.invoice.findUnique({
       where: { id: idOrNumber },
@@ -181,7 +181,7 @@ export class InvoiceService {
       limit?: number;
       offset?: number;
     }
-  ): Promise<{ invoices: Invoice[]; total: number }> {
+  ) {
     const where: any = {
       OR: [
         { userId },
@@ -217,7 +217,7 @@ export class InvoiceService {
       limit?: number;
       offset?: number;
     }
-  ): Promise<{ invoices: Invoice[]; total: number }> {
+  ) {
     const where: any = {
       businessId,
       createdBy,
@@ -248,7 +248,7 @@ export class InvoiceService {
     id: string,
     userId: string,
     input: UpdateInvoiceInput
-  ): Promise<Invoice> {
+  ) {
     // Verify ownership
     const existing = await this.prisma.invoice.findUnique({
       where: { id },
@@ -300,7 +300,7 @@ export class InvoiceService {
   /**
    * Mark invoice as paid
    */
-  async markAsPaid(id: string, userId: string): Promise<Invoice> {
+  async markAsPaid(id: string, userId: string) {
     // Verify ownership first
     const existing = await this.prisma.invoice.findUnique({
       where: { id },

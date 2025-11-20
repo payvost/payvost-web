@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 export class ComplianceManager {
   private prisma: PrismaClient;

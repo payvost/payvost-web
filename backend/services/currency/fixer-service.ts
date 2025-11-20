@@ -1,7 +1,7 @@
 // Fixer.io API Service
 // Provides real-time exchange rates from Fixer.io
 
-import { Decimal } from 'decimal.js';
+import Decimal from 'decimal.js';
 
 const FIXER_API_KEY = process.env.FIXER_API_KEY;
 const FIXER_BASE_URL = 'https://api.fixer.io/';

@@ -1,16 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const transaction_manager_1 = require("../core-banking/src/transaction-manager");
 const fee_engine_1 = require("../core-banking/src/fee-engine");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
 const decimal_js_1 = require("decimal.js");
+const prisma_1 = require("../../common/prisma");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
-const transactionManager = new transaction_manager_1.TransactionManager(prisma);
-const feeEngine = new fee_engine_1.FeeEngine(prisma);
+const transactionManager = new transaction_manager_1.TransactionManager(prisma_1.prisma);
+const feeEngine = new fee_engine_1.FeeEngine(prisma_1.prisma);
 /**
  * POST /api/transaction/transfer
  * Execute a transfer between accounts
@@ -27,7 +26,7 @@ router.post('/transfer', middleware_1.verifyFirebaseToken, middleware_1.requireK
             throw new index_1.ValidationError('Amount must be greater than 0');
         }
         // Verify the from account belongs to the authenticated user
-        const fromAccount = await prisma.account.findFirst({
+        const fromAccount = await prisma_1.prisma.account.findFirst({
             where: { id: fromAccountId, userId },
         });
         if (!fromAccount) {
@@ -64,11 +63,11 @@ router.get('/transfers', middleware_1.verifyFirebaseToken, async (req, res) => {
         const userId = req.user?.uid;
         const { limit = '50', offset = '0', status } = req.query;
         // Get all user's accounts
-        const accounts = await prisma.account.findMany({
+        const accounts = await prisma_1.prisma.account.findMany({
             where: { userId },
             select: { id: true },
         });
-        const accountIds = accounts.map(a => a.id);
+        const accountIds = accounts.map((a) => a.id);
         // Build where clause
         const where = {
             OR: [
@@ -79,7 +78,7 @@ router.get('/transfers', middleware_1.verifyFirebaseToken, async (req, res) => {
         if (status) {
             where.status = status;
         }
-        const transfers = await prisma.transfer.findMany({
+        const transfers = await prisma_1.prisma.transfer.findMany({
             where,
             include: {
                 fromAccount: {
@@ -101,7 +100,7 @@ router.get('/transfers', middleware_1.verifyFirebaseToken, async (req, res) => {
             take: parseInt(limit),
             skip: parseInt(offset),
         });
-        const total = await prisma.transfer.count({ where });
+        const total = await prisma_1.prisma.transfer.count({ where });
         res.status(200).json({
             transfers,
             pagination: {
@@ -125,12 +124,12 @@ router.get('/transfers/:id', middleware_1.verifyFirebaseToken, async (req, res) 
         const userId = req.user?.uid;
         const { id } = req.params;
         // Get all user's accounts
-        const accounts = await prisma.account.findMany({
+        const accounts = await prisma_1.prisma.account.findMany({
             where: { userId },
             select: { id: true },
         });
-        const accountIds = accounts.map(a => a.id);
-        const transfer = await prisma.transfer.findFirst({
+        const accountIds = accounts.map((a) => a.id);
+        const transfer = await prisma_1.prisma.transfer.findFirst({
             where: {
                 id,
                 OR: [

@@ -101,14 +101,14 @@ class AccountingEngine {
                 }
             }
         });
-        const trialBalance = accounts.map(account => ({
+        const trialBalance = accounts.map((account) => ({
             accountId: account.id,
             currency: account.currency,
             debitTotal: account.ledgerEntries
-                .filter(entry => entry.type === 'DEBIT')
+                .filter((entry) => entry.type === 'DEBIT')
                 .reduce((sum, entry) => sum + Number(entry.amount), 0),
             creditTotal: account.ledgerEntries
-                .filter(entry => entry.type === 'CREDIT')
+                .filter((entry) => entry.type === 'CREDIT')
                 .reduce((sum, entry) => sum + Number(entry.amount), 0),
             balance: account.balance
         }));
