@@ -275,7 +275,7 @@ interface InvoiceDocumentProps {
   };
 }
 
-export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
+const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
   const items = Array.isArray(invoice.items) && invoice.items.length > 0 
     ? invoice.items 
     : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
@@ -389,6 +389,5 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => 
   );
 };
 
-export default InvoiceDocument;
 export default InvoiceDocument;
 
