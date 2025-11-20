@@ -14,7 +14,7 @@ Successfully migrated from Fixer.io to OpenExchangeRates.org for all exchange ra
 **File**: `.env`
 
 ```diff
-- FIXER_API_KEY=228793b424835fd85f1ca3d53d11d552
+- FIXER_API_KEY=<your-fixer-api-key>
 + OPEN_EXCHANGE_RATES_APP_ID=f6b5193e0f5f41628faa76637b48c41f
 ```
 

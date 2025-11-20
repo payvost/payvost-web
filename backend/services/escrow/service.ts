@@ -1,4 +1,4 @@
-import { PrismaClient, EscrowStatus, MilestoneStatus, EscrowPartyRole, Escrow as PrismaEscrow } from '@prisma/client';
+import { EscrowStatus, MilestoneStatus, EscrowPartyRole, Escrow as PrismaEscrow } from '@prisma/client';
 import Decimal from 'decimal.js';
 import {
   CreateEscrowInput,
@@ -11,8 +11,7 @@ import {
   EscrowDetails,
   MilestoneWithProgress,
 } from './types';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../common/prisma';
 
 /**
  * Escrow State Machine

@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { verifyFirebaseToken, requireRole, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
 import { Decimal } from 'decimal.js';
+import { prisma } from '../../common/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 /**
  * Transaction Risk Levels

@@ -531,3 +531,63 @@ model RateAlert {
   notifiedCount  Int      @default(0)
   createdAt      DateTime @default(now())
 }
+
+// Error Tracking Model
+enum ErrorSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ErrorStatus {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+model ErrorLog {
+  id              String        @id @default(uuid())
+  message         String
+  errorType       String        // Error class name
+  severity        ErrorSeverity @default(MEDIUM)
+  status          ErrorStatus   @default(NEW)
+  
+  // Error details
+  stack           String?       @db.Text
+  context         Json?         // Additional context data
+  
+  // Request context
+  method          String?       // HTTP method
+  path            String?       // Request path
+  query           Json?         // Query parameters
+  ipAddress       String?
+  userAgent       String?
+  userId          String?       // If user was authenticated
+  correlationId  String?       // Request correlation ID
+  
+  // Environment
+  environment     String        @default("development")
+  release         String?       // App version/release
+  
+  // Occurrence tracking
+  occurrenceCount Int           @default(1)
+  firstSeenAt     DateTime      @default(now())
+  lastSeenAt      DateTime      @default(now())
+  
+  // Resolution
+  resolvedBy      String?       // userId who resolved
+  resolvedAt      DateTime?
+  resolutionNotes String?       @db.Text
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([severity])
+  @@index([status])
+  @@index([errorType])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([correlationId])
+}

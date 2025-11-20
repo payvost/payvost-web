@@ -6,8 +6,9 @@ Add these environment variables to your Vercel project settings:
 
 ### Database (Prisma)
 ```
-DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19iTzE5SmdvTmlsbjJuclpmMmN5VWMiLCJhcGlfa2V5IjoiMDFLOFlIMjNFUVdKN0JKMzBDNjFZMFc0WUsiLCJ0ZW5hbnRfaWQiOiJiOGUwOTgyMTlmNzYxOWZhYzRmZjY3OTZjZjY4YWE3ZTNjMTA5YWQwN2YwNGU2OGE2MDYxMmNlN2Q5YmQxOGJkIiwiaW50ZXJuYWxfc2VjcmV0IjoiYmM5MzBiNjEtODFmZS00ZTczLWE0OGUtNTk2MjhlYWNjNWU2In0.mqwgRmI68hyvDaFWv22sBOUYtbn98ySh_TAAdAskRWw
+DATABASE_URL=prisma+postgres://accelerate.prisma-data.net/?api_key=<your-prisma-accelerate-api-key>
 ```
+**Note:** Get your API key from the Prisma Accelerate dashboard. Never commit actual keys to version control.
 
 ### Firebase Admin SDK
 **Option 1: JSON String (Recommended)**
@@ -29,16 +30,18 @@ cat backend/payvost-ae91662ec061.json | base64 -w 0
 
 #### Fixer.io (Currency Exchange Rates)
 ```
-FIXER_API_KEY=228793b424835fd85f1ca3d53d11d552
+FIXER_API_KEY=<your-fixer-api-key>
 ```
+**Note:** Get your API key from [Fixer.io dashboard](https://fixer.io/dashboard). Never commit actual keys to version control.
 
 #### Reloadly (Airtime/Gift Cards)
 ```
-RELOADLY_CLIENT_ID=q0iLeNtwNqaqsBQuyGoHCA7dI9QfX8vj
-RELOADLY_CLIENT_SECRET=gCluhtQd6y-pvyIdQLdjW0zJp7h9G3-NxEEgguYatH3TmJxK3y5gRAzz6vwQim8
-RELOADLY_WEBHOOK_SECRET=Q9dgoBCyaM-0DFu9MSobWvtYEzapDy-8PX8ViKzTkWQF2zn5MHRu1vffNTgEam8
+RELOADLY_CLIENT_ID=<your-reloadly-client-id>
+RELOADLY_CLIENT_SECRET=<your-reloadly-client-secret>
+RELOADLY_WEBHOOK_SECRET=<your-reloadly-webhook-secret>
 RELOADLY_ENV=production
 ```
+**Note:** Get your credentials from [Reloadly dashboard](https://www.reloadly.com/developers/api-credentials). Never commit actual secrets to version control.
 
 ## Optional Variables
 
@@ -67,6 +70,12 @@ TWILIO_FROM_NUMBER=<your-twilio-phone>
 ### Firebase Realtime Database (Optional)
 ```
 FIREBASE_DATABASE_URL=https://payvost-default-rtdb.firebaseio.com
+```
+
+### Error Tracking (Optional)
+Error tracking is built-in and uses your database. To enable in development:
+```
+ENABLE_ERROR_TRACKING=true
 ```
 
 ## How to Add Variables to Vercel

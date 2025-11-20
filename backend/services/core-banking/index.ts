@@ -1,6 +1,5 @@
-import { PrismaClient, TransactionType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { TransactionType } from '@prisma/client';
+import { prisma } from '../../common/prisma';
 
 export interface TransferResult {
   success: boolean;

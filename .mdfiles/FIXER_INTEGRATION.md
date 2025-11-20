@@ -109,7 +109,7 @@ Response:
 
 Required in `.env`:
 ```
-FIXER_API_KEY=228793b424835fd85f1ca3d53d11d552
+FIXER_API_KEY=<your-fixer-api-key>
 ```
 
 ## Caching Strategy

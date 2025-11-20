@@ -10,10 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { ENV_VARIABLES, RELOADLY } from '@/config/integration-partners';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { notificationService } from '@/services/notificationService';
-
-const prisma = new PrismaClient();
 
 /**
  * Webhook event types

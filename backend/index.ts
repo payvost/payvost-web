@@ -10,12 +10,12 @@ import { createRequire } from 'module';
 import './firebase';
 
 // Initialize monitoring and infrastructure
-import { initSentry } from './common/sentry';
+import { initErrorTracker } from './common/error-tracker';
 import { initRedis } from './common/redis';
 import { logger } from './common/logger';
 
-// Initialize Sentry (must be early)
-initSentry();
+// Initialize error tracking (must be early)
+initErrorTracker();
 
 // Initialize Redis
 initRedis();
@@ -53,6 +53,7 @@ let notificationRoutes: any;
 let currencyRoutes: any;
 let paymentRoutes: any;
 let escrowRoutes: any;
+let errorTrackerRoutes: any;
 
 try {
   logger.info('Firebase Admin SDK initialized');
@@ -65,6 +66,7 @@ try {
   currencyRoutes = loadService('./services/currency/routes');
   paymentRoutes = loadService('./services/payment/src/routes');
   escrowRoutes = loadService('./services/escrow/routes');
+  errorTrackerRoutes = loadService('./services/error-tracker/routes');
   logger.info('All service routes loaded');
 } catch (err) {
   logger.error({ err }, 'Failed to load backend modules');
@@ -109,6 +111,10 @@ try {
   
   if (escrowRoutes) {
     registerServiceRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes);
+  }
+  
+  if (errorTrackerRoutes) {
+    registerServiceRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes);
   }
   
   logger.info('All service routes registered');

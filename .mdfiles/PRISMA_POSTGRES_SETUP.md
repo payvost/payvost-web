@@ -121,9 +121,10 @@ To use Prisma Accelerate's connection pooling and caching:
 
 2. Add both URLs to Vercel:
    ```
-   DATABASE_URL = prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19qMFFyTDctV09SMHhyOTVydHZHQXgiLCJhcGlfa2V5IjoiMDFLOFlOU01YODg5V1Y3SkcxWUJIRldTMEUiLCJ0ZW5hbnRfaWQiOiJlZmU4YWRiZTI5ODc1MDc2ZWJjZWMwNDFhODQzMzdhNTNjYzUxMTIxOTEzMjJjMmJjNTliNTlmZGUwYmMxMTBjIiwiaW50ZXJuYWxfc2VjcmV0IjoiMTg5MmMyNTgtZTEyMy00Y2U0LWJjZmQtMjEyNTYzM2JiZDM5In0.aKpKy6WNxL6_ThQGLG77sedSHiYJPSvCwWoVIbtQQIc
+   DATABASE_URL = prisma+postgres://accelerate.prisma-data.net/?api_key=<your-prisma-accelerate-api-key>
    
-   DIRECT_URL = postgres://efe8adbe29875076ebcec041a84337a53cc5112191322c2bc59b59fde0bc110c:sk_j0QrL7-WOR0xr95rtvGAx@db.prisma.io:5432/postgres?sslmode=require
+   DIRECT_URL = postgres://<username>:<password>@db.prisma.io:5432/postgres?sslmode=require
+   **SECURITY NOTE:** Never commit actual database credentials. Use environment variables.
    ```
 
 3. Install Prisma Accelerate extension:

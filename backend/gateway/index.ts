@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { createRequire } from 'module';
 import path from 'path';
 import { logger, requestLogger, logError } from '../common/logger';
-import { sentryRequestHandler, sentryErrorHandler } from '../common/sentry';
+import { errorTrackerHandler, errorTrackerErrorHandler } from '../common/error-tracker';
 import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
 
 // Domain-specific error classes
@@ -108,8 +108,8 @@ export { requestLogger };
 export function createGateway() {
   const app = express();
 
-  // Sentry request handler (must be first)
-  app.use(sentryRequestHandler());
+  // Error tracker request handler (must be first)
+  app.use(errorTrackerHandler());
 
   // Security headers
   app.use(helmet({
@@ -119,14 +119,56 @@ export function createGateway() {
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
       },
     },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true
+    },
+    frameguard: { action: 'deny' },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     crossOriginEmbedderPolicy: false, // Allow embedding for API usage
   }));
 
-  // CORS
+  // CORS - Security: Require explicit origin configuration
+  const allowedOrigins = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.split(',').map(origin => origin.trim())
+    : [];
+
+  if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+    throw new Error(
+      'FRONTEND_URL must be set in production environment. ' +
+      'Provide comma-separated list of allowed origins (e.g., "https://app.payvost.com,https://www.payvost.com")'
+    );
+  }
+
   app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.) in development only
+      if (!origin && process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      
+      // In production, require origin
+      if (!origin) {
+        return callback(new Error('CORS: Origin header required'));
+      }
+
+      // Check if origin is allowed
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: Origin ${origin} not allowed`));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
     credentials: true,
@@ -160,8 +202,8 @@ export function createGateway() {
     });
   });
 
-  // Sentry error handler (must be before other error handlers)
-  app.use(sentryErrorHandler());
+  // Error tracker error handler (must be before other error handlers)
+  app.use(errorTrackerErrorHandler());
 
   return app;
 }

@@ -4,10 +4,13 @@
  * Database Connection Test Script
  * 
  * This script verifies that your Prisma database connection is working correctly.
- * Run this after setting up your .env.development.local file.
+ * Run this after setting up your backend/.env file.
  * 
  * Usage: node scripts/test-db-connection.js
  */
+
+// Load environment variables from backend/.env
+require('dotenv').config({ path: require('path').resolve(__dirname, '../backend/.env') });
 
 const { PrismaClient } = require('@prisma/client');
 

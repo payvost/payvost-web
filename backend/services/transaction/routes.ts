@@ -1,13 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { TransactionManager } from '../core-banking/src/transaction-manager';
 import { FeeEngine } from '../core-banking/src/fee-engine';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
 import { Decimal } from 'decimal.js';
+import { prisma } from '../../common/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 const transactionManager = new TransactionManager(prisma);
 const feeEngine = new FeeEngine(prisma);
 

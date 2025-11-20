@@ -134,7 +134,8 @@ postgres://efe8adbe29875076ebcec041a84337a53cc5112191322c2bc59b59fde0bc110c:sk_j
 
 ### Prisma Accelerate (optional, for production with caching)
 ```
-prisma+postgres://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19qMFFyTDctV09SMHhyOTVydHZHQXgiLCJhcGlfa2V5IjoiMDFLOFlOU01YODg5V1Y3SkcxWUJIRldTMEUiLCJ0ZW5hbnRfaWQiOiJlZmU4YWRiZTI5ODc1MDc2ZWJjZWMwNDFhODQzMzdhNTNjYzUxMTIxOTEzMjJjMmJjNTliNTlmZGUwYmMxMTBjIiwiaW50ZXJuYWxfc2VjcmV0IjoiMTg5MmMyNTgtZTEyMy00Y2U0LWJjZmQtMjEyNTYzM2JiZDM5In0.aKpKy6WNxL6_ThQGLG77sedSHiYJPSvCwWoVIbtQQIc
+prisma+postgres://accelerate.prisma-data.net/?api_key=<your-prisma-accelerate-api-key>
+**SECURITY NOTE:** Replace with your actual Prisma Accelerate API key from the dashboard. Never commit real keys.
 ```
 
 ## 🎯 Next Steps

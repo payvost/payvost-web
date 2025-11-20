@@ -40,7 +40,8 @@ This guide explains how Firebase Cloud Messaging has been integrated into Payvos
 #### Step 2: Verify Server Key
 Your FCM server key is already available:
 ```
-Server Key: AAAAzXnyRGQ:APA91bH7JWx07PnIHKC-gWBZ5z0teUIFjFVrUqgdN5bIIi1yUVcNrjV2a1vBw-_YkZk-4U3iU0ZYRJBVsoRYKG4719kTrBSx_5LsODxHwFJo82OK3fs9-bIrrmxd5g2kgPSn1CvE28D1
+Server Key: <your-fcm-server-key>
+**SECURITY NOTE:** Get your FCM Server Key from Firebase Console > Project Settings > Cloud Messaging. Never commit actual keys.
 Sender ID: 882514216036
 ```
 
