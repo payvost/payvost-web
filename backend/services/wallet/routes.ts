@@ -172,4 +172,184 @@ router.get('/accounts/:id/ledger', verifyFirebaseToken, async (req: Authenticate
   }
 });
 
+/**
+ * POST /api/wallet/deduct
+ * Deduct balance from an account for external transactions
+ */
+router.post('/deduct', verifyFirebaseToken, requireKYC, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { accountId, amount, currency, description, referenceId } = req.body;
+
+    if (!accountId || !amount || !currency) {
+      throw new ValidationError('accountId, amount, and currency are required');
+    }
+
+    if (amount <= 0) {
+      throw new ValidationError('Amount must be greater than 0');
+    }
+
+    // Verify account belongs to user
+    const account = await prisma.account.findFirst({
+      where: { id: accountId, userId },
+    });
+
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found or unauthorized' });
+    }
+
+    if (account.currency !== currency) {
+      return res.status(400).json({ error: 'Currency mismatch' });
+    }
+
+    // Deduct balance in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Lock account for update
+      const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
+        SELECT id, balance
+        FROM "Account"
+        WHERE id = ${accountId}
+        FOR UPDATE
+      `;
+
+      const accountData = lockedAccount[0];
+      if (!accountData) {
+        throw new Error('Account not found');
+      }
+
+      const currentBalance = parseFloat(accountData.balance);
+      const deductAmount = parseFloat(amount.toString());
+
+      if (currentBalance < deductAmount) {
+        throw new Error('Insufficient funds');
+      }
+
+      const newBalance = (currentBalance - deductAmount).toFixed(8);
+
+      // Update account balance
+      await tx.account.update({
+        where: { id: accountId },
+        data: { balance: newBalance },
+      });
+
+      // Create ledger entry
+      await tx.ledgerEntry.create({
+        data: {
+          accountId,
+          amount: `-${deductAmount}`,
+          balanceAfter: newBalance,
+          type: 'DEBIT',
+          description: description || 'External transaction payment',
+          referenceId: referenceId || null,
+        },
+      });
+
+      return {
+        accountId,
+        amount: deductAmount,
+        currency,
+        previousBalance: currentBalance,
+        newBalance: parseFloat(newBalance),
+      };
+    });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error deducting balance:', error);
+    if (error.message === 'Insufficient funds') {
+      return res.status(400).json({ error: 'Insufficient funds' });
+    }
+    res.status(500).json({ error: error.message || 'Failed to deduct balance' });
+  }
+});
+
+/**
+ * POST /api/wallet/refund
+ * Refund balance to an account (for failed external transactions)
+ */
+router.post('/refund', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { accountId, amount, currency, description, referenceId } = req.body;
+
+    if (!accountId || !amount || !currency) {
+      throw new ValidationError('accountId, amount, and currency are required');
+    }
+
+    if (amount <= 0) {
+      throw new ValidationError('Amount must be greater than 0');
+    }
+
+    // Verify account belongs to user (or allow system refunds)
+    const account = await prisma.account.findFirst({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // For system refunds, allow even if userId doesn't match
+    // For user-initiated refunds, verify ownership
+    if (userId && account.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (account.currency !== currency) {
+      return res.status(400).json({ error: 'Currency mismatch' });
+    }
+
+    // Refund balance in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Lock account for update
+      const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
+        SELECT id, balance
+        FROM "Account"
+        WHERE id = ${accountId}
+        FOR UPDATE
+      `;
+
+      const accountData = lockedAccount[0];
+      if (!accountData) {
+        throw new Error('Account not found');
+      }
+
+      const currentBalance = parseFloat(accountData.balance);
+      const refundAmount = parseFloat(amount.toString());
+      const newBalance = (currentBalance + refundAmount).toFixed(8);
+
+      // Update account balance
+      await tx.account.update({
+        where: { id: accountId },
+        data: { balance: newBalance },
+      });
+
+      // Create ledger entry
+      await tx.ledgerEntry.create({
+        data: {
+          accountId,
+          amount: refundAmount.toString(),
+          balanceAfter: newBalance,
+          type: 'CREDIT',
+          description: description || 'Refund for failed transaction',
+          referenceId: referenceId || null,
+        },
+      });
+
+      return {
+        accountId,
+        amount: refundAmount,
+        currency,
+        previousBalance: currentBalance,
+        newBalance: parseFloat(newBalance),
+      };
+    });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (error: any) {
+    console.error('Error refunding balance:', error);
+    res.status(500).json({ error: error.message || 'Failed to refund balance' });
+  }
+});
+
 export default router;

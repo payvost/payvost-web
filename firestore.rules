@@ -205,17 +205,17 @@ service cloud.firestore {
 
     // 🪪 KYC Submissions (admin readable, user can read their own)
     match /kyc_submissions/{submissionId} {
-      // Users can read their own submissions
+      // Users can read their own submissions, admins can read all
       allow read: if request.auth != null 
-                   && request.auth.uid == resource.data.userId;
-      
-      // Admins can read all submissions
-      allow read: if isAdmin();
+                   && (resource.data.userId == request.auth.uid || isAdmin());
       
       // Users can create their own submissions
+      // Allow creation if user is authenticated and userId matches
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.status == "submitted";
+                    && request.resource.data.status == "submitted"
+                    && request.resource.data.userId is string
+                    && request.resource.data.countryCode is string;
       
       // Only system/admins can update (via backend)
       allow update: if isAdmin();

@@ -3,6 +3,7 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import React from 'react';
 
 interface TransactionChartProps {
     data: {
@@ -46,9 +47,27 @@ export function TransactionChart({ data }: TransactionChartProps) {
            tickLine={false}
            axisLine={false}
            tickMargin={10}
-           tickFormatter={(value) => `$${Number(value) / 1000}k`}
+           tickFormatter={(value) => {
+             const numValue = Number(value);
+             if (numValue >= 1000) {
+               return `$${(numValue / 1000).toFixed(numValue >= 10000 ? 0 : 1)}k`;
+             }
+             return `$${numValue.toFixed(2)}`;
+           }}
         />
-        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+        <Tooltip 
+          cursor={false} 
+          content={<ChartTooltipContent indicator="dot" />}
+          formatter={(value: any) => {
+            const numValue = Number(value);
+            return new Intl.NumberFormat('en-US', { 
+              style: 'currency', 
+              currency: 'USD',
+              minimumFractionDigits: numValue < 1 ? 2 : 0,
+              maximumFractionDigits: numValue < 1 ? 2 : 0
+            }).format(numValue);
+          }}
+        />
         <Legend />
         <Bar dataKey="income" fill="var(--color-income)" radius={4} />
         <Bar dataKey="expense" fill="var(--color-expense)" radius={4} />

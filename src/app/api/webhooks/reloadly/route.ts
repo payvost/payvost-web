@@ -12,6 +12,8 @@ import { createHmac } from 'crypto';
 import { ENV_VARIABLES, RELOADLY } from '@/config/integration-partners';
 import { prisma } from '@/lib/prisma';
 import { notificationService } from '@/services/notificationService';
+import { db, auth } from '@/lib/firebase-admin';
+import { buildBackendUrl } from '@/lib/api/backend';
 
 /**
  * Webhook event types
@@ -63,6 +65,105 @@ function verifyWebhookSignature(
 }
 
 /**
+ * Fetch user data from Firebase
+ */
+async function getUserData(userId: string): Promise<{ email: string; name: string } | null> {
+  try {
+    // Try to get from Firestore first
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      return {
+        email: userData?.email || '',
+        name: userData?.fullName || userData?.name || userData?.username || 'User',
+      };
+    }
+
+    // Fallback to Firebase Auth
+    const authUser = await auth.getUser(userId);
+    return {
+      email: authUser.email || '',
+      name: authUser.displayName || 'User',
+    };
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    return null;
+  }
+}
+
+/**
+ * Refund balance to user account
+ */
+async function refundToAccount(accountId: string | null, amount: number, currency: string, description: string, referenceId?: string): Promise<void> {
+  if (!accountId) {
+    console.warn('No accountId provided for refund');
+    return;
+  }
+
+  try {
+    // Call backend refund API (we need to use a system token or make this a server-side call)
+    // For now, we'll use fetch with a service account token or make it a direct Prisma call
+    // Since this is a webhook, we'll use Prisma directly to update the account
+    const account = await prisma.account.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      console.error(`Account ${accountId} not found for refund`);
+      return;
+    }
+
+    if (account.currency !== currency) {
+      console.error(`Currency mismatch: account has ${account.currency}, refund is ${currency}`);
+      return;
+    }
+
+    // Update balance and create ledger entry in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Lock account
+      const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
+        SELECT id, balance
+        FROM "Account"
+        WHERE id = ${accountId}
+        FOR UPDATE
+      `;
+
+      const accountData = lockedAccount[0];
+      if (!accountData) {
+        throw new Error('Account not found');
+      }
+
+      const currentBalance = parseFloat(accountData.balance);
+      const refundAmount = parseFloat(amount.toString());
+      const newBalance = (currentBalance + refundAmount).toFixed(8);
+
+      // Update account balance
+      await tx.account.update({
+        where: { id: accountId },
+        data: { balance: newBalance },
+      });
+
+      // Create ledger entry
+      await tx.ledgerEntry.create({
+        data: {
+          accountId,
+          amount: refundAmount.toString(),
+          balanceAfter: newBalance,
+          type: 'CREDIT',
+          description: description,
+          referenceId: referenceId || null,
+        },
+      });
+    });
+
+    console.log(`Refunded ${amount} ${currency} to account ${accountId}`);
+  } catch (error) {
+    console.error('Error refunding balance:', error);
+    throw error;
+  }
+}
+
+/**
  * Handle topup success
  */
 async function handleTopupSuccess(data: any) {
@@ -110,22 +211,24 @@ async function handleTopupSuccess(data: any) {
     // Send email notification to user
     if (userId && userId !== 'unknown') {
       try {
-        // Fetch user details from database or use from webhook data
-        // For now, using placeholder - in production, fetch from User table
-        await notificationService.notifyExternalTransaction({
-          userId,
-          userEmail: data.userEmail || 'user@example.com', // TODO: Fetch from user record
-          userName: data.userName || 'User', // TODO: Fetch from user record
-          type: 'success',
-          transactionType: 'airtime_topup',
-          details: {
-            phoneNumber: data.recipientPhone,
-            operatorName: data.operatorName,
-            amount: data.amount,
-            currency: data.currency || 'USD',
-            transactionId: data.transactionId,
-          },
-        });
+        // Fetch user details from Firebase
+        const userData = await getUserData(userId);
+        if (userData) {
+          await notificationService.notifyExternalTransaction({
+            userId,
+            userEmail: userData.email,
+            userName: userData.name,
+            type: 'success',
+            transactionType: 'airtime_topup',
+            details: {
+              phoneNumber: data.recipientPhone,
+              operatorName: data.operatorName,
+              amount: data.amount,
+              currency: data.currency || 'USD',
+              transactionId: data.transactionId,
+            },
+          });
+        }
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
         // Don't fail the webhook if notification fails
@@ -152,7 +255,7 @@ async function handleTopupFailed(data: any) {
     const [, userId, accountId] = customId?.split('-') || [];
 
     // Update transaction status
-    await prisma.externalTransaction.upsert({
+    const transactionRecord = await prisma.externalTransaction.upsert({
       where: {
         providerTransactionId: data.transactionId?.toString() || `reloadly-${data.transactionId}`,
       },
@@ -180,23 +283,39 @@ async function handleTopupFailed(data: any) {
     });
 
     // Refund user if payment was deducted
-    // TODO: Implement refund logic
+    if (accountId && data.amount) {
+      try {
+        await refundToAccount(
+          accountId,
+          data.amount,
+          data.currency || 'USD',
+          `Refund for failed airtime top-up`,
+          transactionRecord.id
+        );
+      } catch (refundError) {
+        console.error('Failed to refund balance:', refundError);
+        // Log for manual review but don't fail the webhook
+      }
+    }
     
     // Send notification to user about failed transaction
     if (userId && userId !== 'unknown') {
       try {
-        await notificationService.sendEmail({
-          to: data.userEmail || 'user@example.com', // TODO: Fetch from user record
-          subject: 'Airtime Top-up Failed',
-          template: 'transaction_failed',
-          variables: {
-            name: data.userName || 'User', // TODO: Fetch from user record
-            reason: data.errorMessage || data.failureReason || 'Topup failed',
-            amount: data.amount,
-            currency: data.currency || 'USD',
-            date: new Date().toLocaleString(),
-          },
-        });
+        const userData = await getUserData(userId);
+        if (userData) {
+          await notificationService.sendEmail({
+            to: userData.email,
+            subject: 'Airtime Top-up Failed',
+            template: 'transaction_failed',
+            variables: {
+              name: userData.name,
+              reason: data.errorMessage || data.failureReason || 'Topup failed',
+              amount: data.amount,
+              currency: data.currency || 'USD',
+              date: new Date().toLocaleString(),
+            },
+          });
+        }
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
       }
@@ -222,7 +341,7 @@ async function handleGiftCardSuccess(data: any) {
     const [, userId, accountId] = customId?.split('-') || [];
 
     // Update transaction status in database
-    await prisma.externalTransaction.upsert({
+    const transaction = await prisma.externalTransaction.upsert({
       where: {
         providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
       },
@@ -232,6 +351,15 @@ async function handleGiftCardSuccess(data: any) {
         webhookData: data,
         completedAt: new Date(),
         updatedAt: new Date(),
+        // Store redeem codes in recipientDetails
+        recipientDetails: {
+          email: data.recipientEmail,
+          productName: data.productName,
+          redeemCode: data.redeemCode || data.redemptionCode || data.code,
+          pin: data.pin || data.pinCode,
+          expiryDate: data.expiryDate,
+          cardNumber: data.cardNumber,
+        },
       },
       create: {
         userId: userId || 'unknown',
@@ -245,6 +373,10 @@ async function handleGiftCardSuccess(data: any) {
         recipientDetails: {
           email: data.recipientEmail,
           productName: data.productName,
+          redeemCode: data.redeemCode || data.redemptionCode || data.code,
+          pin: data.pin || data.pinCode,
+          expiryDate: data.expiryDate,
+          cardNumber: data.cardNumber,
         },
         metadata: data,
         webhookReceived: true,
@@ -253,8 +385,29 @@ async function handleGiftCardSuccess(data: any) {
       },
     });
 
-    // TODO: Store redeem codes
-    // TODO: Send gift card details to recipient
+    // Send gift card details to recipient if email is provided
+    if (data.recipientEmail && (data.redeemCode || data.redemptionCode || data.code)) {
+      try {
+        const userData = userId && userId !== 'unknown' ? await getUserData(userId) : null;
+        await notificationService.sendEmail({
+          to: data.recipientEmail,
+          subject: 'Your Gift Card is Ready!',
+          template: 'gift_card_delivery',
+          variables: {
+            recipientName: data.recipientName || 'Valued Customer',
+            productName: data.productName,
+            amount: data.amount,
+            currency: data.currencyCode || 'USD',
+            redeemCode: data.redeemCode || data.redemptionCode || data.code,
+            pin: data.pin || data.pinCode || 'N/A',
+            expiryDate: data.expiryDate || 'N/A',
+            senderName: userData?.name || 'Payvost',
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send gift card email:', emailError);
+      }
+    }
   } catch (error) {
     console.error('Error updating gift card transaction:', error);
   }
@@ -275,7 +428,7 @@ async function handleGiftCardFailed(data: any) {
     const customId = data.customIdentifier;
     const [, userId, accountId] = customId?.split('-') || [];
 
-    await prisma.externalTransaction.upsert({
+    const transactionRecord = await prisma.externalTransaction.upsert({
       where: {
         providerTransactionId: data.transactionId?.toString() || `reloadly-gc-${data.transactionId}`,
       },
@@ -302,7 +455,20 @@ async function handleGiftCardFailed(data: any) {
       },
     });
 
-    // TODO: Refund user if payment was deducted
+    // Refund user if payment was deducted
+    if (accountId && data.amount) {
+      try {
+        await refundToAccount(
+          accountId,
+          data.amount,
+          data.currencyCode || 'USD',
+          `Refund for failed gift card order`,
+          transactionRecord.id
+        );
+      } catch (refundError) {
+        console.error('Failed to refund balance:', refundError);
+      }
+    }
   } catch (error) {
     console.error('Error updating failed gift card transaction:', error);
   }
@@ -333,6 +499,15 @@ async function handleBillPaymentSuccess(data: any) {
         webhookData: data,
         completedAt: new Date(),
         updatedAt: new Date(),
+        // Store payment receipt in recipientDetails
+        recipientDetails: {
+          billerName: data.billerName,
+          accountNumber: data.subscriberAccountNumber,
+          receiptNumber: data.receiptNumber || data.receipt || data.transactionId?.toString(),
+          receiptUrl: data.receiptUrl || data.receiptLink,
+          confirmationCode: data.confirmationCode || data.confirmationNumber,
+          paymentDate: data.paymentDate || new Date().toISOString(),
+        },
       },
       create: {
         userId: userId || 'unknown',
@@ -346,6 +521,10 @@ async function handleBillPaymentSuccess(data: any) {
         recipientDetails: {
           billerName: data.billerName,
           accountNumber: data.subscriberAccountNumber,
+          receiptNumber: data.receiptNumber || data.receipt || data.transactionId?.toString(),
+          receiptUrl: data.receiptUrl || data.receiptLink,
+          confirmationCode: data.confirmationCode || data.confirmationNumber,
+          paymentDate: data.paymentDate || new Date().toISOString(),
         },
         metadata: data,
         webhookReceived: true,
@@ -353,8 +532,6 @@ async function handleBillPaymentSuccess(data: any) {
         completedAt: new Date(),
       },
     });
-
-    // TODO: Store payment receipt
   } catch (error) {
     console.error('Error updating bill payment transaction:', error);
   }
@@ -402,12 +579,32 @@ async function handleBillPaymentFailed(data: any) {
       },
     });
 
-    // TODO: Refund user if payment was deducted
+    // Refund user if payment was deducted
+    if (accountId && data.amount) {
+      try {
+        await refundToAccount(
+          accountId,
+          data.amount,
+          data.currencyCode || 'USD',
+          `Refund for failed bill payment`,
+          transactionRecord?.id || undefined
+        );
+      } catch (refundError) {
+        console.error('Failed to refund balance:', refundError);
+      }
+    }
   } catch (error) {
     console.error('Error updating failed bill payment:', error);
+    // Log error for investigation
+    console.error('Failed bill payment details:', {
+      transactionId: data.transactionId,
+      userId,
+      accountId,
+      amount: data.amount,
+      currency: data.currencyCode,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
-  
-  // TODO: Log error for investigation
   return {
     success: true,
     message: 'Bill payment failure processed',

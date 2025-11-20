@@ -145,6 +145,54 @@ class WalletService {
       throw error;
     }
   }
+
+  /**
+   * Deduct balance from an account for external transactions
+   */
+  async deductBalance(data: {
+    accountId: string;
+    amount: number;
+    currency: string;
+    description?: string;
+    referenceId?: string;
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiClient.post<{ success: boolean; data: any }>(
+        '/api/wallet/deduct',
+        data
+      );
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to deduct balance: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Refund balance to an account (for failed external transactions)
+   */
+  async refundBalance(data: {
+    accountId: string;
+    amount: number;
+    currency: string;
+    description?: string;
+    referenceId?: string;
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const response = await apiClient.post<{ success: boolean; data: any }>(
+        '/api/wallet/refund',
+        data
+      );
+      return response;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to refund balance: ${error.message}`);
+      }
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance
