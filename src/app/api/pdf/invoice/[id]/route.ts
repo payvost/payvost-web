@@ -4,9 +4,6 @@ import React from 'react';
 import { renderToStream } from '@react-pdf/renderer';
 import InvoiceDocument from '@/lib/pdf/InvoiceDocument';
 
-// Ensure we're using the correct React version for React-PDF
-const ReactPDF = require('@react-pdf/renderer');
-
 // Increase timeout for PDF generation (Vercel Pro allows up to 60s)
 export const maxDuration = 60;
 
@@ -134,15 +131,31 @@ export async function GET(
     const finalInvoice = {
       ...sanitizedInvoice,
       items: sanitizedInvoice.items.map((item: any) => ({
-        description: String(item.description || 'Item'),
+        description: String(item.description || item.name || 'Item'),
         quantity: Number(item.quantity) || 1,
         price: Number(item.price) || 0,
       })),
     };
 
+    // Log sample data for debugging
+    console.log('[PDF] Final invoice sample:', {
+      id: finalInvoice.id,
+      invoiceNumber: finalInvoice.invoiceNumber,
+      status: finalInvoice.status,
+      itemsCount: finalInvoice.items?.length,
+      firstItem: finalInvoice.items?.[0],
+      issueDate: finalInvoice.issueDate,
+      dueDate: finalInvoice.dueDate,
+    });
+
     // Generate PDF using React-PDF
     // Use React.createElement to create the component element
     try {
+      // Verify InvoiceDocument is a function
+      if (typeof InvoiceDocument !== 'function') {
+        throw new Error(`InvoiceDocument is not a function, got: ${typeof InvoiceDocument}`);
+      }
+      
       const invoiceDocElement = React.createElement(InvoiceDocument, { 
         invoice: finalInvoice 
       });
@@ -151,10 +164,11 @@ export async function GET(
         throw new Error('Failed to create React element for InvoiceDocument');
       }
       
-      console.log('[PDF] Created React element, rendering to stream...');
+      console.log('[PDF] Created React element, type:', typeof invoiceDocElement);
+      console.log('[PDF] Rendering to stream...');
       
-      // Use ReactPDF's renderToStream directly with the element
-      const stream = await ReactPDF.renderToStream(invoiceDocElement);
+      // Use the imported renderToStream function
+      const stream = await renderToStream(invoiceDocElement);
 
       // Convert stream to buffer
       const chunks: Buffer[] = [];
@@ -174,17 +188,27 @@ export async function GET(
       });
     } catch (renderError: any) {
       console.error('[PDF] React-PDF render error:', renderError);
-      throw new Error(`React-PDF render failed: ${renderError.message}`);
+      console.error('[PDF] Error stack:', renderError.stack);
+      console.error('[PDF] Error details:', JSON.stringify(renderError, Object.getOwnPropertyNames(renderError)));
+      throw renderError; // Re-throw to preserve original error
     }
 
   } catch (error: any) {
     console.error('[PDF] Generation failed:', error);
     console.error('[PDF] Error stack:', error.stack);
     console.error('[PDF] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    // In production, log full error but return sanitized message
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error.message 
+      : (error.message?.includes('React error #31') 
+          ? 'PDF generation failed: Invalid data format' 
+          : 'Internal server error');
+    
     return NextResponse.json(
       { 
         error: 'Failed to generate PDF',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        details: errorMessage
       },
       { status: 500 }
     );
