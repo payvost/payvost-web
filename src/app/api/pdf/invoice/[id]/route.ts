@@ -47,36 +47,55 @@ export async function GET(
     const normalizeInvoice = (data: any) => {
       const normalizeDate = (date: any) => {
         if (!date) return null;
-        if (date.toDate) return date.toDate();
-        if (date._seconds) return new Date(date._seconds * 1000);
+        if (date && typeof date.toDate === 'function') return date.toDate();
+        if (date && date._seconds) return new Date(date._seconds * 1000);
         if (typeof date === 'string') return new Date(date);
-        return date;
+        if (date instanceof Date) return date;
+        return null;
       };
 
+      // Ensure items are properly formatted
+      const normalizeItems = (items: any) => {
+        if (!Array.isArray(items)) return [];
+        return items.map((item: any) => ({
+          description: String(item.description || item.name || 'Item'),
+          quantity: Number(item.quantity) || 1,
+          price: Number(item.price) || 0,
+        }));
+      };
+
+      // Extract string values, handling both old and new formats
+      const toName = data.toInfo?.name || data.toName || '';
+      const toEmail = data.toInfo?.email || data.toEmail || '';
+      const toAddress = data.toInfo?.address || data.toAddress || '';
+      const fromName = data.fromInfo?.name || data.fromName || '';
+      const fromAddress = data.fromInfo?.address || data.fromAddress || '';
+      const fromEmail = data.fromInfo?.email || data.fromEmail || '';
+
       return {
-        ...data,
-        id: invoiceDoc.id,
-        invoiceNumber: data.invoiceNumber || id,
+        id: String(invoiceDoc.id),
+        invoiceNumber: String(data.invoiceNumber || id),
         issueDate: normalizeDate(data.issueDate),
         dueDate: normalizeDate(data.dueDate),
         createdAt: normalizeDate(data.createdAt),
         updatedAt: normalizeDate(data.updatedAt),
         paidAt: data.paidAt ? normalizeDate(data.paidAt) : null,
-        // Handle both old format (toName, fromName) and new format (toInfo, fromInfo)
-        toName: data.toInfo?.name || data.toName,
-        toEmail: data.toInfo?.email || data.toEmail,
-        toAddress: data.toInfo?.address || data.toAddress,
-        fromName: data.fromInfo?.name || data.fromName,
-        fromAddress: data.fromInfo?.address || data.fromAddress,
-        fromEmail: data.fromInfo?.email || data.fromEmail,
-        items: data.items || [],
-        status: data.status || 'Pending',
-        currency: data.currency || 'USD',
-        grandTotal: data.grandTotal || 0,
-        taxRate: data.taxRate || 0,
-        tax: data.tax || 0,
-        discount: data.discount || 0,
-        notes: data.notes || '',
+        toName: String(toName),
+        toEmail: String(toEmail),
+        toAddress: String(toAddress),
+        fromName: String(fromName),
+        fromAddress: String(fromAddress),
+        fromEmail: String(fromEmail),
+        items: normalizeItems(data.items),
+        status: String(data.status || 'Pending'),
+        currency: String(data.currency || 'USD'),
+        grandTotal: Number(data.grandTotal) || 0,
+        taxRate: Number(data.taxRate) || 0,
+        tax: Number(data.tax) || 0,
+        discount: Number(data.discount) || 0,
+        notes: String(data.notes || ''),
+        description: String(data.description || ''),
+        amount: Number(data.amount) || 0,
       };
     };
 
@@ -90,36 +109,53 @@ export async function GET(
       normalizedInvoice.tax = subtotal * (Number(normalizedInvoice.taxRate) / 100);
     }
 
+    // Validate normalized invoice data - ensure all values are primitives
+    const sanitizedInvoice = JSON.parse(JSON.stringify(normalizedInvoice));
+    console.log('[PDF] Sanitized invoice data keys:', Object.keys(sanitizedInvoice));
+
     // Generate PDF using React-PDF
-    const invoiceDocElement = React.createElement(InvoiceDocument, { 
-      invoice: normalizedInvoice 
-    });
-    
-    const stream = await renderToStream(invoiceDocElement);
+    // Use React.createElement to create the component element
+    try {
+      const invoiceDocElement = React.createElement(InvoiceDocument, { 
+        invoice: sanitizedInvoice 
+      });
+      
+      if (!invoiceDocElement) {
+        throw new Error('Failed to create React element for InvoiceDocument');
+      }
+      
+      console.log('[PDF] Created React element, rendering to stream...');
+      const stream = await renderToStream(invoiceDocElement);
 
-    // Convert stream to buffer
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
+      // Convert stream to buffer
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk));
+      }
+      const pdfBuffer = Buffer.concat(chunks);
+
+      // Return PDF response
+      return new NextResponse(pdfBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
+          'Content-Length': pdfBuffer.length.toString(),
+        },
+      });
+    } catch (renderError: any) {
+      console.error('[PDF] React-PDF render error:', renderError);
+      throw new Error(`React-PDF render failed: ${renderError.message}`);
     }
-    const pdfBuffer = Buffer.concat(chunks);
-
-    // Return PDF response
-    return new NextResponse(pdfBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="invoice-${id}.pdf"`,
-        'Content-Length': pdfBuffer.length.toString(),
-      },
-    });
 
   } catch (error: any) {
     console.error('[PDF] Generation failed:', error);
+    console.error('[PDF] Error stack:', error.stack);
+    console.error('[PDF] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return NextResponse.json(
       { 
         error: 'Failed to generate PDF',
-        details: error.message 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       },
       { status: 500 }
     );

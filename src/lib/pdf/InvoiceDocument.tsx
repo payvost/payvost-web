@@ -232,21 +232,26 @@ const formatCurrency = (amount: number, currency: string) => {
   return currencyMap[currency] || `${currency} ${formattedAmount}`;
 };
 
-const formatDate = (dateValue: any) => {
+const formatDate = (dateValue: any): string => {
   if (!dateValue) return '-';
   let date: Date;
-  if (dateValue.toDate && typeof dateValue.toDate === 'function') {
-    date = dateValue.toDate();
-  } else if (dateValue._seconds || dateValue.seconds) {
-    date = new Date((dateValue._seconds || dateValue.seconds) * 1000);
-  } else if (typeof dateValue === 'string') {
-    date = new Date(dateValue);
-  } else if (dateValue instanceof Date) {
-    date = dateValue;
-  } else {
-    date = new Date(dateValue);
+  try {
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      date = dateValue.toDate();
+    } else if (dateValue && (dateValue._seconds || dateValue.seconds)) {
+      date = new Date((dateValue._seconds || dateValue.seconds) * 1000);
+    } else if (typeof dateValue === 'string') {
+      date = new Date(dateValue);
+    } else if (dateValue instanceof Date) {
+      date = dateValue;
+    } else {
+      date = new Date(dateValue);
+    }
+    if (isNaN(date.getTime())) return '-';
+    return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+  } catch (e) {
+    return '-';
   }
-  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
 };
 
 interface InvoiceDocumentProps {
@@ -321,8 +326,8 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
           </View>
           <View style={styles.columnRight}>
             <Text style={styles.sectionHeader}>Invoice Details</Text>
-            <Text style={styles.text}>Issue Date: {formatDate(invoice.issueDate || invoice.createdAt)}</Text>
-            <Text style={styles.text}>Due Date: {formatDate(invoice.dueDate)}</Text>
+            <Text style={styles.text}>Issue Date: {formatDate(invoice.issueDate || invoice.createdAt) || '-'}</Text>
+            <Text style={styles.text}>Due Date: {formatDate(invoice.dueDate) || '-'}</Text>
           </View>
         </View>
 
