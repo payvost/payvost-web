@@ -68,8 +68,8 @@ export class ReportingEngine {
       });
 
       const accountIds = [...new Set([
-        ...transfers.map(t => t.fromAccountId),
-        ...transfers.map(t => t.toAccountId)
+        ...transfers.map((t: any) => t.fromAccountId),
+        ...transfers.map((t: any) => t.toAccountId)
       ])];
 
       const accounts = await tx.account.findMany({
@@ -81,9 +81,9 @@ export class ReportingEngine {
         }
       });
 
-      const accountMap = new Map(accounts.map(a => [a.id, a]));
+      const accountMap = new Map(accounts.map((a: any) => [a.id, a]));
 
-      return transfers.map(t => ({
+      return transfers.map((t: any) => ({
         ...t,
         fromAccount: accountMap.get(t.fromAccountId)!,
         toAccount: accountMap.get(t.toAccountId)!
@@ -96,8 +96,8 @@ export class ReportingEngine {
     // Aggregate transaction data
     const aggregates = {
       totalTransactions: transactions.length,
-      totalVolume: transactions.reduce((sum, t) => sum + Number(t.amount), 0),
-      highValueTransactions: transactions.filter(t => Number(t.amount) > 10000).length,
+      totalVolume: transactions.reduce((sum: number, t: any) => sum + Number(t.amount), 0),
+      highValueTransactions: transactions.filter((t: any) => Number(t.amount) > 10000).length,
       // We'll implement cross-border detection when country field is added
       crossBorderTransactions: 0,
       suspiciousActivityReports: complianceAlerts.length
@@ -163,13 +163,13 @@ export class ReportingEngine {
     // Calculate statement metrics
     const metrics = {
       totalCredits: ledgerEntries
-        .filter(e => e.type === 'CREDIT')
-        .reduce((sum, e) => sum + Number(e.amount), 0),
+        .filter((e: any) => e.type === 'CREDIT')
+        .reduce((sum: number, e: any) => sum + Number(e.amount), 0),
       totalDebits: ledgerEntries
-        .filter(e => e.type === 'DEBIT')
-        .reduce((sum, e) => sum + Number(e.amount), 0),
+        .filter((e: any) => e.type === 'DEBIT')
+        .reduce((sum: number, e: any) => sum + Number(e.amount), 0),
       totalTransactions: transactions.length,
-      largestTransaction: Math.max(...transactions.map(t => Number(t.amount)))
+      largestTransaction: Math.max(...transactions.map((t: any) => Number(t.amount)))
     };
 
     return {
@@ -189,7 +189,7 @@ export class ReportingEngine {
         net: Number(closingBalance) - Number(openingBalance)
       },
       metrics,
-      transactions: transactions.map(t => ({
+      transactions: transactions.map((t: any) => ({
         id: t.id,
         date: format(t.createdAt, 'yyyy-MM-dd HH:mm:ss'),
         type: t.fromAccountId === accountId ? 'DEBIT' : 'CREDIT',

@@ -1,5 +1,8 @@
-import { TransactionType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
+
+// Use Prisma enum
+const TransactionType = Prisma.TransactionType;
 
 export interface TransferResult {
   success: boolean;
@@ -31,7 +34,7 @@ export async function transferFunds(
       }
     }
 
-  const transfer = await prisma.$transaction(async (tx) => {
+  const transfer = await prisma.$transaction(async (tx: any) => {
       // Lock the two accounts to perform safe balance checks and updates
       const lockedRows: Array<{ id: string; balance: string }> = await tx.$queryRaw`
         SELECT id, balance

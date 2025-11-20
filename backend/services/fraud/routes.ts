@@ -328,7 +328,7 @@ async function calculateAccountRiskScore(accountId: string): Promise<{
     },
   });
 
-  const failedTransfers = recentTransfers.filter(t => t.status === 'FAILED').length;
+  const failedTransfers = recentTransfers.filter((t: any) => t.status === 'FAILED').length;
   if (failedTransfers > 5) {
     score += 25;
     factors.push('Multiple failed transactions');

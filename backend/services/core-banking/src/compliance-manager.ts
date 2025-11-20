@@ -140,7 +140,7 @@ export class ComplianceManager {
     });
 
     // Check for structuring pattern
-    const hasStructuring = recentTransactions.some((t, i, arr) => {
+    const hasStructuring = recentTransactions.some((t: any, i: number, arr: any[]) => {
       if (i === 0) return false;
       const timeDiff = t.createdAt.getTime() - arr[i-1].createdAt.getTime();
       return timeDiff < 300000; // 5 minutes

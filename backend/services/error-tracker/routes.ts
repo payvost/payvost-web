@@ -108,11 +108,11 @@ router.get('/stats', async (req: Request, res: Response) => {
     
     res.json({
       total,
-      bySeverity: bySeverity.reduce((acc, item) => {
+      bySeverity: bySeverity.reduce((acc: Record<string, number>, item: any) => {
         acc[item.severity] = item._count;
         return acc;
       }, {} as Record<string, number>),
-      byStatus: byStatus.reduce((acc, item) => {
+      byStatus: byStatus.reduce((acc: Record<string, number>, item: any) => {
         acc[item.status] = item._count;
         return acc;
       }, {} as Record<string, number>),
