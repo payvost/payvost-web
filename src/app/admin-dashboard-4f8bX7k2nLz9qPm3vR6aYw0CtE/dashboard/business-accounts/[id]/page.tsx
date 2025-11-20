@@ -18,7 +18,7 @@ const businessDetails: BusinessAccountData = {
     onboardingDate: '2024-08-10',
     country: 'United States',
     countryCode: 'US',
-    verificationStatus: 'Verified',
+    verificationStatus: 'verified',
     kycTier: 'Tier 3',
     contactEmail: 'contact@techinnovators.com',
     paymentVolume: 1250000,
@@ -39,10 +39,10 @@ const businessDetails: BusinessAccountData = {
 };
 
 const statusConfig: Record<BusinessVerificationStatus, { icon: React.ReactNode; color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    Verified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-green-600', variant: 'default' },
-    Pending: { icon: <Clock className="h-5 w-5" />, color: 'text-yellow-600', variant: 'secondary' },
-    Rejected: { icon: <XCircle className="h-5 w-5" />, color: 'text-red-600', variant: 'destructive' },
-    Restricted: { icon: <AlertTriangle className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
+    verified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-green-600', variant: 'default' },
+    pending: { icon: <Clock className="h-5 w-5" />, color: 'text-yellow-600', variant: 'secondary' },
+    rejected: { icon: <XCircle className="h-5 w-5" />, color: 'text-red-600', variant: 'destructive' },
+    restricted: { icon: <AlertTriangle className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
 };
 
 interface BusinessDetailsPageProps {

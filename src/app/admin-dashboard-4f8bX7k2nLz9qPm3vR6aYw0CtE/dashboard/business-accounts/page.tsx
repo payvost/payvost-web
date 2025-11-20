@@ -14,18 +14,18 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 const sampleBusinesses: BusinessAccountData[] = [
-    { id: 'biz_1', businessName: 'Tech Innovators Inc.', sector: 'Technology', onboardingDate: '2024-08-10', country: 'United States', countryCode: 'US', verificationStatus: 'Verified', kycTier: 'Tier 3', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_1', name: 'Liam Johnson' } },
-    { id: 'biz_2', businessName: 'Global Foods Ltd.', sector: 'E-commerce', onboardingDate: '2024-07-22', country: 'Nigeria', countryCode: 'NG', verificationStatus: 'Pending', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_2', name: 'Olivia Smith' } },
-    { id: 'biz_3', businessName: 'Creative Designs Co.', sector: 'Design Agency', onboardingDate: '2024-06-15', country: 'United Kingdom', countryCode: 'GB', verificationStatus: 'Verified', kycTier: 'Tier 2', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_3', name: 'Noah Williams' } },
-    { id: 'biz_4', businessName: 'HealthFirst Pharma', sector: 'Healthcare', onboardingDate: '2024-08-01', country: 'Canada', countryCode: 'CA', verificationStatus: 'Restricted', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_4', name: 'Emma Brown' } },
-    { id: 'biz_5', businessName: 'QuickLogistics', sector: 'Logistics', onboardingDate: '2024-05-30', country: 'Ghana', countryCode: 'GH', verificationStatus: 'Rejected', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_5', name: 'James Jones' } },
+    { id: 'biz_1', businessName: 'Tech Innovators Inc.', sector: 'Technology', onboardingDate: '2024-08-10', country: 'United States', countryCode: 'US', verificationStatus: 'verified', kycTier: 'Tier 3', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_1', name: 'Liam Johnson' } },
+    { id: 'biz_2', businessName: 'Global Foods Ltd.', sector: 'E-commerce', onboardingDate: '2024-07-22', country: 'Nigeria', countryCode: 'NG', verificationStatus: 'pending', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_2', name: 'Olivia Smith' } },
+    { id: 'biz_3', businessName: 'Creative Designs Co.', sector: 'Design Agency', onboardingDate: '2024-06-15', country: 'United Kingdom', countryCode: 'GB', verificationStatus: 'verified', kycTier: 'Tier 2', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_3', name: 'Noah Williams' } },
+    { id: 'biz_4', businessName: 'HealthFirst Pharma', sector: 'Healthcare', onboardingDate: '2024-08-01', country: 'Canada', countryCode: 'CA', verificationStatus: 'restricted', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_4', name: 'Emma Brown' } },
+    { id: 'biz_5', businessName: 'QuickLogistics', sector: 'Logistics', onboardingDate: '2024-05-30', country: 'Ghana', countryCode: 'GH', verificationStatus: 'rejected', kycTier: 'Tier 1', contactEmail: '', paymentVolume: 0, disputeRatio: 0, activityLog: [], documents: [], owner: { id: 'usr_5', name: 'James Jones' } },
 ];
 
 const statusConfig: Record<BusinessVerificationStatus, { color: string, variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    Verified: { color: 'text-green-600', variant: 'default' },
-    Pending: { color: 'text-yellow-600', variant: 'secondary' },
-    Rejected: { color: 'text-red-600', variant: 'destructive' },
-    Restricted: { color: 'text-orange-600', variant: 'destructive' },
+    verified: { color: 'text-green-600', variant: 'default' },
+    pending: { color: 'text-yellow-600', variant: 'secondary' },
+    rejected: { color: 'text-red-600', variant: 'destructive' },
+    restricted: { color: 'text-orange-600', variant: 'destructive' },
 };
 
 export default function BusinessAccountsPage() {

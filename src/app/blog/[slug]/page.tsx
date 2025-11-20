@@ -13,6 +13,9 @@ import {
     Share2,
     Link as LinkIcon,
     ArrowRight,
+    Twitter,
+    Linkedin,
+    Facebook,
     ArrowLeft,
     Eye
 } from 'lucide-react';

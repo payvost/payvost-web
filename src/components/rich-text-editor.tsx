@@ -71,14 +71,14 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
             border-color: hsl(var(--border));
         }
       `}</style>
-      <ReactQuill
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-        placeholder={placeholder}
-      />
+      {React.createElement(ReactQuill as any, {
+        theme: "snow",
+        value,
+        onChange,
+        modules,
+        formats,
+        placeholder,
+      })}
     </div>
   );
 }

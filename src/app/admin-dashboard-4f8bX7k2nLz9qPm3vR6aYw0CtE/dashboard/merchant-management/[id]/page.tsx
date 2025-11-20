@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,10 +31,11 @@ const merchantDetails: MerchantAccountData = {
     website: 'https://creatify.co',
 };
 
-const statusConfig = {
+const statusConfig: Record<MerchantAccountData['status'], { icon: React.ReactElement; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Active: { icon: <ShieldCheck className="h-5 w-5 text-green-500" />, variant: 'default' as const },
     Restricted: { icon: <AlertTriangle className="h-5 w-5 text-orange-500" />, variant: 'destructive' as const },
     'Payouts Held': { icon: <Clock className="h-5 w-5 text-yellow-500" />, variant: 'secondary' as const },
+    Suspended: { icon: <XCircle className="h-5 w-5 text-red-500" />, variant: 'destructive' as const },
 };
 
 export default function MerchantDetailsPage({ params }: { params: { id: string } }) {

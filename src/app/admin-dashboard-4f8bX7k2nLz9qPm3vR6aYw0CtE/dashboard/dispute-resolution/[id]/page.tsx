@@ -21,8 +21,8 @@ const caseDetails: Dispute = {
     status: 'Needs response',
     dueBy: '2024-08-20',
     evidence: [
-        { name: 'order_confirmation.pdf', uploadedBy: 'John Doe', date: '2024-08-18' },
-        { name: 'email_thread.png', uploadedBy: 'John Doe', date: '2024-08-18' },
+        { name: 'order_confirmation.pdf', url: '#', uploadedBy: 'John Doe', date: '2024-08-18' },
+        { name: 'email_thread.png', url: '#', uploadedBy: 'John Doe', date: '2024-08-18' },
     ],
     log: [
         { user: 'John Doe', action: 'Dispute opened', date: '2024-08-18' },

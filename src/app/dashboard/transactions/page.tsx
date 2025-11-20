@@ -87,7 +87,7 @@ export default function TransactionsPage() {
           let externalTransactions: Transaction[] = [];
           try {
             const externalTxs = await externalTransactionService.getByUser(user.uid, { limit: 100 });
-            externalTransactions = externalTxs.map((tx) => ({
+            externalTransactions = (externalTxs as any[]).map((tx: any) => ({
               id: tx.id,
               type: formatTransactionType(tx.type),
               recipientName: tx.recipientDetails?.billerName || tx.recipientDetails?.productName || tx.recipientDetails?.phone || 'N/A',

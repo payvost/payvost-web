@@ -24,11 +24,11 @@ const TransactionChart = dynamic(() => import('@/components/transaction-chart').
 
 
 const kycStatusConfig: Record<KycStatus, { icon: React.ReactNode; color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    Verified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-green-600', variant: 'default' },
-    Pending: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-yellow-600', variant: 'secondary' },
-    Unverified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-gray-600', variant: 'outline' },
-    Restricted: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
-    Rejected: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-red-600', variant: 'destructive' },
+    verified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-green-600', variant: 'default' },
+    pending: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-yellow-600', variant: 'secondary' },
+    unverified: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-gray-600', variant: 'outline' },
+    restricted: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-orange-600', variant: 'destructive' },
+    rejected: { icon: <ShieldCheck className="h-5 w-5" />, color: 'text-red-600', variant: 'destructive' },
 };
 
 
@@ -233,7 +233,7 @@ export default function CustomerDetailsPage() {
         );
     }
 
-    const status = kycStatusConfig[customer.kycStatus as KycStatus] || kycStatusConfig.Unverified;
+    const status = kycStatusConfig[customer.kycStatus as KycStatus] || kycStatusConfig.unverified;
     const stats = computeStats(customer);
     
     // Format joined date

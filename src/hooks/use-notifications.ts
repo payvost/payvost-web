@@ -9,6 +9,7 @@ import {
   setupForegroundMessageHandler,
   clearFCMToken,
 } from '@/lib/fcm';
+// @ts-ignore - Firebase messaging types
 import type { MessagePayload } from 'firebase/messaging';
 import { useToast } from './use-toast';
 

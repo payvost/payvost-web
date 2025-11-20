@@ -104,12 +104,8 @@ export function sanitizeUrl(input: string): string | null {
     const url = new URL(urlString);
     
     // Only allow http and https protocols
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return null;
-    }
-    
-    // Block javascript: and data: protocols
-    if (url.protocol === 'javascript:' || url.protocol === 'data:') {
+    const protocol = url.protocol;
+    if (protocol !== 'http:' && protocol !== 'https:') {
       return null;
     }
     
@@ -192,7 +188,7 @@ export function sanitizeObject<T extends Record<string, any>>(
     numberFields?: (keyof T)[];
   }
 ): T {
-  const sanitized = { ...obj };
+  const sanitized: any = { ...obj };
 
   for (const [key, value] of Object.entries(obj)) {
     if (value === null || value === undefined) {
@@ -200,23 +196,23 @@ export function sanitizeObject<T extends Record<string, any>>(
     }
 
     if (options.htmlFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizeHtml(String(value)) as any;
+      sanitized[key] = sanitizeHtml(String(value));
     } else if (options.textFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizeText(String(value)) as any;
+      sanitized[key] = sanitizeText(String(value));
     } else if (options.urlFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizeUrl(String(value)) as any;
+      sanitized[key] = sanitizeUrl(String(value));
     } else if (options.emailFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizeEmail(String(value)) as any;
+      sanitized[key] = sanitizeEmail(String(value));
     } else if (options.phoneFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizePhone(String(value)) as any;
+      sanitized[key] = sanitizePhone(String(value));
     } else if (options.numberFields?.includes(key as keyof T)) {
-      sanitized[key] = sanitizeNumber(value) as any;
+      sanitized[key] = sanitizeNumber(value);
     } else if (typeof value === 'string') {
       // Default: sanitize as text if no specific field type
-      sanitized[key] = sanitizeText(value) as any;
+      sanitized[key] = sanitizeText(value);
     }
   }
 
-  return sanitized;
+  return sanitized as T;
 }
 

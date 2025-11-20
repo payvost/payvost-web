@@ -21,6 +21,8 @@ import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { InvoiceAPI, type CreateInvoiceInput, type UpdateInvoiceInput } from '@/services/invoice-api';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Separator } from './ui/separator';

@@ -21,7 +21,7 @@ const supportChatFlow = ai.defineFlow(
   async (input) => {
     const { message, history } = input;
 
-    const llm = ai.getGenerator('googleai/gemini-2.0-flash');
+    const llm = (ai as any).getGenerator('googleai/gemini-2.0-flash');
 
     const response = await llm.generate({
       history: history,
