@@ -57,16 +57,35 @@ export function TransactionChart({ data }: TransactionChartProps) {
         />
         <Tooltip 
           cursor={false} 
-          content={<ChartTooltipContent indicator="dot" />}
-          formatter={(value: any) => {
-            const numValue = Number(value);
-            return new Intl.NumberFormat('en-US', { 
-              style: 'currency', 
-              currency: 'USD',
-              minimumFractionDigits: numValue < 1 ? 2 : 0,
-              maximumFractionDigits: numValue < 1 ? 2 : 0
-            }).format(numValue);
-          }}
+          content={<ChartTooltipContent 
+            indicator="dot"
+            formatter={(value: any, name: any) => {
+              const numValue = Number(value);
+              const formatted = new Intl.NumberFormat('en-US', { 
+                style: 'currency', 
+                currency: 'USD',
+                minimumFractionDigits: numValue < 1 ? 2 : 0,
+                maximumFractionDigits: numValue < 1 ? 2 : 0
+              }).format(numValue);
+              
+              return (
+                <div className="flex w-full flex-wrap items-center gap-2">
+                  <div className="h-2.5 w-2.5 shrink-0 rounded-[2px] bg-[var(--color-bg)] border-[var(--color-border)]" 
+                       style={{ '--color-bg': `var(--color-${name})`, '--color-border': `var(--color-${name})` } as React.CSSProperties} />
+                  <div className="flex flex-1 justify-between items-center leading-none">
+                    <div className="grid gap-1.5">
+                      <span className="text-muted-foreground">
+                        {name === 'income' ? 'Income' : 'Expense'}
+                      </span>
+                    </div>
+                    <span className="font-mono font-medium tabular-nums text-foreground">
+                      {formatted}
+                    </span>
+                  </div>
+                </div>
+              );
+            }}
+          />}
         />
         <Legend />
         <Bar dataKey="income" fill="var(--color-income)" radius={4} />
