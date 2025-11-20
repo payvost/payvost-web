@@ -1,40 +1,4 @@
-import { Prisma } from '@prisma/client';
-
-// Use Prisma enum values - fallback to string literals if not available
-type EscrowStatus = Prisma.EscrowStatus;
-type MilestoneStatus = Prisma.MilestoneStatus;
-type EscrowPartyRole = Prisma.EscrowPartyRole;
-type Escrow = Prisma.Escrow;
-
-const EscrowStatusEnum = (Prisma as any).EscrowStatus || {
-  DRAFT: 'DRAFT',
-  AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
-  AWAITING_FUNDING: 'AWAITING_FUNDING',
-  FUNDED: 'FUNDED',
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  CANCELLED: 'CANCELLED',
-  DISPUTED: 'DISPUTED',
-  REFUNDED: 'REFUNDED',
-};
-
-const MilestoneStatusEnum = (Prisma as any).MilestoneStatus || {
-  PENDING: 'PENDING',
-  AWAITING_FUNDING: 'AWAITING_FUNDING',
-  FUNDED: 'FUNDED',
-  UNDER_REVIEW: 'UNDER_REVIEW',
-  APPROVED: 'APPROVED',
-  RELEASED: 'RELEASED',
-  DISPUTED: 'DISPUTED',
-  CANCELLED: 'CANCELLED',
-};
-
-const EscrowPartyRoleEnum = (Prisma as any).EscrowPartyRole || {
-  BUYER: 'BUYER',
-  SELLER: 'SELLER',
-  MEDIATOR: 'MEDIATOR',
-  ADMIN: 'ADMIN',
-};
+import { Prisma, Escrow, EscrowStatus, MilestoneStatus, EscrowPartyRole } from '@prisma/client';
 import Decimal from 'decimal.js';
 import {
   CreateEscrowInput,
@@ -46,6 +10,9 @@ import {
   EscrowActivityInput,
   EscrowDetails,
   MilestoneWithProgress,
+  EscrowStatusEnum,
+  MilestoneStatusEnum,
+  EscrowPartyRoleEnum,
 } from './types';
 import { prisma } from '../../common/prisma';
 
@@ -75,7 +42,7 @@ export class EscrowStateMachine {
     toStatus: EscrowStatus,
     userId?: string,
     role?: EscrowPartyRole
-  ): Promise<PrismaEscrow> {
+  ): Promise<Escrow> {
     const escrow = await prisma.escrow.findUnique({ where: { id: escrowId } });
     if (!escrow) throw new Error('Escrow not found');
 
@@ -120,7 +87,7 @@ export async function createEscrow(
   const platformFee = new Decimal(totalAmount).mul(platformFeePercent).div(100);
 
   // Create escrow with parties and milestones in a transaction
-  const escrow = await prisma.$transaction(async (tx: any) => {
+  const escrow = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Create the escrow
     const newEscrow = await tx.escrow.create({
       data: {
@@ -216,7 +183,7 @@ export async function acceptEscrow(
   userId: string,
   userEmail: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Find party by email and update
     const party = await tx.escrowParty.findFirst({
       where: { escrowId, email: userEmail, hasAccepted: false },
@@ -367,7 +334,7 @@ export async function submitDeliverable(
   input: SubmitDeliverableInput,
   userId: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const milestone = await tx.milestone.findUnique({
       where: { id: input.milestoneId },
     });
@@ -407,7 +374,7 @@ export async function releaseMilestone(
   input: ReleaseMilestoneInput,
   userId: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const milestone = await tx.milestone.findUnique({
       where: { id: input.milestoneId },
       include: { escrow: true },
@@ -489,11 +456,11 @@ export async function raiseDispute(
   userId: string,
   userRole: EscrowPartyRole
 ): Promise<string> {
-  return await prisma.$transaction(async (tx) => {
+  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Update escrow status to disputed
     await tx.escrow.update({
       where: { id: escrowId },
-      data: { status: EscrowStatus.DISPUTED },
+      data: { status: EscrowStatusEnum.DISPUTED as EscrowStatus },
     });
 
     // Create dispute
@@ -543,7 +510,7 @@ export async function resolveDispute(
   input: ResolveDisputeInput,
   userId: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const dispute = await tx.dispute.findUnique({
       where: { id: input.disputeId },
       include: { escrow: true },
@@ -567,11 +534,11 @@ export async function resolveDispute(
     });
 
     // Update escrow status based on resolution
-    let newStatus: EscrowStatus = EscrowStatus.IN_PROGRESS;
+    let newStatus: EscrowStatus = EscrowStatusEnum.IN_PROGRESS as EscrowStatus;
     if (input.resolution === 'REFUND_BUYER') {
-      newStatus = EscrowStatus.REFUNDED;
+      newStatus = EscrowStatusEnum.REFUNDED as EscrowStatus;
     } else if (input.resolution === 'RELEASE_SELLER') {
-      newStatus = EscrowStatus.COMPLETED;
+      newStatus = EscrowStatusEnum.COMPLETED as EscrowStatus;
     }
 
     await tx.escrow.update({
@@ -600,17 +567,17 @@ export async function cancelEscrow(
   userId: string,
   reason?: string
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const escrow = await tx.escrow.findUnique({ where: { id: escrowId } });
     if (!escrow) throw new Error('Escrow not found');
 
-    if (escrow.status === EscrowStatus.COMPLETED || escrow.status === EscrowStatus.CANCELLED) {
+    if (escrow.status === EscrowStatusEnum.COMPLETED || escrow.status === EscrowStatusEnum.CANCELLED) {
       throw new Error('Cannot cancel completed or already cancelled escrow');
     }
 
     await tx.escrow.update({
       where: { id: escrowId },
-      data: { status: EscrowStatus.CANCELLED },
+      data: { status: EscrowStatusEnum.CANCELLED as EscrowStatus },
     });
 
     await tx.escrowActivity.create({

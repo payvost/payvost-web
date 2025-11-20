@@ -1,14 +1,10 @@
-import { Prisma } from '@prisma/client';
+import { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution } from '@prisma/client';
 
-// Use Prisma enum types
-export type EscrowStatus = Prisma.EscrowStatus;
-export type EscrowPartyRole = Prisma.EscrowPartyRole;
-export type MilestoneStatus = Prisma.MilestoneStatus;
-export type DisputeStatus = Prisma.DisputeStatus;
-export type DisputeResolution = Prisma.DisputeResolution;
+// Export enum types
+export type { EscrowStatus, EscrowPartyRole, MilestoneStatus, DisputeStatus, DisputeResolution };
 
 // Export enum values for runtime use - with fallback
-export const EscrowStatusEnum = (Prisma as any).EscrowStatus || {
+export const EscrowStatusEnum = EscrowStatus || {
   DRAFT: 'DRAFT',
   AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
   AWAITING_FUNDING: 'AWAITING_FUNDING',
@@ -20,14 +16,14 @@ export const EscrowStatusEnum = (Prisma as any).EscrowStatus || {
   REFUNDED: 'REFUNDED',
 };
 
-export const EscrowPartyRoleEnum = (Prisma as any).EscrowPartyRole || {
+export const EscrowPartyRoleEnum = EscrowPartyRole || {
   BUYER: 'BUYER',
   SELLER: 'SELLER',
   MEDIATOR: 'MEDIATOR',
   ADMIN: 'ADMIN',
 };
 
-export const MilestoneStatusEnum = (Prisma as any).MilestoneStatus || {
+export const MilestoneStatusEnum = MilestoneStatus || {
   PENDING: 'PENDING',
   AWAITING_FUNDING: 'AWAITING_FUNDING',
   FUNDED: 'FUNDED',
@@ -38,7 +34,7 @@ export const MilestoneStatusEnum = (Prisma as any).MilestoneStatus || {
   CANCELLED: 'CANCELLED',
 };
 
-export const DisputeStatusEnum = (Prisma as any).DisputeStatus || {
+export const DisputeStatusEnum = DisputeStatus || {
   OPEN: 'OPEN',
   UNDER_REVIEW: 'UNDER_REVIEW',
   EVIDENCE_SUBMITTED: 'EVIDENCE_SUBMITTED',
@@ -49,7 +45,7 @@ export const DisputeStatusEnum = (Prisma as any).DisputeStatus || {
   CLOSED: 'CLOSED',
 };
 
-export const DisputeResolutionEnum = (Prisma as any).DisputeResolution || {
+export const DisputeResolutionEnum = DisputeResolution || {
   REFUND_BUYER: 'REFUND_BUYER',
   RELEASE_SELLER: 'RELEASE_SELLER',
   PARTIAL_REFUND: 'PARTIAL_REFUND',

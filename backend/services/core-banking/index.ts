@@ -1,9 +1,8 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, TransactionType } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 
 // Use Prisma enum - fallback to string if not available
-type TransactionType = Prisma.TransactionType;
-const TransactionTypeEnum = (Prisma as any).TransactionType || {
+const TransactionTypeEnum = TransactionType || {
   INTERNAL_TRANSFER: 'INTERNAL_TRANSFER',
   EXTERNAL_TRANSFER: 'EXTERNAL_TRANSFER',
   CARD_PAYMENT: 'CARD_PAYMENT',
@@ -42,7 +41,7 @@ export async function transferFunds(
       }
     }
 
-  const transfer = await prisma.$transaction(async (tx: any) => {
+  const transfer = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Lock the two accounts to perform safe balance checks and updates
       const lockedRows: Array<{ id: string; balance: string }> = await tx.$queryRaw`
         SELECT id, balance
