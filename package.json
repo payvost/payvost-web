@@ -15,7 +15,7 @@
     "images:optimize": "node ./scripts/optimize-images.js",
     "build:client": "next build",
     "prisma:generate": "prisma generate --schema backend/prisma/schema.prisma",
-    "build:server": "npm run prisma:generate && cd backend && tsc -p tsconfig.json",
+    "build:server": "npm run prisma:generate && cd backend && npm install && tsc -p tsconfig.json",
     "build": "npm run build:client && npm run build:server",
     "start:client": "next start -p 3000",
     "start:server": "cross-env PORT=3001 node backend/dist/index.js",
