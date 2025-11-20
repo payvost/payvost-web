@@ -5,12 +5,17 @@ import * as React from 'react';
 import { Pie, PieChart, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
-const data = [
-  { name: 'USD', value: 400, fill: 'hsl(var(--chart-1))' },
-  { name: 'EUR', value: 300, fill: 'hsl(var(--chart-2))' },
-  { name: 'GBP', value: 200, fill: 'hsl(var(--chart-3))' },
-  { name: 'NGN', value: 278, fill: 'hsl(var(--chart-4))' },
-  { name: 'OTHER', value: 189, fill: 'hsl(var(--chart-5))' },
+interface CurrencyData {
+  name: string;
+  value: number;
+}
+
+const chartColors = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
 ];
 
 const chartConfig = {
@@ -39,10 +44,38 @@ const chartConfig = {
   },
 };
 
-export function AdminCurrencyPieChart() {
+interface AdminCurrencyPieChartProps {
+  data?: CurrencyData[];
+}
+
+export function AdminCurrencyPieChart({ data = [] }: AdminCurrencyPieChartProps) {
+  const chartData = React.useMemo(() => {
+    return data.map((item, index) => ({
+      ...item,
+      fill: chartColors[index % chartColors.length],
+    }));
+  }, [data]);
+
   const totalValue = React.useMemo(() => {
-    return data.reduce((acc, curr) => acc + curr.value, 0);
-  }, []);
+    return chartData.reduce((acc, curr) => acc + curr.value, 0);
+  }, [chartData]);
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        No currency data available
+      </div>
+    );
+  }
+
+  const formatValue = (value: number) => {
+    if (value >= 1000000) {
+      return `$${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      return `$${(value / 1000).toFixed(1)}K`;
+    }
+    return `$${value.toFixed(0)}`;
+  };
 
   return (
     <ChartContainer
@@ -56,7 +89,7 @@ export function AdminCurrencyPieChart() {
             content={<ChartTooltipContent hideLabel nameKey="name" />}
           />
           <Pie
-            data={data}
+            data={chartData}
             dataKey="value"
             nameKey="name"
             innerRadius="50%"
@@ -64,7 +97,7 @@ export function AdminCurrencyPieChart() {
             // Add this to fix the active segment growing issue
             activeIndex={-1} 
           >
-            {data.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />
             ))}
           </Pie>
@@ -76,7 +109,7 @@ export function AdminCurrencyPieChart() {
                                 <li key={`item-${index}`} className="flex items-center space-x-2 text-sm">
                                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                     <span className="text-muted-foreground">{entry.value}</span>
-                                    <span>${(entry.payload as any)?.value}K</span>
+                                    <span>{formatValue((entry.payload as any)?.value || 0)}</span>
                                 </li>
                             ))}
                         </ul>

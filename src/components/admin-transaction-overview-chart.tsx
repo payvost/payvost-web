@@ -3,14 +3,11 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
-const chartData = [
-  { month: 'January', volume: 186000, payouts: 80000 },
-  { month: 'February', volume: 305000, payouts: 200000 },
-  { month: 'March', volume: 237000, payouts: 120000 },
-  { month: 'April', volume: 73000, payouts: 190000 },
-  { month: 'May', volume: 209000, payouts: 130000 },
-  { month: 'June', volume: 214000, payouts: 110000 },
-];
+interface ChartData {
+  month: string;
+  volume: number;
+  payouts: number;
+}
 
 const chartConfig = {
   volume: {
@@ -23,10 +20,23 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function AdminTransactionOverviewChart() {
+const defaultData: ChartData[] = [
+  { month: 'January', volume: 0, payouts: 0 },
+  { month: 'February', volume: 0, payouts: 0 },
+  { month: 'March', volume: 0, payouts: 0 },
+  { month: 'April', volume: 0, payouts: 0 },
+  { month: 'May', volume: 0, payouts: 0 },
+  { month: 'June', volume: 0, payouts: 0 },
+];
+
+interface AdminTransactionOverviewChartProps {
+  data?: ChartData[];
+}
+
+export function AdminTransactionOverviewChart({ data = defaultData }: AdminTransactionOverviewChartProps) {
   return (
     <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-      <BarChart data={chartData}>
+      <BarChart data={data.length > 0 ? data : defaultData}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="month"
@@ -39,7 +49,12 @@ export function AdminTransactionOverviewChart() {
            tickLine={false}
            axisLine={false}
            tickMargin={10}
-           tickFormatter={(value) => `$${Number(value) / 1000}k`}
+           tickFormatter={(value) => {
+             if (value >= 1000000) {
+               return `$${(Number(value) / 1000000).toFixed(1)}M`;
+             }
+             return `$${Number(value) / 1000}k`;
+           }}
         />
         <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
         <Legend />
