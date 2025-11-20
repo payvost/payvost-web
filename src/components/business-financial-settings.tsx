@@ -18,7 +18,7 @@ import { Separator } from './ui/separator';
 const financialSettingsSchema = z.object({
   defaultSettlementAccount: z.string().min(1, "Settlement account is required"),
   primaryOperatingAccount: z.string().min(1, "Primary account is required"),
-  payoutSchedule: z.enum(['Daily', 'Weekly', 'Monthly']),
+  payoutSchedule: z.enum(['Daily', 'Weekly', 'Monthly', 'OnDemand']),
   escrowEnabled: z.boolean(),
 });
 

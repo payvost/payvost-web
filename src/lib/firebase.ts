@@ -1,5 +1,6 @@
 
 // Import the functions you need from the SDKs you need
+// @ts-ignore - Firebase app types
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';

@@ -12,11 +12,11 @@ import { Input } from '@/components/ui/input';
 import type { VirtualCardData } from '@/types/virtual-card';
 
 const sampleCards: VirtualCardData[] = [
-    { id: 'vc_1', cardLabel: 'Marketing Team', last4: '4284', cardType: 'visa', balance: 2500.75, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [] },
-    { id: 'vc_2', cardLabel: 'Development Subscriptions', last4: '8932', cardType: 'mastercard', balance: 500.20, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [] },
-    { id: 'vc_3', cardLabel: 'CEO Travel Card', last4: '7766', cardType: 'visa', balance: 10000.00, currency: 'USD', status: 'frozen', fullNumber: '', expiry: '', cvv: '', transactions: [] },
-    { id: 'vc_4', cardLabel: 'UK Office Expenses', last4: '9876', cardType: 'visa', balance: 8500.00, currency: 'GBP', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [] },
-    { id: 'vc_5', cardLabel: 'Terminated Card', last4: '1111', cardType: 'mastercard', balance: 0.00, currency: 'USD', status: 'terminated', fullNumber: '', expiry: '', cvv: '', transactions: [] },
+    { id: 'vc_1', cardLabel: 'Marketing Team', last4: '4284', cardType: 'visa', balance: 2500.75, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'blue', cardModel: 'debit' },
+    { id: 'vc_2', cardLabel: 'Development Subscriptions', last4: '8932', cardType: 'mastercard', balance: 500.20, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'purple', cardModel: 'debit' },
+    { id: 'vc_3', cardLabel: 'CEO Travel Card', last4: '7766', cardType: 'visa', balance: 10000.00, currency: 'USD', status: 'frozen', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'green', cardModel: 'debit' },
+    { id: 'vc_4', cardLabel: 'UK Office Expenses', last4: '9876', cardType: 'visa', balance: 8500.00, currency: 'GBP', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'black', cardModel: 'debit' },
+    { id: 'vc_5', cardLabel: 'Terminated Card', last4: '1111', cardType: 'mastercard', balance: 0.00, currency: 'USD', status: 'terminated', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'blue', cardModel: 'debit' },
 ];
 
 export default function CardManagementPage() {

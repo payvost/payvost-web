@@ -155,7 +155,7 @@ export function BusinessPayoutForm() {
                                     <div className="space-y-2"><Label htmlFor="accountNumber">Account Number</Label><Input id="accountNumber" {...register('accountNumber')}/> {errors.accountNumber && <p className="text-sm text-destructive">{errors.accountNumber.message}</p>}</div>
                                 </div>
                                 <div className="space-y-2"><Label htmlFor="bank">Bank / Payment Service</Label><Input id="bank" {...register('bank')}/> {errors.bank && <p className="text-sm text-destructive">{errors.bank.message}</p>}</div>
-                                <div className="flex items-center space-x-2"><Controller name="saveBeneficiary" control={control} render={({field}) => (<input type="checkbox" id="saveBeneficiary" {...field} />)} /><Label htmlFor="saveBeneficiary">Save as beneficiary for future use</Label></div>
+                                <div className="flex items-center space-x-2"><Controller name="saveBeneficiary" control={control} render={({field}) => (<input type="checkbox" id="saveBeneficiary" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} onBlur={field.onBlur} ref={field.ref} />)} /><Label htmlFor="saveBeneficiary">Save as beneficiary for future use</Label></div>
                             </div>
                         )}
                     </div>

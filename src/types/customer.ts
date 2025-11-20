@@ -3,6 +3,8 @@
 import type { Timestamp } from "firebase/firestore";
 import type { KycStatus } from './kyc';
 
+export type { KycStatus };
+
 export type UserType = 'Pending' | 'Tier 1' | 'Tier 2' | 'Business Owner' | 'Business Pending';
 
 interface WalletBalance {

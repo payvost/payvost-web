@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CodeBlock } from '@/components/code-block'; // Assuming you have a code block component
 import { Separator } from '@/components/ui/separator';
 
 const webhookLogs = [

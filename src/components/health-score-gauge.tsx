@@ -28,6 +28,7 @@ export function HealthScoreGauge({ score }: HealthScoreGaugeProps) {
       config={{}}
       className="mx-auto aspect-square h-full max-h-[300px] relative"
     >
+      <>
       <PieChart>
         <Pie
           data={data}
@@ -50,6 +51,7 @@ export function HealthScoreGauge({ score }: HealthScoreGaugeProps) {
         <p className="text-5xl font-bold" style={{ color: getScoreColor(score) }}>{score}</p>
         <p className="text-sm text-muted-foreground">out of 100</p>
       </div>
+      </>
     </ChartContainer>
   );
 }

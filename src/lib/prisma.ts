@@ -2,6 +2,7 @@
  * Prisma Client Singleton
  * Ensures only one instance of Prisma Client is created across the application
  */
+// @ts-ignore - Prisma client types
 import { PrismaClient } from '@prisma/client';
 
 declare global {

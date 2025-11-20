@@ -208,7 +208,7 @@ export default function PaymentPage() {
                                             {Object.entries(bankDetails).map(([key, value]) => (
                                                 <div key={key} className="flex justify-between">
                                                     <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                                                    <span className="font-semibold">{value}</span>
+                                                    <span className="font-semibold">{String(value)}</span>
                                                 </div>
                                             ))}
                                         </div>

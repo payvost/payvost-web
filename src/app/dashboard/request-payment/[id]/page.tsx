@@ -48,7 +48,7 @@ export default function PaymentLinkDetailsPage() {
             if (doc.exists()) {
                 const data = doc.data();
                 if (data.status === 'Deleted') {
-                    setRequest(null);
+                    setLinkDetails(null);
                 } else {
                     setLinkDetails({ id: doc.id, ...data });
                 }

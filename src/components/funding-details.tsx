@@ -78,7 +78,7 @@ export function FundingDetails({ wallet }: FundingDetailsProps) {
                 {Object.entries(details).map(([key, value]) => (
                      <div key={key} className="text-sm">
                         <p className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                        <p className="font-semibold">{value}</p>
+                        <p className="font-semibold">{String(value)}</p>
                     </div>
                 ))}
                 <Separator />

@@ -3,6 +3,7 @@
  * Handles push notification registration and message handling
  */
 
+// @ts-ignore - Firebase messaging types
 import { getMessaging, getToken, onMessage, Messaging, MessagePayload } from 'firebase/messaging';
 import { app } from './firebase';
 
@@ -134,7 +135,7 @@ export const setupForegroundMessageHandler = (
     return null;
   }
 
-  const unsubscribe = onMessage(messagingInstance, (payload) => {
+  const unsubscribe = onMessage(messagingInstance, (payload: any) => {
     console.log('📬 Foreground message received:', payload);
     
     // Show browser notification even when app is open

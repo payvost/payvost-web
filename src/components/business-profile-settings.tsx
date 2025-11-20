@@ -120,14 +120,14 @@ export function BusinessProfileSettings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InfoField label="Legal Business Name" value={profile?.name} />
+                        <InfoField label="Legal Business Name" value={profile?.legalName} />
                         <InfoField label="Industry" value={profile?.industry} />
-                        <InfoField label="Business Type" value={profile?.type ? businessTypeMap[profile.type] : 'N/A'} />
+                        <InfoField label="Business Type" value={profile?.businessType ? businessTypeMap[profile.businessType] : 'N/A'} />
                         <InfoField label="Registration Number" value={profile?.registrationNumber} />
                         <InfoField label="Tax ID" value={profile?.taxId} />
                         <InfoField label="Website" value={profile?.website} />
                         <div className="sm:col-span-2">
-                             <InfoField label="Business Address" value={profile?.address} />
+                             <InfoField label="Business Address" value={profile?.businessAddress} />
                         </div>
                     </div>
                 </CardContent>
@@ -143,7 +143,7 @@ export function BusinessProfileSettings() {
                         <Avatar className="h-20 w-20">
                             <AvatarImage src={logoPreview || undefined} />
                             <AvatarFallback>
-                                {profile?.name ? profile.name.substring(0, 2).toUpperCase() : 'QI'}
+                                {profile?.legalName ? profile.legalName.substring(0, 2).toUpperCase() : 'QI'}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
@@ -174,7 +174,7 @@ export function BusinessProfileSettings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 border rounded-lg bg-green-500/10 border-green-500/20 text-green-700">
-                        <p className="font-semibold">Your business is currently {profile?.status || 'Pending'}.</p>
+                        <p className="font-semibold">Your business is currently {profile?.kycStatus || 'pending'}.</p>
                     </div>
                      <div className="space-y-2">
                         <h4 className="font-medium">Uploaded Documents</h4>
