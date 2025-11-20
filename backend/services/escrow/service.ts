@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import type { EscrowStatus, EscrowPartyRole, MilestoneStatus } from '@prisma/client';
+import type { EscrowStatus, EscrowPartyRole, MilestoneStatus } from './types';
 import { Decimal } from '@prisma/client/runtime/library';
 import DecimalJS from 'decimal.js';
 import {
