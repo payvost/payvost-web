@@ -96,8 +96,15 @@ export default function PayoutManagementPage() {
 
       const response = await axios.get(`/api/admin/financial/payouts?${params.toString()}`);
       const data = response.data;
-      setPayouts(data.payouts || []);
-      setSummary(data.summary || summary);
+      const payoutsData = data.payouts || [];
+      setPayouts(payoutsData);
+      setSummary({
+        totalProcessed: data.summary?.totalProcessed || 0,
+        pendingAmount: data.summary?.pendingAmount || 0,
+        failedCount: data.summary?.failedCount || 0,
+        scheduledCount: data.summary?.scheduledCount || 0,
+        totalCount: data.summary?.totalCount || payoutsData.length,
+      });
     } catch (error: any) {
       console.error('Error fetching payouts:', error);
       toast({
@@ -168,14 +175,19 @@ export default function PayoutManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, dateRange, toast, summary]);
+  }, [statusFilter, dateRange, toast]);
 
   useEffect(() => {
     fetchPayouts();
   }, [fetchPayouts]);
 
   useEffect(() => {
-    let filtered = payouts;
+    if (!payouts || payouts.length === 0) {
+      setFilteredPayouts([]);
+      return;
+    }
+
+    let filtered = [...payouts];
 
     if (searchQuery) {
       filtered = filtered.filter(
@@ -254,6 +266,19 @@ export default function PayoutManagementPage() {
   };
 
   const chartData = React.useMemo(() => {
+    if (!payouts || payouts.length === 0) {
+      // Return empty data structure for chart
+      return Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - i));
+        return {
+          date: format(date, 'MMM dd'),
+          amount: 0,
+          count: 0,
+        };
+      });
+    }
+
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i));
@@ -261,11 +286,13 @@ export default function PayoutManagementPage() {
         date: format(date, 'MMM dd'),
         amount: payouts
           .filter((p) => {
+            if (!p.createdAt) return false;
             const pDate = new Date(p.createdAt);
             return pDate.toDateString() === date.toDateString() && p.status === 'Completed';
           })
-          .reduce((sum, p) => sum + p.amount, 0),
+          .reduce((sum, p) => sum + (p.amount || 0), 0),
         count: payouts.filter((p) => {
+          if (!p.createdAt) return false;
           const pDate = new Date(p.createdAt);
           return pDate.toDateString() === date.toDateString() && p.status === 'Completed';
         }).length,
@@ -558,24 +585,28 @@ export default function PayoutManagementPage() {
           <CardDescription>Completed payout amounts and counts</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip
-                formatter={(value: number, name: string) => {
-                  if (name === 'amount') {
-                    return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), 'Amount'];
-                  }
-                  return [value, 'Count'];
-                }}
-              />
-              <Bar yAxisId="left" dataKey="amount" fill="#8884d8" name="Amount" />
-              <Line yAxisId="right" type="monotone" dataKey="count" stroke="#82ca9d" strokeWidth={2} name="Count" />
-            </ComposedChart>
-          </ResponsiveContainer>
+          {loading ? (
+            <Skeleton className="h-[300px] w-full" />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value: number, name: string) => {
+                    if (name === 'amount') {
+                      return [new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value), 'Amount'];
+                    }
+                    return [value, 'Count'];
+                  }}
+                />
+                <Bar yAxisId="left" dataKey="amount" fill="#8884d8" name="Amount" />
+                <Line yAxisId="right" type="monotone" dataKey="count" stroke="#82ca9d" strokeWidth={2} name="Count" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -623,7 +654,15 @@ export default function PayoutManagementPage() {
           </CardContent>
           <CardFooter>
             <div className="text-xs text-muted-foreground">
-              Showing <strong>1-{filteredPayouts.length}</strong> of <strong>{payouts.length}</strong> payouts
+              {loading ? (
+                'Loading...'
+              ) : filteredPayouts.length === 0 ? (
+                'No payouts found'
+              ) : (
+                <>
+                  Showing <strong>1-{filteredPayouts.length}</strong> of <strong>{payouts.length}</strong> payouts
+                </>
+              )}
             </div>
           </CardFooter>
         </Card>
