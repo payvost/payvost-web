@@ -39,6 +39,9 @@ export interface CustomerData {
     kycLevel?: 'Basic' | 'Full' | 'Advanced';
     kycIdType?: string; // e.g., NIN, Passport, Driver's License
     kycIdNumber?: string;
+    bvn?: string; // Bank Verification Number
+    ssn?: string; // Social Security Number
+    ssnLast4?: string; // Last 4 digits of SSN
   userType: UserType;
   riskScore: number;
   totalSpend: number;

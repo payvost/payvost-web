@@ -150,6 +150,15 @@ export async function GET(
       }
     }
     
+    // Extract SSN and other additional fields from tier1 additionalFields
+    let ssn: string | null = null;
+    let ssnLast4: string | null = null;
+    if (data.kycProfile?.tiers?.tier1?.additionalFields) {
+      const additionalFields = data.kycProfile.tiers.tier1.additionalFields;
+      ssn = additionalFields.ssn || additionalFields.socialSecurityNumber || null;
+      ssnLast4 = additionalFields.ssnLast4 || null;
+    }
+    
     // Build customer response
     const customer = {
       id: userDoc.id,
@@ -164,6 +173,8 @@ export async function GET(
       kycIdType: kycIdType || null,
       kycIdNumber: kycIdNumber || null,
       bvn: data.bvn || null,
+      ssn: ssn || null,
+      ssnLast4: ssnLast4 || null,
       userType: userType,
       country: data.country || 'Unknown',
       countryCode: data.countryCode || 'US',

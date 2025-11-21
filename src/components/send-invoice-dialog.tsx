@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, Download, FileImage, Loader2, Send, QrCode, Share2, Printer } from 'lucide-react';
 import type { InvoiceFormValues } from './create-invoice-page';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { QRCodeDialog } from './qr-code-dialog';
 
@@ -34,31 +34,75 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
   const [qrCodeOpen, setQrCodeOpen] = useState(false);
 
   useEffect(() => {
-    if (isOpen && invoiceId) {
-      setLoading(true);
-      const docRef = doc(db, 'invoices', invoiceId);
-      const unsubscribe = onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) {
-          setInvoiceData({ id: docSnap.id, ...docSnap.data() });
+    if (!isOpen || !invoiceId) {
+      setInvoiceData(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    let unsubscribe: (() => void) | null = null;
+
+    const fetchInvoice = async () => {
+      try {
+        // Try invoices collection first
+        let docRef = doc(db, 'invoices', invoiceId);
+        let docSnap = await getDoc(docRef);
+
+        // If not found, try businessInvoices collection
+        if (!docSnap.exists()) {
+          docRef = doc(db, 'businessInvoices', invoiceId);
+          docSnap = await getDoc(docRef);
         }
-        setLoading(false);
-      }, (error) => {
+
+        if (docSnap.exists()) {
+          const data = { id: docSnap.id, ...docSnap.data() };
+          setInvoiceData(data);
+          
+          // Set up real-time listener for updates
+          unsubscribe = onSnapshot(docRef, (snapshot) => {
+            if (snapshot.exists()) {
+              setInvoiceData({ id: snapshot.id, ...snapshot.data() });
+            }
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Invoice not found.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error: any) {
         console.error('Error fetching invoice:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load invoice. Please try again.',
+          description: error?.code === 'permission-denied' 
+            ? 'Permission denied. Please ensure you have access to this invoice.'
+            : 'Failed to load invoice. Please try again.',
           variant: 'destructive',
         });
+      } finally {
         setLoading(false);
-      });
-      return () => unsubscribe();
-    }
+      }
+    };
+
+    fetchInvoice();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [isOpen, invoiceId, toast]);
 
   const copyLink = () => {
-    if (!invoiceData?.publicUrl) return;
-    navigator.clipboard.writeText(invoiceData.publicUrl);
+    const publicUrl = invoiceData?.publicUrl || (invoiceId ? `${window.location.origin}/invoice/${invoiceId}` : null);
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
     toast({ title: 'Link Copied!' });
+  }
+  
+  const getPublicUrl = () => {
+    return invoiceData?.publicUrl || (invoiceId ? `${window.location.origin}/invoice/${invoiceId}` : null);
   }
 
   const handlePrint = () => {
@@ -75,14 +119,15 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
   };
 
   const handleShare = async () => {
-    if (!invoiceData?.publicUrl) return;
+    const publicUrl = getPublicUrl();
+    if (!publicUrl) return;
     
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `Invoice ${invoiceData.invoiceNumber || invoiceData.id}`,
-          text: `Please pay invoice ${invoiceData.invoiceNumber || invoiceData.id}`,
-          url: invoiceData.publicUrl,
+          title: `Invoice ${invoiceData?.invoiceNumber || invoiceData?.id || invoiceId}`,
+          text: `Please pay invoice ${invoiceData?.invoiceNumber || invoiceData?.id || invoiceId}`,
+          url: publicUrl,
         });
         toast({ title: 'Shared', description: 'Invoice link shared successfully' });
       } else {
@@ -121,12 +166,21 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
                 </div>
             )}
             
-            {invoiceData && invoiceData.publicUrl && (
-                <>
+            {invoiceData && (() => {
+                const publicUrl = getPublicUrl();
+                if (!publicUrl) {
+                    return (
+                        <div className="text-sm text-muted-foreground p-4 text-center">
+                            Generating shareable link...
+                        </div>
+                    );
+                }
+                
+                return (
                     <div className="space-y-2">
                         <Label>Shareable Payment Link</Label>
                         <div className="flex gap-2">
-                            <Input value={invoiceData.publicUrl} readOnly />
+                            <Input value={publicUrl} readOnly />
                             <Button type="button" variant="outline" size="icon" onClick={copyLink}>
                                 <Copy className="h-4 w-4" />
                             </Button>
@@ -138,8 +192,8 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
                             </Button>
                         </div>
                     </div>
-                </>
-            )}
+                );
+            })()}
 
             {invoiceData && (
                 <div className="space-y-2 pt-4">
@@ -154,11 +208,11 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
       </DialogContent>
       
       {/* QR Code Dialog */}
-      {invoiceData?.publicUrl && (
+      {invoiceData && getPublicUrl() && (
         <QRCodeDialog
           isOpen={qrCodeOpen}
           setIsOpen={setQrCodeOpen}
-          url={invoiceData.publicUrl}
+          url={getPublicUrl() || ''}
           title="Invoice QR Code"
         />
       )}
