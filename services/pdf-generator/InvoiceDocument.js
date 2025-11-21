@@ -3,114 +3,132 @@ const { Document, Page, Text, View, StyleSheet } = require('@react-pdf/renderer'
 
 const styles = StyleSheet.create({
   page: { 
-    padding: 40, 
+    padding: 50, 
     fontFamily: 'Helvetica', 
     fontSize: 10, 
     color: '#1e293b',
     backgroundColor: '#ffffff'
   },
+  // Enhanced Header
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 35, 
-    paddingBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: '#2563eb',
-    borderBottomStyle: 'solid'
+    alignItems: 'flex-start', 
+    marginBottom: 40, 
+    paddingBottom: 25,
+    paddingTop: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
+    borderBottomWidth: 3,
+    borderBottomColor: '#1e40af',
+    borderBottomStyle: 'solid',
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12
   },
-  headerLeft: { flexDirection: 'column' },
+  headerLeft: { flexDirection: 'column', flex: 1 },
   title: { 
-    fontSize: 32, 
+    fontSize: 38, 
     fontWeight: 'bold', 
-    color: '#2563eb', 
-    marginBottom: 6,
-    letterSpacing: 1
+    color: '#1e40af', 
+    marginBottom: 8,
+    letterSpacing: 1.2
   },
   invoiceNumber: { 
-    fontSize: 12, 
+    fontSize: 13, 
     color: '#64748b',
-    fontWeight: 'normal'
+    fontWeight: '600',
+    marginTop: 4
   },
   statusBadge: { 
-    padding: '8 16', 
-    borderRadius: 20, 
-    fontSize: 10, 
+    padding: '10 20', 
+    borderRadius: 25, 
+    fontSize: 11, 
     fontWeight: 'bold',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 1,
+    alignSelf: 'flex-end'
   },
   statusPaid: { 
     backgroundColor: '#dcfce7', 
-    color: '#16a34a',
-    border: '1 solid #86efac'
+    color: '#166534',
+    border: '2 solid #86efac'
   },
   statusPending: { 
     backgroundColor: '#fef3c7', 
-    color: '#f59e0b',
-    border: '1 solid #fcd34d'
+    color: '#92400e',
+    border: '2 solid #fcd34d'
   },
   statusOverdue: { 
     backgroundColor: '#fee2e2', 
-    color: '#dc2626',
-    border: '1 solid #fca5a5'
+    color: '#991b1b',
+    border: '2 solid #fca5a5'
   },
+  // Enhanced Section Layout
   section: { 
     flexDirection: 'row', 
-    marginBottom: 30,
+    marginBottom: 35,
     gap: 20
   },
   column: { 
     flex: 1, 
     paddingRight: 15,
     backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 8
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
   },
   columnRight: { 
     flex: 1, 
     alignItems: 'flex-end',
     backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 8
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
   },
   sectionHeader: { 
-    fontSize: 11, 
+    fontSize: 12, 
     fontWeight: 'bold', 
-    marginBottom: 10,
-    color: '#2563eb',
+    marginBottom: 12,
+    color: '#1e40af',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 1,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: '#1e40af'
   },
   text: { 
-    fontSize: 10, 
-    marginBottom: 4,
-    color: '#334155',
-    lineHeight: 1.4
+    fontSize: 11, 
+    marginBottom: 5,
+    color: '#1e293b',
+    lineHeight: 1.5,
+    fontWeight: '600'
   },
   mutedText: { 
-    fontSize: 9, 
+    fontSize: 9.5, 
     color: '#64748b', 
-    marginBottom: 3,
-    lineHeight: 1.3
+    marginBottom: 4,
+    lineHeight: 1.4
   },
+  // Enhanced Table Design
   table: { 
-    marginTop: 25, 
-    marginBottom: 25,
+    marginTop: 30, 
+    marginBottom: 30,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
     overflow: 'hidden'
   },
   tableHeader: { 
     flexDirection: 'row', 
-    backgroundColor: '#2563eb', 
-    padding: 12,
+    backgroundColor: '#1e40af', 
+    padding: 14,
     borderBottomWidth: 0
   },
   tableRow: { 
     flexDirection: 'row', 
-    padding: 12, 
+    padding: 14, 
     borderBottomWidth: 1, 
     borderBottomColor: '#e2e8f0',
     backgroundColor: '#ffffff'
@@ -119,100 +137,143 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc'
   },
   tableColHeader: { 
-    fontSize: 10, 
+    fontSize: 11, 
     fontWeight: 'bold', 
     color: '#ffffff',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 0.8
   },
   tableCol: { 
-    fontSize: 10,
+    fontSize: 10.5,
     color: '#334155'
   },
   tableColDesc: { width: '60%' },
   tableColQty: { width: '13%', textAlign: 'center' },
   tableColPrice: { width: '13%', textAlign: 'right' },
   tableColTotal: { width: '14%', textAlign: 'right', fontWeight: 'bold' },
+  // Enhanced Totals Section
   totalsSection: { 
     flexDirection: 'row', 
     justifyContent: 'flex-end', 
-    marginTop: 25 
+    marginTop: 30 
   },
   totalsBox: { 
-    width: 240,
-    backgroundColor: '#f8fafc',
-    padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    width: 280,
+    backgroundColor: '#ffffff',
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1e40af'
   },
   totalRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginBottom: 8, 
-    fontSize: 10,
-    paddingVertical: 4
+    marginBottom: 10, 
+    fontSize: 10.5,
+    paddingVertical: 5
   },
   totalLabel: { 
     color: '#64748b',
-    fontSize: 10
+    fontSize: 10.5,
+    fontWeight: '600'
   },
   totalValue: {
     color: '#334155',
-    fontWeight: 'normal',
-    fontSize: 10
+    fontWeight: '600',
+    fontSize: 10.5
   },
   grandTotalRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginTop: 12, 
-    paddingTop: 12, 
-    borderTopWidth: 2, 
-    borderTopColor: '#2563eb',
-    paddingVertical: 8
+    marginTop: 15, 
+    paddingTop: 15, 
+    borderTopWidth: 3, 
+    borderTopColor: '#1e40af',
+    paddingVertical: 10,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    paddingLeft: 12,
+    paddingRight: 12
   },
   grandTotalText: { 
-    fontSize: 14, 
+    fontSize: 15, 
     fontWeight: 'bold',
     color: '#1e293b'
   },
   grandTotalValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb'
+    color: '#1e40af'
   },
+  // Payment Information Section
+  paymentSection: {
+    marginTop: 30,
+    padding: 20,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 10,
+    borderLeftWidth: 5,
+    borderLeftColor: '#1e40af',
+    borderWidth: 1,
+    borderColor: '#bfdbfe'
+  },
+  paymentHeader: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#1e40af',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8
+  },
+  paymentText: {
+    fontSize: 10,
+    color: '#1e293b',
+    lineHeight: 1.6,
+    marginBottom: 6
+  },
+  // Enhanced Notes Section
   notesSection: { 
     marginTop: 30,
-    padding: 16,
-    backgroundColor: '#fef3c7',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b'
+    padding: 20,
+    backgroundColor: '#fffbeb',
+    borderRadius: 10,
+    borderLeftWidth: 5,
+    borderLeftColor: '#f59e0b',
+    borderWidth: 1,
+    borderColor: '#fde68a'
   },
   notesHeader: { 
-    fontSize: 11, 
+    fontSize: 12, 
     fontWeight: 'bold', 
-    marginBottom: 8,
+    marginBottom: 10,
     color: '#92400e',
     textTransform: 'uppercase',
-    letterSpacing: 0.5
+    letterSpacing: 0.8
   },
   notesText: { 
-    fontSize: 9, 
+    fontSize: 10, 
     color: '#78350f', 
-    lineHeight: 1.5
+    lineHeight: 1.6
   },
+  // Enhanced Footer
   footer: {
     position: 'absolute',
     bottom: 30,
-    left: 40,
-    right: 40,
+    left: 50,
+    right: 50,
     textAlign: 'center',
-    color: '#94a3b8',
-    fontSize: 8,
+    color: '#64748b',
+    fontSize: 9,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingTop: 10
+    paddingTop: 15,
+    lineHeight: 1.6
+  },
+  footerText: {
+    marginBottom: 4
+  },
+  footerLink: {
+    color: '#1e40af',
+    textDecoration: 'underline'
   }
 });
 
@@ -248,15 +309,44 @@ const formatDate = (dateValue) => {
 const InvoiceDocument = ({ invoice }) => {
   const items = Array.isArray(invoice.items) && invoice.items.length > 0 ? invoice.items : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
   const subtotal = items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
-  const tax = Number(invoice.tax || 0);
+  const taxRate = Number(invoice.taxRate || 0);
+  const tax = invoice.tax !== undefined ? Number(invoice.tax) : (subtotal * (taxRate / 100));
   const discount = Number(invoice.discount || 0);
   const grandTotal = invoice.grandTotal || (subtotal + tax - discount);
   const currency = invoice.currency || 'USD';
   const status = invoice.status || 'Pending';
-  const statusStyle = status === 'Paid' ? styles.statusPaid : status === 'Overdue' ? styles.statusOverdue : styles.statusPending;
+  const statusStyle = status === 'Paid' || status === 'PAID' ? styles.statusPaid : status === 'Overdue' || status === 'OVERDUE' ? styles.statusOverdue : styles.statusPending;
+  
+  // Calculate days until due date
+  const getDueDateInfo = () => {
+    if (!invoice.dueDate) return null;
+    try {
+      let dueDate;
+      if (invoice.dueDate && typeof invoice.dueDate === 'string') {
+        dueDate = new Date(invoice.dueDate);
+      } else if (invoice.dueDate && invoice.dueDate._seconds) {
+        dueDate = new Date(invoice.dueDate._seconds * 1000);
+      } else {
+        dueDate = new Date(invoice.dueDate);
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dueDate.setHours(0, 0, 0, 0);
+      const diffTime = dueDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  const daysUntilDue = getDueDateInfo();
+  const isOverdue = daysUntilDue !== null && daysUntilDue < 0;
+  const isDueSoon = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
 
   return React.createElement(Document, {},
     React.createElement(Page, { size: 'A4', style: styles.page },
+      // Enhanced Header
       React.createElement(View, { style: styles.header },
         React.createElement(View, { style: styles.headerLeft },
           React.createElement(Text, { style: styles.title }, 'INVOICE'),
@@ -266,6 +356,8 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, {}, status.toUpperCase())
         )
       ),
+      
+      // Billing Information Section
       React.createElement(View, { style: styles.section },
         React.createElement(View, { style: styles.column },
           React.createElement(Text, { style: styles.sectionHeader }, 'Billed To'),
@@ -282,9 +374,13 @@ const InvoiceDocument = ({ invoice }) => {
         React.createElement(View, { style: styles.columnRight },
           React.createElement(Text, { style: styles.sectionHeader }, 'Invoice Details'),
           React.createElement(Text, { style: styles.text }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
-          React.createElement(Text, { style: styles.text }, `Due Date: ${formatDate(invoice.dueDate)}`)
+          React.createElement(Text, { style: styles.text }, `Due Date: ${formatDate(invoice.dueDate)}`),
+          isOverdue && React.createElement(Text, { style: [styles.mutedText, { color: '#dc2626', fontWeight: 'bold', marginTop: 5 }] }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
+          isDueSoon && !isOverdue && React.createElement(Text, { style: [styles.mutedText, { color: '#f59e0b', fontWeight: 'bold', marginTop: 5 }] }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
         )
       ),
+      
+      // Enhanced Items Table
       React.createElement(View, { style: styles.table },
         React.createElement(View, { style: styles.tableHeader },
           React.createElement(Text, { style: [styles.tableColHeader, styles.tableColDesc] }, 'Description'),
@@ -305,6 +401,8 @@ const InvoiceDocument = ({ invoice }) => {
           );
         })
       ),
+      
+      // Enhanced Totals Section
       React.createElement(View, { style: styles.totalsSection },
         React.createElement(View, { style: styles.totalsBox },
           React.createElement(View, { style: styles.totalRow },
@@ -312,7 +410,7 @@ const InvoiceDocument = ({ invoice }) => {
             React.createElement(Text, { style: styles.totalValue }, formatCurrency(subtotal, currency))
           ),
           tax > 0 && React.createElement(View, { style: styles.totalRow },
-            React.createElement(Text, { style: styles.totalLabel }, `Tax (${invoice.taxRate || 0}%):`),
+            React.createElement(Text, { style: styles.totalLabel }, `Tax${taxRate > 0 ? ` (${taxRate}%)` : ''}:`),
             React.createElement(Text, { style: styles.totalValue }, formatCurrency(tax, currency))
           ),
           discount > 0 && React.createElement(View, { style: styles.totalRow },
@@ -325,12 +423,29 @@ const InvoiceDocument = ({ invoice }) => {
           )
         )
       ),
+      
+      // Payment Information Section
+      React.createElement(View, { style: styles.paymentSection },
+        React.createElement(Text, { style: styles.paymentHeader }, 'Payment Information'),
+        React.createElement(Text, { style: styles.paymentText }, `Payment is due by ${formatDate(invoice.dueDate)}.`),
+        invoice.paymentMethod && React.createElement(Text, { style: styles.paymentText }, `Payment Method: ${invoice.paymentMethod === 'payvost' || invoice.paymentMethod === 'PAYVOST' ? 'PayVost' : invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'MANUAL' ? 'Bank Transfer' : invoice.paymentMethod === 'stripe' || invoice.paymentMethod === 'STRIPE' ? 'Credit Card (Stripe)' : invoice.paymentMethod}`),
+        invoice.manualBankName && React.createElement(Text, { style: styles.paymentText }, `Bank: ${invoice.manualBankName}`),
+        invoice.manualAccountName && React.createElement(Text, { style: styles.paymentText }, `Account Name: ${invoice.manualAccountName}`),
+        invoice.manualAccountNumber && React.createElement(Text, { style: styles.paymentText }, `Account Number: ${invoice.manualAccountNumber}`),
+        invoice.manualOtherDetails && React.createElement(Text, { style: styles.paymentText }, invoice.manualOtherDetails)
+      ),
+      
+      // Notes Section
       invoice.notes && React.createElement(View, { style: styles.notesSection },
-        React.createElement(Text, { style: styles.notesHeader }, 'Notes'),
+        React.createElement(Text, { style: styles.notesHeader }, 'Additional Notes'),
         React.createElement(Text, { style: styles.notesText }, invoice.notes)
       ),
+      
+      // Enhanced Footer
       React.createElement(View, { style: styles.footer },
-        React.createElement(Text, {}, 'Thank you for your business!')
+        React.createElement(Text, { style: styles.footerText }, 'Thank you for your business!'),
+        React.createElement(Text, { style: styles.footerText }, 'If you have any questions about this invoice, please contact us.'),
+        invoice.fromEmail && React.createElement(Text, { style: styles.footerText }, `Email: ${invoice.fromEmail}`)
       )
     )
   );

@@ -168,36 +168,33 @@ export async function POST(request: NextRequest) {
 
     // Send notification to user about the decision
     try {
-      if (decision === 'approved') {
-        await sendUnifiedNotification({
-          userId,
-          title: 'Business Onboarding Approved ✓',
-          body: `Congratulations! Your business onboarding for ${submissionData.name} has been approved. You now have Tier 3 access with unlimited transactions and business account features.${adminResponse ? ` ${adminResponse}` : ''}`,
-          type: 'kyc',
-          data: {
-            status: 'approved',
-            submissionId,
-            businessName: submissionData.name,
-          },
-          clickAction: '/dashboard/profile',
-        });
-      } else {
-        await sendUnifiedNotification({
-          userId,
-          title: 'Business Onboarding Review Complete',
-          body: `Your business onboarding submission has been reviewed.${reason ? ` Reason: ${reason}` : ''}${adminResponse ? ` ${adminResponse}` : ''} Please review the details and take necessary actions.`,
-          type: 'kyc',
-          data: {
-            status: 'rejected',
-            submissionId,
-            reason: reason || 'No reason provided',
-            businessName: submissionData.name,
-          },
-          clickAction: '/dashboard/get-started/onboarding/business',
-        });
-      }
+      const notificationTitle = decision === 'approved' 
+        ? 'Business Onboarding Approved ✓'
+        : 'Business Onboarding Review Complete';
+      
+      const notificationBody = decision === 'approved'
+        ? `Congratulations! Your business onboarding for ${submissionData.name} has been approved. You now have Tier 3 access with unlimited transactions and business account features.${adminResponse ? ` ${adminResponse}` : ''}`
+        : `Your business onboarding submission has been reviewed.${reason ? ` Reason: ${reason}` : ''}${adminResponse ? ` ${adminResponse}` : ''} Please review the details and take necessary actions.`;
+
+      // Create in-app notification
+      await db.collection('notifications').add({
+        userId,
+        title: notificationTitle,
+        message: notificationBody,
+        type: 'kyc',
+        icon: decision === 'approved' ? 'CheckCircle' : 'XCircle',
+        read: false,
+        createdAt: new Date(),
+        link: decision === 'approved' ? '/dashboard/profile' : '/dashboard/get-started/onboarding/business',
+        data: {
+          status: decision,
+          submissionId,
+          businessName: submissionData.name,
+          reason: reason || null,
+        },
+      });
     } catch (notificationError) {
-      console.error('Error sending notification:', notificationError);
+      console.error('Error creating notification:', notificationError);
       // Don't fail the request if notification fails
     }
 
