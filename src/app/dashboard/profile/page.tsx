@@ -649,9 +649,20 @@ export default function ProfilePage() {
                         <CardDescription>Increase your limits by providing more verification.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <Card className="bg-primary/5">
+                         <Card className={cn(
+                            "bg-primary/5",
+                            userData?.kycProfile?.tiers?.tier2?.status === 'approved' && "bg-green-50 dark:bg-green-950/20"
+                         )}>
                             <CardHeader>
-                                <CardTitle>Tier 2: Verified</CardTitle>
+                                <CardTitle className="flex items-center justify-between">
+                                    Tier 2: Verified
+                                    {userData?.kycProfile?.tiers?.tier2?.status === 'approved' && (
+                                        <Badge className="bg-green-500">Approved</Badge>
+                                    )}
+                                    {userData?.kycProfile?.tiers?.tier2?.status === 'submitted' && (
+                                        <Badge variant="secondary">Under Review</Badge>
+                                    )}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm">
@@ -660,33 +671,80 @@ export default function ProfilePage() {
                                 </ul>
                             </CardContent>
                              <CardFooter>
-                                <Button 
-                                    className="w-full" 
-                                    asChild
-                                    disabled={
-                                        userData?.kycTier !== 'tier1' || 
-                                        (userData?.kycStatus !== 'verified' && userData?.kycStatus !== 'tier1_verified') ||
-                                        userData?.kycProfile?.tiers?.tier1?.status !== 'approved'
-                                    }
-                                >
-                                    <Link href="/dashboard/kyc/upgrade-tier2">
-                                        Upgrade to Tier 2 <ArrowRight className="ml-2 h-4 w-4"/>
-                                    </Link>
-                                </Button>
+                                {userData?.kycProfile?.tiers?.tier2?.status === 'approved' ? (
+                                    <Button className="w-full" disabled>
+                                        <CheckCircle className="mr-2 h-4 w-4"/>Tier 2 Approved
+                                    </Button>
+                                ) : userData?.kycProfile?.tiers?.tier2?.status === 'submitted' || userData?.kycProfile?.tiers?.tier2?.status === 'pending_review' ? (
+                                    <Button className="w-full" disabled>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin"/>Under Review
+                                    </Button>
+                                ) : (
+                                    <Button 
+                                        className="w-full" 
+                                        asChild
+                                        disabled={
+                                            userData?.kycTier !== 'tier1' || 
+                                            (userData?.kycStatus !== 'verified' && userData?.kycStatus !== 'tier1_verified') ||
+                                            userData?.kycProfile?.tiers?.tier1?.status !== 'approved'
+                                        }
+                                    >
+                                        <Link href="/dashboard/kyc/upgrade-tier2">
+                                            Upgrade to Tier 2 <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
-                         <Card className="bg-muted/50">
+                         <Card className={cn(
+                            "bg-muted/50",
+                            userData?.kycProfile?.tiers?.tier3?.status === 'approved' && "bg-green-50 dark:bg-green-950/20",
+                            (userData?.kycProfile?.tiers?.tier2?.status === 'approved' && userData?.kycProfile?.tiers?.tier3?.status !== 'approved') && "bg-primary/5"
+                         )}>
                             <CardHeader>
-                                <CardTitle>Tier 3: Verified Pro</CardTitle>
+                                <CardTitle className="flex items-center justify-between">
+                                    Tier 3: Verified Pro
+                                    {userData?.kycProfile?.tiers?.tier3?.status === 'approved' && (
+                                        <Badge className="bg-green-500">Approved</Badge>
+                                    )}
+                                    {userData?.kycProfile?.tiers?.tier3?.status === 'submitted' && (
+                                        <Badge variant="secondary">Under Review</Badge>
+                                    )}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <ul className="space-y-2 text-sm text-muted-foreground">
-                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 mr-2"/>Unlimited transactions</li>
-                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 mr-2"/>Business account features</li>
+                                <ul className={cn(
+                                    "space-y-2 text-sm",
+                                    userData?.kycProfile?.tiers?.tier3?.status === 'locked' && "text-muted-foreground"
+                                )}>
+                                    <li className="flex items-center"><CheckCircle className={cn(
+                                        "h-4 w-4 mr-2",
+                                        userData?.kycProfile?.tiers?.tier3?.status === 'locked' ? "" : "text-green-500"
+                                    )}/>Unlimited transactions</li>
+                                    <li className="flex items-center"><CheckCircle className={cn(
+                                        "h-4 w-4 mr-2",
+                                        userData?.kycProfile?.tiers?.tier3?.status === 'locked' ? "" : "text-green-500"
+                                    )}/>Business account features</li>
                                 </ul>
                             </CardContent>
                             <CardFooter>
-                                <Button className="w-full" disabled>Requires Tier 2</Button>
+                                {userData?.kycProfile?.tiers?.tier3?.status === 'approved' ? (
+                                    <Button className="w-full" disabled>
+                                        <CheckCircle className="mr-2 h-4 w-4"/>Tier 3 Approved
+                                    </Button>
+                                ) : userData?.kycProfile?.tiers?.tier3?.status === 'submitted' || userData?.kycProfile?.tiers?.tier3?.status === 'pending_review' ? (
+                                    <Button className="w-full" disabled>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin"/>Under Review
+                                    </Button>
+                                ) : userData?.kycProfile?.tiers?.tier2?.status === 'approved' ? (
+                                    <Button className="w-full" asChild>
+                                        <Link href="/dashboard/get-started/onboarding/business">
+                                            Upgrade to Tier 3 <ArrowRight className="ml-2 h-4 w-4"/>
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button className="w-full" disabled>Requires Tier 2</Button>
+                                )}
                             </CardFooter>
                         </Card>
                     </CardContent>

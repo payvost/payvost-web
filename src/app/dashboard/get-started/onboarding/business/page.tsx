@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OnboardingFormPage() {
@@ -23,6 +23,7 @@ export default function OnboardingFormPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [businessOnboarding, setBusinessOnboarding] = useState<any>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -41,6 +42,26 @@ export default function OnboardingFormPage() {
         setLoadingUser(false);
     });
 
+    // Check for existing business onboarding submission
+    const checkBusinessOnboarding = async () => {
+      try {
+        const q = query(
+          collection(db, 'business_onboarding'),
+          where('userId', '==', user.uid),
+          where('status', 'in', ['submitted', 'pending_review', 'under_review'])
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          setBusinessOnboarding({ id: doc.id, ...doc.data() });
+        }
+      } catch (error) {
+        console.error('Error checking business onboarding:', error);
+      }
+    };
+
+    checkBusinessOnboarding();
+
     return () => unsub();
   }, [user, authLoading]);
 
@@ -51,8 +72,11 @@ export default function OnboardingFormPage() {
         return;
     }
     
-    const formData = new FormData(e.currentTarget);
-    const businessData = {
+    setIsLoading(true);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const businessData = {
         name: formData.get('business-name'),
         type: formData.get('business-type'),
         industry: formData.get('industry'),
@@ -60,13 +84,46 @@ export default function OnboardingFormPage() {
         taxId: formData.get('tax-id'),
         address: formData.get('business-address'),
         email: formData.get('contact-email'),
-        website: formData.get('website'),
-    };
-    
-    // Temporarily store data to pass to the next step
-    localStorage.setItem('businessOnboardingData', JSON.stringify(businessData));
-    
-    router.push('/dashboard/get-started/verify');
+        website: formData.get('website') || null,
+      };
+      
+      // Check if user already has a pending submission
+      const q = query(
+        collection(db, 'business_onboarding'),
+        where('userId', '==', user.uid),
+        where('status', 'in', ['submitted', 'pending_review', 'under_review'])
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const submissionId = querySnapshot.empty 
+        ? `business_${user.uid}_${Date.now()}` 
+        : querySnapshot.docs[0].id;
+      
+      // Save to Firestore
+      await setDoc(doc(db, 'business_onboarding', submissionId), {
+        userId: user.uid,
+        ...businessData,
+        status: 'submitted',
+        submittedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      
+      // Also save to localStorage for the verify page
+      localStorage.setItem('businessOnboardingData', JSON.stringify(businessData));
+      localStorage.setItem('businessOnboardingId', submissionId);
+      
+      toast({ title: 'Business information saved', description: 'Please proceed to upload verification documents.' });
+      router.push('/dashboard/get-started/verify');
+    } catch (error: any) {
+      console.error('Error saving business onboarding:', error);
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to save business information. Please try again.', 
+        variant: 'destructive' 
+      });
+      setIsLoading(false);
+    }
   }
 
   const renderContent = () => {
@@ -74,7 +131,8 @@ export default function OnboardingFormPage() {
         return <Skeleton className="h-96 w-full max-w-3xl mx-auto" />
     }
 
-    if (userData?.businessProfile) {
+    if (businessOnboarding || userData?.businessProfile) {
+        const status = businessOnboarding?.status || 'pending_review';
         return (
             <div className="flex-1 flex items-center justify-center">
                 <Card className="w-full max-w-md text-center">
@@ -84,7 +142,11 @@ export default function OnboardingFormPage() {
                         </div>
                         <CardTitle className="mt-4">Review in Progress</CardTitle>
                         <CardDescription>
-                            We have received your business information and our team is currently reviewing it. We will notify you once the review is complete, typically within 4 business hours.
+                            {status === 'approved' 
+                              ? 'Your business onboarding has been approved!'
+                              : status === 'rejected'
+                              ? 'Your business onboarding has been reviewed. Please check the details for any required actions.'
+                              : 'We have received your business information and our team is currently reviewing it. We will notify you once the review is complete, typically within 4 business hours.'}
                         </CardDescription>
                     </CardHeader>
                     <CardFooter>
