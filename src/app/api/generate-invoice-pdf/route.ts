@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // This route generates a PDF and uploads it to Firebase Storage
 // Called when invoice is created/updated (status = Pending/Paid)
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
     // Update Firestore with PDF URL
     await adminDb.collection(collectionName).doc(invoiceId).update({
       pdfUrl: signedUrl,
-      pdfGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pdfGeneratedAt: FieldValue.serverTimestamp(),
     });
 
     console.log(`[PDF Generation] Updated Firestore with PDF URL for invoice: ${invoiceId}`);
