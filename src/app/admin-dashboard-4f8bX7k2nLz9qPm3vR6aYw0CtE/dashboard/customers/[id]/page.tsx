@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2, TrendingUp } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2, TrendingUp, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -566,32 +566,29 @@ export default function CustomerDetailsPage() {
                                                         {(customer.ssn || customer.ssnLast4) && (
                                                             <div><p className="text-muted-foreground flex items-center gap-1"><KeyRound className="h-4 w-4"/> SSN</p><p className="font-medium pl-5 font-mono">{formatSensitiveValue(customer.ssn || customer.ssnLast4, 'ssn')}</p></div>
                                                         )}
+                                                        {(customer.address || customer.street || customer.city) && (
+                                                            <div className="col-span-2 md:col-span-1"><p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-4 w-4"/> Address</p><div className="pl-5 text-sm space-y-0.5">
+                                                                {(customer.address?.street || customer.street) && (
+                                                                    <p className="font-medium">{(customer.address?.street || customer.street)}</p>
+                                                                )}
+                                                                {(() => {
+                                                                    const city = customer.address?.city || customer.city;
+                                                                    const state = customer.address?.state || customer.state;
+                                                                    const postalCode = customer.address?.postalCode || customer.zip;
+                                                                    const addressLine = [city, state, postalCode].filter(Boolean).join(', ');
+                                                                    return addressLine ? <p className="font-medium">{addressLine}</p> : null;
+                                                                })()}
+                                                                {(customer.address?.country || customer.country) && (
+                                                                    <p className="text-muted-foreground">{customer.address?.country || customer.country}</p>
+                                                                )}
+                                                            </div></div>
+                                                        )}
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Activity className="h-4 w-4" /> Last Login</p><p className="font-medium pl-5">{customer.lastLoginAt ? new Date(toDate(customer.lastLoginAt)!).toLocaleString() : <span className="text-muted-foreground">Never</span>}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Last IP</p><p className="font-medium pl-5 font-mono">{customer.lastLoginIp || <span className="text-muted-foreground">Not available</span>}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> Device</p><p className="font-medium pl-5">{customer.lastLoginDevice || <span className="text-muted-foreground">Not available</span>}</p></div>
                                                 </CardContent>
                                                 <Separator />
                                                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        {(customer.address || customer.street || customer.city) && (
-                                                            <div>
-                                                                <h4 className="font-semibold mb-2">Address</h4>
-                                                                <div className="text-sm space-y-1">
-                                                                    {(customer.address?.street || customer.street) && (
-                                                                        <p>{(customer.address?.street || customer.street)}</p>
-                                                                    )}
-                                                                    {(() => {
-                                                                        const city = customer.address?.city || customer.city;
-                                                                        const state = customer.address?.state || customer.state;
-                                                                        const postalCode = customer.address?.postalCode || customer.zip;
-                                                                        const addressLine = [city, state, postalCode].filter(Boolean).join(', ');
-                                                                        return addressLine ? <p>{addressLine}</p> : null;
-                                                                    })()}
-                                                                    {(customer.address?.country || customer.country) && (
-                                                                        <p className="text-muted-foreground">{customer.address?.country || customer.country}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
                                                         {customer.businessInfo && (
                                                             <div>
                                                                 <h4 className="font-semibold mb-2 flex items-center gap-2"><Briefcase className="h-4 w-4"/> Business Info</h4>

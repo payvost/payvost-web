@@ -1,21 +1,9 @@
 /**
- * Vercel Edge Function for sending batch email notifications
+ * Vercel API Route - Proxies batch email requests to Render/Railway email service
+ * This offloads heavy email processing from Vercel to prevent timeouts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
-
-const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
 interface BatchEmailRequest {
   emails: Array<{
@@ -54,37 +42,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send emails in parallel with rate limiting
-    const results = await Promise.allSettled(
-      emails.map(async (email) => {
-        return emailTransporter.sendMail({
-          from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
-          to: email.to,
-          subject: email.subject,
-          html: email.html,
-        });
-      })
-    );
+    // Proxy to email service (Render/Railway)
+    const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 
+                           process.env.NEXT_PUBLIC_EMAIL_SERVICE_URL || 
+                           'http://localhost:3006';
 
-    const successful = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
+    console.log(`[Email API] Proxying batch email request to: ${emailServiceUrl}/batch`);
 
-    console.log(`✅ Batch email sent: ${successful} successful, ${failed} failed`);
-
-    return NextResponse.json({
-      success: true,
-      total: emails.length,
-      successful,
-      failed,
-      results: results.map((r, i) => ({
-        email: emails[i].to,
-        status: r.status,
-        messageId: r.status === 'fulfilled' ? (r.value as any).messageId : null,
-        error: r.status === 'rejected' ? r.reason.message : null,
-      })),
+    const response = await fetch(`${emailServiceUrl}/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ emails }),
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(120000), // 2 minutes timeout
     });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[Email API] Email service returned ${response.status}: ${errorText}`);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Email service unavailable',
+          details: response.status === 504 ? 'Service timeout' : errorText
+        },
+        { status: response.status === 504 ? 504 : 503 }
+      );
+    }
+
+    const data = await response.json();
+    console.log(`[Email API] Batch email completed: ${data.successful}/${data.total} successful`);
+
+    return NextResponse.json(data);
   } catch (error: any) {
-    console.error('❌ Failed to send batch emails:', error);
+    console.error('[Email API] Error proxying to email service:', error);
+    
+    // Check if it's a timeout error
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Email service timeout',
+          message: 'Email service took too long to respond. Please try again.',
+          details: 'Service may be cold-starting (free tier)'
+        },
+        { status: 504 }
+      );
+    }
+
     return NextResponse.json(
       { 
         success: false, 
