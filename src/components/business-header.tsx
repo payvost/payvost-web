@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, PanelLeft, LifeBuoy, Command, Settings } from 'lucide-react';
+import { Search, PanelLeft, LifeBuoy, Command, Settings, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,20 @@ import { Icons } from './icons';
 import { ScrollArea } from './ui/scroll-area';
 import { ThemeSwitcher } from './theme-switcher';
 import { usePathname } from 'next/navigation';
-import { menuItems } from './business-sidebar';
+import { 
+  mainNavItems, 
+  financialsItems, 
+  bookkeepingItems, 
+  salesCommerceItems, 
+  customersItems, 
+  toolsItems 
+} from './business-sidebar';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { NotificationDropdown } from './notification-dropdown';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Separator } from './ui/separator';
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from './ui/sidebar';
 import { cn } from '@/lib/utils';
 
 export function BusinessHeader() {
@@ -42,57 +49,105 @@ export function BusinessHeader() {
         return pathname.startsWith(href);
     };
     
-    const defaultActiveGroup = menuItems.find(group => group.items.some(item => isActive(item.href)))?.group;
-
     const renderNav = () => (
-       <nav>
-         <Accordion type="multiple" defaultValue={[defaultActiveGroup].filter(Boolean) as string[]} className="w-full">
-              {menuItems.map((group) => {
-                const GroupIcon = group.icon;
-                const hasActiveItem = group.items.some(item => isActive(item.href));
-                
-                return (
-                  <AccordionItem value={group.group} key={group.group} className="border-b-0">
-                      <AccordionTrigger className={cn(
-                        "py-2 px-2 rounded hover:no-underline transition-colors",
-                        "text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                        "hover:bg-sidebar-accent",
-                        "[&[data-state=open]>svg]:rotate-90",
-                        hasActiveItem && "text-sidebar-foreground bg-sidebar-accent/50"
-                      )}>
-                         <span className="flex items-center gap-2 flex-1 text-left text-sm">
-                           <GroupIcon className="h-4 w-4 shrink-0" />
-                           <span className="truncate">{group.group}</span>
-                         </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-0 pt-0">
-                          <div className="flex flex-col ml-6">
-                          {group.items.map(item => {
-                            const active = isActive(item.href);
-                            
-                            return (
-                              <Link
-                                key={item.label}
-                                href={item.href}
-                                className={cn(
-                                  "px-2 py-1.5 text-sm transition-colors rounded",
-                                  "text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                                  "hover:bg-sidebar-accent",
-                                  active && "text-sidebar-foreground font-medium bg-sidebar-accent"
-                                )}
-                              >
-                                <span className="truncate">{item.label}</span>
-                              </Link>
-                            );
-                          })}
-                          </div>
-                      </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-          </Accordion>
-      </nav>
-     );
+      <>
+        <SidebarGroup>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarMenu>
+            {mainNavItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Financials</SidebarGroupLabel>
+          <SidebarMenu>
+            {financialsItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Bookkeeping</SidebarGroupLabel>
+          <SidebarMenu>
+            {bookkeepingItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Sales & Commerce</SidebarGroupLabel>
+          <SidebarMenu>
+            {salesCommerceItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Customers</SidebarGroupLabel>
+          <SidebarMenu>
+            {customersItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Tools & Settings</SidebarGroupLabel>
+          <SidebarMenu>
+            {toolsItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      </>
+    );
 
     return (
         <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
@@ -108,26 +163,47 @@ export function BusinessHeader() {
                 <SheetHeader className="p-0">
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>
-                <div className="flex h-12 items-center border-b px-4">
-                 <Link href="/business" className="flex items-center justify-start">
-                   <Icons.logo className="h-8" />
-                 </Link>
+                {/* Logo Header */}
+                <div className="h-12 flex items-center px-4 border-b">
+                  <Link href="/business" className="flex items-center justify-start">
+                    <Icons.logo className="h-8" />
+                  </Link>
+                </div>
+                {/* Business Header */}
+                <div className="border-b h-16 flex items-center px-3">
+                  <div className="flex items-center gap-2.5 w-full">
+                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Business" className="h-8 w-8 rounded" />
+                      ) : (
+                        <span className="text-xs font-medium">
+                          {user?.displayName?.substring(0, 2).toUpperCase() || 'BI'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {user?.displayName || 'Business'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Active</div>
+                    </div>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </div>
                 </div>
                <ScrollArea className="flex-1">
                  <div className="p-2">{renderNav()}</div>
                </ScrollArea>
                <div className="mt-auto border-t p-2">
-                 <Link
-                   href="/business/settings"
-                   className={cn(
-                     "flex items-center gap-2 px-2 py-2 text-sm rounded transition-colors",
-                     "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                     isActive('/business/settings') && "text-sidebar-foreground bg-sidebar-accent"
-                   )}
-                 >
-                   <Settings className="h-4 w-4 shrink-0" />
-                   <span className="truncate">Settings</span>
-                 </Link>
+                 <SidebarMenu className="w-full">
+                   <SidebarMenuItem className="w-full">
+                     <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" isActive={isActive('/business/settings')}>
+                       <Link href="/business/settings">
+                         <Settings />
+                         <span>Settings</span>
+                       </Link>
+                     </SidebarMenuButton>
+                   </SidebarMenuItem>
+                 </SidebarMenu>
                </div>
             </SheetContent>
           </Sheet>
