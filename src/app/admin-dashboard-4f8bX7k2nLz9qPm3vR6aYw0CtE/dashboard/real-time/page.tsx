@@ -514,7 +514,6 @@ export default function RealTimePage() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <CardTitle>Live Feed</CardTitle>
                         <div className="flex flex-col gap-3 w-full">
                             <div className="flex flex-col sm:flex-row gap-2">
                                 <div className="relative flex-1">
