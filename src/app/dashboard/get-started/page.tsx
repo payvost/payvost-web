@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 
 export default function BusinessOnboardingPage() {
@@ -23,10 +24,14 @@ export default function BusinessOnboardingPage() {
     if (!user) return;
 
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists() && doc.data().businessProfile?.status === 'Approved') {
+        if (doc.exists()) {
+          const businessProfile = doc.data().businessProfile;
+          // Check for both 'approved' (lowercase) and 'Approved' (capitalized) for compatibility
+          if (businessProfile && (businessProfile.status === 'approved' || businessProfile.status === 'Approved')) {
             setIsBusinessApproved(true);
-        } else {
+          } else {
             setIsBusinessApproved(false);
+          }
         }
     });
 
@@ -95,15 +100,22 @@ export default function BusinessOnboardingPage() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {profileTypes.map(profile => (
-                     <Card key={profile.title} className="cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col
-                             hover:ring-1 hover:ring-primary/50">
-                        <Link href={profile.href} className="flex flex-col flex-grow">
+                     <Card key={profile.title} className={cn(
+                       "hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col hover:ring-1 hover:ring-primary/50",
+                       profile.status === 'approved' ? '' : 'cursor-pointer'
+                     )}>
+                        <div className="flex flex-col flex-grow">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-4 bg-primary/10 rounded-lg">
                                     {profile.icon}
                                 </div>
-                                <div>
-                                    <CardTitle>{profile.title}</CardTitle>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <CardTitle>{profile.title}</CardTitle>
+                                        {profile.status === 'approved' && (
+                                          <Badge variant="default" className="bg-green-500 text-white">Business Owner</Badge>
+                                        )}
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
@@ -111,13 +123,28 @@ export default function BusinessOnboardingPage() {
                             </CardContent>
                             <CardFooter className="flex-col items-start">
                                 {profile.status === 'coming-soon' && <Badge variant="secondary" className="mb-4">Coming Soon</Badge>}
-                                {profile.status === 'approved' && <Badge variant="default" className="mb-4 bg-green-500/20 text-green-700">Approved</Badge>}
-                                <Button variant={profile.status === 'approved' ? 'default' : 'outline'} className="w-full">
-                                    {profile.buttonText}
-                                    <ArrowRight className="ml-2 h-4 w-4" />
-                                </Button>
+                                {profile.status === 'approved' ? (
+                                  <div className="w-full space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                      You've been approved! Visit your business dashboard to get started.
+                                    </p>
+                                    <Link href="/business" className="w-full">
+                                      <Button variant="default" className="w-full">
+                                        Visit Business Dashboard
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                      </Button>
+                                    </Link>
+                                  </div>
+                                ) : (
+                                  <Link href={profile.href} className="w-full">
+                                    <Button variant="outline" className="w-full" disabled={profile.status === 'coming-soon'}>
+                                      {profile.buttonText}
+                                      <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                )}
                             </CardFooter>
-                        </Link>
+                        </div>
                     </Card>
                 ))}
             </div>
