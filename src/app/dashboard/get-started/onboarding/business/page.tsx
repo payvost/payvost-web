@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, collection, query, where, getDocs, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OnboardingFormPage() {
@@ -42,13 +42,13 @@ export default function OnboardingFormPage() {
         setLoadingUser(false);
     });
 
-    // Check for existing business onboarding submission
+    // Check for existing business onboarding submission in Firestore (already completed)
     const checkBusinessOnboarding = async () => {
       try {
         const q = query(
           collection(db, 'business_onboarding'),
           where('userId', '==', user.uid),
-          where('status', 'in', ['submitted', 'pending_review', 'under_review'])
+          where('status', 'in', ['submitted', 'pending_review', 'under_review', 'approved', 'rejected'])
         );
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
@@ -77,6 +77,7 @@ export default function OnboardingFormPage() {
     try {
       const formData = new FormData(e.currentTarget);
       const businessData = {
+        userId: user.uid,
         name: formData.get('business-name'),
         type: formData.get('business-type'),
         industry: formData.get('industry'),
@@ -87,32 +88,14 @@ export default function OnboardingFormPage() {
         website: formData.get('website') || null,
       };
       
-      // Check if user already has a pending submission
-      const q = query(
-        collection(db, 'business_onboarding'),
-        where('userId', '==', user.uid),
-        where('status', 'in', ['submitted', 'pending_review', 'under_review'])
-      );
-      const querySnapshot = await getDocs(q);
+      // Generate a unique submission ID
+      const submissionId = `business_${user.uid}_${Date.now()}`;
       
-      const submissionId = querySnapshot.empty 
-        ? `business_${user.uid}_${Date.now()}` 
-        : querySnapshot.docs[0].id;
-      
-      // Save to Firestore
-      await setDoc(doc(db, 'business_onboarding', submissionId), {
-        userId: user.uid,
-        ...businessData,
-        status: 'submitted',
-        submittedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      
-      // Also save to localStorage for the verify page
+      // Save to localStorage only (streaming data, not saving to Firestore yet)
       localStorage.setItem('businessOnboardingData', JSON.stringify(businessData));
       localStorage.setItem('businessOnboardingId', submissionId);
       
+      setIsLoading(false);
       toast({ title: 'Business information saved', description: 'Please proceed to upload verification documents.' });
       router.push('/dashboard/get-started/verify');
     } catch (error: any) {
