@@ -27,6 +27,7 @@ import { DashboardSwitcher } from './dashboard-switcher';
 import { NotificationDropdown } from './notification-dropdown';
 import { Separator } from './ui/separator';
 import { SidebarProvider, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from './ui/sidebar';
+import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
 
 export function BusinessHeader() {
@@ -150,7 +151,7 @@ export function BusinessHeader() {
     );
 
     return (
-        <header className="flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
+        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -164,24 +165,38 @@ export function BusinessHeader() {
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>
                 <SidebarProvider>
-                  {/* Business Header */}
-                  <div className="border-b h-16 flex items-center px-3">
-                    <div className="flex items-center gap-2.5 w-full">
-                      <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                        <span className="text-xs font-medium">BU</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          Business
+                  {/* Business Header Card */}
+                  <div className="px-2 py-2 border-b">
+                    <Card className="p-2">
+                      <div className="flex flex-col gap-2">
+                        {/* Payvost Logo */}
+                        <div className="flex items-center justify-center">
+                          <Icons.logo className="h-6" />
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1">
+                        
+                        {/* BU and Business Name */}
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
+                            <span className="text-xs font-medium">BU</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium truncate">
+                                Business
+                              </span>
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Not Available Status */}
+                        <div className="flex items-center justify-center">
                           <div className="rounded px-1.5 py-0.5 text-[10px] font-normal bg-muted text-muted-foreground">
                             Not Available
                           </div>
                         </div>
                       </div>
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    </div>
+                    </Card>
                   </div>
                  <ScrollArea className="flex-1">
                    <div className="p-2">{renderNav()}</div>
