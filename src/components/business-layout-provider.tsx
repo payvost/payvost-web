@@ -25,8 +25,14 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
         }
 
         const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-            if (doc.exists() && doc.data().businessProfile?.status === 'Approved') {
-                setBusinessStatus('approved');
+            if (doc.exists()) {
+                const businessProfile = doc.data().businessProfile;
+                // Check for both 'approved' (lowercase) and 'Approved' (capitalized) for compatibility
+                if (businessProfile && (businessProfile.status === 'approved' || businessProfile.status === 'Approved')) {
+                    setBusinessStatus('approved');
+                } else {
+                    setBusinessStatus('unapproved');
+                }
             } else {
                 setBusinessStatus('unapproved');
             }
@@ -36,12 +42,14 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
     }, [user, authLoading, router]);
 
     useEffect(() => {
-        if (businessStatus === 'unapproved') {
+        // Only redirect if we're sure the status is unapproved (not still loading)
+        if (businessStatus === 'unapproved' && !authLoading) {
             router.push('/dashboard/get-started');
         }
-    }, [businessStatus, router]);
+    }, [businessStatus, router, authLoading]);
 
-    if (authLoading || businessStatus !== 'approved') {
+    // Show loading state while checking auth or business status
+    if (authLoading || businessStatus === 'loading') {
         return (
             <div className="min-h-screen w-full bg-muted/40">
                 <BusinessSidebar />

@@ -92,7 +92,7 @@ export default function BusinessOnboardingPage() {
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <main className="flex-1 p-4 lg:p-6 flex flex-col items-center justify-center">
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-6xl">
             <div className="text-center mb-12">
                 <h1 className="text-3xl font-bold tracking-tight md:text-4xl">There is even more with Payvost</h1>
                 <p className="text-muted-foreground mt-2 md:text-lg">Select the profile that best describes you to get a tailored experience.</p>
