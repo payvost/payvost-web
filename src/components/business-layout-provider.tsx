@@ -10,6 +10,7 @@ import { BusinessSidebar } from '@/components/business-sidebar';
 import { BusinessHeader } from '@/components/business-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 export function BusinessLayoutProvider({ children }: { children: React.ReactNode }) {
     const { user, loading: authLoading } = useAuth();
@@ -51,11 +52,12 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
     // Show loading state while checking auth or business status
     if (authLoading || businessStatus === 'loading') {
         return (
-            <div className="min-h-screen w-full bg-background">
-                <BusinessSidebar />
-                 <div className="flex flex-col sm:pl-14 md:pl-[14rem]">
-                    <BusinessHeader />
-                     <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
+            <SidebarProvider className="block min-h-screen w-full">
+                <div className="min-h-screen w-full bg-background">
+                    <BusinessSidebar />
+                     <div className="flex flex-col sm:pl-14 md:pl-[12rem] min-h-screen">
+                        <BusinessHeader />
+                         <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
                         <div className="flex items-center justify-between space-y-2 mb-6">
                             <Skeleton className="h-10 w-64" />
                         </div>
@@ -85,18 +87,21 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
                     </main>
                 </div>
             </div>
+        </SidebarProvider>
         );
     }
 
     return (
-        <div className="min-h-screen w-full bg-background">
-            <BusinessSidebar />
-            <div className="flex flex-col sm:pl-14 md:pl-[14rem]">
-                <BusinessHeader />
-                <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
-                    {children}
-                </main>
+        <SidebarProvider className="block min-h-screen w-full">
+            <div className="min-h-screen w-full bg-background">
+                <BusinessSidebar />
+                <div className="flex flex-col sm:pl-14 md:pl-[12rem] min-h-screen">
+                    <BusinessHeader />
+                    <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
+                        {children}
+                    </main>
+                </div>
             </div>
-        </div>
+        </SidebarProvider>
     );
 };
