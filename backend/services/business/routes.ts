@@ -385,14 +385,14 @@ router.get('/health-score', verifyFirebaseToken, async (req: AuthenticatedReques
       },
     });
 
-    const successfulTransactions = transactions.filter(tx => tx.status === 'COMPLETED');
+    const successfulTransactions = transactions.filter((tx: any) => tx.status === 'COMPLETED');
     const totalTransactions = transactions.length;
     const acceptanceRate = totalTransactions > 0 
       ? (successfulTransactions.length / totalTransactions) * 100 
       : 100;
 
     // Calculate chargeback rate (transactions with chargeback description)
-    const chargebacks = transactions.filter(tx => 
+    const chargebacks = transactions.filter((tx: any) => 
       tx.description?.toLowerCase().includes('chargeback')
     );
     const chargebackRate = totalTransactions > 0 
@@ -400,7 +400,7 @@ router.get('/health-score', verifyFirebaseToken, async (req: AuthenticatedReques
       : 0;
 
     // Calculate dispute rate
-    const disputes = transactions.filter(tx => 
+    const disputes = transactions.filter((tx: any) => 
       tx.description?.toLowerCase().includes('dispute')
     );
     const disputeRate = totalTransactions > 0 
