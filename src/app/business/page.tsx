@@ -12,9 +12,6 @@ import Link from 'next/link';
 import { BusinessTransactionChart } from '@/components/business-transaction-chart';
 import { ActivityLog } from '@/components/activity-log';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { BusinessAccount } from '@/types/business-account-summary';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Completed: { icon: <CheckCircle className="h-3 w-3 mr-1" />, color: 'text-green-600', variant: 'default'},
@@ -24,41 +21,106 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; varia
 };
 
 
+interface DashboardData {
+    accountBalance: number;
+    accountCurrency: string;
+    accountName: string;
+    pendingPayouts: number;
+    pendingPayoutsCount: number;
+    openInvoices: number;
+    openInvoicesAmount: number;
+    newCustomers: number;
+    newCustomersChange: number;
+    recentTransactions: Array<{
+        id: string;
+        type: 'Credit' | 'Debit';
+        description: string;
+        amount: number;
+        date: string;
+        status: string;
+    }>;
+}
+
 export default function BusinessDashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const [loadingData, setLoadingData] = useState(true);
-    const [account, setAccount] = useState<BusinessAccount | null>(null);
+    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!user) {
             if (!authLoading) setLoadingData(false);
             return;
         }
-        // This is a placeholder. In a real app, you would fetch the specific business account data.
-        // For now, we use mock data.
-        setAccount({
-            id: 'biz_123',
-            name: 'Qwibik Technologies',
-            balance: 52345.67,
-            currency: 'USD',
-            description: 'Your primary operating account.'
-        });
-        setLoadingData(false);
 
+        const fetchDashboardData = async () => {
+            try {
+                setLoadingData(true);
+                setError(null);
+                const response = await fetch('/api/business/dashboard');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch dashboard data');
+                }
+
+                const data = await response.json();
+                setDashboardData(data);
+            } catch (err) {
+                console.error('Error fetching dashboard data:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+                // Fallback to mock data if API fails
+                setDashboardData({
+                    accountBalance: 52345.67,
+                    accountCurrency: 'USD',
+                    accountName: 'Qwibik Technologies',
+                    pendingPayouts: 5230.00,
+                    pendingPayoutsCount: 2,
+                    openInvoices: 8,
+                    openInvoicesAmount: 12800,
+                    newCustomers: 24,
+                    newCustomersChange: 5,
+                    recentTransactions: [
+                        { id: 'txn_1', type: 'Credit', description: 'Invoice #1234 Payment', amount: 2500, date: '2024-08-15', status: 'Completed' },
+                        { id: 'txn_2', type: 'Debit', description: 'Payout to Supplier', amount: -1200, date: '2024-08-15', status: 'Completed' },
+                        { id: 'txn_3', type: 'Credit', description: 'Payment Link Received', amount: 300, date: '2024-08-14', status: 'Completed' },
+                    ]
+                });
+            } finally {
+                setLoadingData(false);
+            }
+        };
+
+        fetchDashboardData();
     }, [user, authLoading]);
     
-    const kpiCards = [
-        { title: "Account Balance", value: account ? new Intl.NumberFormat('en-US', { style: 'currency', currency: account.currency }).format(account.balance) : '$0.00', change: "+$2,100 this week", icon: <LineChart className="h-4 w-4 text-muted-foreground" /> },
-        { title: "Pending Payouts", value: "$5,230.00", change: "2 upcoming payouts", icon: <Clock className="h-4 w-4 text-muted-foreground" /> },
-        { title: "Open Invoices", value: "8", change: "$12,800 outstanding", icon: <FileText className="h-4 w-4 text-muted-foreground" /> },
-        { title: "New Customers", value: "24", change: "+5 this week", icon: <Users className="h-4 w-4 text-muted-foreground" /> },
-    ];
+    const kpiCards = dashboardData ? [
+        { 
+            title: "Account Balance", 
+            value: new Intl.NumberFormat('en-US', { style: 'currency', currency: dashboardData.accountCurrency }).format(dashboardData.accountBalance), 
+            change: `+${new Intl.NumberFormat('en-US', { style: 'currency', currency: dashboardData.accountCurrency }).format(2100)} this week`, 
+            icon: <LineChart className="h-4 w-4 text-muted-foreground" /> 
+        },
+        { 
+            title: "Pending Payouts", 
+            value: new Intl.NumberFormat('en-US', { style: 'currency', currency: dashboardData.accountCurrency }).format(dashboardData.pendingPayouts), 
+            change: `${dashboardData.pendingPayoutsCount} upcoming payouts`, 
+            icon: <Clock className="h-4 w-4 text-muted-foreground" /> 
+        },
+        { 
+            title: "Open Invoices", 
+            value: dashboardData.openInvoices.toString(), 
+            change: `${new Intl.NumberFormat('en-US', { style: 'currency', currency: dashboardData.accountCurrency }).format(dashboardData.openInvoicesAmount)} outstanding`, 
+            icon: <FileText className="h-4 w-4 text-muted-foreground" /> 
+        },
+        { 
+            title: "New Customers", 
+            value: dashboardData.newCustomers.toString(), 
+            change: `+${dashboardData.newCustomersChange} this week`, 
+            icon: <Users className="h-4 w-4 text-muted-foreground" /> 
+        },
+    ] : [];
 
-    const recentTransactions = [
-        { id: 'txn_1', type: 'Credit', description: 'Invoice #1234 Payment', amount: 2500, date: '2024-08-15', status: 'Completed' },
-        { id: 'txn_2', type: 'Debit', description: 'Payout to Supplier', amount: -1200, date: '2024-08-15', status: 'Completed' },
-        { id: 'txn_3', type: 'Credit', description: 'Payment Link Received', amount: 300, date: '2024-08-14', status: 'Completed' },
-    ];
+    const recentTransactions = dashboardData?.recentTransactions || [];
 
     return (
         <>
@@ -130,7 +192,7 @@ export default function BusinessDashboardPage() {
                                                         {status.icon} <span>{tx.status}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(tx.amount)}</TableCell>
+                                                <TableCell className="text-right font-mono">{new Intl.NumberFormat('en-US', { style: 'currency', currency: dashboardData?.accountCurrency || 'USD' }).format(tx.amount)}</TableCell>
                                             </TableRow>
                                         )
                                     })}

@@ -79,18 +79,38 @@ export function BusinessPayoutForm() {
     }
   };
 
-  const onSubmit = (data: PayoutFormValues) => {
+  const onSubmit = async (data: PayoutFormValues) => {
     setIsSubmitting(true);
-    console.log("Payout Data:", data);
-    toast({
+    try {
+      const response = await fetch('/api/business/payouts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process payout');
+      }
+
+      const result = await response.json();
+      toast({
         title: "Payout Submitted",
         description: "Your payout is being processed."
-    });
-    // In a real app, you would handle API submission here.
-    setTimeout(() => {
-        setIsSubmitting(false);
-        setStep(4); // Move to success step
-    }, 2000);
+      });
+      setStep(4); // Move to success step
+    } catch (error) {
+      console.error('Error submitting payout:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process payout. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   if (step === 4) {
