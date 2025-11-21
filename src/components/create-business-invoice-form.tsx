@@ -264,9 +264,24 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             await saveInvoice('Draft');
             toast({ title: "Draft Saved", description: "Your invoice has been saved as a draft." });
             onBack();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving draft:", error);
-            toast({ title: 'Error', description: 'Could not save draft.', variant: 'destructive'});
+            let errorMessage = 'Could not save draft.';
+            
+            // Provide more specific error messages
+            if (error?.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please ensure your account is verified (KYC Tier 1) and you have a business profile set up.';
+            } else if (error?.message?.includes('Business ID')) {
+                errorMessage = 'Business profile not found. Please set up your business profile first.';
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+            
+            toast({ 
+                title: 'Error', 
+                description: errorMessage, 
+                variant: 'destructive'
+            });
         } finally {
             setIsSaving(false);
         }
@@ -279,9 +294,24 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             const finalInvoiceId = await saveInvoice('Pending');
             setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
             setShowSendDialog(true);
-        } catch (error) {
-             console.error("Error sending invoice:", error);
-            toast({ title: 'Error', description: 'Could not send the invoice.', variant: 'destructive'});
+        } catch (error: any) {
+            console.error("Error sending invoice:", error);
+            let errorMessage = 'Could not send the invoice.';
+            
+            // Provide more specific error messages
+            if (error?.code === 'permission-denied') {
+                errorMessage = 'Permission denied. Please ensure your account is verified (KYC Tier 1) and you have a business profile set up.';
+            } else if (error?.message?.includes('Business ID')) {
+                errorMessage = 'Business profile not found. Please set up your business profile first.';
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+            
+            toast({ 
+                title: 'Error', 
+                description: errorMessage, 
+                variant: 'destructive'
+            });
         } finally {
             setIsSaving(false);
         }

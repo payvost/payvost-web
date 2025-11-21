@@ -41,12 +41,19 @@ export default function CustomerDetailsPage() {
     const { toast } = useToast();
 
     // Admin action dialog state
-    const [approveOpen, setApproveOpen] = useState(false);
-    const [rejectOpen, setRejectOpen] = useState(false);
+    const [kycLevelOpen, setKycLevelOpen] = useState(false);
     const [limitsOpen, setLimitsOpen] = useState(false);
-    const [approveLevel, setApproveLevel] = useState<'Basic' | 'Full' | 'Advanced'>('Full');
-    const [rejectReason, setRejectReason] = useState('');
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [kycLevel, setKycLevel] = useState<'Basic' | 'Full' | 'Advanced'>('Full');
     const [limits, setLimits] = useState({ daily: 1000, fx: 5000, withdrawal: 2000 });
+    const [notificationTitle, setNotificationTitle] = useState('');
+    const [notificationMessage, setNotificationMessage] = useState('');
+    
+    // Loading states for admin actions
+    const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+    const [changeKycLoading, setChangeKycLoading] = useState(false);
+    const [adjustLimitsLoading, setAdjustLimitsLoading] = useState(false);
+    const [sendNotificationLoading, setSendNotificationLoading] = useState(false);
 
     // KYC submissions state
     const [kycSubmissions, setKycSubmissions] = useState<any[]>([]);
@@ -121,7 +128,28 @@ export default function CustomerDetailsPage() {
             try {
                 setLoading(true);
                 const response = await axios.get(`/api/admin/customers/${id}`);
-                setCustomer(response.data);
+                const customerData = response.data;
+                setCustomer(customerData);
+                
+                // Initialize limits from customer data if available
+                if (customerData.accountLimits) {
+                    setLimits({
+                        daily: customerData.accountLimits.daily || 1000,
+                        fx: customerData.accountLimits.fx || 5000,
+                        withdrawal: customerData.accountLimits.withdrawal || 2000,
+                    });
+                } else if (customerData.dailyLimit || customerData.fxLimit || customerData.withdrawalLimit) {
+                    setLimits({
+                        daily: customerData.dailyLimit || 1000,
+                        fx: customerData.fxLimit || 5000,
+                        withdrawal: customerData.withdrawalLimit || 2000,
+                    });
+                }
+                
+                // Initialize KYC level from customer data if available
+                if (customerData.kycLevel) {
+                    setKycLevel(customerData.kycLevel);
+                }
             } catch (err) {
                 console.error('Error fetching customer:', err);
                 setError('Failed to load customer data');
@@ -214,9 +242,6 @@ export default function CustomerDetailsPage() {
             // Refresh customer data
             const customerResponse = await axios.get(`/api/admin/customers/${id}`);
             setCustomer(customerResponse.data);
-
-            setRejectOpen(false);
-            setApproveOpen(false);
         } catch (err: any) {
             console.error('Error processing KYC decision:', err);
             toast({
@@ -258,6 +283,133 @@ export default function CustomerDetailsPage() {
             });
         } finally {
             setProcessingTier1Decision(false);
+        }
+    };
+
+    // Handle Force Logout
+    const handleForceLogout = async () => {
+        if (!confirm('Are you sure you want to force logout this user from all devices?')) {
+            return;
+        }
+
+        try {
+            setForceLogoutLoading(true);
+            await axios.post(`/api/admin/customers/${id}/force-logout`);
+            
+            toast({
+                title: 'Force Logout Successful',
+                description: 'User has been logged out from all devices.',
+            });
+        } catch (err: any) {
+            console.error('Error force logging out user:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to force logout user',
+                variant: 'destructive',
+            });
+        } finally {
+            setForceLogoutLoading(false);
+        }
+    };
+
+    // Handle Change KYC Level
+    const handleChangeKycLevel = async () => {
+        try {
+            setChangeKycLoading(true);
+            await axios.post(`/api/admin/customers/${id}/change-kyc-level`, {
+                level: kycLevel,
+            });
+            
+            toast({
+                title: 'KYC Level Updated',
+                description: `KYC level has been changed to ${kycLevel}.`,
+            });
+
+            // Refresh customer data
+            const customerResponse = await axios.get(`/api/admin/customers/${id}`);
+            setCustomer(customerResponse.data);
+
+            setKycLevelOpen(false);
+        } catch (err: any) {
+            console.error('Error changing KYC level:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to change KYC level',
+                variant: 'destructive',
+            });
+        } finally {
+            setChangeKycLoading(false);
+        }
+    };
+
+    // Handle Adjust Limits
+    const handleAdjustLimits = async () => {
+        try {
+            setAdjustLimitsLoading(true);
+            await axios.post(`/api/admin/customers/${id}/adjust-limits`, {
+                daily: limits.daily,
+                fx: limits.fx,
+                withdrawal: limits.withdrawal,
+            });
+            
+            toast({
+                title: 'Limits Updated',
+                description: `Daily: $${limits.daily}, FX: $${limits.fx}, Withdrawal: $${limits.withdrawal}`,
+            });
+
+            // Refresh customer data
+            const customerResponse = await axios.get(`/api/admin/customers/${id}`);
+            setCustomer(customerResponse.data);
+
+            setLimitsOpen(false);
+        } catch (err: any) {
+            console.error('Error adjusting limits:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to adjust limits',
+                variant: 'destructive',
+            });
+        } finally {
+            setAdjustLimitsLoading(false);
+        }
+    };
+
+    // Handle Send Notification
+    const handleSendNotification = async () => {
+        if (!notificationTitle.trim() || !notificationMessage.trim()) {
+            toast({
+                title: 'Error',
+                description: 'Please fill in both title and message',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        try {
+            setSendNotificationLoading(true);
+            const response = await axios.post(`/api/admin/customers/${id}/send-notification`, {
+                title: notificationTitle,
+                message: notificationMessage,
+                type: 'ADMIN_NOTIFICATION',
+            });
+            
+            toast({
+                title: 'Notification Sent',
+                description: response.data.message || 'Notification has been sent to the user.',
+            });
+
+            setNotificationOpen(false);
+            setNotificationTitle('');
+            setNotificationMessage('');
+        } catch (err: any) {
+            console.error('Error sending notification:', err);
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to send notification',
+                variant: 'destructive',
+            });
+        } finally {
+            setSendNotificationLoading(false);
         }
     };
 
@@ -943,10 +1095,25 @@ export default function CustomerDetailsPage() {
                                             </CardHeader>
                                             <CardContent className="space-y-2">
                                                 <div className="grid grid-cols-2 gap-2">
-                                                    <Button variant="outline" size="sm" onClick={() => toast({ title: 'Force Logout', description: 'All active sessions revoked.' })}><Power className="h-4 w-4 mr-2"/>Force Logout</Button>
-                                                    <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        onClick={handleForceLogout}
+                                                        disabled={forceLogoutLoading}
+                                                    >
+                                                        {forceLogoutLoading ? (
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        ) : (
+                                                            <Power className="h-4 w-4 mr-2"/>
+                                                        )}
+                                                        Force Logout
+                                                    </Button>
+                                                    <Dialog open={kycLevelOpen} onOpenChange={setKycLevelOpen}>
                                                       <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm"><Shield className="h-4 w-4 mr-2"/>Change KYC Level</Button>
+                                                        <Button variant="outline" size="sm">
+                                                            <Shield className="h-4 w-4 mr-2"/>
+                                                            Change KYC Level
+                                                        </Button>
                                                       </DialogTrigger>
                                                       <DialogContent>
                                                         <DialogHeader>
@@ -955,80 +1122,129 @@ export default function CustomerDetailsPage() {
                                                         </DialogHeader>
                                                         <div>
                                                           <label className="text-sm text-muted-foreground">Level</label>
-                                                          <select className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={approveLevel} onChange={e => setApproveLevel(e.target.value as any)}>
+                                                          <select 
+                                                            className="mt-1 w-full border rounded-md h-10 px-3 bg-background" 
+                                                            value={kycLevel} 
+                                                            onChange={e => setKycLevel(e.target.value as any)}
+                                                          >
                                                             <option value="Basic">Basic</option>
                                                             <option value="Full">Full</option>
                                                             <option value="Advanced">Advanced</option>
                                                           </select>
                                                         </div>
                                                         <DialogFooter>
-                                                          <Button variant="secondary" onClick={() => setApproveOpen(false)}>Cancel</Button>
-                                                          <Button onClick={() => { setApproveOpen(false); toast({ title: 'KYC Level Updated', description: `Level set to ${approveLevel}.` }); }}>Save</Button>
-                                                        </DialogFooter>
-                                                      </DialogContent>
-                                                    </Dialog>
-                                                    <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-                                                      <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm"><CheckCircle2 className="h-4 w-4 mr-2"/>Approve Docs</Button>
-                                                      </DialogTrigger>
-                                                      <DialogContent>
-                                                        <DialogHeader>
-                                                          <DialogTitle>Approve KYC Submission</DialogTitle>
-                                                          <DialogDescription>Confirm approval and notify the user.</DialogDescription>
-                                                        </DialogHeader>
-                                                        <DialogFooter>
-                                                          <Button variant="secondary" onClick={() => setRejectOpen(false)}>Cancel</Button>
-                                                          <Button onClick={() => { setRejectOpen(false); toast({ title: 'KYC Approved', description: 'User has been notified.' }); }}>Approve</Button>
-                                                        </DialogFooter>
-                                                      </DialogContent>
-                                                    </Dialog>
-                                                    <Dialog>
-                                                      <DialogTrigger asChild>
-                                                        <Button variant="destructive" size="sm"><XCircle className="h-4 w-4 mr-2"/>Reject Docs</Button>
-                                                      </DialogTrigger>
-                                                      <DialogContent>
-                                                        <DialogHeader>
-                                                          <DialogTitle>Reject KYC Submission</DialogTitle>
-                                                          <DialogDescription>Provide a reason. The user will be notified.</DialogDescription>
-                                                        </DialogHeader>
-                                                        <div>
-                                                          <textarea className="w-full border rounded-md p-2 min-h-[100px]" placeholder="Reason for rejection" value={rejectReason} onChange={e => setRejectReason(e.target.value)} />
-                                                        </div>
-                                                        <DialogFooter>
-                                                          <Button variant="secondary" onClick={() => { setRejectReason(''); }}>Clear</Button>
-                                                          <Button onClick={() => { toast({ title: 'KYC Rejected', description: rejectReason || 'No reason provided.' }); setRejectReason(''); }}>Send</Button>
+                                                          <Button variant="secondary" onClick={() => setKycLevelOpen(false)} disabled={changeKycLoading}>
+                                                            Cancel
+                                                          </Button>
+                                                          <Button onClick={handleChangeKycLevel} disabled={changeKycLoading}>
+                                                            {changeKycLoading ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : null}
+                                                            Save
+                                                          </Button>
                                                         </DialogFooter>
                                                       </DialogContent>
                                                     </Dialog>
                                                     <Dialog open={limitsOpen} onOpenChange={setLimitsOpen}>
                                                       <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm"><ListChecks className="h-4 w-4 mr-2"/>Adjust Limits</Button>
+                                                        <Button variant="outline" size="sm">
+                                                            <ListChecks className="h-4 w-4 mr-2"/>
+                                                            Adjust Limits
+                                                        </Button>
                                                       </DialogTrigger>
                                                       <DialogContent>
                                                         <DialogHeader>
                                                           <DialogTitle>Adjust Account Limits</DialogTitle>
+                                                          <DialogDescription>Update the account limits for this user (in USD).</DialogDescription>
                                                         </DialogHeader>
                                                         <div className="grid grid-cols-1 gap-3">
                                                           <div>
                                                             <label className="text-sm text-muted-foreground">Daily Transfer Limit (USD)</label>
-                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.daily} onChange={e => setLimits({ ...limits, daily: Number(e.target.value) })} />
+                                                            <input 
+                                                              type="number" 
+                                                              className="mt-1 w-full border rounded-md h-10 px-3 bg-background" 
+                                                              value={limits.daily} 
+                                                              onChange={e => setLimits({ ...limits, daily: Number(e.target.value) })} 
+                                                            />
                                                           </div>
                                                           <div>
                                                             <label className="text-sm text-muted-foreground">FX Limit (USD)</label>
-                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.fx} onChange={e => setLimits({ ...limits, fx: Number(e.target.value) })} />
+                                                            <input 
+                                                              type="number" 
+                                                              className="mt-1 w-full border rounded-md h-10 px-3 bg-background" 
+                                                              value={limits.fx} 
+                                                              onChange={e => setLimits({ ...limits, fx: Number(e.target.value) })} 
+                                                            />
                                                           </div>
                                                           <div>
                                                             <label className="text-sm text-muted-foreground">Withdrawal Cap (USD)</label>
-                                                            <input type="number" className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={limits.withdrawal} onChange={e => setLimits({ ...limits, withdrawal: Number(e.target.value) })} />
+                                                            <input 
+                                                              type="number" 
+                                                              className="mt-1 w-full border rounded-md h-10 px-3 bg-background" 
+                                                              value={limits.withdrawal} 
+                                                              onChange={e => setLimits({ ...limits, withdrawal: Number(e.target.value) })} 
+                                                            />
                                                           </div>
                                                         </div>
                                                         <DialogFooter>
-                                                          <Button variant="secondary" onClick={() => setLimitsOpen(false)}>Cancel</Button>
-                                                          <Button onClick={() => { setLimitsOpen(false); toast({ title: 'Limits Updated', description: `Daily ${limits.daily}, FX ${limits.fx}, Withdraw ${limits.withdrawal}` }); }}>Save</Button>
+                                                          <Button variant="secondary" onClick={() => setLimitsOpen(false)} disabled={adjustLimitsLoading}>
+                                                            Cancel
+                                                          </Button>
+                                                          <Button onClick={handleAdjustLimits} disabled={adjustLimitsLoading}>
+                                                            {adjustLimitsLoading ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : null}
+                                                            Save
+                                                          </Button>
                                                         </DialogFooter>
                                                       </DialogContent>
                                                     </Dialog>
-                                                    <Button variant="outline" size="sm" onClick={() => toast({ title: 'Notification Sent', description: 'User has been notified.' })}><Bell className="h-4 w-4 mr-2"/>Send Notification</Button>
+                                                    <Dialog open={notificationOpen} onOpenChange={setNotificationOpen}>
+                                                      <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm">
+                                                            <Bell className="h-4 w-4 mr-2"/>
+                                                            Send Notification
+                                                        </Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                        <DialogHeader>
+                                                          <DialogTitle>Send Notification</DialogTitle>
+                                                          <DialogDescription>Send a notification to this user via email, push, and in-app channels.</DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid grid-cols-1 gap-3">
+                                                          <div>
+                                                            <label className="text-sm text-muted-foreground">Title</label>
+                                                            <input 
+                                                              type="text" 
+                                                              className="mt-1 w-full border rounded-md h-10 px-3 bg-background" 
+                                                              placeholder="Notification title"
+                                                              value={notificationTitle} 
+                                                              onChange={e => setNotificationTitle(e.target.value)} 
+                                                            />
+                                                          </div>
+                                                          <div>
+                                                            <label className="text-sm text-muted-foreground">Message</label>
+                                                            <textarea 
+                                                              className="mt-1 w-full border rounded-md p-3 bg-background min-h-[100px]" 
+                                                              placeholder="Notification message"
+                                                              value={notificationMessage} 
+                                                              onChange={e => setNotificationMessage(e.target.value)} 
+                                                            />
+                                                          </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                          <Button variant="secondary" onClick={() => { setNotificationOpen(false); setNotificationTitle(''); setNotificationMessage(''); }} disabled={sendNotificationLoading}>
+                                                            Cancel
+                                                          </Button>
+                                                          <Button onClick={handleSendNotification} disabled={sendNotificationLoading}>
+                                                            {sendNotificationLoading ? (
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : null}
+                                                            Send
+                                                          </Button>
+                                                        </DialogFooter>
+                                                      </DialogContent>
+                                                    </Dialog>
                                                 </div>
                                             </CardContent>
                                         </Card>
