@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,21 @@ export default function VerifyBusinessPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Check if business onboarding data exists in localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const businessOnboardingData = localStorage.getItem('businessOnboardingData');
+      if (!businessOnboardingData) {
+        toast({ 
+          title: 'No business information found', 
+          description: 'Please complete the business onboarding form first.', 
+          variant: 'destructive' 
+        });
+        router.push('/dashboard/get-started/onboarding/business');
+      }
+    }
+  }, [router, toast]);
+
   const requirements = useMemo(() => {
     const cfg = KYC_CONFIG.find(c => c.countryCode === countryCode);
     return cfg?.requirements || [];
@@ -65,6 +80,7 @@ export default function VerifyBusinessPage() {
     try {
       const submissionId = `${user.uid}_${Date.now()}`;
       const businessOnboardingId = localStorage.getItem('businessOnboardingId');
+      const businessOnboardingDataStr = localStorage.getItem('businessOnboardingData');
       
       // Upload files
       const uploadedDocs: KycDocument[] = [];
@@ -77,6 +93,7 @@ export default function VerifyBusinessPage() {
         uploadedDocs.push({ key: req.key, name: f.name, url, status: 'submitted', contentType: f.type, size: f.size });
       }
 
+      // Create KYC submission record
       const sub: KycSubmission = {
         id: submissionId,
         userId: user.uid,
@@ -85,23 +102,35 @@ export default function VerifyBusinessPage() {
         status: 'submitted',
         createdAt: new Date().toISOString(),
       };
-      // Store submission for backend review (separate from user doc)
       await setDoc(doc(collection(db, 'kyc_submissions'), submissionId), {
         ...sub,
         createdAt: serverTimestamp(),
       });
 
-      // If this is part of business onboarding, update the business onboarding record with documents
-      if (businessOnboardingId) {
-        await setDoc(doc(db, 'business_onboarding', businessOnboardingId), {
-          documents: uploadedDocs,
-          kycSubmissionId: submissionId,
-          status: 'pending_review',
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
+      // If this is part of business onboarding, create the complete business onboarding record with all data
+      if (businessOnboardingId && businessOnboardingDataStr) {
+        try {
+          const businessData = JSON.parse(businessOnboardingDataStr);
+          
+          // Create the complete business onboarding record with business info + documents
+          await setDoc(doc(db, 'business_onboarding', businessOnboardingId), {
+            userId: user.uid,
+            ...businessData,
+            countryCode,
+            documents: uploadedDocs,
+            kycSubmissionId: submissionId,
+            status: 'pending_review',
+            submittedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        } catch (parseError) {
+          console.error('Error parsing business onboarding data:', parseError);
+          // Still save KYC submission even if business data is missing
+        }
       }
 
-      // Clear localStorage
+      // Clear localStorage after successful save
       localStorage.removeItem('businessOnboardingData');
       localStorage.removeItem('businessOnboardingId');
 
