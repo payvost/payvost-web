@@ -18,6 +18,7 @@ import type { InvoiceFormValues } from './create-invoice-page';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { QRCodeDialog } from './qr-code-dialog';
 
 interface SendInvoiceDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [invoiceData, setInvoiceData] = useState<DocumentData | null>(null);
+  const [qrCodeOpen, setQrCodeOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && invoiceId) {
@@ -71,6 +73,29 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
       description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
     });
   };
+
+  const handleShare = async () => {
+    if (!invoiceData?.publicUrl) return;
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Invoice ${invoiceData.invoiceNumber || invoiceData.id}`,
+          text: `Please pay invoice ${invoiceData.invoiceNumber || invoiceData.id}`,
+          url: invoiceData.publicUrl,
+        });
+        toast({ title: 'Shared', description: 'Invoice link shared successfully' });
+      } else {
+        // Fallback: copy to clipboard
+        copyLink();
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        // User cancelled or error occurred
+        copyLink(); // Fallback to copy
+      }
+    }
+  };
   
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -105,10 +130,10 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
                             <Button type="button" variant="outline" size="icon" onClick={copyLink}>
                                 <Copy className="h-4 w-4" />
                             </Button>
-                            <Button type="button" variant="outline" size="icon">
+                            <Button type="button" variant="outline" size="icon" onClick={handleShare}>
                                 <Share2 className="h-4 w-4" />
                             </Button>
-                            <Button type="button" variant="outline" size="icon">
+                            <Button type="button" variant="outline" size="icon" onClick={() => setQrCodeOpen(true)}>
                                 <QrCode className="h-4 w-4" />
                             </Button>
                         </div>
@@ -127,6 +152,16 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
 
           </div>
       </DialogContent>
+      
+      {/* QR Code Dialog */}
+      {invoiceData?.publicUrl && (
+        <QRCodeDialog
+          isOpen={qrCodeOpen}
+          setIsOpen={setQrCodeOpen}
+          url={invoiceData.publicUrl}
+          title="Invoice QR Code"
+        />
+      )}
     </Dialog>
   );
 }
