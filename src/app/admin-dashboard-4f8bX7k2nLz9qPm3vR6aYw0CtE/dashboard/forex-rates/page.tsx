@@ -55,7 +55,12 @@ export default function ForexRatesPage() {
       const response = await axios.get('/api/admin/financial/forex-rates');
       const data = response.data;
       setRates(data.rates || []);
-      setSummary(data.summary || summary);
+      setSummary(data.summary || {
+        totalPairs: 0,
+        activePairs: 0,
+        pausedPairs: 0,
+        averageMarkup: '0.00',
+      });
     } catch (error: any) {
       console.error('Error fetching forex rates:', error);
       toast({
@@ -83,7 +88,7 @@ export default function ForexRatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, summary]);
+  }, [toast]);
 
   useEffect(() => {
     fetchRates();
@@ -125,11 +130,23 @@ export default function ForexRatesPage() {
       return;
     }
 
+    const baseRateNum = parseFloat(editBaseRate);
+    const markupNum = parseFloat(editMarkup);
+
+    if (isNaN(baseRateNum) || isNaN(markupNum)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter valid numbers',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       await axios.post('/api/admin/financial/forex-rates', {
         currencyPair: editCurrencyPair,
-        baseRate: parseFloat(editBaseRate),
-        markup: parseFloat(editMarkup),
+        baseRate: baseRateNum,
+        markup: markupNum,
         status: editStatus,
       });
 
@@ -174,21 +191,27 @@ export default function ForexRatesPage() {
   };
 
   const rateHistoryData = React.useMemo(() => {
-    // Simulate rate history for the last 7 days
-    return rates.map((rate) => {
-      const history = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (6 - i));
-        // Simulate small variations
+    if (rates.length === 0) return [];
+    
+    // Create a combined history for the first 3 rates
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      const dateStr = format(date, 'MMM dd');
+      
+      const dataPoint: any = { date: dateStr };
+      
+      // Add data for first 3 rates
+      rates.slice(0, 3).forEach((rate, idx) => {
         const variation = (Math.random() - 0.5) * 0.02;
-        return {
-          date: format(date, 'MMM dd'),
-          baseRate: rate.baseRate * (1 + variation),
-          customerRate: rate.customerRate * (1 + variation),
-        };
+        dataPoint[`${rate.currencyPair}_base`] = rate.baseRate * (1 + variation);
+        dataPoint[`${rate.currencyPair}_customer`] = rate.customerRate * (1 + variation);
       });
-      return { pair: rate.currencyPair, history };
+      
+      return dataPoint;
     });
+    
+    return last7Days;
   }, [rates]);
 
   return (
@@ -277,46 +300,47 @@ export default function ForexRatesPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start mb-6">
-        {rateHistoryData.length > 0 && (
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Rate Trends (Last 7 Days)</CardTitle>
-              <CardDescription>Base rate vs customer rate trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" data={rateHistoryData[0]?.history} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  {rateHistoryData.slice(0, 3).map((rateData, idx) => (
-                    <React.Fragment key={rateData.pair}>
+      {rateHistoryData.length > 0 && rates.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Rate Trends (Last 7 Days)</CardTitle>
+            <CardDescription>Base rate vs customer rate trends</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={rateHistoryData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {rates.slice(0, 3).map((rate, idx) => {
+                  const colors = ['#8884d8', '#82ca9d', '#ffc658'];
+                  return (
+                    <React.Fragment key={rate.id}>
                       <Line
                         type="monotone"
-                        dataKey="baseRate"
-                        data={rateData.history}
-                        stroke={['#8884d8', '#82ca9d', '#ffc658'][idx]}
+                        dataKey={`${rate.currencyPair}_base`}
+                        stroke={colors[idx]}
                         strokeDasharray="5 5"
-                        name={`${rateData.pair} (Base)`}
+                        name={`${rate.currencyPair} (Base)`}
+                        dot={false}
                       />
                       <Line
                         type="monotone"
-                        dataKey="customerRate"
-                        data={rateData.history}
-                        stroke={['#8884d8', '#82ca9d', '#ffc658'][idx]}
-                        name={`${rateData.pair} (Customer)`}
+                        dataKey={`${rate.currencyPair}_customer`}
+                        stroke={colors[idx]}
+                        name={`${rate.currencyPair} (Customer)`}
+                        dot={false}
                       />
                     </React.Fragment>
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">
@@ -455,7 +479,7 @@ export default function ForexRatesPage() {
                   <option value="Paused">Paused</option>
                 </select>
               </div>
-              {editBaseRate && editMarkup && (
+              {editBaseRate && editMarkup && !isNaN(parseFloat(editBaseRate)) && !isNaN(parseFloat(editMarkup)) && (
                 <div className="p-3 bg-muted rounded-md">
                   <p className="text-xs text-muted-foreground mb-1">Customer Rate:</p>
                   <p className="text-lg font-semibold">
@@ -510,7 +534,7 @@ export default function ForexRatesPage() {
                 <option value="Paused">Paused</option>
               </select>
             </div>
-            {editBaseRate && editMarkup && (
+            {editBaseRate && editMarkup && !isNaN(parseFloat(editBaseRate)) && !isNaN(parseFloat(editMarkup)) && (
               <div className="p-3 bg-muted rounded-md">
                 <p className="text-xs text-muted-foreground mb-1">New Customer Rate:</p>
                 <p className="text-lg font-semibold">
