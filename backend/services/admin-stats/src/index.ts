@@ -127,17 +127,18 @@ app.get('/stats', async (req: Request, res: Response) => {
 
       // Check user's transactions subcollection
       try {
-        let transactionsQuery = db
+        const transactionsRef = db
           .collection('users')
           .doc(userDoc.id)
           .collection('transactions');
 
+        let transactionsQuery: admin.firestore.Query;
         if (startTimestamp) {
-          transactionsQuery = transactionsQuery
+          transactionsQuery = transactionsRef
             .where('createdAt', '>=', startTimestamp)
             .where('createdAt', '<=', endTimestamp);
         } else {
-          transactionsQuery = transactionsQuery.where('createdAt', '<=', endTimestamp);
+          transactionsQuery = transactionsRef.where('createdAt', '<=', endTimestamp);
         }
 
         const transactionsSnapshot = await transactionsQuery.get();
@@ -166,7 +167,7 @@ app.get('/stats', async (req: Request, res: Response) => {
           const prevStartTimestamp = Timestamp.fromDate(previousStart);
           const prevEndTimestamp = Timestamp.fromDate(previousEnd);
           
-          let prevTransactionsQuery = db
+          const prevTransactionsQuery = db
             .collection('users')
             .doc(userDoc.id)
             .collection('transactions')
@@ -292,10 +293,12 @@ app.get('/volume-over-time', async (req: Request, res: Response) => {
     // Collect transactions from all users
     for (const userDoc of usersSnapshot.docs) {
       try {
-        const transactionsQuery = db
+        const transactionsRef = db
           .collection('users')
           .doc(userDoc.id)
-          .collection('transactions')
+          .collection('transactions');
+        
+        const transactionsQuery = transactionsRef
           .where('createdAt', '>=', startTimestamp)
           .where('createdAt', '<=', endTimestamp);
 
