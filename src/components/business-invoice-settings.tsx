@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Percent, Repeat, FileText, Settings, Loader2, UploadCloud } from 'lucide-react';
+import { Save, Percent, Repeat, FileText, Settings, Loader2, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { InvoiceSettings } from '@/types/business-invoice-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect } from 'react';
@@ -65,8 +65,13 @@ export function BusinessInvoiceSettings() {
                 if (businessProfile?.invoiceLogoUrl) {
                     setLogoPreview(businessProfile.invoiceLogoUrl);
                 }
-                 // If you save invoice settings to the user doc, you can reset the form here
-                 // reset(businessProfile.invoiceSettings || mockSettings);
+                const invoiceSettings = businessProfile?.invoiceSettings || {};
+                reset({
+                    defaultFooter: invoiceSettings.defaultFooter || '',
+                    enableTax: invoiceSettings.enableTax ?? true,
+                    defaultTaxRate: invoiceSettings.defaultTaxRate || 0,
+                    autoInvoiceForRecurring: invoiceSettings.autoInvoiceForRecurring ?? true,
+                });
             }
         });
         return () => unsub();
@@ -115,25 +120,37 @@ export function BusinessInvoiceSettings() {
 
 
     const onSubmit = async (data: InvoiceFormValues) => {
-        console.log(data);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Here you would save the data to firestore, e.g.
-        // if (user) {
-        //   const userDocRef = doc(db, 'users', user.uid);
-        //   await updateDoc(userDocRef, { 'businessProfile.invoiceSettings': data });
-        // }
-        toast({
-            title: 'Invoice Settings Updated',
-            description: 'Your invoice and tax preferences have been saved.',
-        });
+        if (!user) return;
+
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, { 
+                'businessProfile.invoiceSettings': data 
+            });
+
+            toast({
+                title: 'Invoice Settings Updated',
+                description: 'Your invoice and tax preferences have been saved successfully.',
+            });
+        } catch (error) {
+            console.error('Error saving invoice settings:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to save settings. Please try again.',
+                variant: 'destructive',
+            });
+        }
     };
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Invoice Customization</CardTitle>
-                    <CardDescription>Customize the look and feel of your invoices.</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Invoice Customization
+                    </CardTitle>
+                    <CardDescription>Customize the look and feel of your invoices. Your branding will appear on all invoices sent to customers.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                      <div className="space-y-2">
@@ -224,9 +241,22 @@ export function BusinessInvoiceSettings() {
                 </CardContent>
             </Card>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => reset()}>
+                    Reset
+                </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                    <Save className="mr-2 h-4 w-4"/>Save Invoice Settings
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            <Save className="mr-2 h-4 w-4"/>
+                            Save Invoice Settings
+                        </>
+                    )}
                 </Button>
             </div>
         </form>
