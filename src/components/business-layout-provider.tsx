@@ -51,11 +51,11 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
     // Show loading state while checking auth or business status
     if (authLoading || businessStatus === 'loading') {
         return (
-            <div className="min-h-screen w-full bg-muted/40">
+            <div className="min-h-screen w-full bg-background">
                 <BusinessSidebar />
-                 <div className="flex flex-col sm:pl-14 md:pl-[220px]">
+                 <div className="flex flex-col sm:pl-14 md:pl-[260px]">
                     <BusinessHeader />
-                     <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
+                     <main className="flex-1 p-4 sm:px-6 sm:py-4 md:p-6 md:py-6 lg:p-8 lg:py-8">
                         <div className="flex items-center justify-between space-y-2 mb-6">
                             <Skeleton className="h-10 w-64" />
                         </div>
@@ -89,12 +89,14 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
     }
 
     return (
-        <div className="min-h-screen w-full bg-muted/40">
+        <div className="min-h-screen w-full bg-background">
             <BusinessSidebar />
-            <div className="flex flex-col sm:pl-14 md:pl-[220px]">
+            <div className="flex flex-col sm:pl-14 md:pl-[260px]">
                 <BusinessHeader />
-                <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-6 space-y-4">
-                    {children}
+                <main className="flex-1 p-4 sm:px-6 sm:py-4 md:p-6 md:py-6 lg:p-8 lg:py-8">
+                    <div className="mx-auto max-w-7xl space-y-6">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>
