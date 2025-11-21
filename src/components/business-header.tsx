@@ -160,7 +160,7 @@ export function BusinessHeader() {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[12rem] bg-sidebar text-sidebar-foreground">
+            <SheetContent side="left" className="flex flex-col p-0 w-[14rem] bg-sidebar text-sidebar-foreground">
                 <SheetHeader className="p-0">
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>
@@ -169,11 +169,6 @@ export function BusinessHeader() {
                   <div className="px-2 py-2 border-b">
                     <Card className="p-2">
                       <div className="flex flex-col gap-2">
-                        {/* Payvost Logo */}
-                        <div className="flex items-center justify-center">
-                          <Icons.logo className="h-6" />
-                        </div>
-                        
                         {/* BU and Business Name */}
                         <div className="flex items-center gap-2.5">
                           <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
