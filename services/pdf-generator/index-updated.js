@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
 async function fetchInvoiceData(invoiceId) {
   // Try multiple endpoints for invoice data
   const publicEndpoints = [
-    // Vercel public endpoint (if available)
+    // Vercel public endpoint (preferred)
     process.env.VERCEL_BASE_URL 
       ? `${process.env.VERCEL_BASE_URL}/api/invoices/public/${invoiceId}`
       : null,
@@ -44,7 +44,7 @@ async function fetchInvoiceData(invoiceId) {
   throw new Error(`Invoice ${invoiceId} not found or not public`);
 }
 
-// POST endpoint that accepts invoice data directly (more efficient - preferred)
+// POST endpoint that accepts invoice data directly (more efficient)
 app.post('/pdf', async (req, res) => {
   try {
     const { invoiceData, invoiceId } = req.body;
@@ -55,12 +55,12 @@ app.post('/pdf', async (req, res) => {
 
     let data;
     
-    // If invoice data is provided directly, use it (preferred - no fetch needed)
+    // If invoice data is provided directly, use it (preferred)
     if (invoiceData) {
       console.log(`[PDF] Using provided invoice data for: ${invoiceData.id || invoiceId}`);
       data = invoiceData;
     } else {
-      // Otherwise, fetch it (fallback)
+      // Otherwise, fetch it
       console.log(`[PDF] Fetching invoice data for: ${invoiceId}`);
       data = await fetchInvoiceData(invoiceId);
     }
@@ -86,7 +86,7 @@ app.post('/pdf', async (req, res) => {
   }
 });
 
-// GET endpoint (legacy support - still tries to fetch invoice)
+// GET endpoint (legacy support, still tries to fetch invoice)
 app.get('/pdf', async (req, res) => {
   // Backward compatibility: allow legacy `url` param by extracting the invoice id from it
   let { invoiceId } = req.query;
@@ -136,10 +136,11 @@ app.listen(PORT, () => {
   console.log(`PDF Generator service (React-PDF) listening on port ${PORT}`);
   console.log(`  GET /health - Health check`);
   console.log(`  GET /pdf?invoiceId=<id> - Generate PDF (fetches invoice)`);
-  console.log(`  POST /pdf - Generate PDF (receives invoice data - preferred)`);
+  console.log(`  POST /pdf - Generate PDF (receives invoice data)`);
 });
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received');
   process.exit(0);
 });
+
