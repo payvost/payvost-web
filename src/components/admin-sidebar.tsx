@@ -5,11 +5,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home,
   Users,
   LineChart,
-  Package,
-  ShoppingCart,
   Settings,
   DollarSign,
   ArrowRightLeft,
@@ -23,26 +20,31 @@ import {
   Landmark,
   UserCog,
   FileText,
-  FileBarChart,
   HelpingHand,
   BookOpen,
-  Mail,
   KeyRound,
   Webhook,
   FileCode,
-  TestTube,
   FileWarning,
-  ScrollText,
   Gavel,
   Shield,
   Cog,
-  Zap,
-  Bot,
-  Search,
-  PanelLeft,
   CreditCard,
   Bell,
   Building2,
+  Activity,
+  TrendingUp,
+  AlertTriangle,
+  Layers3,
+  RefreshCw,
+  BarChart3,
+  Route,
+  Banknote,
+  FileCheck,
+  AlertCircle,
+  Network,
+  Database,
+  FileBarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -61,102 +63,78 @@ export function AdminSidebar() {
 
   const menuItems = [
       { 
-        group: 'Overview', 
+        group: 'Dashboard & Monitoring', 
         items: [
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard', icon: <LineChart />, label: 'Dashboard' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/real-time', icon: <LineChart />, label: 'Real-Time Transactions' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <FileText />, label: 'System Status' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/real-time', icon: <Activity />, label: 'Real-Time Monitoring' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <AlertTriangle />, label: 'System Health & Alerts' },
         ]
       },
       {
-        group: 'Payments & Transfers',
+        group: 'Transactions & Payments',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions', icon: <DollarSign />, label: 'Transactions' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/remittances', icon: <ArrowRightLeft />, label: 'Remittances' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions', icon: <DollarSign />, label: 'All Transactions' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/remittances', icon: <ArrowRightLeft />, label: 'Cross-Border Transfers' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-links', icon: <HandCoins />, label: 'Payment Links' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/card-management', icon: <CreditCard />, label: 'Card Management' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/card-management', icon: <CreditCard />, label: 'Card Operations' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-routing', icon: <Route />, label: 'Payment Routing & Optimization' },
         ]
       },
-       {
-        group: 'Businesses / Merchants',
+      {
+        group: 'Financial Operations',
         items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settlement-engine', icon: <Layers3 />, label: 'Settlement & Reconciliation' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/liquidity-management', icon: <Banknote />, label: 'Liquidity Management' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/forex-rates', icon: <TrendingUp />, label: 'Forex Rate Management' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/fee-configuration', icon: <DollarSign />, label: 'Fee Configuration' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payout-management', icon: <RefreshCw />, label: 'Payout Management' },
+        ]
+      },
+      {
+        group: 'Customers & Businesses',
+        items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers', icon: <Users />, label: 'Customer Management' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-accounts', icon: <Store />, label: 'Business Accounts' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/merchant-management', icon: <UserCog />, label: 'Merchant Management' },
-        ]
-      },
-       {
-        group: 'Users & Roles',
-        items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/customers', icon: <Users />, label: 'Customers' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management', icon: <UserCog />, label: 'Team Management' },
-        ]
-      },
-       {
-        group: 'Revenue & Fees',
-        items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/fee-configuration', icon: <DollarSign />, label: 'Fee Configuration' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/invoicing', icon: <FileText />, label: 'Invoicing' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/kyc-review', icon: <ShieldCheck />, label: 'KYC/AML Review' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-onboarding', icon: <Building2 />, label: 'Business Onboarding' },
         ]
       },
       {
-        group: 'Reports & Analytics',
+        group: 'Compliance & Risk',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/revenue-breakdown', icon: <LineChart />, label: 'Revenue Breakdown' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/fraud-analysis', icon: <ShieldAlert />, label: 'Fraud & Risk Analysis' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/custom-reports', icon: <FileText />, label: 'Custom Reports' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance Dashboard' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/sanctions-screening', icon: <AlertCircle />, label: 'Sanctions Screening' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/fraud-analysis', icon: <ShieldAlert />, label: 'Fraud Detection & Analysis' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <BarChart3 />, label: 'Risk Assessment' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/reporting', icon: <FileBarChart2 />, label: 'Regulatory Reporting' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/audit-trails', icon: <FileCheck />, label: 'Audit Trails' },
         ]
       },
-       {
-        group: 'Operations',
+      {
+        group: 'Banking & Integrations',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settlement-engine', icon: <Cog />, label: 'Settlement Engine' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/bank-integrations', icon: <Landmark />, label: 'Bank Integrations' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/forex-rates', icon: <Globe />, label: 'Forex & Exchange Rates' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/correspondent-banking', icon: <Network />, label: 'Correspondent Banking' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/integrations', icon: <Puzzle />, label: 'Payment Provider Management' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/api-settings', icon: <KeyRound />, label: 'API & Webhooks' },
         ]
       },
       {
-        group: 'Support Tools',
+        group: 'Support & Operations',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <HelpingHand />, label: 'Customer Support' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <HelpingHand />, label: 'Support Center' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/dispute-resolution', icon: <Gavel />, label: 'Dispute Resolution' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/knowledge-base', icon: <BookOpen />, label: 'Knowledge Base' },
         ]
       },
-       {
-        group: 'Platform Settings',
-        items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/localization', icon: <Globe />, label: 'Localization' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/security', icon: <Shield />, label: 'Security' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/integrations', icon: <Puzzle />, label: 'Integrations' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/api-settings', icon: <KeyRound />, label: 'API Settings' },
-        ]
-      },
       {
-        group: 'Developer Tools',
+        group: 'Settings & Admin',
         items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/webhooks-logs', icon: <Webhook />, label: 'Webhooks & Logs' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/error-tracking', icon: <FileWarning />, label: 'Error Tracking' },
-        ]
-      },
-       {
-        group: 'Compliance & Legal',
-        items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance & Risk' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/reporting', icon: <Gavel />, label: 'Regulatory Reporting' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/audit-trails', icon: <FileCode />, label: 'Audit Trails' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/legal-docs', icon: <FileText />, label: 'Legal Documents' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/kyc-review', icon: <ShieldCheck />, label: 'KYC Review' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-onboarding', icon: <Building2 />, label: 'Business Onboarding' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/kyc-aml', icon: <ShieldCheck />, label: 'KYC/AML Policy' },
-        ]
-      },
-      {
-        group: 'System Admin',
-        items: [
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/platform-config', icon: <Cog />, label: 'Platform Config' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/release-management', icon: <Zap />, label: 'Release Management' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/ai-automation', icon: <Bot />, label: 'AI/Automation' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/platform-config', icon: <Cog />, label: 'Platform Configuration' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management', icon: <Users />, label: 'Team & Permissions' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/security', icon: <Shield />, label: 'System Settings' },
         ]
       }
     ];

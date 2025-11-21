@@ -9,9 +9,38 @@ import {
   PanelLeft,
   Settings,
   LineChart,
-  Globe,
-  FileText,
+  Activity,
+  AlertTriangle,
+  FileCode,
+  DollarSign,
+  ArrowRightLeft,
+  HandCoins,
+  CreditCard,
+  Route,
+  Layers3,
+  Banknote,
+  TrendingUp,
+  RefreshCw,
+  Users,
+  Store,
+  UserCog,
+  ShieldCheck,
+  Building2,
+  ShieldAlert,
+  AlertCircle,
+  BarChart3,
+  FileBarChart2,
+  FileCheck,
+  Landmark,
+  Network,
+  Puzzle,
+  KeyRound,
+  HelpingHand,
+  Gavel,
   Bell,
+  BookOpen,
+  Cog,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -35,21 +64,41 @@ export function AdminHeader() {
 
     const menuItems = [
       { 
-        group: 'Overview', 
+        group: 'Dashboard & Monitoring', 
         items: [
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard', icon: <LineChart />, label: 'Dashboard' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/real-time', icon: <LineChart />, label: 'Real-Time Transactions' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <FileText />, label: 'System Status' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/real-time', icon: <Activity />, label: 'Real-Time Monitoring' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/system-status', icon: <AlertTriangle />, label: 'System Health & Alerts' },
         ]
       },
-        {
-          group: 'Support Tools',
-          items: [
-            { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
-            { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <FileText />, label: 'Support Center' },
-          ],
-        },
-      // ... other menu groups can be added here for the mobile view if needed
+      {
+        group: 'Transactions & Payments',
+        items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/transactions', icon: <DollarSign />, label: 'All Transactions' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/remittances', icon: <ArrowRightLeft />, label: 'Cross-Border Transfers' },
+        ]
+      },
+      {
+        group: 'Financial Operations',
+        items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settlement-engine', icon: <Layers3 />, label: 'Settlement & Reconciliation' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/liquidity-management', icon: <Banknote />, label: 'Liquidity Management' },
+        ]
+      },
+      {
+        group: 'Compliance & Risk',
+        items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance Dashboard' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/sanctions-screening', icon: <AlertCircle />, label: 'Sanctions Screening' },
+        ]
+      },
+      {
+        group: 'Support & Operations',
+        items: [
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/support-center', icon: <HelpingHand />, label: 'Support Center' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/notifications', icon: <Bell />, label: 'Notification Center' },
+        ]
+      },
     ];
 
     const renderNav = () => (
