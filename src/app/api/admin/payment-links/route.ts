@@ -37,10 +37,13 @@ export async function GET() {
           amountReceived: data.status === 'Paid' || data.status === 'Completed' ? 
                           parseFloat(data.numericAmount || data.amount || 0) : 0,
           currency: data.currency || 'USD',
-          created: data.createdAt?.toDate?.() || 
-                   (data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000) : null) ||
-                   (typeof data.createdAt === 'string' ? new Date(data.createdAt) : 
-                   data.date ? new Date(data.date) : new Date()),
+          created: (() => {
+            const date = data.createdAt?.toDate?.() || 
+                        (data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000) : null) ||
+                        (typeof data.createdAt === 'string' ? new Date(data.createdAt) : 
+                        data.date ? new Date(data.date) : new Date());
+            return date instanceof Date ? date.toISOString() : new Date().toISOString();
+          })(),
           publicUrl: data.link || data.publicUrl,
           type: 'payment_request',
           amount: data.amount || `${data.currency || 'USD'} ${data.numericAmount || 0}`,
@@ -66,9 +69,12 @@ export async function GET() {
           paid: data.paid || data.successfulPayments || 0,
           amountReceived: parseFloat(data.amountReceived || data.totalReceived || 0),
           currency: data.currency || 'USD',
-          created: data.createdAt?.toDate?.() || 
-                   (data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000) : null) ||
-                   (typeof data.createdAt === 'string' ? new Date(data.createdAt) : new Date()),
+          created: (() => {
+            const date = data.createdAt?.toDate?.() || 
+                        (data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000) : null) ||
+                        (typeof data.createdAt === 'string' ? new Date(data.createdAt) : new Date());
+            return date instanceof Date ? date.toISOString() : new Date().toISOString();
+          })(),
           publicUrl: data.link || data.publicUrl,
           type: 'payment_link',
         });
@@ -78,7 +84,11 @@ export async function GET() {
     }
 
     // Sort by creation date (newest first)
-    paymentLinks.sort((a, b) => b.created.getTime() - a.created.getTime());
+    paymentLinks.sort((a, b) => {
+      const dateA = typeof a.created === 'string' ? new Date(a.created).getTime() : (a.created?.getTime?.() || 0);
+      const dateB = typeof b.created === 'string' ? new Date(b.created).getTime() : (b.created?.getTime?.() || 0);
+      return dateB - dateA;
+    });
 
     // Calculate stats
     const totalRevenue = paymentLinks.reduce((sum, link) => sum + link.amountReceived, 0);
