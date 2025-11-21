@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, PanelLeft, LifeBuoy, Command, Settings, ChevronDown } from 'lucide-react';
+import { Search, PanelLeft, LifeBuoy, Command, Settings, ChevronDown, Puzzle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -150,7 +150,7 @@ export function BusinessHeader() {
     );
 
     return (
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+        <header className="flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -164,29 +164,21 @@ export function BusinessHeader() {
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>
                 <SidebarProvider>
-                  {/* Logo Header */}
-                  <div className="h-12 flex items-center px-4 border-b">
-                    <Link href="/business" className="flex items-center justify-start">
-                      <Icons.logo className="h-8" />
-                    </Link>
-                  </div>
                   {/* Business Header */}
                   <div className="border-b h-16 flex items-center px-3">
                     <div className="flex items-center gap-2.5 w-full">
                       <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt="Business" className="h-8 w-8 rounded" />
-                        ) : (
-                          <span className="text-xs font-medium">
-                            {user?.displayName?.substring(0, 2).toUpperCase() || 'BI'}
-                          </span>
-                        )}
+                        <span className="text-xs font-medium">BU</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">
-                          {user?.displayName || 'Business'}
+                          Business
                         </div>
-                        <div className="text-xs text-muted-foreground">Active</div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="rounded px-1.5 py-0.5 text-[10px] font-normal bg-muted text-muted-foreground">
+                            Not Available
+                          </div>
+                        </div>
                       </div>
                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     </div>
@@ -196,14 +188,22 @@ export function BusinessHeader() {
                  </ScrollArea>
                  <div className="mt-auto border-t p-2">
                    <SidebarMenu className="w-full">
-                     <SidebarMenuItem className="w-full">
-                       <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" isActive={isActive('/business/settings')}>
-                         <Link href="/business/settings">
-                           <Settings />
-                           <span>Settings</span>
-                         </Link>
-                       </SidebarMenuButton>
-                     </SidebarMenuItem>
+                     <div className="flex items-center justify-start">
+                       <SidebarMenuItem className="w-full">
+                         <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
+                           <Link href="/business/settings">
+                             <Settings />
+                             <span>Settings</span>
+                           </Link>
+                         </SidebarMenuButton>
+                       </SidebarMenuItem>
+                       <SidebarMenuItem>
+                         <SidebarMenuButton size="default" className="justify-start gap-2" tooltip="Developer">
+                           <Puzzle />
+                           <span>Developer</span>
+                         </SidebarMenuButton>
+                       </SidebarMenuItem>
+                     </div>
                    </SidebarMenu>
                  </div>
                 </SidebarProvider>
