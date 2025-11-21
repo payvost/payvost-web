@@ -45,6 +45,22 @@ export default function CustomerDetailsPage() {
     const [limitsOpen, setLimitsOpen] = useState(false);
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [kycLevel, setKycLevel] = useState<'Basic' | 'Full' | 'Advanced'>('Full');
+    
+    // Get available KYC levels based on user's current tier
+    const getAvailableKycLevels = (): ('Basic' | 'Full' | 'Advanced')[] => {
+        if (!customer) return ['Basic', 'Full', 'Advanced'];
+        
+        // If user is tier3, they can have Advanced
+        if (customer.kycTier === 'tier3' || customer.userType === 'Tier 3') {
+            return ['Basic', 'Full', 'Advanced'];
+        }
+        // If user is tier2, they can have Full
+        if (customer.kycTier === 'tier2' || customer.userType === 'Tier 2') {
+            return ['Basic', 'Full'];
+        }
+        // If user is tier1, they can have Basic
+        return ['Basic'];
+    };
     const [limits, setLimits] = useState({ daily: 1000, fx: 5000, withdrawal: 2000 });
     const [notificationTitle, setNotificationTitle] = useState('');
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -458,11 +474,46 @@ export default function CustomerDetailsPage() {
     
     // Format joined date
     const formatDate = (date: any) => {
-        if (!date) return 'N/A';
+        if (!date) return null;
         if (typeof date === 'string') return new Date(date).toLocaleDateString();
         if (date.toDate) return date.toDate().toLocaleDateString();
         if (date._seconds) return new Date(date._seconds * 1000).toLocaleDateString();
-        return 'N/A';
+        return null;
+    };
+    
+    // Determine actual KYC level from tier status
+    const getActualKycLevel = (): string | null => {
+        // First check if kycLevel is explicitly set
+        if (customer.kycLevel) {
+            return customer.kycLevel;
+        }
+        
+        // Otherwise determine from tier status
+        if (customer.kycProfile?.tiers) {
+            if (customer.kycProfile.tiers.tier3?.status === 'approved') {
+                return 'Advanced';
+            } else if (customer.kycProfile.tiers.tier2?.status === 'approved') {
+                return 'Full';
+            } else if (customer.kycProfile.tiers.tier1?.status === 'approved') {
+                return 'Basic';
+            }
+        }
+        
+        // Fallback to kycTier
+        if (customer.kycTier === 'tier3') return 'Advanced';
+        if (customer.kycTier === 'tier2') return 'Full';
+        if (customer.kycTier === 'tier1') return 'Basic';
+        
+        return null;
+    };
+    
+    // Helper to format sensitive data (mask SSN, show last 4 of BVN if needed)
+    const formatSensitiveValue = (value: string | null | undefined, type: 'ssn' | 'bvn' | 'id' = 'id'): string | null => {
+        if (!value) return null;
+        if (type === 'ssn' && value.length > 4) {
+            return `***-**-${value.slice(-4)}`;
+        }
+        return value;
     };
 
     return (
@@ -503,25 +554,41 @@ export default function CustomerDetailsPage() {
                                                 </CardHeader>
                                                 <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> User Type</p><div className="pl-5"><Badge variant="outline">{customer.userType}</Badge></div></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Phone className="h-4 w-4" /> Phone</p><p className="font-medium pl-5">{customer.phone || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate)}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Shield className="h-4 w-4" /> KYC Level</p><p className="font-medium pl-5">{customer.kycLevel || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Type</p><p className="font-medium pl-5">{customer.kycIdType || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Number</p><p className="font-medium pl-5">{customer.kycIdNumber || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Activity className="h-4 w-4" /> Last Login</p><p className="font-medium pl-5">{customer.lastLoginAt ? new Date(toDate(customer.lastLoginAt)!).toLocaleString() : 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Last IP</p><p className="font-medium pl-5">{customer.lastLoginIp || 'N/A'}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> Device</p><p className="font-medium pl-5">{customer.lastLoginDevice || 'N/A'}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Phone className="h-4 w-4" /> Phone</p><p className="font-medium pl-5">{customer.phone || <span className="text-muted-foreground">Not provided</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country || <span className="text-muted-foreground">Not set</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate) || <span className="text-muted-foreground">Not available</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Shield className="h-4 w-4" /> KYC Level</p><p className="font-medium pl-5">{getActualKycLevel() || <span className="text-muted-foreground">Not set</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Type</p><p className="font-medium pl-5">{customer.kycIdType || <span className="text-muted-foreground">Not provided</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Number</p><p className="font-medium pl-5 font-mono">{customer.kycIdNumber || <span className="text-muted-foreground">Not provided</span>}</p></div>
+                                                        {customer.bvn && (
+                                                            <div><p className="text-muted-foreground flex items-center gap-1"><KeyRound className="h-4 w-4"/> BVN</p><p className="font-medium pl-5 font-mono">{formatSensitiveValue(customer.bvn, 'bvn')}</p></div>
+                                                        )}
+                                                        {(customer.ssn || customer.ssnLast4) && (
+                                                            <div><p className="text-muted-foreground flex items-center gap-1"><KeyRound className="h-4 w-4"/> SSN</p><p className="font-medium pl-5 font-mono">{formatSensitiveValue(customer.ssn || customer.ssnLast4, 'ssn')}</p></div>
+                                                        )}
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Activity className="h-4 w-4" /> Last Login</p><p className="font-medium pl-5">{customer.lastLoginAt ? new Date(toDate(customer.lastLoginAt)!).toLocaleString() : <span className="text-muted-foreground">Never</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Last IP</p><p className="font-medium pl-5 font-mono">{customer.lastLoginIp || <span className="text-muted-foreground">Not available</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4" /> Device</p><p className="font-medium pl-5">{customer.lastLoginDevice || <span className="text-muted-foreground">Not available</span>}</p></div>
                                                 </CardContent>
                                                 <Separator />
-                                                {(customer.address || customer.businessInfo) && (
-                                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        {customer.address && (
+                                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        {(customer.address || customer.street || customer.city) && (
                                                             <div>
                                                                 <h4 className="font-semibold mb-2">Address</h4>
                                                                 <div className="text-sm space-y-1">
-                                                                    <p>{customer.address.street || '—'}</p>
-                                                                    <p>{[customer.address.city, customer.address.state, customer.address.postalCode].filter(Boolean).join(', ') || '—'}</p>
+                                                                    {(customer.address?.street || customer.street) && (
+                                                                        <p>{(customer.address?.street || customer.street)}</p>
+                                                                    )}
+                                                                    {(() => {
+                                                                        const city = customer.address?.city || customer.city;
+                                                                        const state = customer.address?.state || customer.state;
+                                                                        const postalCode = customer.address?.postalCode || customer.zip;
+                                                                        const addressLine = [city, state, postalCode].filter(Boolean).join(', ');
+                                                                        return addressLine ? <p>{addressLine}</p> : null;
+                                                                    })()}
+                                                                    {(customer.address?.country || customer.country) && (
+                                                                        <p className="text-muted-foreground">{customer.address?.country || customer.country}</p>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1127,10 +1194,15 @@ export default function CustomerDetailsPage() {
                                                             value={kycLevel} 
                                                             onChange={e => setKycLevel(e.target.value as any)}
                                                           >
-                                                            <option value="Basic">Basic</option>
-                                                            <option value="Full">Full</option>
-                                                            <option value="Advanced">Advanced</option>
+                                                            {getAvailableKycLevels().map(level => (
+                                                              <option key={level} value={level}>{level}</option>
+                                                            ))}
                                                           </select>
+                                                          {getAvailableKycLevels().length === 1 && (
+                                                            <p className="text-xs text-muted-foreground mt-1">
+                                                              Only Basic level is available for Tier 1 users. Upgrade tier to unlock higher levels.
+                                                            </p>
+                                                          )}
                                                         </div>
                                                         <DialogFooter>
                                                           <Button variant="secondary" onClick={() => setKycLevelOpen(false)} disabled={changeKycLoading}>
