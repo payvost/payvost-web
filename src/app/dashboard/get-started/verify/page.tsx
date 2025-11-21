@@ -16,13 +16,12 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { KYC_CONFIG } from '@/config/kyc';
-import type { KycDocKey, KycLevel, KycDocument, KycSubmission } from '@/types/kyc';
+import type { KycDocKey, KycDocument, KycSubmission } from '@/types/kyc';
 
 export default function VerifyBusinessPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted'>('idle');
   const [countryCode, setCountryCode] = useState<string>('NG');
-  const [level, setLevel] = useState<KycLevel>('Full');
   const [files, setFiles] = useState<Record<KycDocKey, File | null>>({
     government_id: null,
     proof_of_address: null,
@@ -39,8 +38,8 @@ export default function VerifyBusinessPage() {
 
   const requirements = useMemo(() => {
     const cfg = KYC_CONFIG.find(c => c.countryCode === countryCode);
-    return cfg?.levels[level] || [];
-  }, [countryCode, level]);
+    return cfg?.requirements || [];
+  }, [countryCode]);
 
   const handleFileChange = (key: KycDocKey, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -82,7 +81,6 @@ export default function VerifyBusinessPage() {
         id: submissionId,
         userId: user.uid,
         countryCode,
-        level,
         documents: uploadedDocs,
         status: 'submitted',
         createdAt: new Date().toISOString(),
@@ -162,26 +160,29 @@ export default function VerifyBusinessPage() {
                             </div>
                             <div>
                                 <CardTitle>Business Verification</CardTitle>
-                                <CardDescription>Please select your country and KYC level, then upload the required documents.</CardDescription>
+                                <CardDescription>Please select your country, then upload the required documents.</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Country</label>
-                          <select className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={countryCode} onChange={e => setCountryCode(e.target.value)}>
-                            {KYC_CONFIG.map(c => (<option key={c.countryCode} value={c.countryCode}>{c.countryName}</option>))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">KYC Level</label>
-                          <select className="mt-1 w-full border rounded-md h-10 px-3 bg-background" value={level} onChange={e => setLevel(e.target.value as KycLevel)}>
-                            <option value="Basic">Basic</option>
-                            <option value="Full">Full</option>
-                            <option value="Advanced">Advanced</option>
-                          </select>
-                        </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground mb-2 block">Country</label>
+                        <select className="w-full border rounded-md h-10 px-3 bg-background" value={countryCode} onChange={e => {
+                          setCountryCode(e.target.value);
+                          // Clear files when country changes
+                          setFiles({
+                            government_id: null,
+                            proof_of_address: null,
+                            selfie: null,
+                            business_registration: null,
+                            tax_id: null,
+                            director_id: null,
+                            bank_statement: null,
+                            other: null,
+                          });
+                        }}>
+                          {KYC_CONFIG.map(c => (<option key={c.countryCode} value={c.countryCode}>{c.countryName}</option>))}
+                        </select>
                       </div>
 
                       {requirements.map(req => (
