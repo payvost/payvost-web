@@ -180,24 +180,23 @@ export async function POST(req: NextRequest) {
 
     console.log(`[PDF Generation] Uploaded to Storage: ${fileName}`);
 
-    // Generate a signed URL (valid for 1 year)
-    const [signedUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: '03-09-2491', // Far future date (Firebase limit)
-    });
+    // ✅ DON'T generate signed URL - serve through API instead
+    // This keeps storage bucket URL hidden and allows access control
+    // PDFs are served via /api/pdf/invoice/[id] which handles access control
 
-    // Update Firestore with PDF URL
+    // Update Firestore to indicate PDF is ready (no signed URL stored)
     await adminDb.collection(collectionName).doc(invoiceId).update({
-      pdfUrl: signedUrl,
       pdfGeneratedAt: FieldValue.serverTimestamp(),
+      pdfReady: true, // Flag to indicate PDF is ready
+      // Don't store signed URL - serve through /api/pdf/invoice/[id] instead
     });
 
-    console.log(`[PDF Generation] Updated Firestore with PDF URL for invoice: ${invoiceId}`);
+    console.log(`[PDF Generation] Updated Firestore - PDF ready for invoice: ${invoiceId} (served via API)`);
 
     return NextResponse.json({
       success: true,
-      pdfUrl: signedUrl,
       message: 'PDF generated and uploaded successfully',
+      // Don't return signed URL - client should use /api/pdf/invoice/[id]
     });
 
   } catch (error: any) {
