@@ -65,6 +65,8 @@ export default function VerifyBusinessPage() {
 
     try {
       const submissionId = `${user.uid}_${Date.now()}`;
+      const businessOnboardingId = localStorage.getItem('businessOnboardingId');
+      
       // Upload files
       const uploadedDocs: KycDocument[] = [];
       for (const req of requirements) {
@@ -90,6 +92,20 @@ export default function VerifyBusinessPage() {
         ...sub,
         createdAt: serverTimestamp(),
       });
+
+      // If this is part of business onboarding, update the business onboarding record with documents
+      if (businessOnboardingId) {
+        await setDoc(doc(db, 'business_onboarding', businessOnboardingId), {
+          documents: uploadedDocs,
+          kycSubmissionId: submissionId,
+          status: 'pending_review',
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+
+      // Clear localStorage
+      localStorage.removeItem('businessOnboardingData');
+      localStorage.removeItem('businessOnboardingId');
 
       setSubmissionState('submitted');
       toast({ title: 'Submitted', description: 'Your documents have been submitted for review.' });
