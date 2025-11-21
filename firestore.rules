@@ -6,7 +6,7 @@ service cloud.firestore {
     function isTier1(userId) {
       return request.auth != null
              && request.auth.uid == userId
-             && get(/databases/$(database)/documents/users/$(userId)).data.kycStatus == "Verified";
+             && get(/databases/$(database)/documents/users/$(userId)).data.kycStatus == "verified";
     }
 
     // ✅ Helper: check if user is admin
