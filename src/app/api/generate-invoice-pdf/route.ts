@@ -43,15 +43,90 @@ export async function POST(req: NextRequest) {
     let pdfBuffer: Buffer;
     
     try {
-      // Call Render PDF service
-      const pdfUrl = `${pdfServiceUrl}/pdf?invoiceId=${invoiceId}`;
+      // Normalize invoice data for PDF
+      const normalizeInvoiceData = (data: any) => {
+        // Convert Firestore Timestamps to ISO strings
+        const normalizeDate = (date: any): string | null => {
+          if (!date) return null;
+          try {
+            let dateObj: Date;
+            if (date && typeof date.toDate === 'function') {
+              dateObj = date.toDate();
+            } else if (date && date._seconds) {
+              dateObj = new Date(date._seconds * 1000);
+            } else if (typeof date === 'string') {
+              dateObj = new Date(date);
+            } else if (date instanceof Date) {
+              dateObj = date;
+            } else {
+              dateObj = new Date(date);
+            }
+            if (isNaN(dateObj.getTime())) return null;
+            return dateObj.toISOString();
+          } catch (e) {
+            return null;
+          }
+        };
+
+        const normalizeItems = (items: any) => {
+          if (!Array.isArray(items)) return [];
+          return items.map((item: any) => ({
+            description: String(item.description || item.name || 'Item'),
+            quantity: Number(item.quantity) || 1,
+            price: Number(item.price) || 0,
+          }));
+        };
+
+        const toName = data.toInfo?.name || data.toName || '';
+        const toEmail = data.toInfo?.email || data.toEmail || '';
+        const toAddress = data.toInfo?.address || data.toAddress || '';
+        const fromName = data.fromInfo?.name || data.fromName || '';
+        const fromAddress = data.fromInfo?.address || data.fromAddress || '';
+        const fromEmail = data.fromInfo?.email || data.fromEmail || '';
+
+        return {
+          id: String(invoiceId),
+          invoiceNumber: String(data.invoiceNumber || invoiceId),
+          issueDate: normalizeDate(data.issueDate),
+          dueDate: normalizeDate(data.dueDate),
+          createdAt: normalizeDate(data.createdAt),
+          updatedAt: normalizeDate(data.updatedAt),
+          paidAt: data.paidAt ? normalizeDate(data.paidAt) : null,
+          toName: String(toName),
+          toEmail: String(toEmail),
+          toAddress: String(toAddress),
+          fromName: String(fromName),
+          fromAddress: String(fromAddress),
+          fromEmail: String(fromEmail),
+          items: normalizeItems(data.items),
+          status: String(data.status || 'Pending'),
+          currency: String(data.currency || 'USD'),
+          grandTotal: Number(data.grandTotal) || 0,
+          taxRate: Number(data.taxRate) || 0,
+          tax: Number(data.tax) || 0,
+          discount: Number(data.discount) || 0,
+          notes: String(data.notes || ''),
+          description: String(data.description || ''),
+          amount: Number(data.amount) || 0,
+        };
+      };
+
+      const normalizedInvoice = normalizeInvoiceData(invoiceData);
+
+      // Send invoice data to Render service via POST (more efficient)
+      const pdfUrl = `${pdfServiceUrl}/pdf`;
       console.log(`[PDF Generation] Calling PDF service: ${pdfUrl}`);
       
       const pdfResponse = await fetch(pdfUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Accept': 'application/pdf',
         },
+        body: JSON.stringify({
+          invoiceData: normalizedInvoice,
+          invoiceId: invoiceId,
+        }),
         // Add timeout to prevent hanging
         signal: AbortSignal.timeout(50000), // 50 seconds timeout
       });
