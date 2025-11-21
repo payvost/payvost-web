@@ -43,7 +43,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       },
     });
 
-    const pendingPayoutsTotal = pendingPayouts.reduce((sum, p) => sum + Number(p.amount), 0);
+    const pendingPayoutsTotal = pendingPayouts.reduce((sum: number, p: { amount: any }) => sum + Number(p.amount), 0);
     const pendingPayoutsCount = pendingPayouts.length;
 
     // Get open invoices (business invoices with PENDING or OVERDUE status)
@@ -61,7 +61,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     });
 
     const openInvoicesCount = openInvoices.length;
-    const openInvoicesAmount = openInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
+    const openInvoicesAmount = openInvoices.reduce((sum: number, inv: { grandTotal: any }) => sum + Number(inv.grandTotal), 0);
 
     // Get new customers (users who made transactions in the last 7 days)
     const sevenDaysAgo = new Date();
@@ -127,7 +127,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       take: 10,
     });
 
-    const recentTransactionsData = recentTxs.map(tx => ({
+    const recentTransactionsData = recentTxs.map((tx: any) => ({
       id: tx.id,
       type: tx.toAccount.userId === userId ? 'Credit' : 'Debit',
       description: tx.description || `${tx.type} Transaction`,
@@ -209,23 +209,23 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     });
 
     // Calculate gross revenue (total incoming)
-    const grossRevenue = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
-    const previousGrossRevenue = previousTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const grossRevenue = transactions.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+    const previousGrossRevenue = previousTransactions.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
     const grossRevenueChange = previousGrossRevenue > 0 
       ? ((grossRevenue - previousGrossRevenue) / previousGrossRevenue) * 100 
       : 0;
 
     // Calculate fees
-    const totalFees = transactions.reduce((sum, tx) => {
-      const fees = tx.appliedFees.reduce((feeSum, fee) => feeSum + Number(fee.amount), 0);
+    const totalFees = transactions.reduce((sum: number, tx: any) => {
+      const fees = tx.appliedFees.reduce((feeSum: number, fee: any) => feeSum + Number(fee.amount), 0);
       return sum + fees;
     }, 0);
 
     // Calculate net revenue
     const netRevenue = grossRevenue - totalFees;
-    const previousNetRevenue = previousTransactions.reduce((sum, tx) => {
+    const previousNetRevenue = previousTransactions.reduce((sum: number, tx: any) => {
       const amount = Number(tx.amount);
-      const fees = tx.appliedFees.reduce((feeSum, fee) => feeSum + Number(fee.amount), 0);
+      const fees = tx.appliedFees.reduce((feeSum: number, fee: any) => feeSum + Number(fee.amount), 0);
       return sum + amount - fees;
     }, 0);
     const netRevenueChange = previousNetRevenue > 0 
@@ -249,7 +249,7 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       },
     });
 
-    const totalRefunds = refunds.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const totalRefunds = refunds.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
     const previousRefunds = await prisma.transfer.findMany({
       where: {
         fromAccount: {
@@ -265,7 +265,7 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
         },
       },
     });
-    const previousTotalRefunds = previousRefunds.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const previousTotalRefunds = previousRefunds.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
     const refundsChange = previousTotalRefunds > 0 
       ? ((totalRefunds - previousTotalRefunds) / previousTotalRefunds) * 100 
       : 0;
@@ -282,7 +282,7 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       },
     });
 
-    const taxes = invoices.reduce((sum, inv) => {
+    const taxes = invoices.reduce((sum: number, inv: any) => {
       const subtotal = Number(inv.grandTotal) / (1 + Number(inv.taxRate) / 100);
       const taxAmount = Number(inv.grandTotal) - subtotal;
       return sum + taxAmount;
@@ -299,7 +299,7 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       },
     });
 
-    const previousTaxes = previousInvoices.reduce((sum, inv) => {
+    const previousTaxes = previousInvoices.reduce((sum: number, inv: any) => {
       const subtotal = Number(inv.grandTotal) / (1 + Number(inv.taxRate) / 100);
       const taxAmount = Number(inv.grandTotal) - subtotal;
       return sum + taxAmount;
@@ -310,8 +310,8 @@ router.get('/analytics', verifyFirebaseToken, async (req: AuthenticatedRequest, 
       : 0;
 
     // Get revenue breakdown data
-    const revenueData = transactions.map(tx => {
-      const fees = tx.appliedFees.reduce((sum, fee) => sum + Number(fee.amount), 0);
+    const revenueData = transactions.map((tx: any) => {
+      const fees = tx.appliedFees.reduce((sum: number, fee: any) => sum + Number(fee.amount), 0);
       return {
         id: tx.id,
         date: tx.createdAt.toISOString().split('T')[0],
@@ -425,10 +425,10 @@ router.get('/health-score', verifyFirebaseToken, async (req: AuthenticatedReques
     });
 
     const currentRevenue = successfulTransactions
-      .filter(tx => tx.toAccount.userId === userId)
-      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      .filter((tx: any) => tx.toAccount.userId === userId)
+      .reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
 
-    const previousRevenue = previousTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+    const previousRevenue = previousTransactions.reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
     const revenueGrowth = previousRevenue > 0 
       ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
       : 0;
@@ -573,7 +573,7 @@ router.get('/transactions', verifyFirebaseToken, async (req: AuthenticatedReques
       skip: parseInt(offset as string),
     });
 
-    const formattedTransactions = transactions.map(tx => ({
+    const formattedTransactions = transactions.map((tx: any) => ({
       id: tx.id,
       type: tx.toAccount.userId === userId ? 'Credit' : 'Debit',
       description: tx.description || `${tx.type} Transaction`,
