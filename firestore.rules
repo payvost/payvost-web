@@ -223,5 +223,28 @@ service cloud.firestore {
       // Prevent deletion
       allow delete: if false;
     }
+
+    // 🏢 Business Onboarding (admin readable, user can read/create/update their own)
+    match /business_onboarding/{submissionId} {
+      // Users can read their own submissions, admins can read all
+      allow read: if request.auth != null 
+                   && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Allow listing/querying - users can query their own, admins can query all
+      allow list: if request.auth != null;
+      
+      // Users can create their own business onboarding submissions
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.status == "submitted"
+                    && request.resource.data.userId is string;
+      
+      // Users can update their own submissions, admins can update any
+      allow update: if request.auth != null
+                    && (request.auth.uid == resource.data.userId || isAdmin());
+      
+      // Prevent deletion
+      allow delete: if false;
+    }
   }
 }

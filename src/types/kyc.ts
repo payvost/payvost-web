@@ -43,7 +43,7 @@ export interface KycRequirement {
 export interface CountryKycConfig {
   countryCode: string; // ISO-3166 alpha-2
   countryName: string;
-  levels: Record<KycLevel, KycRequirement[]>;
+  requirements: KycRequirement[]; // Country-specific document requirements
 }
 
 export interface KycDocument {
@@ -60,7 +60,7 @@ export interface KycSubmission {
   id: string;
   userId: string;
   countryCode: string;
-  level: KycLevel;
+  level?: KycLevel; // Optional for backward compatibility
   documents: KycDocument[];
   status: 'submitted' | 'in_review' | 'approved' | 'rejected';
   createdAt: string; // ISO

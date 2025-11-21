@@ -97,14 +97,40 @@ export function CreateQuoteForm({ onBack, quoteId }: CreateQuoteFormProps) {
   
   const onSubmit: SubmitHandler<QuoteFormValues> = async (data) => {
     setIsSubmitting(true);
-    console.log("Quote Data:", data);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
+    try {
+      const response = await fetch('/api/business/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          issueDate: data.issueDate.toISOString(),
+          expiryDate: data.expiryDate.toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create quote');
+      }
+
+      const result = await response.json();
+      toast({
         title: "Quote Created!",
         description: `Quote #${data.quoteNumber} has been saved.`
-    });
-    setIsSubmitting(false);
-    onBack();
+      });
+      onBack();
+    } catch (error) {
+      console.error('Error creating quote:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create quote. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
