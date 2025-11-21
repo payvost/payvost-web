@@ -110,12 +110,7 @@ export default function BusinessOnboardingPage() {
                                     {profile.icon}
                                 </div>
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <CardTitle>{profile.title}</CardTitle>
-                                        {profile.status === 'approved' && (
-                                          <Badge variant="default" className="bg-green-500 text-white">Business Owner</Badge>
-                                        )}
-                                    </div>
+                                    <CardTitle>{profile.title}</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
@@ -123,18 +118,14 @@ export default function BusinessOnboardingPage() {
                             </CardContent>
                             <CardFooter className="flex-col items-start">
                                 {profile.status === 'coming-soon' && <Badge variant="secondary" className="mb-4">Coming Soon</Badge>}
+                                {profile.status === 'approved' && <Badge variant="secondary" className="mb-4">Approved</Badge>}
                                 {profile.status === 'approved' ? (
-                                  <div className="w-full space-y-3">
-                                    <p className="text-sm text-muted-foreground">
-                                      You've been approved! Visit your business dashboard to get started.
-                                    </p>
-                                    <Link href="/business" className="w-full">
-                                      <Button variant="default" className="w-full">
-                                        Visit Business Dashboard
-                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </Link>
-                                  </div>
+                                  <Link href="/business" className="w-full">
+                                    <Button variant="default" className="w-full">
+                                      Visit Business Dashboard
+                                      <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </Link>
                                 ) : (
                                   <Link href={profile.href} className="w-full">
                                     <Button variant="outline" className="w-full" disabled={profile.status === 'coming-soon'}>
