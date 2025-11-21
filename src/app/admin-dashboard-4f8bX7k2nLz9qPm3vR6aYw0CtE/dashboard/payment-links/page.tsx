@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 import axios from 'axios';
 
 interface PaymentLink {
@@ -51,23 +52,42 @@ export default function PaymentLinksPage() {
     const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
     const { toast } = useToast();
     
-    useEffect(() => {
-        async function fetchPaymentLinks() {
-            try {
-                setLoading(true);
-                setError(null);
+    const fetchPaymentLinks = async () => {
+        try {
+            setLoading(true);
+            setError(null);
 
-                const response = await axios.get('/api/admin/payment-links');
-                setLinks(response.data.links || []);
-                setStats(response.data.stats || null);
-            } catch (err: any) {
-                console.error('Error fetching payment links:', err);
-                setError(err.response?.data?.error || 'Failed to load payment links');
-            } finally {
-                setLoading(false);
-            }
+            const response = await axios.get('/api/admin/payment-links');
+            const linksData = response.data.links || [];
+            
+            // Normalize date fields to strings
+            const normalizedLinks = linksData.map((link: any) => ({
+                ...link,
+                created: link.created instanceof Date 
+                    ? link.created.toISOString() 
+                    : typeof link.created === 'string' 
+                        ? link.created 
+                        : link.createdAt 
+                            ? (link.createdAt instanceof Date ? link.createdAt.toISOString() : link.createdAt)
+                            : new Date().toISOString(),
+            }));
+            
+            setLinks(normalizedLinks);
+            setStats(response.data.stats || null);
+        } catch (err: any) {
+            console.error('Error fetching payment links:', err);
+            setError(err.response?.data?.error || 'Failed to load payment links');
+            toast({
+                title: 'Error',
+                description: err.response?.data?.error || 'Failed to load payment links',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
         }
+    };
 
+    useEffect(() => {
         if (view === 'list') {
             fetchPaymentLinks();
         }
@@ -80,12 +100,20 @@ export default function PaymentLinksPage() {
         }).format(amount);
     };
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+    const formatDate = (dateInput: string | Date) => {
+        try {
+            const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+            if (isNaN(date.getTime())) {
+                return 'Invalid date';
+            }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+            });
+        } catch (error) {
+            return 'Invalid date';
+        }
     };
 
     const copyToClipboard = (url: string) => {
@@ -147,9 +175,7 @@ export default function PaymentLinksPage() {
                             {selectedLinks.length} selected
                         </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => {
-                        fetchPaymentLinks();
-                    }} disabled={loading}>
+                    <Button variant="outline" size="sm" onClick={fetchPaymentLinks} disabled={loading}>
                         <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
                         Refresh
                     </Button>
@@ -320,7 +346,7 @@ export default function PaymentLinksPage() {
                                             <TableCell>
                                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                     <Calendar className="h-3 w-3" />
-                                                    {formatDate(link.created)}
+                                                    {link.created ? formatDate(link.created) : 'N/A'}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -383,7 +409,7 @@ export default function PaymentLinksPage() {
                                         link.clicks > 0 ? ((link.paid / link.clicks) * 100).toFixed(2) : '0',
                                         link.amountReceived,
                                         link.currency,
-                                        formatDate(link.created),
+                                        link.created ? formatDate(link.created) : 'N/A',
                                     ].join(','))
                                 ].join('\n');
                                 const blob = new Blob([csvContent], { type: 'text/csv' });
