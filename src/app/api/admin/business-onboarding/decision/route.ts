@@ -176,22 +176,26 @@ export async function POST(request: NextRequest) {
         ? `Congratulations! Your business onboarding for ${submissionData.name} has been approved. You now have Tier 3 access with unlimited transactions and business account features.${adminResponse ? ` ${adminResponse}` : ''}`
         : `Your business onboarding submission has been reviewed.${reason ? ` Reason: ${reason}` : ''}${adminResponse ? ` ${adminResponse}` : ''} Please review the details and take necessary actions.`;
 
-      // Create in-app notification
-      await db.collection('notifications').add({
+      // Create in-app notification in user's notifications subcollection
+      await db.collection('users').doc(userId).collection('notifications').add({
         userId,
         title: notificationTitle,
+        description: notificationBody,
         message: notificationBody,
         type: 'kyc',
-        icon: decision === 'approved' ? 'CheckCircle' : 'XCircle',
+        icon: decision === 'approved' ? 'success' : 'alert',
+        context: 'personal', // Set context to personal so it shows in personal dashboard notifications
         read: false,
-        createdAt: new Date(),
-        link: decision === 'approved' ? '/dashboard/profile' : '/dashboard/get-started/onboarding/business',
+        date: new Date(),
+        href: decision === 'approved' ? '/business' : '/dashboard/get-started/onboarding/business',
+        link: decision === 'approved' ? '/business' : '/dashboard/get-started/onboarding/business',
         data: {
           status: decision,
           submissionId,
           businessName: submissionData.name,
           reason: reason || null,
         },
+        createdAt: new Date(),
       });
     } catch (notificationError) {
       console.error('Error creating notification:', notificationError);

@@ -74,7 +74,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
         const businessProfile = doc.data().businessProfile;
-        if (businessProfile && businessProfile.status === 'Approved') {
+        // Check for both 'approved' (lowercase) and 'Approved' (capitalized) for compatibility
+        if (businessProfile && (businessProfile.status === 'approved' || businessProfile.status === 'Approved')) {
           setIsBusinessApproved(true);
         } else {
           setIsBusinessApproved(false);
