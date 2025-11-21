@@ -160,7 +160,7 @@ export function BusinessHeader() {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[12rem] bg-sidebar text-sidebar-foreground">
+            <SheetContent side="left" className="flex flex-col p-0 w-[14rem] bg-sidebar text-sidebar-foreground">
                 <SheetHeader className="p-0">
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>

@@ -169,7 +169,7 @@ export function BusinessSidebar() {
           </div>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[calc(12rem-1rem)]">
+      <DropdownMenuContent align="start" className="w-[calc(14rem-1rem)]">
         <DropdownMenuItem asChild>
           <Link href="/business/settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -299,7 +299,7 @@ export function BusinessSidebar() {
 
   return (
     <SidebarProvider>
-      <div className="hidden md:flex fixed inset-y-0 left-0 w-[12rem] z-50 flex-col border-r bg-sidebar text-sidebar-foreground">
+      <div className="hidden md:flex fixed inset-y-0 left-0 w-[14rem] z-50 flex-col border-r bg-sidebar text-sidebar-foreground">
         {/* Business Header Card */}
         <div className="px-2 py-2 border-b">
           <Card className="p-2">
