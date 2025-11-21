@@ -113,22 +113,22 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   });
 
   const mainNavItems = [
-    { href: '/dashboard', icon: <Home />, label: 'Dashboard' },
-    { href: '/dashboard/payments', icon: <Send />, label: 'Payments' },
-    { href: '/dashboard/transactions', icon: <ArrowRightLeft />, label: 'Transactions' },
-    { href: '/dashboard/wallets', icon: <Wallet />, label: 'Wallets' },
-    { href: '/dashboard/cards', icon: <CreditCard />, label: 'Virtual Cards' },
+    { href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
+    { href: '/dashboard/payments', icon: <Send strokeWidth={2.5} />, label: 'Payments' },
+    { href: '/dashboard/transactions', icon: <ArrowRightLeft strokeWidth={2.5} />, label: 'Transactions' },
+    { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallets' },
+    { href: '/dashboard/cards', icon: <CreditCard strokeWidth={2.5} />, label: 'Virtual Cards' },
   ];
   
   const collectPaymentItems = [
-    { href: '/dashboard/request-payment', icon: <HandCoins />, label: 'Request' },
-    { href: '/dashboard/dispute', icon: <ShieldAlert />, label: 'Dispute Center' },
-    { href: '/dashboard/escrow', icon: <ShieldCheck />, label: 'Escrow', comingSoon: false, isNew: true },
+    { href: '/dashboard/request-payment', icon: <HandCoins strokeWidth={2.5} />, label: 'Request' },
+    { href: '/dashboard/dispute', icon: <ShieldAlert strokeWidth={2.5} />, label: 'Dispute Center' },
+    { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', comingSoon: false, isNew: true },
   ];
 
   const saveAndInvestItems = [
     { href: '/dashboard/investment/portfolio', label: 'Portfolio', icon: <BarChart strokeWidth={2.5} /> },
-    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank /> },
+    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank strokeWidth={2.5} /> },
     { href: '/dashboard/investment', label: 'Investment', icon: <TrendingUp strokeWidth={2.5} /> },
 ];
 

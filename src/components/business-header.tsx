@@ -26,7 +26,6 @@ export function BusinessHeader() {
     const { user } = useAuth();
     const pathname = usePathname();
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
     
     useEffect(() => {
         if (!user) return;
@@ -45,39 +44,30 @@ export function BusinessHeader() {
     
     const defaultActiveGroup = menuItems.find(group => group.items.some(item => isActive(item.href)))?.group;
 
-    const filteredMenuItems = menuItems.map(group => ({
-        ...group,
-        items: group.items.filter(item => 
-            item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            group.group.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    })).filter(group => group.items.length > 0);
-
     const renderNav = () => (
-       <nav className="space-y-1">
+       <nav>
          <Accordion type="multiple" defaultValue={[defaultActiveGroup].filter(Boolean) as string[]} className="w-full">
-              {filteredMenuItems.map((group) => {
+              {menuItems.map((group) => {
                 const GroupIcon = group.icon;
                 const hasActiveItem = group.items.some(item => isActive(item.href));
                 
                 return (
                   <AccordionItem value={group.group} key={group.group} className="border-b-0">
                       <AccordionTrigger className={cn(
-                        "py-2.5 px-3 rounded-md hover:no-underline transition-colors",
+                        "py-2 px-2 rounded hover:no-underline transition-colors",
                         "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                         "hover:bg-sidebar-accent",
                         "[&[data-state=open]>svg]:rotate-90",
                         hasActiveItem && "text-sidebar-foreground bg-sidebar-accent/50"
                       )}>
-                         <span className="flex items-center gap-2.5 flex-1 text-left font-medium text-sm">
+                         <span className="flex items-center gap-2 flex-1 text-left text-sm">
                            <GroupIcon className="h-4 w-4 shrink-0" />
                            <span className="truncate">{group.group}</span>
                          </span>
                       </AccordionTrigger>
-                      <AccordionContent className="pb-1.5 pt-0">
-                          <div className="flex flex-col gap-0.5 ml-7 mt-1">
+                      <AccordionContent className="pb-0 pt-0">
+                          <div className="flex flex-col ml-6">
                           {group.items.map(item => {
-                            const ItemIcon = item.icon;
                             const active = isActive(item.href);
                             
                             return (
@@ -85,21 +75,13 @@ export function BusinessHeader() {
                                 key={item.label}
                                 href={item.href}
                                 className={cn(
-                                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all",
-                                  "relative group/item",
-                                  active
-                                    ? "bg-primary/10 text-primary font-medium shadow-sm"
-                                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                                  "px-2 py-1.5 text-sm transition-colors rounded",
+                                  "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                                  "hover:bg-sidebar-accent",
+                                  active && "text-sidebar-foreground font-medium bg-sidebar-accent"
                                 )}
                               >
-                                <ItemIcon className={cn(
-                                  "h-3.5 w-3.5 shrink-0",
-                                  active ? "text-primary" : "text-sidebar-foreground/50"
-                                )} />
-                                <span className="truncate flex-1">{item.label}</span>
-                                {active && (
-                                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-                                )}
+                                <span className="truncate">{item.label}</span>
                               </Link>
                             );
                           })}
@@ -122,36 +104,25 @@ export function BusinessHeader() {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[280px] bg-sidebar">
+            <SheetContent side="left" className="flex flex-col p-0 w-[12rem] bg-sidebar text-sidebar-foreground">
                 <SheetHeader className="p-0">
                   <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
                 </SheetHeader>
-                <div className="flex h-16 items-center border-b border-sidebar-border px-4">
-                 <Link href="/business" className="flex items-center gap-2.5 font-semibold text-sidebar-foreground">
-                   <Icons.logo className="h-7 w-7" />
-                   <span className="text-base">Business</span>
+                <div className="flex h-12 items-center border-b px-4">
+                 <Link href="/business" className="flex items-center justify-start">
+                   <Icons.logo className="h-8" />
                  </Link>
                 </div>
-                <div className="p-3 border-b border-sidebar-border">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-sidebar-foreground/50" />
-                    <Input
-                      type="search"
-                      placeholder="Search menu..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-9 pl-8 bg-background/50 border-sidebar-border text-sm"
-                    />
-                  </div>
-                </div>
-               <ScrollArea className="flex-1 px-2 py-2">{renderNav()}</ScrollArea>
-               <div className="mt-auto border-t border-sidebar-border p-3">
+               <ScrollArea className="flex-1">
+                 <div className="p-2">{renderNav()}</div>
+               </ScrollArea>
+               <div className="mt-auto border-t p-2">
                  <Link
                    href="/business/settings"
                    className={cn(
-                     "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-all",
+                     "flex items-center gap-2 px-2 py-2 text-sm rounded transition-colors",
                      "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                     isActive('/business/settings') && "bg-sidebar-accent text-sidebar-foreground"
+                     isActive('/business/settings') && "text-sidebar-foreground bg-sidebar-accent"
                    )}
                  >
                    <Settings className="h-4 w-4 shrink-0" />
