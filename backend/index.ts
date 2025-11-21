@@ -177,6 +177,98 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
   }
 });
 
+// Email Service Proxy
+// Forward email requests to the dedicated email service
+const EMAIL_SERVICE_URL = process.env.EMAIL_SERVICE_URL || 'http://localhost:3006';
+
+app.post('/api/email/single', async (req, res) => {
+  try {
+    const response = await fetch(`${EMAIL_SERVICE_URL}/single`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Email service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to email service',
+      message: error.message,
+    });
+  }
+});
+
+app.post('/api/email/batch', async (req, res) => {
+  try {
+    const response = await fetch(`${EMAIL_SERVICE_URL}/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Email service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to email service',
+      message: error.message,
+    });
+  }
+});
+
+// Admin Stats Service Proxy
+// Forward admin stats requests to the dedicated admin stats service
+const ADMIN_STATS_SERVICE_URL = process.env.ADMIN_STATS_SERVICE_URL || 'http://localhost:3007';
+
+app.get('/api/admin-stats/stats', async (req, res) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (req.query.startDate) queryParams.set('startDate', req.query.startDate as string);
+    if (req.query.endDate) queryParams.set('endDate', req.query.endDate as string);
+    if (req.query.currency) queryParams.set('currency', req.query.currency as string);
+
+    const url = `${ADMIN_STATS_SERVICE_URL}/stats?${queryParams.toString()}`;
+    const response = await fetch(url);
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Admin stats service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to admin stats service',
+      message: error.message,
+    });
+  }
+});
+
+app.get('/api/admin-stats/volume-over-time', async (req, res) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (req.query.startDate) queryParams.set('startDate', req.query.startDate as string);
+    if (req.query.endDate) queryParams.set('endDate', req.query.endDate as string);
+    if (req.query.currency) queryParams.set('currency', req.query.currency as string);
+
+    const url = `${ADMIN_STATS_SERVICE_URL}/volume-over-time?${queryParams.toString()}`;
+    const response = await fetch(url);
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Admin stats service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to admin stats service',
+      message: error.message,
+    });
+  }
+});
+
 app.get('/api/pdf/health', async (_req, res) => {
   try {
     const response = await fetch(`${PDF_SERVICE_URL}/health`);

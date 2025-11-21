@@ -95,6 +95,15 @@ export function LoginForm() {
         return;
       }
 
+      // Track login event
+      try {
+        const idToken = await user.getIdToken();
+        await axios.post('/api/auth/track-login', { idToken });
+      } catch (trackError) {
+        // Non-critical error, continue with login
+        console.warn('Failed to track login:', trackError);
+      }
+
       // No MFA enrolled, proceed with login
       toast({
           title: "Login Successful!",
@@ -168,6 +177,15 @@ export function LoginForm() {
         await auth.signOut();
         router.push('/verify-email');
         return;
+      }
+
+      // Track login event
+      try {
+        const idToken = await user.getIdToken();
+        await axios.post('/api/auth/track-login', { idToken });
+      } catch (trackError) {
+        // Non-critical error, continue with login
+        console.warn('Failed to track login:', trackError);
       }
 
       // 2FA successful
