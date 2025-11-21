@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, MoreHorizontal, Copy, Edit, BarChart2 } from 'lucide-react';
+import { PlusCircle, Search, MoreHorizontal, Copy, Edit, BarChart2, Download, RefreshCw, Trash2, CheckSquare, Square, Eye, TrendingUp, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreatePaymentLinkForm } from '@/components/create-payment-link-form';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
 import axios from 'axios';
 
 interface PaymentLink {
@@ -45,6 +48,8 @@ export default function PaymentLinksPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
+    const { toast } = useToast();
     
     useEffect(() => {
         async function fetchPaymentLinks() {
@@ -85,8 +90,10 @@ export default function PaymentLinksPage() {
 
     const copyToClipboard = (url: string) => {
         navigator.clipboard.writeText(url);
-        // You could add a toast notification here
-        alert('Link copied to clipboard!');
+        toast({
+            title: 'Copied!',
+            description: 'Payment link copied to clipboard',
+        });
     };
 
     const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
@@ -127,10 +134,30 @@ export default function PaymentLinksPage() {
                     <h2 className="text-3xl font-bold tracking-tight">Payment Links</h2>
                     <p className="text-muted-foreground">Create and manage reusable payment links.</p>
                 </div>
-                <Button onClick={() => setView('create')}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Payment Link
-                </Button>
+                <div className="flex items-center gap-2">
+                    {selectedLinks.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={() => {
+                            toast({
+                                title: 'Bulk action',
+                                description: `${selectedLinks.length} links selected`,
+                            });
+                            setSelectedLinks([]);
+                        }}>
+                            <CheckSquare className="mr-2 h-4 w-4" />
+                            {selectedLinks.length} selected
+                        </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => {
+                        fetchPaymentLinks();
+                    }} disabled={loading}>
+                        <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+                        Refresh
+                    </Button>
+                    <Button onClick={() => setView('create')}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Payment Link
+                    </Button>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
@@ -229,55 +256,148 @@ export default function PaymentLinksPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={selectedLinks.length === filteredLinks.length && filteredLinks.length > 0}
+                                            onCheckedChange={(checked) => {
+                                                setSelectedLinks(checked ? filteredLinks.map(l => l.id) : []);
+                                            }}
+                                        />
+                                    </TableHead>
                                     <TableHead>Title</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Clicks / Paid</TableHead>
+                                    <TableHead>Conversion</TableHead>
                                     <TableHead className="text-right">Amount Received</TableHead>
+                                    <TableHead>Created</TableHead>
                                     <TableHead><span className="sr-only">Actions</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredLinks.map((link) => (
-                                    <TableRow key={link.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{link.title}</div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {formatDate(link.created)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(link.status)}>
-                                                {link.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {link.clicks} / {link.paid}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono">
-                                            {formatCurrency(link.amountReceived, link.currency)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {link.publicUrl && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => copyToClipboard(link.publicUrl!)}
-                                                    title="Copy link"
-                                                >
-                                                    <Copy className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {filteredLinks.map((link) => {
+                                    const conversionRate = link.clicks > 0 ? ((link.paid / link.clicks) * 100).toFixed(1) : '0.0';
+                                    const isSelected = selectedLinks.includes(link.id);
+                                    return (
+                                        <TableRow key={link.id} className={isSelected ? 'bg-muted/50' : ''}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    onCheckedChange={(checked) => {
+                                                        setSelectedLinks(checked
+                                                            ? [...selectedLinks, link.id]
+                                                            : selectedLinks.filter(id => id !== link.id)
+                                                        );
+                                                    }}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{link.title}</div>
+                                                <div className="text-xs text-muted-foreground font-mono">
+                                                    {link.id.substring(0, 8)}...
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={getStatusVariant(link.status)}>
+                                                    {link.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{link.clicks}</span>
+                                                    <span className="text-muted-foreground">/</span>
+                                                    <span className="font-medium text-green-600">{link.paid}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                                                    <span className="text-sm font-medium">{conversionRate}%</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono">
+                                                {formatCurrency(link.amountReceived, link.currency)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {formatDate(link.created)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        {link.publicUrl && (
+                                                            <>
+                                                                <DropdownMenuItem onClick={() => copyToClipboard(link.publicUrl!)}>
+                                                                    <Copy className="mr-2 h-4 w-4" />
+                                                                    Copy Link
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => window.open(link.publicUrl, '_blank')}>
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    View Link
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-links/${link.id}`}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     )}
                 </CardContent>
                 {!loading && filteredLinks.length > 0 && (
                     <CardFooter>
-                        <div className="text-xs text-muted-foreground">
-                            Showing <strong>1-{filteredLinks.length}</strong> of <strong>{links.length}</strong> payment links
+                        <div className="flex items-center justify-between w-full">
+                            <div className="text-xs text-muted-foreground">
+                                Showing <strong>1-{filteredLinks.length}</strong> of <strong>{links.length}</strong> payment links
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => {
+                                const csvContent = [
+                                    ['ID', 'Title', 'Status', 'Clicks', 'Paid', 'Conversion Rate', 'Amount Received', 'Currency', 'Created'].join(','),
+                                    ...filteredLinks.map(link => [
+                                        link.id,
+                                        `"${link.title}"`,
+                                        link.status,
+                                        link.clicks,
+                                        link.paid,
+                                        link.clicks > 0 ? ((link.paid / link.clicks) * 100).toFixed(2) : '0',
+                                        link.amountReceived,
+                                        link.currency,
+                                        formatDate(link.created),
+                                    ].join(','))
+                                ].join('\n');
+                                const blob = new Blob([csvContent], { type: 'text/csv' });
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `payment-links-${new Date().toISOString().split('T')[0]}.csv`;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                toast({ title: 'Exported', description: 'Payment links exported to CSV' });
+                            }}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Export CSV
+                            </Button>
                         </div>
                     </CardFooter>
                 )}
