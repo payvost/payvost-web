@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { VirtualCardData } from '@/types/virtual-card';
 import { cn } from '@/lib/utils';
+import axios from 'axios';
 
 interface CardStats {
     totalActive: number;
@@ -25,39 +26,64 @@ interface CardStats {
     terminatedCount: number;
 }
 
-const sampleCards: VirtualCardData[] = [
-    { id: 'vc_1', cardLabel: 'Marketing Team', last4: '4284', cardType: 'visa', balance: 2500.75, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'blue', cardModel: 'debit' },
-    { id: 'vc_2', cardLabel: 'Development Subscriptions', last4: '8932', cardType: 'mastercard', balance: 500.20, currency: 'USD', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'purple', cardModel: 'debit' },
-    { id: 'vc_3', cardLabel: 'CEO Travel Card', last4: '7766', cardType: 'visa', balance: 10000.00, currency: 'USD', status: 'frozen', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'green', cardModel: 'debit' },
-    { id: 'vc_4', cardLabel: 'UK Office Expenses', last4: '9876', cardType: 'visa', balance: 8500.00, currency: 'GBP', status: 'active', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'black', cardModel: 'debit' },
-    { id: 'vc_5', cardLabel: 'Terminated Card', last4: '1111', cardType: 'mastercard', balance: 0.00, currency: 'USD', status: 'terminated', fullNumber: '', expiry: '', cvv: '', transactions: [], theme: 'blue', cardModel: 'debit' },
-];
+interface CardWithUser extends VirtualCardData {
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+}
 
 export default function CardManagementPage() {
     const router = useRouter();
-    const [cards, setCards] = useState<VirtualCardData[]>(sampleCards);
+    const [cards, setCards] = useState<CardWithUser[]>([]);
     const [stats, setStats] = useState<CardStats | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('all');
     const { toast } = useToast();
 
+    const fetchCards = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get('/api/admin/cards');
+            
+            const cardsData = response.data.cards || [];
+            // Normalize card data to match VirtualCardData interface
+            const normalizedCards: CardWithUser[] = cardsData.map((card: any) => ({
+                id: card.id,
+                cardLabel: card.cardLabel || card.label || 'Unnamed Card',
+                last4: card.last4 || '0000',
+                cardType: card.cardType || 'visa',
+                balance: parseFloat(card.balance || 0),
+                currency: card.currency || 'USD',
+                status: card.status || 'active',
+                fullNumber: card.fullNumber || '',
+                expiry: card.expiry || '',
+                cvv: card.cvv || '',
+                transactions: card.transactions || [],
+                theme: card.theme || 'blue',
+                cardModel: card.cardModel || 'debit',
+                userId: card.userId,
+                userName: card.userName,
+                userEmail: card.userEmail,
+            }));
+            
+            setCards(normalizedCards);
+            setStats(response.data.stats || null);
+        } catch (error: any) {
+            console.error('Error fetching cards:', error);
+            toast({
+                title: 'Error',
+                description: error.response?.data?.error || 'Failed to load cards',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        // Calculate stats from cards
-        const totalActive = cards.filter(c => c.status === 'active').length;
-        const totalSpending = cards.reduce((sum, c) => sum + c.balance, 0);
-        const frozenCount = cards.filter(c => c.status === 'frozen').length;
-        const terminatedCount = cards.filter(c => c.status === 'terminated').length;
-        
-        setStats({
-            totalActive,
-            totalSpending30d: totalSpending,
-            fraudBlocks24h: 12, // Mock data
-            avgSpendingPerCard: totalActive > 0 ? totalSpending / totalActive : 0,
-            frozenCount,
-            terminatedCount,
-        });
-    }, [cards]);
+        fetchCards();
+    }, []);
 
     const filteredCards = cards.filter(card => {
         if (searchQuery) {
@@ -134,7 +160,7 @@ export default function CardManagementPage() {
                     <p className="text-muted-foreground">Issue, manage, and monitor all virtual cards.</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={loading}>
+                    <Button variant="outline" size="sm" onClick={fetchCards} disabled={loading}>
                         <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
                         Refresh
                     </Button>
@@ -256,7 +282,10 @@ export default function CardManagementPage() {
                                                 <div className="font-medium">{card.cardLabel}</div>
                                                 <div className="text-sm text-muted-foreground font-mono">•••• {card.last4}</div>
                                             </TableCell>
-                                            <TableCell>Marketing Team</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{card.userName || 'Unknown User'}</div>
+                                                <div className="text-xs text-muted-foreground">{card.userEmail || 'No email'}</div>
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge 
                                                     variant={card.status === 'active' ? 'default' : card.status === 'frozen' ? 'secondary' : 'destructive'} 

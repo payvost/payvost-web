@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, MoreHorizontal, Copy, Edit, BarChart2, Download, RefreshCw, Trash2, CheckSquare, Square, Eye, TrendingUp, Calendar } from 'lucide-react';
+import { PlusCircle, Search, MoreHorizontal, Copy, Edit, BarChart2, Download, RefreshCw, Trash2, CheckSquare, Square, Eye, TrendingUp, Calendar, Gift, Ticket, Link as LinkIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreatePaymentLinkForm } from '@/components/create-payment-link-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 
@@ -28,7 +29,11 @@ interface PaymentLink {
   currency: string;
   created: string;
   publicUrl?: string;
-  type: 'payment_link' | 'invoice';
+  type: 'payment_link' | 'payment_request' | 'donation' | 'event';
+  goal?: number; // For donations
+  totalTickets?: number; // For events
+  eventDate?: string; // For events
+  userId?: string;
 }
 
 interface PaymentLinkStats {
@@ -38,6 +43,9 @@ interface PaymentLinkStats {
   totalClicks: number;
   totalPaid: number;
   totalLinks: number;
+  paymentLinksCount: number;
+  donationsCount: number;
+  eventsCount: number;
 }
 
 type View = 'list' | 'create';
@@ -50,6 +58,7 @@ export default function PaymentLinksPage() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
+    const [filterType, setFilterType] = useState<'all' | 'payment_link' | 'donation' | 'event'>('all');
     const { toast } = useToast();
     
     const fetchPaymentLinks = async () => {
@@ -140,10 +149,32 @@ export default function PaymentLinksPage() {
         }
     };
 
-    const filteredLinks = links.filter(link =>
-        link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredLinks = links.filter(link => {
+        // Type filter
+        if (filterType !== 'all') {
+            if (filterType === 'payment_link' && !['payment_link', 'payment_request'].includes(link.type)) {
+                return false;
+            }
+            if (filterType === 'donation' && link.type !== 'donation') {
+                return false;
+            }
+            if (filterType === 'event' && link.type !== 'event') {
+                return false;
+            }
+        }
+        
+        // Search filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            if (!link.title.toLowerCase().includes(query) &&
+                !link.id.toLowerCase().includes(query) &&
+                !(link.description || '').toLowerCase().includes(query)) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
     
     if (view === 'create') {
         return <CreatePaymentLinkForm onBack={() => setView('list')} />;
@@ -159,8 +190,8 @@ export default function PaymentLinksPage() {
 
             <div className="flex items-center justify-between space-y-2 mb-6">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Payment Links</h2>
-                    <p className="text-muted-foreground">Create and manage reusable payment links.</p>
+                    <h2 className="text-3xl font-bold tracking-tight">Payment Links & Collections</h2>
+                    <p className="text-muted-foreground">Manage payment links, donations, and event tickets.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {selectedLinks.length > 0 && (
@@ -186,7 +217,7 @@ export default function PaymentLinksPage() {
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -202,14 +233,15 @@ export default function PaymentLinksPage() {
                                 <div className="text-2xl font-bold">
                                     {formatCurrency(stats?.totalRevenue || 0)}
                                 </div>
-                                <p className="text-xs text-muted-foreground">from all payment links</p>
+                                <p className="text-xs text-muted-foreground">from all collections</p>
                             </>
                         )}
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Links</CardTitle>
+                        <CardTitle className="text-sm font-medium">Payment Links</CardTitle>
+                        <LinkIcon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         {loading ? (
@@ -219,28 +251,46 @@ export default function PaymentLinksPage() {
                             </>
                         ) : (
                             <>
-                                <div className="text-2xl font-bold">{stats?.activeLinks || 0}</div>
-                                <p className="text-xs text-muted-foreground">currently accepting payments</p>
+                                <div className="text-2xl font-bold">{stats?.paymentLinksCount || 0}</div>
+                                <p className="text-xs text-muted-foreground">active payment links</p>
                             </>
                         )}
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+                        <CardTitle className="text-sm font-medium">Donations</CardTitle>
+                        <Gift className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         {loading ? (
                             <>
-                                <Skeleton className="h-8 w-20 mb-2" />
+                                <Skeleton className="h-8 w-16 mb-2" />
                                 <Skeleton className="h-4 w-40" />
                             </>
                         ) : (
                             <>
-                                <div className="text-2xl font-bold">
-                                    {stats?.conversionRate ? stats.conversionRate.toFixed(1) : '0.0'}%
-                                </div>
-                                <p className="text-xs text-muted-foreground">Clicks to successful payments</p>
+                                <div className="text-2xl font-bold">{stats?.donationsCount || 0}</div>
+                                <p className="text-xs text-muted-foreground">donation campaigns</p>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Events</CardTitle>
+                        <Ticket className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-8 w-16 mb-2" />
+                                <Skeleton className="h-4 w-40" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{stats?.eventsCount || 0}</div>
+                                <p className="text-xs text-muted-foreground">event pages</p>
                             </>
                         )}
                     </CardContent>
@@ -249,15 +299,34 @@ export default function PaymentLinksPage() {
 
             <Card>
                 <CardHeader>
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Search by link title or ID..."
-                            className="w-full rounded-lg bg-background pl-8 md:w-[320px]"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by title, ID, or description..."
+                                className="w-full rounded-lg bg-background pl-8"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Tabs value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+                            <TabsList>
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="payment_link">
+                                    <LinkIcon className="h-3 w-3 mr-1" />
+                                    Links
+                                </TabsTrigger>
+                                <TabsTrigger value="donation">
+                                    <Gift className="h-3 w-3 mr-1" />
+                                    Donations
+                                </TabsTrigger>
+                                <TabsTrigger value="event">
+                                    <Ticket className="h-3 w-3 mr-1" />
+                                    Events
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -317,9 +386,16 @@ export default function PaymentLinksPage() {
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <div className="font-medium">{link.title}</div>
-                                                <div className="text-xs text-muted-foreground font-mono">
-                                                    {link.id.substring(0, 8)}...
+                                                <div className="flex items-center gap-2">
+                                                    {link.type === 'donation' && <Gift className="h-3 w-3 text-muted-foreground" />}
+                                                    {link.type === 'event' && <Ticket className="h-3 w-3 text-muted-foreground" />}
+                                                    {(link.type === 'payment_link' || link.type === 'payment_request') && <LinkIcon className="h-3 w-3 text-muted-foreground" />}
+                                                    <div>
+                                                        <div className="font-medium">{link.title}</div>
+                                                        <div className="text-xs text-muted-foreground font-mono">
+                                                            {link.id.substring(0, 8)}...
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -328,17 +404,42 @@ export default function PaymentLinksPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <span>{link.clicks}</span>
-                                                    <span className="text-muted-foreground">/</span>
-                                                    <span className="font-medium text-green-600">{link.paid}</span>
-                                                </div>
+                                                {link.type === 'event' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-green-600">{link.paid}</span>
+                                                        <span className="text-muted-foreground">/</span>
+                                                        <span>{link.totalTickets || 0}</span>
+                                                        <span className="text-xs text-muted-foreground">tickets</span>
+                                                    </div>
+                                                ) : link.type === 'donation' ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-green-600">{link.paid}</span>
+                                                        <span className="text-muted-foreground">contributions</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{link.clicks}</span>
+                                                        <span className="text-muted-foreground">/</span>
+                                                        <span className="font-medium text-green-600">{link.paid}</span>
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                                                    <span className="text-sm font-medium">{conversionRate}%</span>
-                                                </div>
+                                                {link.type === 'donation' && link.goal ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="text-sm font-medium">
+                                                            {((link.amountReceived / link.goal) * 100).toFixed(1)}%
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            of {formatCurrency(link.goal, link.currency)}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1">
+                                                        <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                                                        <span className="text-sm font-medium">{conversionRate}%</span>
+                                                    </div>
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-right font-mono">
                                                 {formatCurrency(link.amountReceived, link.currency)}
