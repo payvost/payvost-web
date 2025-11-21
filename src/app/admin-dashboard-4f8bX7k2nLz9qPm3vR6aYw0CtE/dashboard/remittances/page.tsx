@@ -86,52 +86,25 @@ export default function AdminRemittancesPage() {
     const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
     const { toast } = useToast();
 
-    // Mock data for now - replace with API call
     useEffect(() => {
         const fetchRemittances = async () => {
             try {
                 setLoading(true);
-                // TODO: Replace with actual API call
-                // const response = await axios.get('/api/admin/remittances', { params: { ... } });
+                const params = new URLSearchParams();
+                if (dateRange.from) params.append('startDate', dateRange.from.toISOString());
+                if (dateRange.to) params.append('endDate', dateRange.to.toISOString());
+                if (activeTab !== 'all') params.append('status', activeTab);
+
+                const response = await axios.get(`/api/admin/remittances?${params}`);
                 
-                // Mock data
-                const mockRemittances: Remittance[] = [
-                    { id: 'rem_1a2b3c', from: 'USA', to: 'NGA', fromAmount: 1000, toAmount: 1450000, fxRate: '1450.00', partner: 'Stripe', channel: 'Bank Deposit', status: 'Completed', deliveryTime: '15 mins', profit: 12.50, fromCurrency: 'USD', toCurrency: 'NGN' },
-                    { id: 'rem_4d5e6f', from: 'GBR', to: 'GHA', fromAmount: 500, toAmount: 7650, fxRate: '15.30', partner: 'Wise', channel: 'Mobile Money', status: 'Processing', deliveryTime: 'N/A', profit: 7.20, fromCurrency: 'GBP', toCurrency: 'GHS' },
-                    { id: 'rem_7g8h9i', from: 'CAN', to: 'KEN', fromAmount: 750, toAmount: 99750, fxRate: '133.00', partner: 'WorldRemit', channel: 'Bank Deposit', status: 'Delayed', deliveryTime: '2 hrs', profit: 9.80, fromCurrency: 'CAD', toCurrency: 'KES' },
-                    { id: 'rem_1j2k3l', from: 'USA', to: 'GBR', fromAmount: 2500, toAmount: 1975, fxRate: '0.79', partner: 'Stripe', channel: 'Bank Deposit', status: 'Failed', deliveryTime: 'N/A', profit: 0.00, fromCurrency: 'USD', toCurrency: 'GBP' },
-                    { id: 'rem_4m5n6o', from: 'NGA', to: 'USA', fromAmount: 500000, toAmount: 340, fxRate: '0.00068', partner: 'Local Bank', channel: 'Bank Deposit', status: 'Completed', deliveryTime: '25 mins', profit: 5.10, fromCurrency: 'NGN', toCurrency: 'USD' },
-                ];
-
-                setRemittances(mockRemittances);
-
-                // Calculate stats
-                const totalVolume = mockRemittances.reduce((sum, r) => sum + r.fromAmount, 0);
-                const successful = mockRemittances.filter(r => r.status === 'Completed').length;
-                const delayed = mockRemittances.filter(r => r.status === 'Delayed').length;
-                const totalProfit = mockRemittances.reduce((sum, r) => sum + r.profit, 0);
-                const avgDelivery = '22 mins';
-
-                setStats({
-                    totalVolume24h: totalVolume,
-                    successfulPayouts24h: successful,
-                    avgDeliveryTime: avgDelivery,
-                    delayedCount: delayed,
-                    totalProfit,
-                    topCorridors: [
-                        { corridor: 'USA → NGA', volume: 1000, count: 1 },
-                        { corridor: 'GBR → GHA', volume: 500, count: 1 },
-                    ],
-                    partnerPerformance: [
-                        { partner: 'Stripe', successRate: 50, avgTime: '20 mins' },
-                        { partner: 'Wise', successRate: 0, avgTime: 'N/A' },
-                    ],
-                });
+                const remittancesData = response.data.remittances || [];
+                setRemittances(remittancesData);
+                setStats(response.data.stats || null);
             } catch (error: any) {
                 console.error('Error fetching remittances:', error);
                 toast({
                     title: 'Error',
-                    description: 'Failed to load remittances',
+                    description: error.response?.data?.error || 'Failed to load remittances',
                     variant: 'destructive',
                 });
             } finally {
@@ -140,7 +113,7 @@ export default function AdminRemittancesPage() {
         };
 
         fetchRemittances();
-    }, [dateRange, toast]);
+    }, [dateRange, activeTab, toast]);
 
     const filteredRemittances = remittances.filter(rem => {
         if (searchQuery && !rem.id.toLowerCase().includes(searchQuery.toLowerCase())) return false;

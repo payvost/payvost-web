@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import axios from 'axios';
 
 interface ProviderPerformance {
     id: string;
@@ -70,114 +71,76 @@ interface RoutingStats {
     routingEfficiency: number;
 }
 
-const mockProviders: ProviderPerformance[] = [
-    {
-        id: 'stripe',
-        name: 'Stripe',
-        successRate: 98.5,
-        avgResponseTime: 120,
-        totalTransactions: 15420,
-        totalVolume: 2450000,
-        costPerTransaction: 0.30,
-        status: 'active',
-        supportedCurrencies: ['USD', 'EUR', 'GBP'],
-        supportedCountries: ['US', 'GB', 'CA', 'AU'],
-        lastUpdated: new Date().toISOString(),
-    },
-    {
-        id: 'paystack',
-        name: 'Paystack',
-        successRate: 96.2,
-        avgResponseTime: 180,
-        totalTransactions: 8920,
-        totalVolume: 1250000,
-        costPerTransaction: 0.15,
-        status: 'active',
-        supportedCurrencies: ['NGN', 'GHS', 'ZAR'],
-        supportedCountries: ['NG', 'GH', 'ZA'],
-        lastUpdated: new Date().toISOString(),
-    },
-    {
-        id: 'flutterwave',
-        name: 'Flutterwave',
-        successRate: 94.8,
-        avgResponseTime: 200,
-        totalTransactions: 6540,
-        totalVolume: 980000,
-        costPerTransaction: 0.20,
-        status: 'active',
-        supportedCurrencies: ['NGN', 'KES', 'GHS', 'ZAR'],
-        supportedCountries: ['NG', 'KE', 'GH', 'ZA'],
-        lastUpdated: new Date().toISOString(),
-    },
-    {
-        id: 'wise',
-        name: 'Wise',
-        successRate: 97.1,
-        avgResponseTime: 150,
-        totalTransactions: 4320,
-        totalVolume: 890000,
-        costPerTransaction: 0.25,
-        status: 'degraded',
-        supportedCurrencies: ['USD', 'EUR', 'GBP', 'AUD'],
-        supportedCountries: ['US', 'GB', 'AU', 'CA'],
-        lastUpdated: new Date().toISOString(),
-    },
-];
-
-const mockRules: RoutingRule[] = [
-    {
-        id: 'rule_1',
-        name: 'NGN Domestic Priority',
-        priority: 1,
-        conditions: {
-            currency: ['NGN'],
-            sourceCountry: ['NG'],
-            destinationCountry: ['NG'],
-        },
-        provider: 'paystack',
-        enabled: true,
-    },
-    {
-        id: 'rule_2',
-        name: 'High Value USD',
-        priority: 2,
-        conditions: {
-            currency: ['USD'],
-            amountMin: 10000,
-        },
-        provider: 'stripe',
-        enabled: true,
-    },
-    {
-        id: 'rule_3',
-        name: 'EUR SEPA Route',
-        priority: 3,
-        conditions: {
-            currency: ['EUR'],
-            sourceCountry: ['DE', 'FR', 'IT', 'ES'],
-        },
-        provider: 'stripe',
-        enabled: false,
-    },
-];
-
 export default function PaymentRoutingPage() {
-    const [providers, setProviders] = useState<ProviderPerformance[]>(mockProviders);
-    const [rules, setRules] = useState<RoutingRule[]>(mockRules);
-    const [loading, setLoading] = useState(false);
+    const [providers, setProviders] = useState<ProviderPerformance[]>([]);
+    const [rules, setRules] = useState<RoutingRule[]>([]);
+    const [stats, setStats] = useState<RoutingStats | null>(null);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
     const { toast } = useToast();
 
-    const stats: RoutingStats = {
-        totalOptimizations: 3420,
-        costSavings: 12500,
-        avgSuccessRate: 97.1,
-        avgResponseTime: 162,
-        topProvider: 'Stripe',
-        routingEfficiency: 94.5,
+    const fetchRoutingData = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get('/api/admin/payment-routing');
+            
+            const providersData = response.data.providers || [];
+            setProviders(providersData);
+            setStats(response.data.stats || null);
+            
+            // Mock rules for now (should come from API in future)
+            setRules([
+                {
+                    id: 'rule_1',
+                    name: 'NGN Domestic Priority',
+                    priority: 1,
+                    conditions: {
+                        currency: ['NGN'],
+                        sourceCountry: ['NG'],
+                        destinationCountry: ['NG'],
+                    },
+                    provider: 'paystack',
+                    enabled: true,
+                },
+                {
+                    id: 'rule_2',
+                    name: 'High Value USD',
+                    priority: 2,
+                    conditions: {
+                        currency: ['USD'],
+                        amountMin: 10000,
+                    },
+                    provider: 'stripe',
+                    enabled: true,
+                },
+                {
+                    id: 'rule_3',
+                    name: 'EUR SEPA Route',
+                    priority: 3,
+                    conditions: {
+                        currency: ['EUR'],
+                        sourceCountry: ['DE', 'FR', 'IT', 'ES'],
+                    },
+                    provider: 'stripe',
+                    enabled: false,
+                },
+            ]);
+        } catch (error: any) {
+            console.error('Error fetching routing data:', error);
+            toast({
+                title: 'Error',
+                description: error.response?.data?.error || 'Failed to load routing data',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        fetchRoutingData();
+    }, []);
 
     const filteredProviders = providers.filter(p => 
         !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -238,7 +201,7 @@ export default function PaymentRoutingPage() {
                     <p className="text-muted-foreground">Monitor provider performance and optimize payment routing.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={loading}>
+                    <Button variant="outline" size="sm" onClick={fetchRoutingData} disabled={loading}>
                         <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
                         Refresh
                     </Button>
@@ -254,50 +217,76 @@ export default function PaymentRoutingPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Routing Efficiency</CardTitle>
-                        <Zap className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.routingEfficiency}%</div>
-                        <p className="text-xs text-muted-foreground">Optimal route selection</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Cost Savings (30d)</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(stats.costSavings)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">From optimization</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg Success Rate</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.avgSuccessRate}%</div>
-                        <p className="text-xs text-muted-foreground">Across all providers</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.avgResponseTime}ms</div>
-                        <p className="text-xs text-muted-foreground">Transaction processing</p>
-                    </CardContent>
-                </Card>
-            </div>
+            {stats && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Routing Efficiency</CardTitle>
+                            <Zap className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? (
+                                <Skeleton className="h-8 w-20" />
+                            ) : (
+                                <>
+                                    <div className="text-2xl font-bold">{stats.routingEfficiency}%</div>
+                                    <p className="text-xs text-muted-foreground">Optimal route selection</p>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Cost Savings (30d)</CardTitle>
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? (
+                                <Skeleton className="h-8 w-20" />
+                            ) : (
+                                <>
+                                    <div className="text-2xl font-bold">
+                                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(stats.costSavings)}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">From optimization</p>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Avg Success Rate</CardTitle>
+                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? (
+                                <Skeleton className="h-8 w-20" />
+                            ) : (
+                                <>
+                                    <div className="text-2xl font-bold">{stats.avgSuccessRate}%</div>
+                                    <p className="text-xs text-muted-foreground">Across all providers</p>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? (
+                                <Skeleton className="h-8 w-20" />
+                            ) : (
+                                <>
+                                    <div className="text-2xl font-bold">{stats.avgResponseTime}ms</div>
+                                    <p className="text-xs text-muted-foreground">Transaction processing</p>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
@@ -308,54 +297,69 @@ export default function PaymentRoutingPage() {
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4 mt-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium">Top Performing Providers</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {providers
-                                        .sort((a, b) => b.successRate - a.successRate)
-                                        .slice(0, 3)
-                                        .map((provider, idx) => (
-                                            <div key={provider.id} className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn(
-                                                        "h-2 w-2 rounded-full",
-                                                        provider.status === 'active' ? "bg-green-500" :
-                                                        provider.status === 'degraded' ? "bg-yellow-500" : "bg-red-500"
-                                                    )} />
-                                                    <span className="font-medium">{provider.name}</span>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-sm font-medium">{provider.successRate}%</div>
-                                                    <div className="text-xs text-muted-foreground">{provider.avgResponseTime}ms</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium">Active Routing Rules</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {rules.filter(r => r.enabled).map((rule) => (
-                                        <div key={rule.id} className="flex items-center justify-between">
-                                            <div>
-                                                <div className="font-medium">{rule.name}</div>
-                                                <div className="text-xs text-muted-foreground">Priority: {rule.priority}</div>
-                                            </div>
-                                            <Badge variant="default">{rule.provider}</Badge>
+                    {loading ? (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Card><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                            <Card><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-medium">Top Performing Providers</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {providers.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No provider data available</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {providers
+                                                .sort((a, b) => b.successRate - a.successRate)
+                                                .slice(0, 3)
+                                                .map((provider, idx) => (
+                                                    <div key={provider.id} className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={cn(
+                                                                "h-2 w-2 rounded-full",
+                                                                provider.status === 'active' ? "bg-green-500" :
+                                                                provider.status === 'degraded' ? "bg-yellow-500" : "bg-red-500"
+                                                            )} />
+                                                            <span className="font-medium">{provider.name}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-sm font-medium">{provider.successRate}%</div>
+                                                            <div className="text-xs text-muted-foreground">{provider.avgResponseTime}ms</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                         </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-medium">Active Routing Rules</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {rules.filter(r => r.enabled).length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No active routing rules</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {rules.filter(r => r.enabled).map((rule) => (
+                                                <div key={rule.id} className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium">{rule.name}</div>
+                                                        <div className="text-xs text-muted-foreground">Priority: {rule.priority}</div>
+                                                    </div>
+                                                    <Badge variant="default">{rule.provider}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
                 </TabsContent>
 
                 <TabsContent value="providers" className="mt-4">
@@ -514,42 +518,49 @@ export default function PaymentRoutingPage() {
                 </TabsContent>
 
                 <TabsContent value="analytics" className="mt-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium">Cost Optimization</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-2xl font-bold">
-                                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.costSavings)}
+                    {loading || !stats ? (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Card><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                            <Card><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-medium">Cost Optimization</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="text-2xl font-bold">
+                                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats.costSavings)}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">Saved in last 30 days</p>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">Saved in last 30 days</p>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                            <div className="h-full bg-green-500" style={{ width: '75%' }} />
+                                        </div>
                                     </div>
-                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                        <div className="h-full bg-green-500" style={{ width: '75%' }} />
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-medium">Routing Efficiency</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="text-2xl font-bold">{stats.routingEfficiency}%</div>
+                                            <p className="text-xs text-muted-foreground">Optimal route selection rate</p>
+                                        </div>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                            <div className="h-full bg-blue-500" style={{ width: `${stats.routingEfficiency}%` }} />
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium">Routing Efficiency</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div>
-                                        <div className="text-2xl font-bold">{stats.routingEfficiency}%</div>
-                                        <p className="text-xs text-muted-foreground">Optimal route selection rate</p>
-                                    </div>
-                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                        <div className="h-full bg-blue-500" style={{ width: `${stats.routingEfficiency}%` }} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
         </>
