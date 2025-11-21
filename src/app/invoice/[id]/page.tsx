@@ -61,6 +61,7 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
+        let isBusinessInvoice = false;
         // Try the invoices collection first
         let docRef = doc(db, "invoices", id);
         let docSnap = await getDoc(docRef);
@@ -70,40 +71,69 @@ export default function PublicInvoicePage() {
         if (!docSnap.exists()) {
           docRef = doc(db, "businessInvoices", id);
           docSnap = await getDoc(docRef);
+          isBusinessInvoice = true;
           console.log('[invoice] checked collection: businessInvoices, exists:', docSnap.exists());
         }
 
-        if (docSnap.exists() && docSnap.data().isPublic) {
+        if (docSnap.exists()) {
           const invoiceData = docSnap.data();
-          setInvoice(invoiceData);
-          setFoundInCollection(docRef.parent.id || (docRef.path.includes('businessInvoices') ? 'businessInvoices' : 'invoices'));
+          
+          // For regular invoices, check isPublic. 
+          // For business invoices, rules allow read: if true, but we should still respect Draft status
+          const isPublic = invoiceData.isPublic !== false; // Default to true if not set
+          const isDraft = invoiceData.status === 'Draft';
+          // Business invoices are publicly readable per rules, but don't show drafts publicly
+          // Regular invoices must have isPublic === true
+          const canView = isBusinessInvoice 
+            ? !isDraft  // Business invoices: show if not draft
+            : isPublic; // Regular invoices: show if public
+          
+          if (canView) {
+            setInvoice(invoiceData);
+            setFoundInCollection(isBusinessInvoice ? 'businessInvoices' : 'invoices');
 
-          // Fetch associated business profile (if there is a businessId)
-          if (invoiceData.businessId) {
-            const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
-            const bizSnap = await getDocs(bizQuery);
-            if (!bizSnap.empty) {
-              setBusinessProfile(bizSnap.docs[0].data().businessProfile);
+            // Fetch associated business profile (if there is a businessId)
+            if (invoiceData.businessId) {
+              try {
+                const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
+                const bizSnap = await getDocs(bizQuery);
+                if (!bizSnap.empty) {
+                  setBusinessProfile(bizSnap.docs[0].data().businessProfile);
+                }
+              } catch (profileError) {
+                console.warn('Could not fetch business profile:', profileError);
+                // Continue without business profile
+              }
             }
-          }
 
-          // If online payment (stripe), fetch Stripe clientSecret
-          if (invoiceData.paymentMethod === 'stripe') {
-            const res = await fetch(`${apiBase}/create-payment-intent`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                invoiceId: id,
-                amount: invoiceData.grandTotal * 100, // convert to cents
-                currency: invoiceData.currency.toLowerCase()
-              })
-            });
-            const data = await res.json();
-            setClientSecret(data.clientSecret);
+            // If online payment (stripe), fetch Stripe clientSecret
+            if (invoiceData.paymentMethod === 'stripe') {
+              try {
+                const res = await fetch(`${apiBase}/create-payment-intent`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    invoiceId: id,
+                    amount: invoiceData.grandTotal * 100, // convert to cents
+                    currency: invoiceData.currency.toLowerCase()
+                  })
+                });
+                const data = await res.json();
+                setClientSecret(data.clientSecret);
+              } catch (paymentError) {
+                console.warn('Could not fetch payment intent:', paymentError);
+                // Continue without payment intent
+              }
+            }
+          } else {
+            setInvoice(null);
+            console.log("Invoice is not public.");
+            setFetchError("Invoice is not public");
           }
         } else {
           setInvoice(null);
-          console.log("Invoice not found or not public.");
+          console.log("Invoice not found.");
+          setFetchError("Invoice not found");
         }
       } catch (error: any) {
         console.error("Error fetching invoice:", error);
