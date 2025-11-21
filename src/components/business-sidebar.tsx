@@ -23,6 +23,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Icons } from '@/components/icons';
 import {
+  SidebarProvider,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
@@ -292,39 +293,41 @@ export function BusinessSidebar() {
   );
 
   return (
-    <div className="hidden md:flex fixed inset-y-0 left-0 w-[12rem] z-50 flex-col border-r bg-sidebar text-sidebar-foreground">
-      {/* Logo Header */}
-      <div className="h-12 lg:h-[52px] flex items-center px-4 border-b">
-        <Link href="/business" className="flex items-center justify-start">
-          <Icons.logo className="h-8" />
-        </Link>
-      </div>
-
-      {/* Business Header - Stripe Style */}
-      <div className="border-b h-16 flex items-center">
-        <BusinessHeaderDropdown />
-      </div>
-
-      {/* Navigation */}
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {renderNav()}
+    <SidebarProvider>
+      <div className="hidden md:flex fixed inset-y-0 left-0 w-[12rem] z-50 flex-col border-r bg-sidebar text-sidebar-foreground">
+        {/* Logo Header */}
+        <div className="h-12 lg:h-[52px] flex items-center px-4 border-b">
+          <Link href="/business" className="flex items-center justify-start">
+            <Icons.logo className="h-8" />
+          </Link>
         </div>
-      </ScrollArea>
 
-      {/* Footer */}
-      <div className="mt-auto border-t p-2">
-        <SidebarMenu className="w-full">
-          <SidebarMenuItem className="w-full">
-            <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" isActive={isActive('/business/settings')}>
-              <Link href="/business/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {/* Business Header - Stripe Style */}
+        <div className="border-b h-16 flex items-center">
+          <BusinessHeaderDropdown />
+        </div>
+
+        {/* Navigation */}
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {renderNav()}
+          </div>
+        </ScrollArea>
+
+        {/* Footer */}
+        <div className="mt-auto border-t p-2">
+          <SidebarMenu className="w-full">
+            <SidebarMenuItem className="w-full">
+              <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" isActive={isActive('/business/settings')}>
+                <Link href="/business/settings">
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
