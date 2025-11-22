@@ -22,6 +22,8 @@ import {
   User,
   Calendar,
   Globe,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +51,9 @@ interface KycSubmission {
   rejectionReason?: string;
   userEmail?: string;
   userName?: string;
+  autoApproved?: boolean;
+  confidenceScore?: number;
+  verificationResultId?: string;
 }
 
 export default function KycReviewPage() {
@@ -424,6 +429,39 @@ export default function KycReviewPage() {
                           ))}
                         </div>
                       </div>
+                      {(submission.autoApproved !== undefined || submission.confidenceScore !== undefined) && (
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                          <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4" />
+                            Verification Details
+                          </p>
+                          <div className="space-y-2">
+                            {submission.autoApproved && (
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="h-3 w-3 text-green-600" />
+                                <span className="text-xs font-medium text-green-700 dark:text-green-400">Auto-Approved</span>
+                              </div>
+                            )}
+                            {submission.confidenceScore !== undefined && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Confidence Score:</span>
+                                  <span className="font-semibold">{submission.confidenceScore}%</span>
+                                </div>
+                                <div className="w-full bg-muted rounded-full h-2">
+                                  <div 
+                                    className={`h-2 rounded-full transition-all ${
+                                      submission.confidenceScore >= 90 ? 'bg-green-600' :
+                                      submission.confidenceScore >= 70 ? 'bg-yellow-600' : 'bg-red-600'
+                                    }`}
+                                    style={{ width: `${submission.confidenceScore}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {submission.rejectionReason && (
                         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                           <p className="text-sm font-medium text-destructive mb-1">Rejection Reason:</p>
