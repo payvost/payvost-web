@@ -746,7 +746,7 @@ model Content {
 
 model ContentVersion {
   id          String   @id @default(uuid())
-  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentItem Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
   contentId   String
   version     Int
   title       String
