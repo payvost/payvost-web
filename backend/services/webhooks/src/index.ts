@@ -164,7 +164,7 @@ async function refundToAccount(
       return;
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance
         FROM "Account"
