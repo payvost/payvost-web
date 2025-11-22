@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns"
-import type { DateRange } from "react-day-picker"
+import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -13,114 +12,84 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useIsMobile } from "@/hooks/use-mobile"
 
-interface DateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
-  date?: DateRange | undefined;
-  onDateChange?: (date: DateRange | undefined) => void;
+interface DatePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  date?: Date | undefined;
+  onDateChange?: (date: Date | undefined) => void;
   showPresets?: boolean;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
 const datePresets = [
   {
     label: "Today",
-    value: () => ({
-      from: startOfDay(new Date()),
-      to: endOfDay(new Date()),
-    }),
+    value: () => startOfDay(new Date()),
   },
   {
     label: "Yesterday",
-    value: () => ({
-      from: startOfDay(subDays(new Date(), 1)),
-      to: endOfDay(subDays(new Date(), 1)),
-    }),
+    value: () => startOfDay(subDays(new Date(), 1)),
   },
   {
-    label: "Last 7 days",
-    value: () => ({
-      from: startOfDay(subDays(new Date(), 6)),
-      to: endOfDay(new Date()),
-    }),
+    label: "Tomorrow",
+    value: () => startOfDay(subDays(new Date(), -1)),
   },
   {
-    label: "Last 14 days",
-    value: () => ({
-      from: startOfDay(subDays(new Date(), 13)),
-      to: endOfDay(new Date()),
-    }),
+    label: "This week start",
+    value: () => startOfWeek(new Date()),
   },
   {
-    label: "Last 30 days",
-    value: () => ({
-      from: startOfDay(subDays(new Date(), 29)),
-      to: endOfDay(new Date()),
-    }),
+    label: "This week end",
+    value: () => endOfWeek(new Date()),
   },
   {
-    label: "This week",
-    value: () => ({
-      from: startOfWeek(new Date()),
-      to: endOfWeek(new Date()),
-    }),
+    label: "This month start",
+    value: () => startOfMonth(new Date()),
   },
   {
-    label: "This month",
-    value: () => ({
-      from: startOfMonth(new Date()),
-      to: endOfMonth(new Date()),
-    }),
+    label: "This month end",
+    value: () => endOfMonth(new Date()),
   },
   {
-    label: "Last month",
+    label: "Last month start",
     value: () => {
       const lastMonth = subMonths(new Date(), 1);
-      return {
-        from: startOfMonth(lastMonth),
-        to: endOfMonth(lastMonth),
-      };
+      return startOfMonth(lastMonth);
     },
-  },
-  {
-    label: "This year",
-    value: () => ({
-      from: startOfYear(new Date()),
-      to: endOfYear(new Date()),
-    }),
   },
 ];
 
-export function DateRangePicker({
+export function DatePicker({
   className,
   date: controlledDate,
   onDateChange,
   showPresets = true,
-}: DateRangePickerProps) {
-  const [internalDate, setInternalDate] = React.useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
+  placeholder = "Pick a date",
+  disabled = false,
+}: DatePickerProps) {
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(
+    undefined
+  );
 
   const [isOpen, setIsOpen] = React.useState(false);
-  const isMobile = useIsMobile();
 
   const date = controlledDate !== undefined ? controlledDate : internalDate;
   
-  const setDate = React.useCallback((newDate: DateRange | undefined) => {
+  const setDate = React.useCallback((newDate: Date | undefined) => {
     if (onDateChange) {
       onDateChange(newDate);
     } else {
       setInternalDate(newDate);
     }
-    // Close popover when range is complete
-    if (newDate?.from && newDate?.to) {
+    // Close popover when date is selected
+    if (newDate) {
       setIsOpen(false);
     }
   }, [onDateChange]);
 
   const handlePresetClick = (preset: typeof datePresets[0]) => {
-    const range = preset.value();
-    setDate(range);
+    const selectedDate = preset.value();
+    setDate(selectedDate);
   };
 
   return (
@@ -131,26 +100,14 @@ export function DateRangePicker({
             id="date"
             variant={"outline"}
             size="sm"
+            disabled={disabled}
             className={cn(
-              "h-9 w-full sm:w-[280px] justify-start text-left font-normal transition-all hover:bg-accent",
+              "h-9 w-full sm:w-[240px] justify-start text-left font-normal transition-all hover:bg-accent",
               !date && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
-                <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
-                </>
-              ) : (
-                <>
-                  {format(date.from, "LLL dd, y")} - ...
-                </>
-              )
-            ) : (
-              <span>Pick a date range</span>
-            )}
+            {date ? format(date, "PPP") : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
@@ -180,15 +137,11 @@ export function DateRangePicker({
             <div className="p-3">
               <Calendar
                 initialFocus
-                mode="range"
-                defaultMonth={date?.from}
+                mode="single"
+                defaultMonth={date}
                 selected={date}
                 onSelect={setDate}
-                numberOfMonths={isMobile ? 1 : 2}
                 className="rounded-md border-0"
-                classNames={{
-                  months: "flex flex-col sm:flex-row",
-                }}
               />
             </div>
           </div>
@@ -197,3 +150,4 @@ export function DateRangePicker({
     </div>
   )
 }
+
