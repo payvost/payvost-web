@@ -21,7 +21,7 @@ export default function HrUnauthorizedPage() {
             This area is restricted to authorized HR personnel only. If you believe this is an error, please contact your system administrator.
           </p>
           <div className="flex gap-2">
-            <Link href="/hr-admin/login" className="flex-1">
+            <Link href="/hr-70w7b86wOJldervcz_pob/login" className="flex-1">
               <Button variant="outline" className="w-full">Back to Login</Button>
             </Link>
             <Link href="/" className="flex-1">

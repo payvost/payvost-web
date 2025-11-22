@@ -85,7 +85,7 @@ export default function HrJobsPage() {
             Manage job postings and applications
           </p>
         </div>
-        <Link href="/hr-admin/jobs/create">
+        <Link href="/hr-70w7b86wOJldervcz_pob/jobs/create">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Create Job
@@ -114,7 +114,7 @@ export default function HrJobsPage() {
             <div className="text-center py-8">
               <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">No jobs found</p>
-              <Link href="/hr-admin/jobs/create">
+              <Link href="/hr-70w7b86wOJldervcz_pob/jobs/create">
                 <Button>Create Your First Job</Button>
               </Link>
             </div>
@@ -152,12 +152,12 @@ export default function HrJobsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/hr-admin/jobs/${job.id}`}>
+                    <Link href={`/hr-70w7b86wOJldervcz_pob/jobs/${job.id}`}>
                       <Button variant="outline" size="sm">
                         <Eye className="h-4 w-4" />
                       </Button>
                     </Link>
-                    <Link href={`/hr-admin/jobs/${job.id}/edit`}>
+                    <Link href={`/hr-70w7b86wOJldervcz_pob/jobs/${job.id}/edit`}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>

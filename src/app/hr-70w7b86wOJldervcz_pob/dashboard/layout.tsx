@@ -11,7 +11,7 @@ export default async function HrDashboardLayoutRoute({
   // Server-side session and role verification
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('hr_session')?.value;
-  const basePath = '/hr-admin';
+  const basePath = '/hr-70w7b86wOJldervcz_pob';
 
   if (!sessionCookie) {
     redirect(`${basePath}/login`);

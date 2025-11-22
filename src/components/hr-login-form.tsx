@@ -44,7 +44,7 @@ export function HrLoginForm() {
       const data = await response.json()
 
       // Step 4: Redirect to HR dashboard
-      router.push("/hr-admin/dashboard")
+      router.push("/hr-70w7b86wOJldervcz_pob/dashboard")
       router.refresh()
     } catch (error: any) {
       console.error("Login error:", error)
