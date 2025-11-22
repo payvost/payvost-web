@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { format } from 'date-fns';
 import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, addDoc, Timestamp, GeoPoint } from 'firebase/firestore';
@@ -1286,33 +1287,15 @@ export function RegistrationForm() {
                         name="dateOfBirth"
                         control={control}
                         render={({ field }) => (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                    )}
-                                    disabled={isLoading}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                    captionLayout="dropdown-buttons"
-                                    fromDate={new Date(new Date().setFullYear(new Date().getFullYear() - 100))}
-                                    toDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
-                                    defaultMonth={new Date(new Date().setFullYear(new Date().getFullYear() - 20))}
-                                />
-                                </PopoverContent>
-                            </Popover>
+                            <CompactDatePicker
+                                value={field.value}
+                                onChange={field.onChange}
+                                fromDate={new Date(new Date().setFullYear(new Date().getFullYear() - 100))}
+                                toDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
+                                defaultMonth={new Date(new Date().setFullYear(new Date().getFullYear() - 20))}
+                                disabled={isLoading}
+                                placeholder="Pick a date"
+                            />
                         )}
                     />
                     {errors.dateOfBirth && <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>}

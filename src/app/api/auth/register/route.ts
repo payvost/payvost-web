@@ -65,6 +65,18 @@ function validatePhoneNumber(phone: string, countryCode?: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // Ensure Firebase Admin is initialized
+    if (!admin.apps.length) {
+      console.error('[Register API] Firebase Admin SDK not initialized');
+      return NextResponse.json(
+        { 
+          error: 'Service unavailable', 
+          message: 'Registration service is temporarily unavailable. Please try again in a few moments.' 
+        },
+        { status: 503 }
+      );
+    }
+
     // Rate limiting
     const clientIP = getClientIP(request);
     const rateLimitResult = rateLimit(
@@ -174,35 +186,78 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user with Firebase Admin SDK (bypasses client restrictions)
-    const userRecord = await adminAuth.createUser({
-      email,
-      password,
-      displayName,
-      phoneNumber: phoneNumber || undefined,
-      emailVerified: false,
-    });
+    let userRecord;
+    try {
+      userRecord = await adminAuth.createUser({
+        email,
+        password,
+        displayName,
+        phoneNumber: phoneNumber || undefined,
+        emailVerified: false,
+      });
+    } catch (authError: unknown) {
+      const authErrorDetails = authError as { code?: string; message?: string };
+      console.error('[Register API] Firebase Auth user creation failed:', {
+        code: authErrorDetails?.code,
+        message: authErrorDetails?.message,
+      });
+      // Re-throw to be handled by outer catch
+      throw authError;
+    }
 
     // Create user document in Firestore (minimal initial document - frontend will update with full details)
-    await adminDb.collection('users').doc(userRecord.uid).set({
-      uid: userRecord.uid,
-      email,
-      displayName,
-      phoneNumber: phoneNumber || '',
-      country: '',
-      countryCode: countryCode || '',
-      username: username || '',
-      userType: userType || 'Pending',
-      kycStatus: 'unverified',
-      kycLevel: null,
-      riskScore: 0,
-      totalSpend: 0,
-      wallets: [],
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    try {
+      await adminDb.collection('users').doc(userRecord.uid).set({
+        uid: userRecord.uid,
+        email,
+        displayName,
+        phoneNumber: phoneNumber || '',
+        country: '',
+        countryCode: countryCode || '',
+        username: username || '',
+        userType: userType || 'Pending',
+        kycStatus: 'unverified',
+        kycLevel: null,
+        riskScore: 0,
+        totalSpend: 0,
+        wallets: [],
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (firestoreError: unknown) {
+      const firestoreErrorDetails = firestoreError as { code?: string; message?: string };
+      console.error('[Register API] Firestore write failed:', {
+        code: firestoreErrorDetails?.code,
+        message: firestoreErrorDetails?.message,
+        uid: userRecord.uid,
+      });
+      
+      // Try to clean up the created user if Firestore write fails
+      try {
+        await adminAuth.deleteUser(userRecord.uid);
+        console.log('[Register API] Cleaned up user after Firestore failure');
+      } catch (cleanupError) {
+        console.error('[Register API] Failed to clean up user after Firestore failure:', cleanupError);
+      }
+      
+      // Re-throw to be handled by outer catch
+      throw firestoreError;
+    }
 
     // Generate custom token for immediate sign-in
-    const customToken = await adminAuth.createCustomToken(userRecord.uid);
+    let customToken;
+    try {
+      customToken = await adminAuth.createCustomToken(userRecord.uid);
+    } catch (tokenError: unknown) {
+      const tokenErrorDetails = tokenError as { code?: string; message?: string };
+      console.error('[Register API] Custom token generation failed:', {
+        code: tokenErrorDetails?.code,
+        message: tokenErrorDetails?.message,
+        uid: userRecord.uid,
+      });
+      // Re-throw to be handled by outer catch
+      throw tokenError;
+    }
 
     return NextResponse.json(
       {
@@ -220,7 +275,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     // Improved error handling - don't expose internal details
-    const errorDetails = error as { code?: string; message?: string };
+    const errorDetails = error as { code?: string; message?: string; stack?: string };
     const errorCode = errorDetails?.code;
     const errorMessage = errorDetails?.message || 'An unexpected error occurred';
 
@@ -228,11 +283,12 @@ export async function POST(request: NextRequest) {
     console.error('[Register API] User creation error:', {
       code: errorCode,
       message: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? errorDetails?.stack : undefined,
       timestamp: new Date().toISOString(),
     });
 
     // Handle specific Firebase errors with user-friendly messages
-    if (errorCode === 'auth/email-already-exists') {
+    if (errorCode === 'auth/email-already-exists' || errorCode === 'auth/email-already-in-use') {
       return NextResponse.json(
         { error: 'Email already registered', message: 'An account with this email already exists. Please use a different email or try logging in.' },
         { status: 409 }
@@ -260,9 +316,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for Firebase Admin initialization errors
+    if (errorMessage.includes('Firebase Admin') || errorMessage.includes('admin') || errorCode?.includes('app/no-app')) {
+      console.error('[Register API] Firebase Admin initialization error');
+      return NextResponse.json(
+        { error: 'Service unavailable', message: 'Registration service is temporarily unavailable. Please try again in a few moments.' },
+        { status: 503 }
+      );
+    }
+
+    // Check for Firestore errors
+    if (errorCode?.includes('firestore') || errorCode?.includes('permission') || errorMessage.includes('permission')) {
+      console.error('[Register API] Firestore error');
+      return NextResponse.json(
+        { error: 'Database error', message: 'Unable to save your information. Please try again later.' },
+        { status: 500 }
+      );
+    }
+
     // Generic error response (don't expose internal error details)
     return NextResponse.json(
-      { error: 'Registration failed', message: 'Unable to create your account at this time. Please try again later.' },
+      { 
+        error: 'Registration failed', 
+        message: 'Unable to create your account at this time. Please try again later.',
+        ...(process.env.NODE_ENV === 'development' && { details: errorMessage })
+      },
       { status: 500 }
     );
   }
