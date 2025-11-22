@@ -286,10 +286,6 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="relative flex items-center justify-center order-2 mt-6 sm:mt-8 lg:order-none lg:justify-end lg:mt-0">
-                <div className="hidden md:block">
-                  <div className="absolute -top-10 left-14 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
-                  <div className="absolute -bottom-10 right-10 h-32 w-32 rounded-full bg-primary/25 blur-3xl" />
-                </div>
                 <div ref={rateCardRef} className="relative w-full max-w-xl mx-auto lg:mx-0">
                   <div className="animate-in fade-in-50 slide-in-from-right-6 duration-500">
                     <LiveRateChecker autoFetch sendMoneyHref="/register" />
@@ -300,7 +296,7 @@ export default function LandingPage() {
           </div>
         </section>
         {/* Workflow Section */}
-        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/5 via-background to-background">
+        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
               <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
@@ -332,7 +328,7 @@ export default function LandingPage() {
                   return (
                     <div
                       key={stage.title}
-                      className="group relative overflow-hidden rounded-2xl border border-primary/10 bg-background/80 p-5 sm:p-6 shadow-[0_18px_60px_-48px_rgba(15,46,85,0.65)] transition hover:border-primary hover:shadow-[0_20px_70px_-40px_rgba(15,46,85,0.45)]"
+                      className="group relative overflow-hidden rounded-2xl border border-primary/10 bg-background/80 p-5 sm:p-6 transition hover:border-primary"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -348,7 +344,6 @@ export default function LandingPage() {
                       <p className="mt-2 sm:mt-3 text-sm leading-relaxed text-muted-foreground">
                         {stage.description}
                       </p>
-                      <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent opacity-0 transition group-hover:opacity-100" />
                     </div>
                   );
                 })}
@@ -371,7 +366,7 @@ export default function LandingPage() {
                 <p className="text-sm sm:text-base text-slate-300 md:text-lg leading-relaxed max-w-2xl mx-auto lg:mx-0">
                   Build production-grade remittance flows, wallets, and compliance automations with Payvost SDKs, comprehensive documentation, and tooling that surfaces everything your engineers need.
                 </p>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6 shadow-[0_24px_90px_-50px_rgba(0,0,0,0.75)] text-left w-full h-auto">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:p-6 text-left w-full h-auto">
                   <div className="flex flex-col sm:flex-row items-center justify-between text-[10px] sm:text-xs font-semibold uppercase tracking-[0.25em] sm:tracking-[0.35em] text-slate-400">
                     <span>TypeScript SDK</span>
                     <span className="hidden sm:inline">payments.ts</span>
@@ -407,7 +402,6 @@ export default function LandingPage() {
 
         {/* Countries Section */}
         <section id="countries" className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32">
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 max-w-3xl">
               <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
@@ -423,7 +417,7 @@ export default function LandingPage() {
               {popularCountries.map((country) => (
                 <Card
                   key={country.name}
-                  className="group h-full overflow-hidden border-border/30 bg-background/70 backdrop-blur-md shadow-[0_20px_70px_-45px_rgba(10,70,95,0.35)] transition hover:border-primary/40 hover:shadow-[0_30px_90px_-40px_rgba(10,70,95,0.45)]"
+                  className="group h-full overflow-hidden border-border/30 bg-background/70 transition hover:border-primary/40"
                 >
                   <CardContent className="p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
                     <div className="flex items-start justify-between gap-3 sm:gap-4">
@@ -478,7 +472,6 @@ export default function LandingPage() {
         
         {/* Testimonials Section */}
   <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
-    <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-background" />
     <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
       <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
         <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
@@ -495,12 +488,7 @@ export default function LandingPage() {
       <div className="mt-10 sm:mt-12 grid gap-6 grid-cols-1 lg:grid-cols-2 items-stretch">
         {/* Featured Testimonial Card */}
         <div className="relative w-full max-w-full mx-auto lg:mx-0 flex flex-col">
-          {/* Decorative background only on large screens */}
-          <div className="hidden md:block">
-            <div className="absolute -top-8 -left-6 h-24 w-24 rounded-full bg-primary/15 blur-2xl" />
-            <div className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-primary/20 blur-3xl" />
-          </div>
-          <Card className="relative w-full rounded-3xl border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-45px_rgba(10,70,95,0.45)]">
+          <Card className="relative w-full rounded-3xl border border-border/40 bg-background/90">
             <CardContent className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 lg:p-10">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-center sm:text-left justify-center sm:justify-start">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -532,7 +520,7 @@ export default function LandingPage() {
 
         {/* Carousel Testimonials */}
         <div className="relative w-full max-w-full mx-0 lg:mx-0 flex flex-col">
-          <div className="relative w-full rounded-3xl border border-border/30 bg-background/85 backdrop-blur-md p-4 sm:p-6 md:p-8 shadow-[0_20px_80px_-40px_rgba(10,70,95,0.45)]">
+          <div className="relative w-full rounded-3xl border border-border/30 bg-background/85 p-4 sm:p-6 md:p-8">
             <Carousel
               opts={{
                 align: "start",
@@ -611,7 +599,6 @@ export default function LandingPage() {
   </section>
         {/* FAQ Section */}
         <section id="faq" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32">
-          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-primary/5 via-background to-background" />
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
               <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
@@ -625,7 +612,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="grid gap-4">
-                  <Card className="border border-primary/30 bg-background/80 backdrop-blur-md shadow-[0_24px_80px_-50px_rgba(10,70,95,0.45)]">
+                  <Card className="border border-primary/30 bg-background/80">
                     <CardContent className="flex flex-col gap-4 p-5 sm:p-6 sm:flex-row sm:items-start">
                       <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary mx-auto sm:mx-0 flex-shrink-0">
                         <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -674,7 +661,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              <Card className="border border-border/40 bg-background/90 backdrop-blur-md shadow-[0_24px_90px_-50px_rgba(15,46,85,0.45)]">
+              <Card className="border border-border/40 bg-background/90">
                 <CardContent className="p-3 sm:p-4 md:p-6">
                   <Accordion type="single" collapsible className="grid gap-3 sm:gap-4">
                     {faqs.map((faq) => (
@@ -708,7 +695,7 @@ export default function LandingPage() {
             </div>
             <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
               <Link href="/blog/payvost-partners-with-google" className="group">
-                <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 group-hover:shadow-lg">
+                <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 border">
                     <div className="relative aspect-video w-full">
                       <Image
                         src={blogImages.payvost_google_partnership.src}
@@ -805,7 +792,7 @@ export default function LandingPage() {
                       </p>
                     </div>
                     <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                      <Card className="border border-primary/20 bg-background/80 shadow-[0_8px_32px_-8px_rgba(15,46,85,0.10)] rounded-2xl transition-all duration-300 hover:border-primary/40 hover:shadow-[0_12px_40px_-10px_rgba(15,46,85,0.18)] w-full max-w-lg mx-auto">
+                      <Card className="border border-primary/20 bg-background/80 rounded-2xl transition-all duration-300 hover:border-primary/40 w-full max-w-lg mx-auto">
                         <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
                           <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
                             <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
@@ -816,7 +803,7 @@ export default function LandingPage() {
                           </div>
                         </CardContent>
                       </Card>
-                      <Card className="border border-primary/20 bg-background/80 shadow-[0_8px_32px_-8px_rgba(15,46,85,0.10)] rounded-2xl transition-all duration-300 hover:border-primary/40 hover:shadow-[0_12px_40px_-10px_rgba(15,46,85,0.18)] w-full max-w-md mx-auto md:max-w-lg lg:max-w-xl">
+                      <Card className="border border-primary/20 bg-background/80 rounded-2xl transition-all duration-300 hover:border-primary/40 w-full max-w-md mx-auto md:max-w-lg lg:max-w-xl">
                         <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
                           <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
                             <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
