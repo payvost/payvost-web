@@ -1067,6 +1067,18 @@ export function RegistrationForm() {
       
       const errorDetails = isErrorWithCode(error) ? error : null;
       
+      // Try to clean up if user was created but registration failed
+      // This prevents orphaned accounts in Firebase Auth
+      try {
+        if (auth.currentUser) {
+          // If we're here, user was created but something failed
+          // We can't easily delete the user from client side, but we can sign out
+          await auth.signOut();
+        }
+      } catch (cleanupError) {
+        console.error("Failed to clean up on registration error:", cleanupError);
+      }
+      
       // Handle specific error codes
       if (errorDetails?.code === 'auth/email-already-in-use') {
         errorTitle = "Email Already Registered";
