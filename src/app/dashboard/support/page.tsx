@@ -400,8 +400,8 @@ export default function SupportPage() {
                                                                 name="issueType"
                                                                 control={control}
                                                                 render={({ field }) => (
-                                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                                        <SelectTrigger>
+                                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                                        <SelectTrigger aria-label="Select payment issue type">
                                                                             <SelectValue placeholder="Select issue type" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
@@ -440,8 +440,8 @@ export default function SupportPage() {
                                                                 name="currency"
                                                                 control={control}
                                                                 render={({ field }) => (
-                                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                                        <SelectTrigger>
+                                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                                        <SelectTrigger aria-label="Select currency">
                                                                             <SelectValue placeholder="Select currency" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
@@ -466,8 +466,8 @@ export default function SupportPage() {
                                                                 name="issueType"
                                                                 control={control}
                                                                 render={({ field }) => (
-                                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                                        <SelectTrigger>
+                                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                                        <SelectTrigger aria-label="Select account issue type">
                                                                             <SelectValue placeholder="Select issue type" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
@@ -501,8 +501,8 @@ export default function SupportPage() {
                                                                 name="issueType"
                                                                 control={control}
                                                                 render={({ field }) => (
-                                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                                        <SelectTrigger>
+                                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                                        <SelectTrigger aria-label="Select technical issue type">
                                                                             <SelectValue placeholder="Select issue type" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
@@ -562,8 +562,8 @@ export default function SupportPage() {
                                                             name="inquiryType"
                                                             control={control}
                                                             render={({ field }) => (
-                                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                                    <SelectTrigger>
+                                                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                                    <SelectTrigger aria-label="Select inquiry type">
                                                                         <SelectValue placeholder="Select inquiry type" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
@@ -601,30 +601,30 @@ export default function SupportPage() {
                                                     name="priority"
                                                     control={control}
                                                     render={({ field }) => (
-                                                        <Select onValueChange={field.onChange} value={field.value}>
-                                                            <SelectTrigger>
+                                                        <Select onValueChange={field.onChange} value={field.value || 'MEDIUM'}>
+                                                            <SelectTrigger aria-label="Select priority level">
                                                                 <SelectValue placeholder="Select priority" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="LOW">
+                                                                <SelectItem value="LOW" textValue="Low - General inquiry">
                                                                     <div className="flex items-center gap-2">
                                                                         <div className="h-2 w-2 rounded-full bg-green-500" />
                                                                         Low - General inquiry
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="MEDIUM">
+                                                                <SelectItem value="MEDIUM" textValue="Medium - Standard issue">
                                                                     <div className="flex items-center gap-2">
                                                                         <div className="h-2 w-2 rounded-full bg-yellow-500" />
                                                                         Medium - Standard issue
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="HIGH">
+                                                                <SelectItem value="HIGH" textValue="High - Urgent issue">
                                                                     <div className="flex items-center gap-2">
                                                                         <div className="h-2 w-2 rounded-full bg-orange-500" />
                                                                         High - Urgent issue
                                                                     </div>
                                                                 </SelectItem>
-                                                                <SelectItem value="URGENT">
+                                                                <SelectItem value="URGENT" textValue="Urgent - Critical issue">
                                                                     <div className="flex items-center gap-2">
                                                                         <div className="h-2 w-2 rounded-full bg-red-500" />
                                                                         Urgent - Critical issue
