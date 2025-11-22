@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { createHmac } from 'crypto';
 import admin from 'firebase-admin';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 
 const app = express();
 const PORT = process.env.WEBHOOK_SERVICE_PORT || 3008;
@@ -37,10 +37,7 @@ if (!admin.apps.length) {
   }
 }
 
-// Initialize Prisma
-const prisma = new PrismaClient({
-  log: NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+// Prisma is initialized in ./prisma.ts
 
 const db = admin.firestore();
 const auth = admin.auth();
