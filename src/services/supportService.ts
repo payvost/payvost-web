@@ -266,5 +266,100 @@ export const supportService = {
     if (assignedToId) params.append('assignedToId', assignedToId);
     return apiRequest<TicketStats>(`/api/support/tickets/stats?${params.toString()}`);
   },
+
+  // ==================== Chat Session Methods ====================
+
+  /**
+   * List chat sessions
+   */
+  async listChatSessions(filters: {
+    status?: 'WAITING' | 'ACTIVE' | 'ENDED' | ('WAITING' | 'ACTIVE' | 'ENDED')[];
+    agentId?: string | null;
+    customerId?: string;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<{ sessions: any[]; pagination: any }> {
+    const params = new URLSearchParams();
+    
+    if (filters.status) {
+      if (Array.isArray(filters.status)) {
+        filters.status.forEach(s => params.append('status', s));
+      } else {
+        params.append('status', filters.status);
+      }
+    }
+    
+    if (filters.agentId !== undefined) {
+      params.append('agentId', filters.agentId === null ? 'null' : filters.agentId);
+    }
+    
+    if (filters.customerId) params.append('customerId', filters.customerId);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    return apiRequest(`/api/support/chat/sessions?${params.toString()}`);
+  },
+
+  /**
+   * Get chat queue (waiting sessions)
+   */
+  async getChatQueue(): Promise<any[]> {
+    return apiRequest('/api/support/chat/queue');
+  },
+
+  /**
+   * Get chat session by ID
+   */
+  async getChatSession(id: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${id}`);
+  },
+
+  /**
+   * Create chat session
+   */
+  async createChatSession(customerId: string, agentId?: string): Promise<any> {
+    return apiRequest('/api/support/chat/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ customerId, agentId }),
+    });
+  },
+
+  /**
+   * Assign chat session
+   */
+  async assignChatSession(sessionId: string, agentId: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ agentId }),
+    });
+  },
+
+  /**
+   * End chat session
+   */
+  async endChatSession(sessionId: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/end`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Add message to chat
+   */
+  async addChatMessage(sessionId: string, content: string, type: string = 'text'): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content, type }),
+    });
+  },
+
+  /**
+   * Get chat statistics
+   */
+  async getChatStats(agentId?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (agentId) params.append('agentId', agentId);
+    return apiRequest(`/api/support/chat/stats?${params.toString()}`);
+  },
 };
 

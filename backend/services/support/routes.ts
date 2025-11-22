@@ -231,5 +231,174 @@ router.post('/tickets/:id/messages', verifyFirebaseToken, requireSupportTeam, as
   }
 });
 
+// ==================== Chat Session Routes ====================
+
+/**
+ * GET /api/support/chat/sessions
+ * List chat sessions with filters
+ */
+router.get('/chat/sessions', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const filters: SupportService.ChatFilters = {
+      status: req.query.status as any,
+      agentId: req.query.agentId === 'null' ? null : req.query.agentId as string,
+      customerId: req.query.customerId as string,
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+    };
+
+    const result = await SupportService.listChatSessions(filters);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch chat sessions' });
+  }
+});
+
+/**
+ * GET /api/support/chat/queue
+ * Get waiting chat sessions (queue)
+ */
+router.get('/chat/queue', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const queue = await SupportService.getChatQueue();
+    res.json(queue);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch chat queue' });
+  }
+});
+
+/**
+ * GET /api/support/chat/sessions/:id
+ * Get chat session by ID
+ */
+router.get('/chat/sessions/:id', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const session = await SupportService.getChatSessionById(req.params.id);
+    res.json(session);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to fetch chat session' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions
+ * Create a new chat session
+ */
+router.post('/chat/sessions', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { customerId, agentId } = req.body;
+
+    if (!customerId) {
+      throw new ValidationError('customerId is required');
+    }
+
+    const session = await SupportService.createChatSession(
+      { customerId },
+      agentId
+    );
+
+    res.status(201).json(session);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to create chat session' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/assign
+ * Assign chat session to agent
+ */
+router.post('/chat/sessions/:id/assign', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { agentId } = req.body;
+
+    if (!agentId) {
+      throw new ValidationError('agentId is required');
+    }
+
+    const session = await SupportService.assignChatSession(req.params.id, agentId);
+    res.json(session);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to assign chat session' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/end
+ * End chat session
+ */
+router.post('/chat/sessions/:id/end', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const session = await SupportService.endChatSession(req.params.id);
+    res.json(session);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to end chat session' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/messages
+ * Add message to chat session
+ */
+router.post('/chat/sessions/:id/messages', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const { content, type = 'text' } = req.body;
+
+    if (!content) {
+      throw new ValidationError('Content is required');
+    }
+
+    const message = await SupportService.addChatMessage(
+      req.params.id,
+      userId,
+      content,
+      type
+    );
+
+    res.status(201).json(message);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to add message' });
+    }
+  }
+});
+
+/**
+ * GET /api/support/chat/stats
+ * Get chat statistics
+ */
+router.get('/chat/stats', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const agentId = req.query.agentId as string | undefined;
+    const stats = await SupportService.getChatStats(agentId);
+    res.json(stats);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch chat stats' });
+  }
+});
+
 export default router;
 
