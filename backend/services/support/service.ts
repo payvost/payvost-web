@@ -461,3 +461,282 @@ export async function getTicketStats(assignedToId?: string) {
   };
 }
 
+// ==================== Chat Session Management ====================
+
+export type ChatStatus = 'WAITING' | 'ACTIVE' | 'ENDED';
+
+export interface CreateChatSessionInput {
+  customerId: string;
+}
+
+export interface ChatFilters {
+  status?: ChatStatus | ChatStatus[];
+  agentId?: string | null;
+  customerId?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Create a new chat session
+ */
+export async function createChatSession(
+  input: CreateChatSessionInput,
+  agentId?: string
+) {
+  const session = await prisma.chatSession.create({
+    data: {
+      customerId: input.customerId,
+      agentId: agentId || null,
+      status: agentId ? 'ACTIVE' : 'WAITING',
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+        take: 50,
+      },
+    },
+  });
+
+  return session;
+}
+
+/**
+ * Get chat session by ID
+ */
+export async function getChatSessionById(sessionId: string) {
+  const session = await prisma.chatSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          session: {
+            select: {
+              id: true,
+              customerId: true,
+              agentId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!session) {
+    throw new ValidationError('Chat session not found');
+  }
+
+  return session;
+}
+
+/**
+ * List chat sessions with filters
+ */
+export async function listChatSessions(filters: ChatFilters = {}) {
+  const {
+    status,
+    agentId,
+    customerId,
+    page = 1,
+    limit = 50,
+  } = filters;
+
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.ChatSessionWhereInput = {};
+
+  if (status) {
+    if (Array.isArray(status)) {
+      where.status = { in: status };
+    } else {
+      where.status = status;
+    }
+  }
+
+  if (agentId !== undefined) {
+    where.agentId = agentId;
+  }
+
+  if (customerId) {
+    where.customerId = customerId;
+  }
+
+  const [sessions, total] = await Promise.all([
+    prisma.chatSession.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { startedAt: 'desc' },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1, // Get last message
+        },
+        _count: {
+          select: {
+            messages: true,
+          },
+        },
+      },
+    }),
+    prisma.chatSession.count({ where }),
+  ]);
+
+  return {
+    sessions,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+/**
+ * Get waiting chat sessions (queue)
+ */
+export async function getChatQueue() {
+  const waiting = await prisma.chatSession.findMany({
+    where: {
+      status: 'WAITING',
+    },
+    orderBy: { startedAt: 'asc' },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+      _count: {
+        select: {
+          messages: true,
+        },
+      },
+    },
+  });
+
+  return waiting;
+}
+
+/**
+ * Assign chat session to agent
+ */
+export async function assignChatSession(
+  sessionId: string,
+  agentId: string
+) {
+  const session = await prisma.chatSession.update({
+    where: { id: sessionId },
+    data: {
+      agentId,
+      status: 'ACTIVE',
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  });
+
+  return session;
+}
+
+/**
+ * End chat session
+ */
+export async function endChatSession(sessionId: string) {
+  const session = await prisma.chatSession.update({
+    where: { id: sessionId },
+    data: {
+      status: 'ENDED',
+      endedAt: new Date(),
+    },
+  });
+
+  return session;
+}
+
+/**
+ * Add message to chat session
+ */
+export async function addChatMessage(
+  sessionId: string,
+  senderId: string,
+  content: string,
+  type: string = 'text'
+) {
+  // Verify session exists and is active
+  const session = await prisma.chatSession.findUnique({
+    where: { id: sessionId },
+  });
+
+  if (!session) {
+    throw new ValidationError('Chat session not found');
+  }
+
+  if (session.status === 'ENDED') {
+    throw new ValidationError('Cannot send message to ended chat session');
+  }
+
+  // Create message
+  const message = await prisma.chatMessage.create({
+    data: {
+      sessionId,
+      senderId,
+      content,
+      type,
+    },
+  });
+
+  // Update session status if it was waiting
+  if (session.status === 'WAITING') {
+    await prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { status: 'ACTIVE' },
+    });
+  }
+
+  return message;
+}
+
+/**
+ * Get chat statistics
+ */
+export async function getChatStats(agentId?: string) {
+  const where: Prisma.ChatSessionWhereInput = {};
+  if (agentId) {
+    where.agentId = agentId;
+  }
+
+  const [
+    total,
+    waiting,
+    active,
+    ended,
+    todayActive,
+  ] = await Promise.all([
+    prisma.chatSession.count({ where }),
+    prisma.chatSession.count({ where: { ...where, status: 'WAITING' } }),
+    prisma.chatSession.count({ where: { ...where, status: 'ACTIVE' } }),
+    prisma.chatSession.count({ where: { ...where, status: 'ENDED' } }),
+    prisma.chatSession.count({
+      where: {
+        ...where,
+        status: 'ACTIVE',
+        startedAt: {
+          gte: new Date(new Date().setHours(0, 0, 0, 0)),
+        },
+      },
+    }),
+  ]);
+
+  return {
+    total,
+    waiting,
+    active,
+    ended,
+    todayActive,
+  };
+}
+
