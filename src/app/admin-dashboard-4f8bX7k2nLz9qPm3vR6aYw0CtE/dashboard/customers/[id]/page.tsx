@@ -682,7 +682,7 @@ export default function CustomerDetailsPage() {
                                                             </div>
                                                         )}
                                                     </CardContent>
-                                                )}
+                                                
                     </Card>
 
                     {/* Business KYC Card */}
