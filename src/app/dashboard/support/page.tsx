@@ -140,9 +140,6 @@ function SupportPageContent() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Tab state for main tabs (Help Center vs My Tickets)
-  const [mainTab, setMainTab] = useState<'help-center' | 'my-tickets'>('help-center');
-  
   // Tickets state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [recentTickets, setRecentTickets] = useState<SupportTicket[]>([]);
@@ -153,14 +150,7 @@ function SupportPageContent() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Initialize tab from URL params
-  useEffect(() => {
-    const tab = searchParams.get('tab') as 'help-center' | 'my-tickets';
-    if (tab === 'help-center' || tab === 'my-tickets') {
-      setMainTab(tab);
-    }
-  }, [searchParams]);
+  const [ticketsSheetOpen, setTicketsSheetOpen] = useState(false);
 
   const {
     register,
@@ -185,7 +175,7 @@ function SupportPageContent() {
     try {
       const result = await supportService.listTickets({
         customerId: user.uid,
-        limit: 5,
+        limit: 20,
         sortBy: 'updatedAt',
         sortOrder: 'desc',
       });
@@ -237,19 +227,19 @@ function SupportPageContent() {
     }
   }, [user?.uid, page, statusFilter, priorityFilter, search, toast]);
 
-  // Fetch recent tickets for widget
+  // Fetch recent tickets
   useEffect(() => {
-    if (user?.uid && mainTab === 'help-center') {
+    if (user?.uid) {
       fetchRecentTickets();
     }
-  }, [user?.uid, mainTab, fetchRecentTickets]);
+  }, [user?.uid, fetchRecentTickets]);
 
-  // Fetch full tickets list
+  // Fetch full tickets list when sheet opens
   useEffect(() => {
-    if (user?.uid && mainTab === 'my-tickets') {
+    if (user?.uid && ticketsSheetOpen) {
       fetchTickets();
     }
-  }, [user?.uid, mainTab, fetchTickets]);
+  }, [user?.uid, ticketsSheetOpen, fetchTickets]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -276,20 +266,11 @@ function SupportPageContent() {
     );
   };
 
-  const handleMainTabChange = (value: string) => {
-    const newTab = value as 'help-center' | 'my-tickets';
-    setMainTab(newTab);
-    // Update URL without navigation
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (newTab === 'help-center') {
-        url.searchParams.delete('tab');
-      } else {
-        url.searchParams.set('tab', newTab);
-      }
-      window.history.replaceState({}, '', url.toString());
-    }
-  };
+  // Calculate notification count (tickets with messages or active status)
+  const notificationCount = recentTickets.filter(t => 
+    (t.status === 'OPEN' || t.status === 'IN_PROGRESS' || t.status === 'PENDING') ||
+    (t._count && t._count.messages > 0)
+  ).length;
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -413,11 +394,10 @@ function SupportPageContent() {
       setOpenTicketDialog(false);
       setActiveTab('payments');
       
-      // Refresh tickets if on my-tickets tab
-      if (mainTab === 'my-tickets') {
+      // Refresh tickets
+      fetchRecentTickets();
+      if (ticketsSheetOpen) {
         fetchTickets();
-      } else {
-        fetchRecentTickets();
       }
     } catch (error: any) {
       console.error('Error creating ticket:', error);
@@ -450,35 +430,30 @@ function SupportPageContent() {
                     <Input
                     type="search"
                     placeholder="Search for answers..."
-                    className="w-full rounded-full bg-background py-6 pl-12 pr-4 text-lg"
+                    className="w-full rounded-full bg-background py-6 pl-12 pr-20 text-lg"
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full relative"
+                      onClick={() => setTicketsSheetOpen(true)}
+                    >
+                      <Ticket className="h-5 w-5" />
+                      {notificationCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-semibold">
+                          {notificationCount > 9 ? '9+' : notificationCount}
+                        </span>
+                      )}
+                    </Button>
                 </div>
                 </div>
             </div>
           </div>
         </section>
 
-        {/* Main Tabs */}
+        {/* Main Content */}
         <div className="container mx-auto px-4 md:px-6 max-w-7xl mt-6">
-          <Tabs value={mainTab} onValueChange={handleMainTabChange} className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="help-center" className="flex items-center gap-2">
-                <LifeBuoy className="h-4 w-4" />
-                Help Center
-              </TabsTrigger>
-              <TabsTrigger value="my-tickets" className="flex items-center gap-2">
-                <Ticket className="h-4 w-4" />
-                My Tickets
-                {recentTickets.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {recentTickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS' || t.status === 'PENDING').length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Help Center Tab */}
-            <TabsContent value="help-center" className="space-y-6">
+          <div className="space-y-6">
 
         {/* Categories Section */}
         <section className="w-full py-12 md:py-20 lg:py-24">
@@ -529,7 +504,7 @@ function SupportPageContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setMainTab('my-tickets')}
+                        onClick={() => setTicketsSheetOpen(true)}
                         className="h-auto p-0 text-xs"
                       >
                         View All
@@ -1008,17 +983,24 @@ function SupportPageContent() {
                   </Card>
                 </div>
               </div>
-            </TabsContent>
+          </div>
+        </div>
 
-            {/* My Tickets Tab */}
-            <TabsContent value="my-tickets" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight">My Support Tickets</h2>
-                  <p className="text-muted-foreground mt-1">
-                    View and track all your support requests
-                  </p>
-                </div>
+        {/* My Tickets Sheet */}
+        <Sheet open={ticketsSheetOpen} onOpenChange={setTicketsSheetOpen}>
+          <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5" />
+                My Support Tickets
+              </SheetTitle>
+              <SheetDescription>
+                View and track all your support requests
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className="mt-6 space-y-6">
+              <div className="flex items-center justify-end">
                 <Button onClick={() => setOpenTicketDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Ticket
@@ -1233,9 +1215,9 @@ function SupportPageContent() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+            </div>
+          </SheetContent>
+        </Sheet>
 
       </main>
     </DashboardLayout>
