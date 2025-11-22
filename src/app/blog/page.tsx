@@ -1,77 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { SiteFooter } from '@/components/site-footer';
-import { Separator } from '@/components/ui/separator';
-
-const articles = [
-  {
-    slug: 'payvost-partners-with-google',
-    title: 'Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management',
-    excerpt: 'A brief summary of the blog post goes here. Catch the reader\'s interest and give them a reason to click and read more about this exciting topic.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    category: 'Partnership',
-    featured: true,
-  },
-  {
-    slug: 'ai-in-remittance',
-    title: 'The Future of Remittances: How AI is Changing the Game',
-    excerpt: 'Discover the revolutionary impact of artificial intelligence on cross-border payments.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    imageHint: 'finance technology',
-    category: 'Technology',
-  },
-  {
-    slug: 'secure-transfers',
-    title: '5 Tips for Secure International Money Transfers',
-    excerpt: 'Protect your money and personal information with these essential security tips.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    imageHint: 'digital security',
-    category: 'Security',
-  },
-  {
-    slug: 'expanding-to-africa',
-    title: 'Expanding Our Reach: Payvost Launches in Three New African Markets',
-    excerpt: 'We are excited to bring our fast and secure remittance services to more people across Africa.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    imageHint: 'africa map',
-    category: 'Company News',
-  },
-  {
-    slug: 'understanding-fx-rates',
-    title: 'Understanding FX Rates: A Guide for Smart Transfers',
-    excerpt: 'Learn how foreign exchange rates work and how to get the most value from your money.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    imageHint: 'currency exchange chart',
-    category: 'Finance',
-  },
-   {
-    slug: 'virtual-cards-guide',
-    title: 'The Ultimate Guide to Using Virtual Cards for Online Shopping',
-    excerpt: 'Enhance your online security with Payvost\'s disposable virtual cards.',
-    featuredImage: '/optimized/Payvost Building.jpg',
-    imageHint: 'online shopping',
-    category: 'Security',
-  },
-];
-
-const categories = ['All', 'Technology', 'Security', 'Company News', 'Finance', 'Partnership'];
-const featuredArticle = articles.find(a => a.featured) || articles[0];
-const otherArticles = articles.filter(a => a !== featuredArticle);
+import { contentService, Content } from '@/services/contentService';
+import { format } from 'date-fns';
 
 export default function BlogArchivePage() {
+    const [articles, setArticles] = useState<Content[]>([]);
+    const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [categories, setCategories] = useState<string[]>(['All']);
+
+    useEffect(() => {
+        const fetchArticles = async () => {
+            try {
+                setLoading(true);
+                const result = await contentService.list({
+                    contentType: 'BLOG',
+                    status: 'PUBLISHED',
+                    limit: 50,
+                });
+                
+                setArticles(result.items);
+                
+                // Extract unique categories
+                const uniqueCategories = ['All', ...Array.from(new Set(
+                    result.items
+                        .map(item => item.category)
+                        .filter((cat): cat is string => !!cat)
+                ))];
+                setCategories(uniqueCategories);
+            } catch (error) {
+                console.error('Failed to fetch articles:', error);
+                // Fallback to empty array on error
+                setArticles([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchArticles();
+    }, []);
 
     const filteredArticles = activeCategory === 'All'
-        ? otherArticles
-        : otherArticles.filter(a => a.category === activeCategory);
+        ? articles
+        : articles.filter(a => a.category === activeCategory);
     
     return (
         <div className="flex flex-col min-h-screen">
@@ -92,17 +72,19 @@ export default function BlogArchivePage() {
                     <div className="container px-4 md:px-6">
                         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
                             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">All Articles</h2>
-                            <div className="flex flex-wrap justify-center gap-2">
-                                {categories.map(cat => (
-                                    <Button
-                                        key={cat}
-                                        variant={activeCategory === cat ? 'default' : 'outline'}
-                                        onClick={() => setActiveCategory(cat)}
-                                    >
-                                        {cat}
-                                    </Button>
-                                ))}
-                            </div>
+                            {categories.length > 1 && (
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {categories.map(cat => (
+                                        <Button
+                                            key={cat}
+                                            variant={activeCategory === cat ? 'default' : 'outline'}
+                                            onClick={() => setActiveCategory(cat)}
+                                        >
+                                            {cat}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {loading ? (

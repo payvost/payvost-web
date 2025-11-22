@@ -481,6 +481,20 @@ export class ContentService {
   }
 
   /**
+   * Increment view count for content
+   */
+  async incrementViewCount(id: string) {
+    return await this.prisma.content.update({
+      where: { id },
+      data: {
+        viewCount: {
+          increment: 1,
+        },
+      },
+    });
+  }
+
+  /**
    * Restore content to a specific version
    */
   async restoreVersion(contentId: string, version: number, userId: string) {
