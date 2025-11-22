@@ -6,20 +6,35 @@ import { cn } from '@/lib/utils';
 import { Loader2, MapPin } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-interface MapboxFeature {
-  id: string;
-  place_name: string;
-  text: string;
-  center: [number, number];
-  address?: string;
-  properties?: {
-    address?: string;
+// OpenStreetMap Nominatim API response structure
+interface NominatimPlace {
+  place_id: number;
+  licence: string;
+  osm_type: string;
+  osm_id: number;
+  boundingbox: [string, string, string, string];
+  lat: string;
+  lon: string;
+  display_name: string;
+  class: string;
+  type: string;
+  importance: number;
+  address?: {
+    house_number?: string;
+    road?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    region?: string;
+    postcode?: string;
+    country?: string;
+    country_code?: string;
   };
-  context?: Array<{
-    id: string;
-    text: string;
-    short_code?: string;
-  }>;
 }
 
 export interface AddressSelection {
@@ -44,17 +59,44 @@ interface AddressAutocompleteProps {
   error?: string;
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-
-if (typeof window !== 'undefined' && !MAPBOX_TOKEN) {
-  console.warn('NEXT_PUBLIC_MAPBOX_TOKEN is not configured; address autocomplete will be disabled.');
-}
-
 const MIN_QUERY_LENGTH = 3;
-const DEBOUNCE_DELAY = 350;
+const DEBOUNCE_DELAY = 400; // Slightly longer for Nominatim rate limits
+const MAX_RESULTS = 7;
 
-const extractFromContext = (feature: MapboxFeature, typePrefix: string) => {
-  return feature.context?.find((item) => item.id.startsWith(`${typePrefix}.`))?.text;
+// Extract address components from Nominatim response
+const extractAddressFromPlace = (place: NominatimPlace): AddressSelection => {
+  const addr = place.address || {};
+  
+  // Build street address
+  const streetParts: string[] = [];
+  if (addr.house_number) streetParts.push(addr.house_number);
+  if (addr.road) streetParts.push(addr.road);
+  const street = streetParts.length > 0 ? streetParts.join(' ') : undefined;
+  
+  // Get city (can be city, town, village, or municipality)
+  const city = addr.city || addr.town || addr.village || addr.municipality;
+  
+  // Get state/region
+  const state = addr.state || addr.region || addr.county;
+  
+  // Get country
+  const country = addr.country;
+  
+  // Get postal code
+  const postalCode = addr.postcode;
+  
+  return {
+    fullAddress: place.display_name,
+    street: street || place.display_name.split(',')[0],
+    city,
+    state,
+    country,
+    postalCode,
+    coordinates: {
+      lat: parseFloat(place.lat),
+      lng: parseFloat(place.lon),
+    },
+  };
 };
 
 export function AddressAutocomplete({
@@ -66,7 +108,7 @@ export function AddressAutocomplete({
   error,
 }: AddressAutocompleteProps) {
   const [query, setQuery] = useState(value);
-  const [suggestions, setSuggestions] = useState<MapboxFeature[]>([]);
+  const [suggestions, setSuggestions] = useState<NominatimPlace[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -78,33 +120,44 @@ export function AddressAutocomplete({
 
   const fetchSuggestions = useCallback(
     async (search: string) => {
-      if (!MAPBOX_TOKEN) {
-        return;
-      }
-
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
       try {
         setIsLoading(true);
+        
+        // Build Nominatim API URL
         const params = new URLSearchParams({
-          access_token: MAPBOX_TOKEN,
-          autocomplete: 'true',
-          limit: '7',
-          types: 'address,place,locality',
-          language: 'en',
+          q: search,
+          format: 'json',
+          addressdetails: '1',
+          limit: String(MAX_RESULTS),
+          dedupe: '1', // Remove duplicates
+          extratags: '0',
+          namedetails: '0',
         });
+        
+        // Add country filter if provided
         if (countryCode) {
-          params.append('country', countryCode.toLowerCase());
+          params.append('countrycodes', countryCode.toLowerCase());
         }
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(search)}.json?${params.toString()}`;
-        const response = await fetch(url, { signal: controller.signal });
+        
+        // Nominatim requires a User-Agent header (their usage policy)
+        const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Payvost/1.0 (Contact: support@payvost.com)', // Required by Nominatim
+          },
+        });
+        
         if (!response.ok) {
-          throw new Error(`Mapbox request failed: ${response.status}`);
+          throw new Error(`Nominatim request failed: ${response.status}`);
         }
-        const data = await response.json();
-        setSuggestions(Array.isArray(data.features) ? data.features.slice(0, 7) : []);
+        
+        const data: NominatimPlace[] = await response.json();
+        setSuggestions(Array.isArray(data) ? data.slice(0, MAX_RESULTS) : []);
         setIsOpen(true);
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
@@ -140,25 +193,8 @@ export function AddressAutocomplete({
   }, [query, fetchSuggestions, disabled]);
 
   const handleSelect = useCallback(
-    (feature: MapboxFeature) => {
-      const streetFallback = feature.properties?.address || feature.address;
-      const street = streetFallback ? `${streetFallback} ${feature.text}`.trim() : feature.text;
-      const city = extractFromContext(feature, 'place') || extractFromContext(feature, 'locality');
-      const state = extractFromContext(feature, 'region');
-      const country = extractFromContext(feature, 'country');
-      const postalCode = extractFromContext(feature, 'postcode');
-
-      const selection: AddressSelection = {
-        fullAddress: feature.place_name,
-        street,
-        city,
-        state,
-        country,
-        postalCode,
-        coordinates: feature.center
-          ? { lat: feature.center[1], lng: feature.center[0] }
-          : undefined,
-      };
+    (place: NominatimPlace) => {
+      const selection = extractAddressFromPlace(place);
 
       onChange(selection.fullAddress);
       onAddressSelected?.(selection);
@@ -173,23 +209,30 @@ export function AddressAutocomplete({
     if (suggestions.length === 0) {
       return null;
     }
-    return suggestions.map((feature) => (
-      <button
-        type="button"
-        key={feature.id}
-        className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left hover:bg-muted focus:bg-muted"
-        onMouseDown={(event) => {
-          event.preventDefault();
-          handleSelect(feature);
-        }}
-      >
-        <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-medium text-foreground">{feature.text}</p>
-          <p className="text-xs text-muted-foreground">{feature.place_name}</p>
-        </div>
-      </button>
-    ));
+    return suggestions.map((place) => {
+      const addr = place.address || {};
+      const primaryText = addr.road 
+        ? `${addr.house_number || ''} ${addr.road}`.trim() 
+        : place.display_name.split(',')[0];
+      
+      return (
+        <button
+          type="button"
+          key={place.place_id}
+          className="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left hover:bg-muted focus:bg-muted"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            handleSelect(place);
+          }}
+        >
+          <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-foreground truncate">{primaryText}</p>
+            <p className="text-xs text-muted-foreground line-clamp-2">{place.display_name}</p>
+          </div>
+        </button>
+      );
+    });
   }, [suggestions, handleSelect]);
 
   useEffect(() => {
