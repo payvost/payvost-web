@@ -116,3 +116,35 @@ export async function requireWriter(uid: string): Promise<void> {
     throw new Error('Unauthorized: Writer access required');
   }
 }
+
+/**
+ * Check if a user has HR admin role in Firestore
+ */
+export async function isHrAdmin(uid: string): Promise<boolean> {
+  try {
+    const userDoc = await db.collection('users').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return false;
+    }
+    
+    const userData = userDoc.data();
+    const role = userData?.role?.toLowerCase();
+    
+    return role === 'hr_admin' || role === 'admin' || role === 'super_admin';
+  } catch (error) {
+    console.error('Error checking HR admin role:', error);
+    return false;
+  }
+}
+
+/**
+ * Verify if user has HR admin role, throws error if not
+ */
+export async function requireHrAdmin(uid: string): Promise<void> {
+  const hasHrAdminRole = await isHrAdmin(uid);
+  
+  if (!hasHrAdminRole) {
+    throw new Error('Unauthorized: HR Admin access required');
+  }
+}

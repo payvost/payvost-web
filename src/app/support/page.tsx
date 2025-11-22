@@ -19,26 +19,29 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
+import { useRouter } from 'next/navigation';
 
 const supportCategories = [
-  { title: 'Getting Started', description: 'Set up your account and make your first transfer.', icon: <Rocket className="h-8 w-8 text-primary" />, href: '#' },
-  { title: 'Payments & Payouts', description: 'Learn about sending and receiving money.', icon: <Banknote className="h-8 w-8 text-primary" />, href: '#' },
-  { title: 'Disputes & Fraud', description: 'Understand how to handle transaction issues.', icon: <ShieldAlert className="h-8 w-8 text-primary" />, href: '#' },
-  { title: 'Account & Settings', description: 'Manage your profile and security settings.', icon: <UserCog className="h-8 w-8 text-primary" />, href: '#' },
-  { title: 'Developer & API', description: 'Integrate our services with your applications.', icon: <Code2 className="h-8 w-8 text-primary" />, href: '#' },
+  { title: 'Getting Started', description: 'Set up your account and make your first transfer.', icon: <Rocket className="h-8 w-8 text-primary" />, href: '/help?category=Getting Started' },
+  { title: 'Payments & Payouts', description: 'Learn about sending and receiving money.', icon: <Banknote className="h-8 w-8 text-primary" />, href: '/help?category=Payments' },
+  { title: 'Disputes & Fraud', description: 'Understand how to handle transaction issues.', icon: <ShieldAlert className="h-8 w-8 text-primary" />, href: '/help?category=Disputes' },
+  { title: 'Account & Settings', description: 'Manage your profile and security settings.', icon: <UserCog className="h-8 w-8 text-primary" />, href: '/help?category=Account' },
+  { title: 'Developer & API', description: 'Integrate our services with your applications.', icon: <Code2 className="h-8 w-8 text-primary" />, href: '/help?category=Developers' },
   { title: 'Contact Us', description: 'Get in touch with our support team.', icon: <MessageSquarePlus className="h-8 w-8 text-primary" />, href: '/contact' },
 ];
 
+// Featured articles will be fetched from knowledge base
 const featuredArticles = [
-    { title: 'How to track your transfer', href: '#' },
-    { title: 'Understanding our fees', href: '#' },
-    { title: 'Securing your Payvost account', href: '#' },
-    { title: 'What to do if your transfer fails', href: '#' },
-    { title: 'API documentation for developers', href: '#' },
+    { title: 'How to track your transfer', href: '/help/how-to-track-your-transfer' },
+    { title: 'Understanding our fees', href: '/help/understanding-our-fees' },
+    { title: 'Securing your Payvost account', href: '/help/securing-your-account' },
+    { title: 'What to do if your transfer fails', href: '/help/transfer-failed' },
+    { title: 'API documentation for developers', href: '/help/api-documentation' },
 ];
 
 export default function SupportPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -63,8 +66,16 @@ export default function SupportPage() {
                             className="w-full rounded-full bg-background py-6 pl-12 pr-4 text-lg"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && searchTerm.trim()) {
+                                    router.push(`/help?search=${encodeURIComponent(searchTerm)}`);
+                                }
+                            }}
                         />
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Press Enter to search or <Link href="/help" className="text-primary hover:underline">browse all articles</Link>
+                    </p>
                 </div>
             </div>
           </div>
