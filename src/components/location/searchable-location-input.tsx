@@ -2,8 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -57,6 +56,7 @@ export function SearchableLocationInput({
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Normalize options to LocationOption format
   const normalizedOptions: LocationOption[] = useMemo(() => {
@@ -97,89 +97,117 @@ export function SearchableLocationInput({
     const newValue = e.target.value;
     onChange(newValue);
     setSearchQuery(newValue);
-    if (newValue && !open && normalizedOptions.length > 0) {
+    // Open dropdown when user starts typing and options are available
+    if (newValue && normalizedOptions.length > 0) {
       setOpen(true);
+    } else if (!newValue) {
+      setOpen(false);
     }
   };
 
   // Handle input focus
   const handleFocus = () => {
-    if (normalizedOptions.length > 0 && value) {
+    if (normalizedOptions.length > 0) {
       setSearchQuery(value);
       setOpen(true);
     }
   };
 
   // Handle input blur - close popover after a delay to allow clicks
-  const handleBlur = () => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Don't close if focus is moving to the dropdown
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (relatedTarget?.closest('[cmdk-list]') || relatedTarget?.closest('[cmdk-item]')) {
+      return;
+    }
     setTimeout(() => {
       setOpen(false);
-    }, 200);
+    }, 150);
   };
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [open]);
 
   // Show dropdown button only when options are available
   const showDropdown = normalizedOptions.length > 0 && !isLoading;
   const displayValue = value || '';
 
   return (
-    <div className="relative">
-      <Popover open={open && showDropdown} onOpenChange={setOpen}>
-        <div className="relative">
-          <Input
-            ref={inputRef}
-            id={id}
-            value={displayValue}
-            onChange={handleInputChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder={isLoading ? 'Loading options…' : placeholder}
-            disabled={isLoading}
-            className={cn(showDropdown && 'pr-10', className)}
-          />
-          {isLoading && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground pointer-events-none" />
-          )}
-          {!isLoading && showDropdown && (
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setOpen(!open);
-                  inputRef.current?.focus();
-                }}
-                tabIndex={-1}
-              >
-                <ChevronsUpDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-          )}
-        </div>
-        {showDropdown && (
-          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder="Search options..."
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-              />
-              <CommandList>
-                <CommandEmpty>
-                  {searchQuery ? (
-                    <div className="py-4 text-center text-sm">
-                      <p className="text-muted-foreground">{emptyLabel}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Continue typing to enter manually
-                      </p>
-                    </div>
-                  ) : (
-                    emptyLabel
-                  )}
-                </CommandEmpty>
+    <div className="relative" ref={containerRef}>
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          id={id}
+          value={displayValue}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={isLoading ? 'Loading options…' : placeholder}
+          disabled={isLoading}
+          className={cn(showDropdown && 'pr-10', className)}
+          autoComplete="off"
+        />
+        {isLoading && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground pointer-events-none z-10" />
+        )}
+        {!isLoading && showDropdown && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 z-10"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(!open);
+              if (!open) {
+                inputRef.current?.focus();
+              }
+            }}
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              e.preventDefault();
+            }}
+          >
+            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+          </Button>
+        )}
+      </div>
+      {showDropdown && open && (
+        <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-lg">
+          <Command shouldFilter={false}>
+            <CommandList className="max-h-[300px] overflow-y-auto">
+              <CommandEmpty>
+                {searchQuery ? (
+                  <div className="py-4 text-center text-sm">
+                    <p className="text-muted-foreground">{emptyLabel}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Continue typing to enter manually
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    {emptyLabel}
+                  </div>
+                )}
+              </CommandEmpty>
+              {filteredOptions.length > 0 && (
                 <CommandGroup>
                   {filteredOptions.map((option) => {
                     const isSelected = selectedOption?.name === option.name;
@@ -191,31 +219,31 @@ export function SearchableLocationInput({
                       >
                         <Check
                           className={cn(
-                            'mr-2 h-4 w-4',
+                            'mr-2 h-4 w-4 shrink-0',
                             isSelected ? 'opacity-100' : 'opacity-0'
                           )}
                         />
-                        {option.name}
+                        <span className="truncate">{option.name}</span>
                       </CommandItem>
                     );
                   })}
                 </CommandGroup>
-                {searchQuery && filteredOptions.length === 0 && (
-                  <CommandGroup>
-                    <CommandItem
-                      value={searchQuery}
-                      onSelect={() => handleSelect(searchQuery)}
-                      className="text-muted-foreground"
-                    >
-                      <span className="text-sm">Use "{searchQuery}"</span>
-                    </CommandItem>
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        )}
-      </Popover>
+              )}
+              {searchQuery && filteredOptions.length === 0 && normalizedOptions.length > 0 && (
+                <CommandGroup>
+                  <CommandItem
+                    value={searchQuery}
+                    onSelect={() => handleSelect(searchQuery)}
+                    className="text-muted-foreground"
+                  >
+                    <span className="text-sm">Use "{searchQuery}"</span>
+                  </CommandItem>
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </div>
+      )}
       {helperText && (
         <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>
       )}

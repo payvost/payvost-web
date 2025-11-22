@@ -213,7 +213,7 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
             variant="outline"
             size="icon"
             onClick={swapCurrencies}
-            className="rounded-full h-10 w-10 border-2 shadow-sm hover:shadow-md transition-all"
+            className="rounded-full h-10 w-10 border-2 transition-all"
           >
             <ArrowRightLeft className="h-5 w-5" />
           </Button>
@@ -317,7 +317,7 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
         {hasFetched ? (
           <Button
             asChild
-            className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+            className="w-full h-12 text-base font-semibold transition-all"
             size="lg"
           >
             <Link href={sendMoneyHref} className="flex items-center justify-center gap-2">
@@ -329,7 +329,7 @@ export function LiveRateChecker({ autoFetch = true, sendMoneyHref = '/register' 
           <Button
             onClick={fetchRate}
             disabled={isLoading || !amount}
-            className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+            className="w-full h-12 text-base font-semibold transition-all"
             size="lg"
           >
             <RefreshCw className={cn('h-5 w-5 mr-2', isLoading && 'animate-spin')} />
