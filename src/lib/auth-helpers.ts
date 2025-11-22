@@ -148,3 +148,37 @@ export async function requireHrAdmin(uid: string): Promise<void> {
     throw new Error('Unauthorized: HR Admin access required');
   }
 }
+
+/**
+ * Check if a user has support team role in Firestore
+ */
+export async function isSupportTeam(uid: string): Promise<boolean> {
+  try {
+    const userDoc = await db.collection('users').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return false;
+    }
+    
+    const userData = userDoc.data();
+    const role = userData?.role?.toLowerCase();
+    
+    // Support roles: support_agent, support_senior, support_supervisor, support_manager
+    // Also allow admin and super_admin
+    return role?.startsWith('support_') || role === 'admin' || role === 'super_admin';
+  } catch (error) {
+    console.error('Error checking support team role:', error);
+    return false;
+  }
+}
+
+/**
+ * Verify if user has support team role, throws error if not
+ */
+export async function requireSupportTeam(uid: string): Promise<void> {
+  const hasSupportRole = await isSupportTeam(uid);
+  
+  if (!hasSupportRole) {
+    throw new Error('Unauthorized: Support team access required');
+  }
+}

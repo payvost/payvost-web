@@ -22,6 +22,7 @@ interface SearchableLocationInputProps {
   helperText?: string;
   id?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 // Fuzzy search function
@@ -52,6 +53,7 @@ export function SearchableLocationInput({
   helperText,
   id,
   className,
+  disabled = false,
 }: SearchableLocationInputProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,7 +161,7 @@ export function SearchableLocationInput({
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={isLoading ? 'Loading options…' : placeholder}
-          disabled={isLoading}
+          disabled={disabled || isLoading}
           className={cn(showDropdown && 'pr-10', className)}
           autoComplete="off"
         />

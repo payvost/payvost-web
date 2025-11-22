@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX, ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { format } from 'date-fns';
@@ -1125,21 +1125,26 @@ export function RegistrationForm() {
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <div className="space-y-8">
-      <Progress value={progress} className="w-full" />
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-sm font-medium text-muted-foreground">Step {currentStep + 1} of {steps.length}</span>
+        <Progress value={progress} className="flex-1" />
+      </div>
       <form onSubmit={handleSubmit(onSubmit)}>
         {currentStep === 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3 className="text-lg font-semibold">Step 1: Personal & Address Information</h3>
-             <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24">
+             <div className="flex items-center gap-4 pb-2">
+                <Avatar className="h-20 w-20 flex-shrink-0">
                     <AvatarImage src={previewImage || undefined} alt="Profile picture preview" />
                     <AvatarFallback>{fullName ? getInitials(fullName) : 'PIC'}</AvatarFallback>
                 </Avatar>
-                <div className="space-y-2 text-center">
+                <div className="flex-1 space-y-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button type="button" variant="default">Set Profile Photo</Button>
+                            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
+                                <UploadCloud className="mr-2 h-4 w-4" /> Set Profile Photo
+                            </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                             <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
@@ -1153,7 +1158,7 @@ export function RegistrationForm() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoChange} disabled={isLoading} />
-                    <p className="text-xs text-muted-foreground">Upload a clear photo of yourself. PNG, JPG up to 5MB.</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
                      {errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
                 </div>
             </div>
@@ -1166,7 +1171,7 @@ export function RegistrationForm() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" {...register('email')} disabled={isLoading} />
+                    <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
                     {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>
@@ -1174,26 +1179,40 @@ export function RegistrationForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
-                    <div className="space-y-1">
-                      <Input id="username" {...register('username')} disabled={isLoading} />
-                      <div className="text-xs text-muted-foreground h-4">
-                        {checkingUsername && <span>Checking availability…</span>}
-                        {!checkingUsername && usernameValue && RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && (
-                          <span className="text-destructive">Reserved username</span>
-                        )}
-                        {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === true && (
-                          <span className="text-green-600">Available</span>
-                        )}
-                        {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === false && (
-                          <span className="text-destructive">Not available</span>
-                        )}
-                      </div>
+                    <div className="relative">
+                      <Input id="username" {...register('username')} disabled={isLoading} className="pr-8" />
+                      {usernameValue && !checkingUsername && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) || usernameAvailable === false ? (
+                            <X className="h-4 w-4 text-destructive" />
+                          ) : usernameAvailable === true ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : null}
+                        </div>
+                      )}
+                      {checkingUsername && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs h-4">
+                      {checkingUsername && <span className="text-muted-foreground">Checking availability…</span>}
+                      {!checkingUsername && usernameValue && RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && (
+                        <span className="text-destructive">Reserved username</span>
+                      )}
+                      {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === true && (
+                        <span className="text-green-600">Available</span>
+                      )}
+                      {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === false && (
+                        <span className="text-destructive">Not available</span>
+                      )}
                     </div>
                     {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <div className="flex items-center rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring">
+                    <div className="flex items-center gap-2">
                             <Controller
                               name="countryCode"
                               control={control}
@@ -1201,9 +1220,9 @@ export function RegistrationForm() {
                                 <Popover open={countryDropdownOpen} onOpenChange={setCountryDropdownOpen}>
                                   <PopoverTrigger asChild>
                                     <Button
-                                      variant="ghost"
+                                      variant="outline"
                                       role="combobox"
-                                      className="w-[140px] justify-between h-9 rounded-r-none"
+                                      className="w-[120px] justify-between shrink-0"
                                       disabled={isLoading || countriesLoading || dialCodeOptions.length === 0}
                                     >
                                       {field.value ? `+${field.value}` : countriesLoading ? 'Loading…' : 'Code'}
@@ -1239,7 +1258,7 @@ export function RegistrationForm() {
                                 </Popover>
                               )}
                             />
-                        <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="Your number" className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"/>
+                        <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="Your phone number" className="flex-1"/>
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                 </div>
@@ -1255,15 +1274,17 @@ export function RegistrationForm() {
                   </Button>
                 </div>
                  {password && (
-                    <div className="space-y-1">
-                        <Progress value={passwordStrength} className={cn("h-1", getStrengthColor(passwordStrength))} />
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-medium" style={{ color: getStrengthColor(passwordStrength).replace('bg-', 'text-') }}>
-                                {getStrengthText(passwordStrength)}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                            <Progress value={passwordStrength} className={cn("flex-1 h-1.5", getStrengthColor(passwordStrength))} />
+                            <span className="text-xs font-medium whitespace-nowrap" style={{ color: getStrengthColor(passwordStrength).replace('bg-', 'text-') }}>
+                                {passwordStrength}% {passwordStrength >= 80 ? '✓' : ''}
                             </span>
-                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                {password.length >= 8 ? <Check className="h-3 w-3 text-green-500" /> : <ShieldX className="h-3 w-3 text-red-500" />} Min 8 characters
-                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {password.length >= 8 ? <Check className="h-3 w-3 text-green-500" /> : <ShieldX className="h-3 w-3 text-red-500" />}
+                            <span>Min 8 characters</span>
+                            {passwordStrength < 80 && <span className="text-destructive">• Aim for 80%+ strength</span>}
                         </div>
                     </div>
                 )}
@@ -1294,7 +1315,7 @@ export function RegistrationForm() {
                                 toDate={new Date(new Date().setFullYear(new Date().getFullYear() - 18))}
                                 defaultMonth={new Date(new Date().setFullYear(new Date().getFullYear() - 20))}
                                 disabled={isLoading}
-                                placeholder="Pick a date"
+                                placeholder="Select your date of birth"
                             />
                         )}
                     />
@@ -1365,9 +1386,8 @@ export function RegistrationForm() {
                   }}
                 />
                 {errors.state && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <span>•</span>
-                    <span>{errors.state.message || 'Please enter your state / province'}</span>
+                  <p className="text-sm text-destructive">
+                    {errors.state.message || 'Please enter your state / province'}
                   </p>
                 )}
               </div>
@@ -1407,14 +1427,14 @@ export function RegistrationForm() {
                         placeholder={placeholder}
                         emptyLabel="No cities found"
                         helperText={!errors.city ? helperText : undefined}
+                        disabled={!stateValue || isLoading}
                       />
                     );
                   }}
                 />
                 {errors.city && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <span>•</span>
-                    <span>{errors.city.message || 'Please enter your city'}</span>
+                  <p className="text-sm text-destructive">
+                    {errors.city.message || 'Please enter your city'}
                   </p>
                 )}
               </div>
@@ -1427,13 +1447,9 @@ export function RegistrationForm() {
                   placeholder="e.g., 12345 or SW1A 1AA"
                 />
                 {errors.zip && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <span>•</span>
-                    <span>{errors.zip.message || 'Please enter your ZIP / postal code'}</span>
+                  <p className="text-sm text-destructive">
+                    {errors.zip.message || 'Please enter your ZIP / postal code'}
                   </p>
-                )}
-                {!errors.zip && (
-                  <p className="text-xs text-muted-foreground">Enter your postal or ZIP code</p>
                 )}
               </div>
             </div>
@@ -1458,14 +1474,14 @@ export function RegistrationForm() {
                 )}
               />
               {!errors.street && (
-                <p className="text-xs text-muted-foreground">Start typing to see suggestions or enter manually</p>
+                <p className="text-xs text-muted-foreground">Start typing to see suggestions</p>
               )}
             </div>
           </div>
         )}
 
         {currentStep === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <h3 className="text-lg font-semibold">Step 2: Identity Verification</h3>
 
             <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
@@ -1576,7 +1592,7 @@ export function RegistrationForm() {
           </div>
         )}
 
-        <div className="mt-8 pt-4 flex justify-between border-t">
+        <div className="mt-6 pt-4 flex justify-between border-t">
           <Button type="button" variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isLoading}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
