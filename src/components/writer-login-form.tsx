@@ -71,10 +71,7 @@ export function WriterLoginForm() {
   return (
     <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Writer Portal</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Sign in to manage content
-        </p>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CMS - Writer Portal</h2>
       </div>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-6">
@@ -151,10 +148,6 @@ export function WriterLoginForm() {
           )}
         </button>
       </form>
-
-      <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-        <p>Only authorized writers and editors can access this portal</p>
-      </div>
     </div>
   )
 }
