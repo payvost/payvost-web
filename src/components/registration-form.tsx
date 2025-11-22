@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX } from 'lucide-react';
+import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown, Check, ShieldX, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
@@ -289,6 +289,7 @@ export function RegistrationForm() {
   const usernameValue = watch('username');
   const countryValue = watch('country');
   const stateValue = watch('state');
+  const cityValue = watch('city');
   const dialCodeOptions = useMemo(() => {
     return countryOptions
       .map((option) => ({
@@ -1351,7 +1352,7 @@ export function RegistrationForm() {
                         ? 'Select a country first'
                         : statesLoading
                           ? 'Loading states…'
-                          : 'Enter your state / region';
+                          : 'Type or select your state / province';
                       return (
                         <Input
                           id="state"
@@ -1363,6 +1364,7 @@ export function RegistrationForm() {
                           }}
                           disabled={isLoading || !countryValue}
                           placeholder={placeholder}
+                          className={cn(!countryValue && 'opacity-60')}
                         />
                       );
                     }
@@ -1378,14 +1380,22 @@ export function RegistrationForm() {
                         options={stateOptions}
                         isLoading={statesLoading}
                         disabled={isLoading}
-                        placeholder={countryValue ? 'Select state / region' : 'Select a country first'}
+                        placeholder={countryValue ? 'Select your state / province' : 'Select a country first'}
                       />
                     );
                   }}
                 />
-                {errors.state && <p className="text-sm text-destructive">{errors.state.message}</p>}
+                {errors.state && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <span>•</span>
+                    <span>{errors.state.message || 'Please select or enter your state / province'}</span>
+                  </p>
+                )}
                 {!errors.state && statesError && (
                   <p className="text-xs text-muted-foreground">{statesError}</p>
+                )}
+                {!errors.state && !statesError && countryValue && !stateValue && (
+                  <p className="text-xs text-muted-foreground">Select from the list or type manually</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -1397,10 +1407,10 @@ export function RegistrationForm() {
                     const showDropdown = citiesLoading || cityOptions.length > 0;
                     if (!showDropdown || !stateValue) {
                       const placeholder = !stateValue
-                        ? 'Select a state first'
+                        ? 'Select a state / province first'
                         : citiesLoading
                           ? 'Loading cities…'
-                          : 'Enter your city';
+                          : 'Type or select your city';
                       return (
                         <Input
                           id="city"
@@ -1412,6 +1422,7 @@ export function RegistrationForm() {
                           }}
                           disabled={isLoading || !stateValue}
                           placeholder={placeholder}
+                          className={cn(!stateValue && 'opacity-60')}
                         />
                       );
                     }
@@ -1427,24 +1438,45 @@ export function RegistrationForm() {
                         options={cityOptions}
                         isLoading={citiesLoading}
                         disabled={isLoading}
-                        placeholder={stateValue ? 'Select a city' : 'Select a state first'}
+                        placeholder={stateValue ? 'Select your city' : 'Select a state / province first'}
                       />
                     );
                   }}
                 />
-                {errors.city && <p className="text-sm text-destructive">{errors.city.message}</p>}
+                {errors.city && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <span>•</span>
+                    <span>{errors.city.message || 'Please select or enter your city'}</span>
+                  </p>
+                )}
                 {!errors.city && citiesError && (
                   <p className="text-xs text-muted-foreground">{citiesError}</p>
+                )}
+                {!errors.city && !citiesError && stateValue && !cityValue && (
+                  <p className="text-xs text-muted-foreground">Select from the list or type manually</p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="zip">ZIP / Postal Code</Label>
-                <Input id="zip" {...register('zip')} disabled={isLoading} />
-                {errors.zip && <p className="text-sm text-destructive">{errors.zip.message}</p>}
+                <Input 
+                  id="zip" 
+                  {...register('zip')} 
+                  disabled={isLoading}
+                  placeholder="e.g., 12345 or SW1A 1AA"
+                />
+                {errors.zip && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <span>•</span>
+                    <span>{errors.zip.message || 'Please enter your ZIP / postal code'}</span>
+                  </p>
+                )}
+                {!errors.zip && (
+                  <p className="text-xs text-muted-foreground">Enter your postal or ZIP code</p>
+                )}
               </div>
             </div>
              <div className="space-y-2">
-              <Label htmlFor="street">Address</Label>
+              <Label htmlFor="street">Street Address</Label>
               <Controller
                 name="street"
                 control={control}
@@ -1463,6 +1495,9 @@ export function RegistrationForm() {
                   />
                 )}
               />
+              {!errors.street && (
+                <p className="text-xs text-muted-foreground">Start typing to see suggestions or enter manually</p>
+              )}
             </div>
           </div>
         )}
@@ -1581,16 +1616,18 @@ export function RegistrationForm() {
 
         <div className="mt-8 pt-4 flex justify-between border-t">
           <Button type="button" variant="outline" onClick={handlePrev} disabled={currentStep === 0 || isLoading}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
           {currentStep < steps.length - 1 ? (
             <Button type="button" onClick={handleNext} disabled={isLoading}>
               Next
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit
+              Submit Registration
             </Button>
           )}
         </div>

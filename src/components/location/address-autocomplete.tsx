@@ -223,7 +223,7 @@ export function AddressAutocomplete({
             setIsOpen(true);
           }
         }}
-        placeholder="Start typing your address"
+        placeholder="Enter your street address (e.g., 123 Main St)"
         className={cn(error && 'border-destructive focus-visible:ring-destructive')}
       />
       {isLoading && (
