@@ -13,9 +13,16 @@ export async function POST(
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
     // Call backend to increment view count
-    // Note: This should be implemented in the backend service
-    // For now, we'll just return success
-    // TODO: Implement view count increment in backend content service
+    const response = await fetch(`${API_BASE_URL}/api/content/${id}/view`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to increment view count');
+    }
     
     return NextResponse.json({ success: true });
   } catch (error: any) {

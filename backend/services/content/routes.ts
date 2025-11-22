@@ -282,5 +282,21 @@ router.post('/:id/restore/:version', verifyFirebaseToken, async (req: Authentica
   }
 });
 
+/**
+ * POST /content/:id/view
+ * Increment view count (public endpoint, no auth required)
+ */
+router.post('/:id/view', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await contentService.incrementViewCount(id);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error incrementing view count:', error);
+    // Don't fail the request if view tracking fails
+    res.json({ success: false });
+  }
+});
+
 export default router;
 

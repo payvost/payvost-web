@@ -1,35 +1,16 @@
-
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Icons } from "@/components/icons";
-import { ArrowRight, Download, Mail, Rss, Newspaper, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, Download, Mail, Rss, Newspaper, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Image from "next/image";
 import { SiteFooter } from "@/components/site-footer";
-
-const pressReleases = [
-    {
-        date: 'August 16, 2024',
-        title: 'Payvost Partners with Google’s Anti-Money Laundering AI for Enhanced Security',
-        excerpt: 'In a landmark move for the fintech industry, Payvost today announced a strategic partnership to integrate Google\'s advanced AML AI, setting a new standard for transaction security and fraud prevention.',
-        href: '/blog/payvost-partners-with-google',
-    },
-    {
-        date: 'July 22, 2024',
-        title: 'Payvost Expands Services to Three New African Markets',
-        excerpt: 'Payvost continues its global expansion, launching its secure remittance platform in Kenya, South Africa, and Egypt, making cross-border payments more accessible for millions.',
-        href: '#',
-    },
-    {
-        date: 'June 05, 2024',
-        title: 'Payvost Secures $50M in Series B Funding to Fuel Global Growth',
-        excerpt: 'Led by Global Fintech Ventures, the latest funding round will accelerate Payvost\'s product development and expansion into new corridors in Asia and Latin America.',
-        href: '#',
-    }
-];
+import { contentService, Content } from '@/services/contentService';
+import { format } from 'date-fns';
 
 const featuredInLogos = [
     { name: 'TechCrunch', logo: 'https://placehold.co/150x40.png', hint: 'techcrunch logo' },
@@ -40,6 +21,30 @@ const featuredInLogos = [
 ];
 
 export default function PressPage() {
+    const [pressReleases, setPressReleases] = useState<Content[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPressReleases = async () => {
+            try {
+                setLoading(true);
+                const result = await contentService.list({
+                    contentType: 'PRESS_RELEASE',
+                    status: 'PUBLISHED',
+                    limit: 50,
+                });
+                setPressReleases(result.items);
+            } catch (error) {
+                console.error('Failed to fetch press releases:', error);
+                setPressReleases([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPressReleases();
+    }, []);
+
     return (
         <div className="flex flex-col min-h-screen">
             <SiteHeader />
@@ -64,24 +69,38 @@ export default function PressPage() {
                                 The latest news and announcements from Payvost.
                             </p>
                         </div>
-                        <div className="max-w-4xl mx-auto space-y-8">
-                            {pressReleases.map(release => (
-                                <Link href={release.href} key={release.title}>
-                                    <Card className="hover:bg-muted/50 transition-colors group">
-                                        <CardHeader>
-                                            <p className="text-sm text-muted-foreground">{release.date}</p>
-                                            <CardTitle className="text-xl group-hover:text-primary transition-colors">{release.title}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <p className="text-muted-foreground">{release.excerpt}</p>
-                                        </CardContent>
-                                        <CardFooter>
-                                            <span className="text-sm font-semibold text-primary">Read Full Story <ArrowRight className="inline-block ml-1 h-4 w-4" /></span>
-                                        </CardFooter>
-                                    </Card>
-                                </Link>
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : pressReleases.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-muted-foreground">No press releases available.</p>
+                            </div>
+                        ) : (
+                            <div className="max-w-4xl mx-auto space-y-8">
+                                {pressReleases.map(release => (
+                                    <Link href={`/blog/${release.slug}`} key={release.id}>
+                                        <Card className="hover:bg-muted/50 transition-colors group">
+                                            <CardHeader>
+                                                {release.publishedAt && (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {format(new Date(release.publishedAt), 'MMMM dd, yyyy')}
+                                                    </p>
+                                                )}
+                                                <CardTitle className="text-xl group-hover:text-primary transition-colors">{release.title}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-muted-foreground">{release.excerpt || 'No excerpt available.'}</p>
+                                            </CardContent>
+                                            <CardFooter>
+                                                <span className="text-sm font-semibold text-primary">Read Full Story <ArrowRight className="inline-block ml-1 h-4 w-4" /></span>
+                                            </CardFooter>
+                                        </Card>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
                 
