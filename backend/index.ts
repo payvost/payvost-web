@@ -57,6 +57,7 @@ let errorTrackerRoutes: any;
 let invoiceRoutes: any;
 let businessRoutes: any;
 let contentRoutes: any;
+let supportRoutes: any;
 
 try {
   logger.info('Firebase Admin SDK initialized');
@@ -73,6 +74,7 @@ try {
   invoiceRoutes = loadService('./services/invoice/routes');
   businessRoutes = loadService('./services/business/routes');
   contentRoutes = loadService('./services/content/routes');
+  supportRoutes = loadService('./services/support/routes');
   logger.info('All service routes loaded');
 } catch (err) {
   logger.error({ err }, 'Failed to load backend modules');
@@ -133,6 +135,10 @@ try {
   
   if (contentRoutes) {
     registerServiceRoutes(app, 'Content Service', '/api/content', contentRoutes);
+  }
+  
+  if (supportRoutes) {
+    registerServiceRoutes(app, 'Support Service', '/api/support', supportRoutes);
   }
   
   logger.info('All service routes registered');

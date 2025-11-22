@@ -431,6 +431,29 @@ export const ENV_VARIABLES = {
   
   // Exchange Rates
   EXCHANGE_RATE_API_KEY: process.env.EXCHANGE_RATE_API_KEY,
+  
+  // KYC Verification Providers
+  // Sumsub - Free tier: 100 verifications/month
+  // Sign up: https://sumsub.com
+  SUMSUB_SECRET_KEY: process.env.SUMSUB_SECRET_KEY,
+  SUMSUB_APP_TOKEN: process.env.SUMSUB_APP_TOKEN,
+  SUMSUB_API_URL: process.env.SUMSUB_API_URL || 'https://api.sumsub.com',
+  
+  // Dojah - Free tier available for African countries
+  // Sign up: https://dojah.io
+  DOJAH_API_KEY: process.env.DOJAH_API_KEY,
+  DOJAH_APP_ID: process.env.DOJAH_APP_ID,
+  DOJAH_API_URL: process.env.DOJAH_API_URL || 'https://api.dojah.io',
+  
+  // ComplyAdvantage - Free tier for AML screening
+  // Sign up: https://complyadvantage.com
+  COMPLYADVANTAGE_API_KEY: process.env.COMPLYADVANTAGE_API_KEY,
+  COMPLYADVANTAGE_API_URL: process.env.COMPLYADVANTAGE_API_URL || 'https://api.complyadvantage.com',
+  
+  // Twilio Verify - For phone OTP verification
+  // Free tier: $15.50 credit for new accounts
+  // Sign up: https://twilio.com
+  TWILIO_VERIFY_SERVICE_SID: process.env.TWILIO_VERIFY_SERVICE_SID,
 } as const;
 
 /**
