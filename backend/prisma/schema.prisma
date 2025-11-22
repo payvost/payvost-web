@@ -909,9 +909,9 @@ model KnowledgeBaseArticle {
   language      String        @default("en")
   views         Int           @default(0)
   helpfulCount  Int           @default(0)
-  createdBy     User          @relation(fields: [createdById], references: [id])
+  createdBy     User          @relation("KBArticlesCreated", fields: [createdById], references: [id])
   createdById   String
-  updatedBy     User?         @relation(fields: [updatedById], references: [id])
+  updatedBy     User?         @relation("KBArticlesUpdated", fields: [updatedById], references: [id])
   updatedById   String?
   publishedAt   DateTime?
   createdAt     DateTime      @default(now())
