@@ -64,6 +64,7 @@ export async function verifySessionCookie(sessionCookie: string) {
 
 /**
  * Log admin access for audit trail
+ * Automatically fetches and includes user details (name, role) for better audit trail
  */
 export async function logAdminAccess(
   uid: string,
@@ -71,10 +72,33 @@ export async function logAdminAccess(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
+    // Fetch user details to enrich the audit log
+    let userName: string | undefined;
+    let userType: string | undefined;
+    
+    try {
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        userName = userData?.fullName || userData?.displayName || userData?.name || userData?.email || undefined;
+        const role = userData?.role || userData?.userType;
+        userType = role === 'admin' || role === 'super_admin' ? 'Admin' : 'Customer';
+      }
+    } catch (userError) {
+      // If we can't fetch user details, continue without them
+      console.warn('Could not fetch user details for audit log:', userError);
+    }
+
     await db.collection('adminAuditLog').add({
       uid,
       action,
-      metadata: metadata || {},
+      userName,
+      userType,
+      metadata: {
+        ...(metadata || {}),
+        userName,
+        userType,
+      },
       timestamp: new Date(),
       ip: metadata?.ip || 'unknown',
     });
