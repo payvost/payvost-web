@@ -136,7 +136,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   return (
     <ProtectRoute>
-      <SidebarProvider>
+      <SidebarProvider style={{ "--sidebar-width": "12rem" } as React.CSSProperties}>
         <TooltipProvider>
         <Sidebar>
           <SidebarHeader className="h-12 lg:h-[52px] flex items-center px-4 border-b">
