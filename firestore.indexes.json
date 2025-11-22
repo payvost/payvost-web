@@ -75,16 +75,6 @@
       ]
     },
     {
-      "collectionGroup": "payouts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "settlements",
       "queryScope": "COLLECTION",
       "fields": [
@@ -92,16 +82,6 @@
           "fieldPath": "status",
           "order": "ASCENDING"
         },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "settlements",
-      "queryScope": "COLLECTION",
-      "fields": [
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
@@ -212,16 +192,6 @@
           "fieldPath": "status",
           "order": "ASCENDING"
         },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "transactions",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
