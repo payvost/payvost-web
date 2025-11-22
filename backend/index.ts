@@ -269,6 +269,81 @@ app.get('/api/admin-stats/volume-over-time', async (req, res) => {
   }
 });
 
+app.get('/api/admin-stats/transactions', async (req, res) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (req.query.limit) queryParams.set('limit', req.query.limit as string);
+    if (req.query.startDate) queryParams.set('startDate', req.query.startDate as string);
+    if (req.query.endDate) queryParams.set('endDate', req.query.endDate as string);
+    if (req.query.currency) queryParams.set('currency', req.query.currency as string);
+
+    const url = `${ADMIN_STATS_SERVICE_URL}/transactions?${queryParams.toString()}`;
+    const response = await fetch(url);
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Admin stats service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to admin stats service',
+      message: error.message,
+    });
+  }
+});
+
+app.get('/api/admin-stats/currency-distribution', async (req, res) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (req.query.startDate) queryParams.set('startDate', req.query.startDate as string);
+    if (req.query.endDate) queryParams.set('endDate', req.query.endDate as string);
+
+    const url = `${ADMIN_STATS_SERVICE_URL}/currency-distribution?${queryParams.toString()}`;
+    const response = await fetch(url);
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Admin stats service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to admin stats service',
+      message: error.message,
+    });
+  }
+});
+
+// Webhook Service Proxy
+// Forward webhook requests to the dedicated webhook service
+const WEBHOOK_SERVICE_URL = process.env.WEBHOOK_SERVICE_URL || 'http://localhost:3008';
+
+app.post('/api/webhooks/reloadly', async (req, res) => {
+  try {
+    // Forward headers (especially signature headers)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    const signature = req.headers['x-reloadly-signature'] || req.headers['x-webhook-signature'];
+    if (signature) {
+      headers['x-reloadly-signature'] = signature as string;
+    }
+
+    const response = await fetch(`${WEBHOOK_SERVICE_URL}/reloadly`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Webhook service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to webhook service',
+      message: error.message,
+    });
+  }
+});
+
 app.get('/api/pdf/health', async (_req, res) => {
   try {
     const response = await fetch(`${PDF_SERVICE_URL}/health`);
