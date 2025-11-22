@@ -71,11 +71,11 @@ export default function SupportPage() {
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col w-full">
         {/* Hero Section */}
         <section className="w-full bg-primary/10 rounded-lg">
           <div className="py-12 md:py-20 lg:py-24">
-            <div className="container px-4 md:px-6 text-center">
+            <div className="container mx-auto px-4 md:px-6 text-center max-w-7xl">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                 Hi {userName}, how can we help?
                 </h1>
@@ -98,10 +98,10 @@ export default function SupportPage() {
 
         {/* Categories Section */}
         <section className="w-full py-12 md:py-20 lg:py-24">
-            <div className="container px-4 md:px-6">
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 justify-items-center">
                     {supportCategories.map((category) => (
-                        <Card key={category.title} className="hover:shadow-lg transition-shadow">
+                        <Card key={category.title} className="hover:shadow-lg transition-shadow w-full max-w-sm">
                             <CardHeader className="flex-row items-center gap-4">
                                 {category.icon}
                                 <CardTitle>{category.title}</CardTitle>
@@ -122,7 +122,7 @@ export default function SupportPage() {
             </div>
         </section>
 
-        <div className="container px-4 md:px-6 mb-24">
+        <div className="container mx-auto px-4 md:px-6 mb-24 max-w-7xl">
             <div className="grid gap-12 lg:grid-cols-3">
                 {/* Featured Articles */}
                 <div className="lg:col-span-2">
@@ -138,10 +138,10 @@ export default function SupportPage() {
                 </div>
 
                 {/* Contact Us Card */}
-                <div>
-                     <Card className="bg-muted/50">
+                <div className="flex justify-center lg:justify-start">
+                     <Card className="bg-muted/50 w-full max-w-sm">
                         <CardHeader className="items-center text-center">
-                            <div className="p-3 bg-primary/10 rounded-full">
+                            <div className="p-3 bg-primary/10 rounded-full mx-auto">
                                 <LifeBuoy className="h-8 w-8 text-primary" />
                             </div>
                             <CardTitle>Can't find an answer?</CardTitle>
