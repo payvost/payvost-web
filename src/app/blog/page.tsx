@@ -105,34 +105,48 @@ export default function BlogArchivePage() {
                             </div>
                         </div>
 
-                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredArticles.map(article => (
-                                <Link key={article.slug} href={`/blog/${article.slug}`} className="group">
-                                    <Card className="flex flex-col h-full overflow-hidden transition-shadow group-hover:shadow-xl">
-                                        <div className="relative aspect-video">
-                                            <Image
-                                                src={article.featuredImage}
-                                                alt={article.title}
-                                                fill
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                                className="object-cover"
-                                                data-ai-hint={article.imageHint || 'abstract technology'}
-                                            />
-                                        </div>
-                                        <CardHeader>
-                                            <Badge variant="secondary" className="w-fit mb-2">{article.category}</Badge>
-                                            <CardTitle className="text-xl group-hover:text-primary transition-colors">{article.title}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex-grow">
-                                            <p className="text-sm text-muted-foreground">{article.excerpt}</p>
-                                        </CardContent>
-                                        <CardFooter>
-                                            <span className="text-sm font-semibold group-hover:text-primary transition-colors">Read More</span>
-                                        </CardFooter>
-                                    </Card>
-                                </Link>
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : filteredArticles.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-muted-foreground">No articles found.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {filteredArticles.map(article => (
+                                    <Link key={article.id} href={`/blog/${article.slug}`} className="group">
+                                        <Card className="flex flex-col h-full overflow-hidden transition-shadow group-hover:shadow-xl">
+                                            <div className="relative aspect-video">
+                                                <Image
+                                                    src={article.featuredImage || '/optimized/Payvost Building.jpg'}
+                                                    alt={article.title}
+                                                    fill
+                                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <CardHeader>
+                                                {article.category && (
+                                                    <Badge variant="secondary" className="w-fit mb-2">{article.category}</Badge>
+                                                )}
+                                                <CardTitle className="text-xl group-hover:text-primary transition-colors">{article.title}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="flex-grow">
+                                                <p className="text-sm text-muted-foreground">{article.excerpt || 'No excerpt available.'}</p>
+                                            </CardContent>
+                                            <CardFooter className="flex justify-between items-center text-xs text-muted-foreground">
+                                                {article.publishedAt && (
+                                                    <span>{format(new Date(article.publishedAt), 'MMM dd, yyyy')}</span>
+                                                )}
+                                                <span className="text-sm font-semibold group-hover:text-primary transition-colors">Read More</span>
+                                            </CardFooter>
+                                        </Card>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
 

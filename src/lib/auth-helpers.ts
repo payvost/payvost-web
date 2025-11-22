@@ -83,3 +83,36 @@ export async function logAdminAccess(
     // Don't throw - logging failure shouldn't block access
   }
 }
+
+/**
+ * Check if a user has writer role in Firestore
+ */
+export async function isWriter(uid: string): Promise<boolean> {
+  try {
+    const userDoc = await db.collection('users').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return false;
+    }
+    
+    const userData = userDoc.data();
+    const role = userData?.role?.toLowerCase();
+    
+    // Writers can be: writer, editor, content_manager, or admin
+    return ['writer', 'editor', 'content_manager', 'admin', 'super_admin'].includes(role);
+  } catch (error) {
+    console.error('Error checking writer role:', error);
+    return false;
+  }
+}
+
+/**
+ * Verify if user has writer role, throws error if not
+ */
+export async function requireWriter(uid: string): Promise<void> {
+  const hasWriterRole = await isWriter(uid);
+  
+  if (!hasWriterRole) {
+    throw new Error('Unauthorized: Writer access required');
+  }
+}
