@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError, AuthorizationError } from '../../gateway/index';
 import admin from 'firebase-admin';
+import { prisma } from '../../common/prisma';
 import * as SupportService from './service';
 
 const db = admin.firestore();
@@ -100,7 +101,7 @@ router.get('/tickets/:id', verifyFirebaseToken, requireSupportTeam, async (req: 
 
 /**
  * POST /api/support/tickets
- * Create a new ticket
+ * Create a new ticket (Support team only - can create for any customer)
  */
 router.post('/tickets', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -125,6 +126,47 @@ router.post('/tickets', verifyFirebaseToken, requireSupportTeam, async (req: Aut
         tags,
       },
       userId
+    );
+
+    res.status(201).json(ticket);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to create ticket' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/tickets/customer
+ * Create a new ticket (Customer-facing - can only create for themselves)
+ */
+router.post('/tickets/customer', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const { subject, description, category, priority, tags, metadata } = req.body;
+
+    if (!subject || !description || !category) {
+      throw new ValidationError('Missing required fields: subject, description, category');
+    }
+
+    // Customers can only create tickets for themselves
+    const ticket = await SupportService.createTicket(
+      {
+        subject,
+        description,
+        category,
+        priority,
+        customerId: userId, // Always use authenticated user's ID
+        tags,
+        metadata, // Include metadata in creation
+      },
+      userId // createdById is the customer themselves
     );
 
     res.status(201).json(ticket);

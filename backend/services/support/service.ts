@@ -12,6 +12,7 @@ export interface CreateTicketInput {
   priority?: TicketPriority;
   customerId: string;
   tags?: string[];
+  metadata?: any;
 }
 
 export interface UpdateTicketInput {
@@ -71,6 +72,7 @@ export async function createTicket(
       customerId: input.customerId,
       createdById,
       tags: input.tags || [],
+      metadata: input.metadata || null,
       status: 'OPEN',
     },
     include: {

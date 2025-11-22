@@ -193,6 +193,7 @@ export const supportService = {
     priority?: TicketPriority;
     customerId: string;
     tags?: string[];
+    metadata?: any;
   }): Promise<SupportTicket> {
     return apiRequest<SupportTicket>('/api/support/tickets', {
       method: 'POST',
