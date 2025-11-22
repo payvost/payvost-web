@@ -1,6 +1,3 @@
-
-'use client';
-
 import { SiteHeader } from '@/components/site-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,51 +14,82 @@ import {
     Linkedin,
     Facebook,
     ArrowLeft,
-    Eye
+    Eye,
+    Loader2
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { SiteFooter } from '@/components/site-footer';
+import { contentService, Content } from '@/services/contentService';
+import { format } from 'date-fns';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import ArticleClient from './article-client';
 
-// Mock data for a single article. In a real app, you would fetch this based on the slug.
-const article = {
-  slug: 'payvost-partners-with-google',
-  title: 'Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management',
-  excerpt: 'A brief summary of the blog post goes here. Catch the reader\'s interest and give them a reason to click and read more about this exciting topic.',
-  featuredImage: '/optimized/Payvost Building.jpg',
-  author: {
-    name: 'Pamilerin Coker',
-    role: 'Head of Product',
-    avatar: 'https://picsum.photos/seed/a1/100/100',
-    avatarHint: 'woman portrait',
-  },
-  publishedAt: 'August 16, 2024',
-  readingTime: '5 min read',
-  tags: ['Partnership', 'AI', 'Security', 'Fintech'],
-  content: `
-    <p>We are thrilled to announce a strategic partnership with Google, integrating their state-of-the-art Anti-Money Laundering (AML) AI into the core of Payvost’s transaction monitoring system. This collaboration marks a significant milestone in our commitment to providing the most secure and reliable remittance platform on the market.</p>
-    <h3 class="font-bold text-xl my-4">Leveraging Advanced AI to Combat Financial Crime</h3>
-    <p>Financial crime is an ever-evolving threat, and staying ahead requires cutting-edge technology. Google's AML AI brings unparalleled analytical power to our platform, capable of processing millions of transactions in real-time to detect suspicious patterns that would be invisible to traditional rule-based systems.</p>
-    <ul>
-        <li><strong>Real-Time Analysis:</strong> Instantly flag potentially fraudulent activities as they happen.</li>
-        <li><strong>Network-Level Insights:</strong> Uncover complex fraud rings and hidden relationships between accounts.</li>
-        <li><strong>Reduced False Positives:</strong> The AI's learning capabilities significantly reduce the number of legitimate transactions being flagged, ensuring a smoother experience for our users.</li>
-    </ul>
-    <p>By integrating this technology, we are not just enhancing our security measures; we are building a smarter, more resilient financial ecosystem. Our users can send money with even greater confidence, knowing that their transactions are protected by one of the most advanced AI systems in the world.</p>
-    <blockquote class="my-6 p-4 bg-muted/50 border-l-4 border-primary">
-        "This partnership with Google allows us to proactively protect our users from financial crime at a scale and speed that was previously unimaginable. It's a game-changer for the remittance industry."
-        <cite class="block mt-2 text-sm font-semibold not-italic">- Pamilerin Coker, Head of Product at Payvost</cite>
-    </blockquote>
-    <h3 class="font-bold text-xl my-4">What This Means for You</h3>
-    <p>For our users, this means enhanced security without sacrificing convenience. The AI works silently in the background, making your international money transfers faster and safer. This move is part of our ongoing mission to build trust and transparency in the global financial landscape.</p>
-  `
-};
+// Calculate reading time from content
+function calculateReadingTime(content: string): string {
+  const wordsPerMinute = 200;
+  const text = content.replace(/<[^>]*>/g, ''); // Remove HTML tags
+  const words = text.split(/\s+/).length;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min read`;
+}
 
-// In a real Next.js app, you'd use generateMetadata for SEO
-// export async function generateMetadata({ params }: { params: { slug: string } }) { ... }
+// Generate metadata for SEO
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  try {
+    const article = await contentService.getBySlug(params.slug);
+    
+    if (!article || article.contentType !== 'BLOG' || article.status !== 'PUBLISHED') {
+      return {
+        title: 'Article Not Found',
+      };
+    }
 
-export default function ArticlePage({ params }: { params: { slug: string } }) {
-  // In a real app, you would fetch article data using params.slug
-  const { title, featuredImage, author, publishedAt, readingTime, tags, content } = article;
+    return {
+      title: article.metaTitle || article.title,
+      description: article.metaDescription || article.excerpt || '',
+      keywords: article.metaKeywords,
+      openGraph: {
+        title: article.metaTitle || article.title,
+        description: article.metaDescription || article.excerpt || '',
+        type: 'article',
+        publishedTime: article.publishedAt || undefined,
+        authors: [article.authorName],
+        images: article.featuredImage ? [article.featuredImage] : [],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: article.metaTitle || article.title,
+        description: article.metaDescription || article.excerpt || '',
+        images: article.featuredImage ? [article.featuredImage] : [],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Article Not Found',
+    };
+  }
+}
+
+export default async function ArticlePage({ params }: { params: { slug: string } }) {
+  let article: Content;
+  
+  try {
+    article = await contentService.getBySlug(params.slug);
+    
+    if (!article || article.contentType !== 'BLOG' || article.status !== 'PUBLISHED') {
+      notFound();
+    }
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    notFound();
+  }
+
+  const readingTime = calculateReadingTime(article.content);
+  const publishedDate = article.publishedAt ? format(new Date(article.publishedAt), 'MMMM dd, yyyy') : '';
+  
+  return <ArticleClient article={article} readingTime={readingTime} publishedDate={publishedDate} />;
+}
 
   return (
     <div className="flex flex-col min-h-screen">

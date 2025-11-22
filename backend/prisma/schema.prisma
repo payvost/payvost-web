@@ -661,3 +661,133 @@ model Invoice {
   @@index([invoiceNumber])
   @@index([dueDate])
 }
+
+// Content Management System Models
+enum ContentType {
+  BLOG
+  PRESS_RELEASE
+  DOCUMENTATION
+  KNOWLEDGE_BASE
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+  SCHEDULED
+}
+
+model Content {
+  id            String       @id @default(uuid())
+  title         String
+  slug          String       @unique
+  contentType   ContentType
+  status        ContentStatus @default(DRAFT)
+  
+  // Content
+  excerpt       String?      @db.Text
+  content       String       @db.Text // HTML/Rich text
+  rawContent    Json?        // For structured content (JSON)
+  
+  // SEO
+  metaTitle     String?
+  metaDescription String?    @db.Text
+  metaKeywords  String[]
+  canonicalUrl  String?
+  
+  // Organization
+  category      String?
+  tags          String[]
+  
+  // Media
+  featuredImage String?      // URL to image
+  mediaIds      String[]     // Array of media IDs
+  
+  // Authorship
+  authorId      String       // Firebase UID
+  authorName    String
+  coAuthors     String[]     // Array of Firebase UIDs
+  
+  // Publishing
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+  expiresAt     DateTime?
+  
+  // Versioning
+  version       Int          @default(1)
+  parentId      String?      // For revisions
+  
+  // Analytics
+  viewCount     Int          @default(0)
+  likeCount     Int          @default(0)
+  
+  // Metadata
+  isPublic      Boolean      @default(true)
+  allowComments Boolean      @default(false)
+  language      String       @default("en")
+  
+  // Relations
+  versions      ContentVersion[]
+  comments      ContentComment[]
+  media         ContentMedia[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  @@index([contentType])
+  @@index([status])
+  @@index([authorId])
+  @@index([category])
+  @@index([publishedAt])
+  @@index([slug])
+  @@fulltext([title, content, excerpt])
+}
+
+model ContentVersion {
+  id          String   @id @default(uuid())
+  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId   String
+  version     Int
+  title       String
+  content     String   @db.Text
+  excerpt     String?  @db.Text
+  authorId    String
+  authorName  String
+  createdAt   DateTime @default(now())
+  
+  @@unique([contentId, version])
+  @@index([contentId])
+}
+
+model ContentComment {
+  id          String   @id @default(uuid())
+  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId   String
+  authorId    String
+  authorName  String
+  comment     String   @db.Text
+  parentId    String?  // For nested comments
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  @@index([contentId])
+  @@index([parentId])
+}
+
+model ContentMedia {
+  id          String   @id @default(uuid())
+  content     Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+  contentId   String?
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  altText     String?
+  caption     String?
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+  
+  @@index([contentId])
+  @@index([uploadedBy])
+}
