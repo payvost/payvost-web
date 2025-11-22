@@ -1,100 +1,70 @@
+/**
+ * Vercel API Route - Proxies transactions requests to Render/Railway admin-stats service
+ * This offloads heavy data aggregation from Vercel to prevent timeouts
+ */
+
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = searchParams.get('limit');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const currency = searchParams.get('currency');
 
-    console.log(`🔍 Fetching recent ${limit} transactions...`);
+    console.log('[Admin Stats API] Proxying transactions request...');
 
-    const recentTransactions: any[] = [];
+    // Proxy to admin-stats service (Render/Railway)
+    const adminStatsServiceUrl = process.env.ADMIN_STATS_SERVICE_URL || 
+                                 process.env.NEXT_PUBLIC_ADMIN_STATS_SERVICE_URL || 
+                                 'http://localhost:3007';
 
-    // Date range filtering
-    const end = endDate ? new Date(endDate) : new Date();
-    const start = startDate ? new Date(startDate) : null;
-    
-    // Convert dates to Firestore Timestamps
-    const endTimestamp = Timestamp.fromDate(end);
-    const startTimestamp = start ? Timestamp.fromDate(start) : null;
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.set('limit', limit);
+    if (startDate) queryParams.set('startDate', startDate);
+    if (endDate) queryParams.set('endDate', endDate);
+    if (currency) queryParams.set('currency', currency);
 
-    // Get all users
-    const usersSnapshot = await db.collection('users').get();
+    const url = `${adminStatsServiceUrl}/transactions?${queryParams.toString()}`;
+    console.log(`[Admin Stats API] Calling: ${url}`);
 
-    // Collect transactions from all users
-    for (const userDoc of usersSnapshot.docs) {
-      const userData = userDoc.data();
-      
-      try {
-        let transactionsQuery = db
-          .collection('users')
-          .doc(userDoc.id)
-          .collection('transactions');
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(180000), // 3 minutes timeout for heavy queries
+    });
 
-        if (startTimestamp) {
-          transactionsQuery = transactionsQuery
-            .where('createdAt', '>=', startTimestamp)
-            .where('createdAt', '<=', endTimestamp)
-            .orderBy('createdAt', 'desc')
-            .limit(limit * 2); // Get more to account for currency filtering
-        } else {
-          transactionsQuery = transactionsQuery
-            .where('createdAt', '<=', endTimestamp)
-            .orderBy('createdAt', 'desc')
-            .limit(limit * 2);
-        }
-
-        const transactionsSnapshot = await transactionsQuery.get();
-
-        transactionsSnapshot.forEach((txDoc) => {
-          const tx = txDoc.data();
-          const txCurrency = (tx.currency || 'USD').toUpperCase();
-          
-          // Filter by currency if specified
-          if (currency && currency !== 'ALL' && txCurrency !== currency) {
-            return;
-          }
-          
-          const txDate = tx.createdAt?.toDate?.() || 
-                        (tx.createdAt?._seconds ? new Date(tx.createdAt._seconds * 1000) : null) ||
-                        (typeof tx.createdAt === 'string' ? new Date(tx.createdAt) : new Date());
-          
-          recentTransactions.push({
-            id: txDoc.id,
-            customer: userData.name || userData.displayName || 'Unknown',
-            email: userData.email || 'No email',
-            amount: parseFloat(tx.amount || 0),
-            currency: txCurrency,
-            status: tx.status || 'completed',
-            type: tx.type || 'transfer',
-            date: txDate.toISOString(),
-            description: tx.description || '',
-          });
-        });
-      } catch (err) {
-        // User might not have transactions subcollection
-        console.log(`No transactions for user ${userDoc.id}`);
-      }
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[Admin Stats API] Admin stats service returned ${response.status}: ${errorText}`);
+      return NextResponse.json(
+        { 
+          error: 'Admin stats service unavailable',
+          details: response.status === 504 ? 'Service timeout' : errorText
+        },
+        { status: response.status === 504 ? 504 : 503 }
+      );
     }
 
-    // Sort by date descending and limit
-    recentTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
-    const limitedTransactions = recentTransactions.slice(0, limit);
+    const data = await response.json();
+    console.log('[Admin Stats API] Transactions fetched successfully');
 
-    console.log(`✅ Found ${limitedTransactions.length} transactions`);
-
-    return NextResponse.json({
-      transactions: limitedTransactions,
-      total: limitedTransactions.length,
-    });
+    return NextResponse.json(data);
   } catch (error: any) {
-    console.error('❌ Error fetching recent transactions:', error);
+    console.error('[Admin Stats API] Error proxying to admin stats service:', error);
+    
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+      return NextResponse.json(
+        { 
+          error: 'Admin stats service timeout',
+          message: 'Transactions query took too long. Please try again or use a smaller date range.',
+          details: 'Service may be processing large dataset'
+        },
+        { status: 504 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch recent transactions', details: error.message },
+      { error: 'Failed to fetch transactions', details: error.message },
       { status: 500 }
     );
   }

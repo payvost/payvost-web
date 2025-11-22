@@ -355,6 +355,193 @@ app.get('/volume-over-time', async (req: Request, res: Response) => {
   }
 });
 
+// Recent transactions endpoint
+app.get('/transactions', async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string || '10');
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+    const currency = req.query.currency as string | undefined;
+
+    console.log(`[Admin Stats Service] Fetching recent ${limit} transactions...`);
+
+    const recentTransactions: any[] = [];
+
+    // Date range filtering
+    const end = endDate ? new Date(endDate) : new Date();
+    const start = startDate ? new Date(startDate) : null;
+    
+    // Convert dates to Firestore Timestamps
+    const endTimestamp = Timestamp.fromDate(end);
+    const startTimestamp = start ? Timestamp.fromDate(start) : null;
+
+    // Get all users
+    const usersSnapshot = await db.collection('users').get();
+
+    // Collect transactions from all users
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      
+      try {
+        const transactionsRef = db
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('transactions');
+
+        let transactionsQuery: admin.firestore.Query;
+        if (startTimestamp) {
+          transactionsQuery = transactionsRef
+            .where('createdAt', '>=', startTimestamp)
+            .where('createdAt', '<=', endTimestamp)
+            .orderBy('createdAt', 'desc')
+            .limit(limit * 2); // Get more to account for currency filtering
+        } else {
+          transactionsQuery = transactionsRef
+            .where('createdAt', '<=', endTimestamp)
+            .orderBy('createdAt', 'desc')
+            .limit(limit * 2);
+        }
+
+        const transactionsSnapshot = await transactionsQuery.get();
+
+        transactionsSnapshot.forEach((txDoc) => {
+          const tx = txDoc.data();
+          const txCurrency = (tx.currency || 'USD').toUpperCase();
+          
+          // Filter by currency if specified
+          if (currency && currency !== 'ALL' && txCurrency !== currency) {
+            return;
+          }
+          
+          const txDate = tx.createdAt?.toDate?.() || 
+                        (tx.createdAt?._seconds ? new Date(tx.createdAt._seconds * 1000) : null) ||
+                        (typeof tx.createdAt === 'string' ? new Date(tx.createdAt) : new Date());
+          
+          recentTransactions.push({
+            id: txDoc.id,
+            customer: userData.name || userData.displayName || 'Unknown',
+            email: userData.email || 'No email',
+            amount: parseFloat(tx.amount || 0),
+            currency: txCurrency,
+            status: tx.status || 'completed',
+            type: tx.type || 'transfer',
+            date: txDate.toISOString(),
+            description: tx.description || '',
+          });
+        });
+      } catch (err) {
+        // User might not have transactions subcollection
+        console.log(`[Admin Stats Service] No transactions for user ${userDoc.id}`);
+      }
+    }
+
+    // Sort by date descending and limit
+    recentTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const limitedTransactions = recentTransactions.slice(0, limit);
+
+    console.log(`[Admin Stats Service] Found ${limitedTransactions.length} transactions`);
+
+    return res.status(200).json({
+      transactions: limitedTransactions,
+      total: limitedTransactions.length,
+    });
+  } catch (error: any) {
+    console.error('[Admin Stats Service] Error fetching recent transactions:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch recent transactions',
+      message: error.message,
+      details: NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
+// Currency distribution endpoint
+app.get('/currency-distribution', async (req: Request, res: Response) => {
+  try {
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+
+    console.log('[Admin Stats Service] Fetching currency distribution...');
+
+    // Default to all time if no date range provided
+    const end = endDate ? new Date(endDate) : new Date();
+    const start = startDate ? new Date(startDate) : null;
+    
+    // Convert dates to Firestore Timestamps
+    const endTimestamp = Timestamp.fromDate(end);
+    const startTimestamp = start ? Timestamp.fromDate(start) : null;
+
+    const currencyTotals: Record<string, number> = {};
+
+    // Get all users
+    const usersSnapshot = await db.collection('users').get();
+
+    // Collect transactions from all users
+    for (const userDoc of usersSnapshot.docs) {
+      try {
+        const transactionsRef = db
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('transactions');
+
+        let transactionsQuery: admin.firestore.Query;
+        if (startTimestamp) {
+          transactionsQuery = transactionsRef
+            .where('createdAt', '>=', startTimestamp)
+            .where('createdAt', '<=', endTimestamp);
+        } else {
+          transactionsQuery = transactionsRef.where('createdAt', '<=', endTimestamp);
+        }
+
+        const transactionsSnapshot = await transactionsQuery.get();
+
+        transactionsSnapshot.forEach((txDoc) => {
+          const tx = txDoc.data();
+          const amount = parseFloat(tx.amount || 0);
+          const currency = (tx.currency || 'USD').toUpperCase();
+
+          if (!currencyTotals[currency]) {
+            currencyTotals[currency] = 0;
+          }
+          currencyTotals[currency] += amount;
+        });
+      } catch (err) {
+        console.log(`[Admin Stats Service] No transactions for user ${userDoc.id}`);
+      }
+    }
+
+    // Format data for chart - get top currencies and group others
+    const sortedCurrencies = Object.entries(currencyTotals)
+      .sort(([, a], [, b]) => b - a);
+
+    const topCurrencies = sortedCurrencies.slice(0, 4);
+    const otherTotal = sortedCurrencies.slice(4).reduce((sum, [, amount]) => sum + amount, 0);
+
+    const chartData = topCurrencies.map(([currency, value]) => ({
+      name: currency,
+      value: Math.round(value),
+    }));
+
+    if (otherTotal > 0) {
+      chartData.push({
+        name: 'OTHER',
+        value: Math.round(otherTotal),
+      });
+    }
+
+    console.log('[Admin Stats Service] Currency distribution calculated successfully');
+
+    return res.status(200).json({ data: chartData });
+  } catch (error: any) {
+    console.error('[Admin Stats Service] Error fetching currency distribution:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch currency distribution',
+      message: error.message,
+      details: NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Admin Stats Service] Shutting down gracefully...');
@@ -373,5 +560,7 @@ app.listen(PORT, () => {
   console.log(`  - GET http://localhost:${PORT}/health`);
   console.log(`  - GET http://localhost:${PORT}/stats`);
   console.log(`  - GET http://localhost:${PORT}/volume-over-time`);
+  console.log(`  - GET http://localhost:${PORT}/transactions`);
+  console.log(`  - GET http://localhost:${PORT}/currency-distribution`);
 });
 

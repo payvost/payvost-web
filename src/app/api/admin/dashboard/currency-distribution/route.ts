@@ -1,6 +1,9 @@
+/**
+ * Vercel API Route - Proxies currency-distribution requests to Render/Railway admin-stats service
+ * This offloads heavy data aggregation from Vercel to prevent timeouts
+ */
+
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
 
 export async function GET(request: Request) {
   try {
@@ -8,82 +11,57 @@ export async function GET(request: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    console.log('🔍 Fetching currency distribution...');
+    console.log('[Admin Stats API] Proxying currency-distribution request...');
 
-    // Default to all time if no date range provided
-    const end = endDate ? new Date(endDate) : new Date();
-    const start = startDate ? new Date(startDate) : null;
-    
-    // Convert dates to Firestore Timestamps
-    const endTimestamp = Timestamp.fromDate(end);
-    const startTimestamp = start ? Timestamp.fromDate(start) : null;
+    // Proxy to admin-stats service (Render/Railway)
+    const adminStatsServiceUrl = process.env.ADMIN_STATS_SERVICE_URL || 
+                                 process.env.NEXT_PUBLIC_ADMIN_STATS_SERVICE_URL || 
+                                 'http://localhost:3007';
 
-    const currencyTotals: Record<string, number> = {};
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.set('startDate', startDate);
+    if (endDate) queryParams.set('endDate', endDate);
 
-    // Get all users
-    const usersSnapshot = await db.collection('users').get();
+    const url = `${adminStatsServiceUrl}/currency-distribution?${queryParams.toString()}`;
+    console.log(`[Admin Stats API] Calling: ${url}`);
 
-    // Collect transactions from all users
-    for (const userDoc of usersSnapshot.docs) {
-      try {
-        let transactionsQuery = db
-          .collection('users')
-          .doc(userDoc.id)
-          .collection('transactions');
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(180000), // 3 minutes timeout for heavy queries
+    });
 
-        if (startTimestamp) {
-          transactionsQuery = transactionsQuery
-            .where('createdAt', '>=', startTimestamp)
-            .where('createdAt', '<=', endTimestamp);
-        } else {
-          transactionsQuery = transactionsQuery.where('createdAt', '<=', endTimestamp);
-        }
-
-        const transactionsSnapshot = await transactionsQuery.get();
-
-        transactionsSnapshot.forEach((txDoc) => {
-          const tx = txDoc.data();
-          const amount = parseFloat(tx.amount || 0);
-          const currency = (tx.currency || 'USD').toUpperCase();
-
-          if (!currencyTotals[currency]) {
-            currencyTotals[currency] = 0;
-          }
-          currencyTotals[currency] += amount;
-        });
-      } catch (err) {
-        console.log(`No transactions for user ${userDoc.id}`);
-      }
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[Admin Stats API] Admin stats service returned ${response.status}: ${errorText}`);
+      return NextResponse.json(
+        { 
+          error: 'Admin stats service unavailable',
+          details: response.status === 504 ? 'Service timeout' : errorText
+        },
+        { status: response.status === 504 ? 504 : 503 }
+      );
     }
 
-    // Format data for chart - get top currencies and group others
-    const sortedCurrencies = Object.entries(currencyTotals)
-      .sort(([, a], [, b]) => b - a);
+    const data = await response.json();
+    console.log('[Admin Stats API] Currency distribution fetched successfully');
 
-    const topCurrencies = sortedCurrencies.slice(0, 4);
-    const otherTotal = sortedCurrencies.slice(4).reduce((sum, [, amount]) => sum + amount, 0);
-
-    const chartData = topCurrencies.map(([currency, value]) => ({
-      name: currency,
-      value: Math.round(value),
-    }));
-
-    if (otherTotal > 0) {
-      chartData.push({
-        name: 'OTHER',
-        value: Math.round(otherTotal),
-      });
-    }
-
-    console.log('✅ Currency distribution calculated successfully');
-
-    return NextResponse.json({ data: chartData });
+    return NextResponse.json(data);
   } catch (error: any) {
-    console.error('❌ Error fetching currency distribution:', error);
+    console.error('[Admin Stats API] Error proxying to admin stats service:', error);
+    
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+      return NextResponse.json(
+        { 
+          error: 'Admin stats service timeout',
+          message: 'Currency distribution calculation took too long. Please try again or use a smaller date range.',
+          details: 'Service may be processing large dataset'
+        },
+        { status: 504 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch currency distribution', details: error.message },
       { status: 500 }
     );
   }
 }
-

@@ -209,7 +209,58 @@ export default function CustomerDetailsPage() {
             try {
                 setLoadingKyc(true);
                 const response = await axios.get(`/api/admin/kyc/submissions?userId=${id}`);
-                setKycSubmissions(response.data || []);
+                const submissions = response.data || [];
+                
+                // Deduplicate submissions - keep only the most recent submission for each tier level
+                // Group by tier level and keep the latest one
+                const deduplicatedSubmissions = submissions.reduce((acc: any[], submission: any) => {
+                    // Normalize level to tier format (tier1, tier2, tier3)
+                    const tierLevel = submission.level === 'Basic' || submission.level === 'tier1' ? 'tier1' :
+                                     submission.level === 'Full' || submission.level === 'tier2' ? 'tier2' :
+                                     submission.level === 'Advanced' || submission.level === 'tier3' ? 'tier3' :
+                                     submission.level || 'unknown';
+                    
+                    // Find existing submission for this tier
+                    const existingIndex = acc.findIndex((s: any) => {
+                        const sTierLevel = s.level === 'Basic' || s.level === 'tier1' ? 'tier1' :
+                                          s.level === 'Full' || s.level === 'tier2' ? 'tier2' :
+                                          s.level === 'Advanced' || s.level === 'tier3' ? 'tier3' :
+                                          s.level || 'unknown';
+                        return sTierLevel === tierLevel;
+                    });
+                    
+                    if (existingIndex === -1) {
+                        // No existing submission for this tier, add it
+                        acc.push({ ...submission, normalizedLevel: tierLevel });
+                    } else {
+                        // Compare timestamps and keep the most recent
+                        const existing = acc[existingIndex];
+                        const existingTime = new Date(existing.createdAt).getTime();
+                        const newTime = new Date(submission.createdAt).getTime();
+                        
+                        if (newTime > existingTime) {
+                            // Replace with newer submission
+                            acc[existingIndex] = { ...submission, normalizedLevel: tierLevel };
+                        }
+                    }
+                    
+                    return acc;
+                }, []);
+                
+                // Sort by tier level (tier1, tier2, tier3) and then by creation date
+                deduplicatedSubmissions.sort((a, b) => {
+                    const tierOrder: { [key: string]: number } = { tier1: 1, tier2: 2, tier3: 3, unknown: 4 };
+                    const aOrder = tierOrder[a.normalizedLevel] || 4;
+                    const bOrder = tierOrder[b.normalizedLevel] || 4;
+                    
+                    if (aOrder !== bOrder) {
+                        return aOrder - bOrder;
+                    }
+                    
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                });
+                
+                setKycSubmissions(deduplicatedSubmissions);
             } catch (err: any) {
                 // Only show error if it's not a storage bucket error (which is expected for tier1 users)
                 if (err.response?.status !== 500 || 
@@ -567,21 +618,24 @@ export default function CustomerDetailsPage() {
                                                             <div><p className="text-muted-foreground flex items-center gap-1"><KeyRound className="h-4 w-4"/> SSN</p><p className="font-medium pl-5 font-mono">{formatSensitiveValue(customer.ssn || customer.ssnLast4, 'ssn')}</p></div>
                                                         )}
                                                         {(customer.address || customer.street || customer.city) && (
-                                                            <div className="col-span-2 md:col-span-1"><p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-4 w-4"/> Address</p><div className="pl-5 text-sm space-y-0.5">
-                                                                {(customer.address?.street || customer.street) && (
-                                                                    <p className="font-medium">{(customer.address?.street || customer.street)}</p>
-                                                                )}
-                                                                {(() => {
-                                                                    const city = customer.address?.city || customer.city;
-                                                                    const state = customer.address?.state || customer.state;
-                                                                    const postalCode = customer.address?.postalCode || customer.zip;
-                                                                    const addressLine = [city, state, postalCode].filter(Boolean).join(', ');
-                                                                    return addressLine ? <p className="font-medium">{addressLine}</p> : null;
-                                                                })()}
-                                                                {(customer.address?.country || customer.country) && (
-                                                                    <p className="text-muted-foreground">{customer.address?.country || customer.country}</p>
-                                                                )}
-                                                            </div></div>
+                                                            <div className="col-span-2 md:col-span-1">
+                                                                <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-4 w-4"/> Address</p>
+                                                                <div className="pl-5 text-sm space-y-0.5">
+                                                                    {(customer.address?.street || customer.street) && (
+                                                                        <p className="font-medium">{(customer.address?.street || customer.street)}</p>
+                                                                    )}
+                                                                    {(() => {
+                                                                        const city = customer.address?.city || customer.city;
+                                                                        const state = customer.address?.state || customer.state;
+                                                                        const postalCode = customer.address?.postalCode || customer.zip;
+                                                                        const addressLine = [city, state, postalCode].filter(Boolean).join(', ');
+                                                                        return addressLine ? <p className="font-medium">{addressLine}</p> : null;
+                                                                    })()}
+                                                                    {(customer.address?.country || customer.country) && (
+                                                                        <p className="text-muted-foreground">{customer.address?.country || customer.country}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         )}
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Activity className="h-4 w-4" /> Last Login</p><p className="font-medium pl-5">{customer.lastLoginAt ? new Date(toDate(customer.lastLoginAt)!).toLocaleString() : <span className="text-muted-foreground">Never</span>}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Last IP</p><p className="font-medium pl-5 font-mono">{customer.lastLoginIp || <span className="text-muted-foreground">Not available</span>}</p></div>
@@ -760,7 +814,12 @@ export default function CustomerDetailsPage() {
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <p className="font-semibold">Level: {submission.level}</p>
+                                                        <p className="font-semibold">
+                                                            {submission.normalizedLevel === 'tier1' ? 'Tier 1' :
+                                                             submission.normalizedLevel === 'tier2' ? 'Tier 2' :
+                                                             submission.normalizedLevel === 'tier3' ? 'Tier 3' :
+                                                             submission.level || 'Unknown'}
+                                                        </p>
                                                         <Badge 
                                                             variant={
                                                                 submission.status === 'approved' ? 'default' :
