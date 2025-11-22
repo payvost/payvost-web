@@ -115,6 +115,7 @@ services:
     env: node
     buildCommand: cd backend/services/webhooks && npm install && npm run build
     startCommand: cd backend/services/webhooks && npm start
+    # Note: buildCommand automatically runs prisma generate
     envVars:
       - key: WEBHOOK_SERVICE_PORT
         value: 3008
