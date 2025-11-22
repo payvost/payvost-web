@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/site-header';
@@ -13,7 +13,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { contentService, Content } from '@/services/contentService';
 import { format } from 'date-fns';
 
-export default function HelpCenterPage() {
+function HelpCenterContent() {
     const searchParams = useSearchParams();
     const [articles, setArticles] = useState<Content[]>([]);
     const [loading, setLoading] = useState(true);
@@ -271,6 +271,51 @@ export default function HelpCenterPage() {
             </main>
             <SiteFooter />
         </div>
+    );
+}
+
+export default function HelpCenterPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col min-h-screen">
+                <SiteHeader />
+                <main className="flex-1">
+                    <section className="w-full bg-muted">
+                        <div className="py-20 md:py-28 lg:py-32">
+                            <div className="container px-4 md:px-6 text-center">
+                                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
+                                    Help Center
+                                </h1>
+                                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl mt-4">
+                                    Find answers to common questions and learn how to get the most out of Payvost.
+                                </p>
+                                <div className="mx-auto mt-6 max-w-2xl">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                        <Input
+                                            type="search"
+                                            placeholder="Search for answers..."
+                                            className="w-full rounded-full bg-background py-6 pl-12 pr-4 text-lg"
+                                            disabled
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section className="w-full py-12 md:py-20 lg:py-24">
+                        <div className="container px-4 md:px-6">
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        </div>
+                    </section>
+                </main>
+                <SiteFooter />
+            </div>
+        }>
+            <HelpCenterContent />
+        </Suspense>
     );
 }
 
