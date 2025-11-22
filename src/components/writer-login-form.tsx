@@ -44,7 +44,7 @@ export function WriterLoginForm() {
       const data = await response.json()
 
       // Step 4: Redirect to writer dashboard
-      router.push("/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard")
+      router.push("/cms-9dj93abkD0ncfhDpLw_KIA/dashboard")
       router.refresh()
     } catch (error: any) {
       console.error("Login error:", error)

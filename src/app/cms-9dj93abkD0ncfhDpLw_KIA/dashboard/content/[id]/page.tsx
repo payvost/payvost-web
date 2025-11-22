@@ -75,7 +75,7 @@ export default function ContentEditPage() {
       });
       
       if (isNew) {
-        router.push('/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard/content');
+        router.push('/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content');
       }
     } catch (error) {
       toast({
@@ -101,7 +101,7 @@ export default function ContentEditPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard/content">
+            <Link href="/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>

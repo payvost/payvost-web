@@ -17,7 +17,7 @@ export default function BlogPostsPage() {
             Create and manage blog articles
           </p>
         </div>
-        <Button onClick={() => router.push('/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard/content/blog/new')}>
+        <Button onClick={() => router.push('/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content/blog/new')}>
           <PlusCircle className="mr-2 h-4 w-4" />
           New Blog Post
         </Button>

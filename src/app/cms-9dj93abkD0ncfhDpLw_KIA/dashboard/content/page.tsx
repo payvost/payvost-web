@@ -83,7 +83,7 @@ export default function ContentListPage() {
             Manage all your content in one place
           </p>
         </div>
-        <Button onClick={() => router.push('/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard/content/new')}>
+        <Button onClick={() => router.push('/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content/new')}>
           <PlusCircle className="mr-2 h-4 w-4" />
           New Content
         </Button>
@@ -154,7 +154,7 @@ export default function ContentListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard/content/${item.id}`}>
+                            <Link href={`/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content/${item.id}`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </Link>

@@ -4,7 +4,7 @@
 A secure, separate writer's panel has been created for content creators to manage blog posts, press releases, documentation, and knowledge base articles without accessing the admin dashboard.
 
 ## Secure URL
-**Writer Panel URL:** `/writer-panel-9dj93abkD0ncfhDpLw_KIA`
+**Writer Panel URL:** `/cms-9dj93abkD0ncfhDpLw_KIA`
 
 This URL is:
 - Unique and hard to predict
@@ -37,7 +37,7 @@ npx prisma generate
 
 #### Routes Created:
 ```
-/writer-panel-9dj93abkD0ncfhDpLw_KIA/
+/cms-9dj93abkD0ncfhDpLw_KIA/
 ├── login/                    # Login page
 ├── unauthorized/             # Access denied page
 └── dashboard/

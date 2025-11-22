@@ -14,7 +14,7 @@ export default function UnauthorizedPage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Button asChild variant="outline">
-            <Link href="/writer-panel-9dj93abkD0ncfhDpLw_KIA/login">Back to Login</Link>
+            <Link href="/cms-9dj93abkD0ncfhDpLw_KIA/login">Back to Login</Link>
           </Button>
           <Button asChild>
             <Link href="/">Go to Home</Link>
