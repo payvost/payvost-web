@@ -23,12 +23,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all BUSINESS type accounts from Prisma
+    // Note: Account.userId is a Firebase UID, not a Prisma User ID
     const businessAccounts = await prisma.account.findMany({
       where: {
         type: 'BUSINESS',
-      },
-      include: {
-        user: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -44,17 +42,30 @@ export async function GET(request: NextRequest) {
           const userData = userDoc.data();
 
           // Get business onboarding data
-          const onboardingQuery = await db
-            .collection('business_onboarding')
-            .where('userId', '==', account.userId)
-            .orderBy('createdAt', 'desc')
-            .limit(1)
-            .get();
+          let onboardingData: any = null;
+          try {
+            const onboardingQuery = await db
+              .collection('business_onboarding')
+              .where('userId', '==', account.userId)
+              .limit(1)
+              .get();
+            onboardingData = onboardingQuery.docs[0]?.data();
+          } catch (queryError) {
+            // If orderBy fails due to missing index, try without it
+            try {
+              const onboardingQuery = await db
+                .collection('business_onboarding')
+                .where('userId', '==', account.userId)
+                .limit(1)
+                .get();
+              onboardingData = onboardingQuery.docs[0]?.data();
+            } catch (err) {
+              console.warn(`Could not fetch onboarding data for user ${account.userId}:`, err);
+            }
+          }
 
-          const onboardingData = onboardingQuery.docs[0]?.data();
-
-          // Map KYC status
-          const kycStatus = account.user.kycStatus?.toLowerCase() || 'pending';
+          // Map KYC status from Firestore user data
+          const kycStatus = userData?.kycStatus?.toLowerCase() || 'pending';
           let verificationStatus: BusinessVerificationStatus = 'pending';
           if (kycStatus === 'verified') {
             verificationStatus = 'verified';
@@ -66,7 +77,7 @@ export async function GET(request: NextRequest) {
 
           // Determine KYC tier based on user tier or default to Tier 1
           let kycTier: BusinessKycTier = 'Tier 1';
-          const userTier = account.user.userTier || 'STANDARD';
+          const userTier = userData?.userTier || userData?.userType || 'STANDARD';
           if (userTier === 'TIER2' || userTier === 'Tier 2') {
             kycTier = 'Tier 2';
           } else if (userTier === 'TIER3' || userTier === 'Tier 3') {
@@ -74,11 +85,11 @@ export async function GET(request: NextRequest) {
           }
 
           // Get business name and sector from onboarding data or user data
-          const businessName = onboardingData?.name || userData?.businessName || account.user.name || 'Unknown Business';
+          const businessName = onboardingData?.name || userData?.businessName || userData?.fullName || userData?.displayName || 'Unknown Business';
           const sector = onboardingData?.industry || userData?.sector || 'General';
-          const country = account.user.country || onboardingData?.address?.split(',').pop()?.trim() || 'Unknown';
+          const country = userData?.country || onboardingData?.address?.split(',').pop()?.trim() || 'Unknown';
           const countryCode = userData?.countryCode || 'US';
-          const contactEmail = onboardingData?.email || account.user.email || '';
+          const contactEmail = onboardingData?.email || userData?.email || '';
 
           // Calculate payment volume from ledger entries (credits only)
           const ledgerEntries = await prisma.ledgerEntry.findMany({
@@ -124,7 +135,7 @@ export async function GET(request: NextRequest) {
             disputeRatio,
             owner: {
               id: account.userId,
-              name: account.user.name || userData?.fullName || userData?.displayName || 'Unknown',
+              name: userData?.fullName || userData?.displayName || userData?.name || 'Unknown',
             },
             activityLog,
             documents,
@@ -134,19 +145,19 @@ export async function GET(request: NextRequest) {
           // Return a minimal entry if there's an error
           return {
             id: account.id,
-            businessName: account.user.name || 'Unknown Business',
+            businessName: 'Unknown Business',
             sector: 'General',
             onboardingDate: account.createdAt.toISOString().split('T')[0],
-            country: account.user.country || 'Unknown',
+            country: 'Unknown',
             countryCode: 'US',
             verificationStatus: 'pending' as BusinessVerificationStatus,
             kycTier: 'Tier 1' as BusinessKycTier,
-            contactEmail: account.user.email || '',
+            contactEmail: '',
             paymentVolume: 0,
             disputeRatio: 0,
             owner: {
               id: account.userId,
-              name: account.user.name || 'Unknown',
+              name: 'Unknown',
             },
             activityLog: [],
             documents: [],

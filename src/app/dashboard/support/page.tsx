@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -141,9 +141,7 @@ function SupportPageContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Tab state for main tabs (Help Center vs My Tickets)
-  const [mainTab, setMainTab] = useState<'help-center' | 'my-tickets'>(
-    (searchParams.get('tab') as 'help-center' | 'my-tickets') || 'help-center'
-  );
+  const [mainTab, setMainTab] = useState<'help-center' | 'my-tickets'>('help-center');
   
   // Tickets state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -155,6 +153,14 @@ function SupportPageContent() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Initialize tab from URL params
+  useEffect(() => {
+    const tab = searchParams.get('tab') as 'help-center' | 'my-tickets';
+    if (tab === 'help-center' || tab === 'my-tickets') {
+      setMainTab(tab);
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -172,21 +178,7 @@ function SupportPageContent() {
     },
   });
 
-  // Fetch recent tickets for widget
-  useEffect(() => {
-    if (user?.uid && mainTab === 'help-center') {
-      fetchRecentTickets();
-    }
-  }, [user, mainTab]);
-
-  // Fetch full tickets list
-  useEffect(() => {
-    if (user?.uid && mainTab === 'my-tickets') {
-      fetchTickets();
-    }
-  }, [user, mainTab, statusFilter, priorityFilter, page, search]);
-
-  const fetchRecentTickets = async () => {
+  const fetchRecentTickets = useCallback(async () => {
     if (!user?.uid) return;
     
     setRecentTicketsLoading(true);
@@ -203,9 +195,9 @@ function SupportPageContent() {
     } finally {
       setRecentTicketsLoading(false);
     }
-  };
+  }, [user?.uid]);
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     if (!user?.uid) return;
     
     setTicketsLoading(true);
@@ -243,7 +235,21 @@ function SupportPageContent() {
     } finally {
       setTicketsLoading(false);
     }
-  };
+  }, [user?.uid, page, statusFilter, priorityFilter, search, toast]);
+
+  // Fetch recent tickets for widget
+  useEffect(() => {
+    if (user?.uid && mainTab === 'help-center') {
+      fetchRecentTickets();
+    }
+  }, [user?.uid, mainTab, fetchRecentTickets]);
+
+  // Fetch full tickets list
+  useEffect(() => {
+    if (user?.uid && mainTab === 'my-tickets') {
+      fetchTickets();
+    }
+  }, [user?.uid, mainTab, fetchTickets]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -274,13 +280,15 @@ function SupportPageContent() {
     const newTab = value as 'help-center' | 'my-tickets';
     setMainTab(newTab);
     // Update URL without navigation
-    const url = new URL(window.location.href);
-    if (newTab === 'help-center') {
-      url.searchParams.delete('tab');
-    } else {
-      url.searchParams.set('tab', newTab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (newTab === 'help-center') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', newTab);
+      }
+      window.history.replaceState({}, '', url.toString());
     }
-    window.history.replaceState({}, '', url.toString());
   };
 
   const formatFileSize = (bytes: number): string => {
