@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { ValidationError } from '../../gateway/index';
 
@@ -196,7 +195,7 @@ export async function listTickets(filters: TicketFilters = {}) {
   const skip = (page - 1) * limit;
 
   // Build where clause
-  const where: Prisma.SupportTicketWhereInput = {};
+  const where: any = {};
 
   if (status) {
     if (Array.isArray(status)) {
@@ -235,7 +234,7 @@ export async function listTickets(filters: TicketFilters = {}) {
   }
 
   // Build orderBy
-  const orderBy: Prisma.SupportTicketOrderByWithRelationInput = {};
+  const orderBy: any = {};
   if (sortBy === 'priority') {
     // Custom priority ordering: URGENT > HIGH > MEDIUM > LOW
     orderBy.priority = sortOrder;
@@ -301,7 +300,7 @@ export async function updateTicket(
   input: UpdateTicketInput,
   updatedById?: string
 ) {
-  const updateData: Prisma.SupportTicketUpdateInput = {};
+  const updateData: any = {};
 
   if (input.subject !== undefined) updateData.subject = input.subject;
   if (input.description !== undefined) updateData.description = input.description;
@@ -408,7 +407,7 @@ export async function addMessage(
  * Get ticket statistics
  */
 export async function getTicketStats(assignedToId?: string) {
-  const where: Prisma.SupportTicketWhereInput = {};
+  const where: any = {};
   if (assignedToId) {
     where.assignedToId = assignedToId;
   }
@@ -450,11 +449,11 @@ export async function getTicketStats(assignedToId?: string) {
       resolved,
       closed,
     },
-    byPriority: byPriority.reduce((acc, item) => {
+    byPriority: byPriority.reduce((acc: Record<string, number>, item: any) => {
       acc[item.priority] = item._count;
       return acc;
     }, {} as Record<string, number>),
-    byStatusGrouped: byStatus.reduce((acc, item) => {
+    byStatusGrouped: byStatus.reduce((acc: Record<string, number>, item: any) => {
       acc[item.status] = item._count;
       return acc;
     }, {} as Record<string, number>),
@@ -544,7 +543,7 @@ export async function listChatSessions(filters: ChatFilters = {}) {
 
   const skip = (page - 1) * limit;
 
-  const where: Prisma.ChatSessionWhereInput = {};
+  const where: any = {};
 
   if (status) {
     if (Array.isArray(status)) {
@@ -704,7 +703,7 @@ export async function addChatMessage(
  * Get chat statistics
  */
 export async function getChatStats(agentId?: string) {
-  const where: Prisma.ChatSessionWhereInput = {};
+  const where: any = {};
   if (agentId) {
     where.agentId = agentId;
   }
