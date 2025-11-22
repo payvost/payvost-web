@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { ContentService } from './src/content-service';
+import { ContentService, ContentType, ContentStatus } from './src/content-service';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { prisma } from '../../common/prisma';
-import { ContentType, ContentStatus } from '@prisma/client';
 
 const router = Router();
 const contentService = new ContentService(prisma);
@@ -126,7 +125,7 @@ router.post('/', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Res
     }
 
     // Get user name from request or use email
-    const authorName = req.user?.name || req.user?.email || 'Unknown';
+    const authorName = req.user?.email || 'Unknown';
 
     const content = await contentService.createContent({
       ...req.body,
