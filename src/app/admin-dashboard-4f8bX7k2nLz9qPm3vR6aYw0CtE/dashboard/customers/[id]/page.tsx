@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2, TrendingUp, MapPin } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, Calendar, Globe, User, Shield, BarChart, Wallet, MessageSquareWarning, Repeat, Power, CircleDollarSign, Briefcase, CreditCard, Landmark, KeyRound, Lock, Unlock, Activity, Settings, CheckCircle2, XCircle, Bell, BarChart3, ListChecks, IdCard, Download, FileText, ExternalLink, Loader2, TrendingUp, MapPin, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -80,6 +80,10 @@ export default function CustomerDetailsPage() {
     const [processingTier1Decision, setProcessingTier1Decision] = useState(false);
     const [tier1RejectReason, setTier1RejectReason] = useState('');
     const [tier1RejectDialogOpen, setTier1RejectDialogOpen] = useState(false);
+    
+    // Business KYC state
+    const [businessOnboarding, setBusinessOnboarding] = useState<any>(null);
+    const [loadingBusinessKyc, setLoadingBusinessKyc] = useState(false);
 
     // Helpers
     const toDate = (date: any): Date | null => {
@@ -176,6 +180,29 @@ export default function CustomerDetailsPage() {
 
         if (id) {
             fetchCustomer();
+        }
+    }, [id]);
+
+    // Fetch business onboarding data
+    useEffect(() => {
+        const fetchBusinessOnboarding = async () => {
+            if (!id) return;
+            try {
+                setLoadingBusinessKyc(true);
+                const response = await axios.get(`/api/admin/business-onboarding/submissions?userId=${id}`);
+                if (response.data && response.data.length > 0) {
+                    setBusinessOnboarding(response.data[0]); // Get the most recent submission
+                }
+            } catch (err) {
+                console.error('Error fetching business onboarding:', err);
+                // Business onboarding might not exist, which is fine
+            } finally {
+                setLoadingBusinessKyc(false);
+            }
+        };
+
+        if (id) {
+            fetchBusinessOnboarding();
         }
     }, [id]);
 
@@ -657,6 +684,102 @@ export default function CustomerDetailsPage() {
                                                     </CardContent>
                                                 )}
                     </Card>
+
+                    {/* Business KYC Card */}
+                    {businessOnboarding && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Building2 className="h-5 w-5" />
+                                    Business KYC
+                                </CardTitle>
+                                <CardDescription>Business onboarding and verification status</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Business Name</p>
+                                        <p className="font-medium">{businessOnboarding.name || businessOnboarding.businessName || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Status</p>
+                                        <Badge 
+                                            variant={
+                                                businessOnboarding.status === 'approved' ? 'default' :
+                                                businessOnboarding.status === 'rejected' ? 'destructive' :
+                                                businessOnboarding.status === 'under_review' || businessOnboarding.status === 'pending_review' ? 'secondary' :
+                                                'outline'
+                                            }
+                                        >
+                                            {businessOnboarding.status || 'submitted'}
+                                        </Badge>
+                                    </div>
+                                    {businessOnboarding.businessType && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Business Type</p>
+                                            <p className="font-medium">{businessOnboarding.businessType}</p>
+                                        </div>
+                                    )}
+                                    {businessOnboarding.industry && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Industry</p>
+                                            <p className="font-medium">{businessOnboarding.industry}</p>
+                                        </div>
+                                    )}
+                                    {businessOnboarding.registrationNumber && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Registration Number</p>
+                                            <p className="font-medium font-mono">{businessOnboarding.registrationNumber}</p>
+                                        </div>
+                                    )}
+                                    {businessOnboarding.taxId && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Tax ID</p>
+                                            <p className="font-medium font-mono">{businessOnboarding.taxId}</p>
+                                        </div>
+                                    )}
+                                    {businessOnboarding.submittedAt && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Submitted</p>
+                                            <p className="font-medium">
+                                                {typeof businessOnboarding.submittedAt === 'string' 
+                                                    ? new Date(businessOnboarding.submittedAt).toLocaleString()
+                                                    : businessOnboarding.submittedAt.toDate?.().toLocaleString() || 'N/A'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {businessOnboarding.reviewedAt && (
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Reviewed</p>
+                                            <p className="font-medium">
+                                                {typeof businessOnboarding.reviewedAt === 'string' 
+                                                    ? new Date(businessOnboarding.reviewedAt).toLocaleString()
+                                                    : businessOnboarding.reviewedAt.toDate?.().toLocaleString() || 'N/A'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                                {businessOnboarding.adminResponse && (
+                                    <>
+                                        <Separator />
+                                        <div>
+                                            <p className="text-sm text-muted-foreground mb-1">Admin Response</p>
+                                            <p className="text-sm">{businessOnboarding.adminResponse}</p>
+                                        </div>
+                                    </>
+                                )}
+                                {businessOnboarding.rejectionReason && (
+                                    <>
+                                        <Separator />
+                                        <div>
+                                            <p className="text-sm text-destructive mb-1">Rejection Reason</p>
+                                            <p className="text-sm text-destructive">{businessOnboarding.rejectionReason}</p>
+                                        </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Tier1 Review Card - Show for tier1 pending users */}
                     {customer.kycTier === 'tier1' && 

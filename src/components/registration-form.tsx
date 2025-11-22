@@ -37,12 +37,14 @@ import {
   SUPPORTED_COUNTRIES,
   DEFAULT_KYC_CONFIG,
   KYC_DYNAMIC_FIELD_NAMES,
+  getCountryIdTypes,
   type CountryKycConfig,
   type KycTierConfig,
   type KycTierKey,
   type SupportedCountry,
 } from '@/config/kyc-config';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -141,6 +143,8 @@ const registrationSchema = z
     city: z.string().min(2, 'City is required'),
     state: z.string().min(2, 'State/Province is required'),
     zip: z.string().min(4, 'ZIP/Postal code is required'),
+    idType: z.string().min(1, 'ID Type is required'),
+    idNumber: z.string().min(1, 'ID Number is required'),
     agreeTerms: z.boolean().refine((val) => val === true, {
       message: 'You must agree to the terms and conditions',
     }),
@@ -163,7 +167,7 @@ const steps = [
   {
     id: 2,
     name: 'Identity Verification',
-    fields: ['agreeTerms'],
+    fields: ['idType', 'idNumber', 'agreeTerms'],
   },
 ];
 
@@ -1030,6 +1034,8 @@ export function RegistrationForm() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         bvn: tier1AdditionalValues.bvn ?? '',
+        idType: data.idType || '',
+        idNumber: data.idNumber || '',
       };
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });
@@ -1514,6 +1520,63 @@ export function RegistrationForm() {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Identity Information</h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="idType">
+                    ID Type <span className="text-destructive">*</span>
+                  </Label>
+                  <Controller
+                    name="idType"
+                    control={control}
+                    rules={{ required: 'ID Type is required' }}
+                    render={({ field }) => {
+                      const idTypes = countryValue ? getCountryIdTypes(countryValue) : [];
+                      return (
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          disabled={isLoading || !countryValue}
+                        >
+                          <SelectTrigger id="idType">
+                            <SelectValue placeholder={countryValue ? "Select ID type" : "Select country first"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {idTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    }}
+                  />
+                  {shouldShowError('idType') && errors.idType && (
+                    <p className="text-sm text-destructive">{errors.idType.message as string}</p>
+                  )}
+                  {!countryValue && (
+                    <p className="text-xs text-muted-foreground">Please select your country first</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="idNumber">
+                    ID Number <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="idNumber"
+                    placeholder="Enter your ID number"
+                    disabled={isLoading}
+                    {...register('idNumber', { required: 'ID Number is required' })}
+                  />
+                  {shouldShowError('idNumber') && errors.idNumber && (
+                    <p className="text-sm text-destructive">{errors.idNumber.message as string}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {tier1Fields.length > 0 && (

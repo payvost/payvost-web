@@ -95,42 +95,38 @@ export interface TicketStats {
   byStatusGrouped: Record<string, number>;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-/**
- * Get authentication token from Firebase
- */
-async function getAuthToken(): Promise<string | null> {
-  try {
-    const { auth } = await import('@/lib/firebase');
-    const user = auth.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Make authenticated API request
+ * Uses Next.js API routes which proxy to backend
  */
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = await getAuthToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  // Get auth token for Authorization header
+  try {
+    const { auth } = await import('@/lib/firebase');
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  } catch {
+    // Ignore auth errors - session cookie will be used
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  // Use relative URL to hit Next.js API routes
+  const response = await fetch(endpoint, {
     ...options,
     headers,
+    credentials: 'include', // Include cookies
   });
 
   if (!response.ok) {
@@ -176,7 +172,8 @@ export const supportService = {
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-    return apiRequest<TicketListResponse>(`/api/support/tickets?${params.toString()}`);
+    const queryString = params.toString();
+    return apiRequest<TicketListResponse>(`/api/support/tickets${queryString ? `?${queryString}` : ''}`);
   },
 
   /**
@@ -264,7 +261,8 @@ export const supportService = {
   async getStats(assignedToId?: string): Promise<TicketStats> {
     const params = new URLSearchParams();
     if (assignedToId) params.append('assignedToId', assignedToId);
-    return apiRequest<TicketStats>(`/api/support/tickets/stats?${params.toString()}`);
+    const queryString = params.toString();
+    return apiRequest<TicketStats>(`/api/support/tickets/stats${queryString ? `?${queryString}` : ''}`);
   },
 
   // ==================== Chat Session Methods ====================
@@ -359,7 +357,8 @@ export const supportService = {
   async getChatStats(agentId?: string): Promise<any> {
     const params = new URLSearchParams();
     if (agentId) params.append('agentId', agentId);
-    return apiRequest(`/api/support/chat/stats?${params.toString()}`);
+    const queryString = params.toString();
+    return apiRequest(`/api/support/chat/stats${queryString ? `?${queryString}` : ''}`);
   },
 };
 

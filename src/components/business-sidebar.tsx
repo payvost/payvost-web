@@ -130,10 +130,27 @@ export function BusinessSidebar() {
     return { label: 'Needs Attention', color: 'bg-red-500/10 text-red-700 dark:text-red-400', icon: AlertCircle };
   };
 
-  const businessName = businessProfile?.legalName || 'Business';
+  const businessName = businessProfile?.legalName || businessProfile?.name || 'Business';
   const businessLogo = businessProfile?.logoUrl;
+  const businessStatus = businessProfile?.status || 'pending';
   const healthStatus = getHealthStatus(healthScore);
   const HealthIcon = healthStatus.icon;
+
+  const getBusinessStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return { label: 'Verified', color: 'bg-green-500/10 text-green-700 dark:text-green-400' };
+      case 'rejected':
+        return { label: 'Rejected', color: 'bg-red-500/10 text-red-700 dark:text-red-400' };
+      case 'under_review':
+      case 'pending_review':
+        return { label: 'Under Review', color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' };
+      default:
+        return { label: 'Pending', color: 'bg-muted text-muted-foreground' };
+    }
+  };
+
+  const businessStatusBadge = getBusinessStatusBadge(businessStatus);
 
   const BusinessHeaderDropdown = ({ className }: { className?: string }) => (
     <DropdownMenu>
@@ -142,21 +159,28 @@ export function BusinessSidebar() {
           <div className="flex flex-col gap-2">
             {/* BU and Business Name */}
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
-                <span className="text-xs font-medium text-sidebar-foreground">BU</span>
-              </div>
+              {businessLogo ? (
+                <img src={businessLogo} alt={businessName} className="h-8 w-8 shrink-0 rounded object-cover" />
+              ) : (
+                <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
+                  <span className="text-xs font-medium text-sidebar-foreground">{businessName.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium text-sidebar-foreground truncate">
-                    Business
+                    {businessName}
                   </span>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" />
                 </div>
               </div>
             </div>
             
-            {/* Not Available Status */}
-            <div className="flex items-center justify-center">
+            {/* Business Status and Health Score */}
+            <div className="flex items-center justify-between gap-2">
+              <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-normal", businessStatusBadge.color)}>
+                {businessStatusBadge.label}
+              </div>
               <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-normal", healthStatus.color)}>
                 {healthStatus.label}
               </div>
