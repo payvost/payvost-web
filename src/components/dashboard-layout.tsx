@@ -126,11 +126,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', comingSoon: false, isNew: true },
   ];
 
-  const supportItems = [
-    { href: '/dashboard/support', icon: <LifeBuoy strokeWidth={2.5} />, label: 'Support Center' },
-    { href: '/dashboard/tickets', icon: <Ticket strokeWidth={2.5} />, label: 'My Tickets' },
-  ];
-
   const isActive = (href: string) => {
     // Exact match for parent routes, prefix match for others.
     if (href === '/dashboard') {
@@ -186,21 +181,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     ))}
                  </SidebarMenu>
                  </SidebarGroup>
-            <SidebarGroup>
-                <SidebarGroupLabel>Support</SidebarGroupLabel>
-                 <SidebarMenu>
-                    {supportItems.map(item => (
-                        <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                                <Link href={item.href}>
-                                    {item.icon}
-                                    {item.label}
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                 </SidebarMenu>
-            </SidebarGroup>
                  <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
                     <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
                     <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
