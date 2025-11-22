@@ -208,6 +208,7 @@ export function RegistrationForm() {
     setError,
     clearErrors,
     formState: { errors },
+    getValues,
   } = useForm<FormValues>({
     resolver: zodResolver(registrationSchema),
     mode: 'onTouched',
@@ -219,6 +220,71 @@ export function RegistrationForm() {
         city: ''
     }
   });
+
+  // Restore form data from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem('registration_progress');
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        // Restore form values (excluding sensitive fields and files)
+        if (parsed.fullName) setValue('fullName', parsed.fullName, { shouldDirty: false });
+        if (parsed.username) setValue('username', parsed.username, { shouldDirty: false });
+        if (parsed.email) setValue('email', parsed.email, { shouldDirty: false });
+        if (parsed.countryCode) setValue('countryCode', parsed.countryCode, { shouldDirty: false });
+        if (parsed.phone) setValue('phone', parsed.phone, { shouldDirty: false });
+        if (parsed.country) setValue('country', parsed.country, { shouldDirty: false });
+        if (parsed.state) setValue('state', parsed.state, { shouldDirty: false });
+        if (parsed.city) setValue('city', parsed.city, { shouldDirty: false });
+        if (parsed.street) setValue('street', parsed.street, { shouldDirty: false });
+        if (parsed.zip) setValue('zip', parsed.zip, { shouldDirty: false });
+        if (parsed.dateOfBirth) setValue('dateOfBirth', new Date(parsed.dateOfBirth), { shouldDirty: false });
+        if (parsed.agreeTerms) setValue('agreeTerms', parsed.agreeTerms, { shouldDirty: false });
+        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+      console.error('Failed to restore registration progress:', e);
+    }
+  }, [setValue]);
+
+  // Save form data to localStorage on field changes (debounced)
+  useEffect(() => {
+    const subscription = watch((value) => {
+      // Don't save passwords or files to localStorage
+      const dataToSave = {
+        fullName: value.fullName,
+        username: value.username,
+        email: value.email,
+        countryCode: value.countryCode,
+        phone: value.phone,
+        country: value.country,
+        state: value.state,
+        city: value.city,
+        street: value.street,
+        zip: value.zip,
+        dateOfBirth: value.dateOfBirth?.toISOString(),
+        agreeTerms: value.agreeTerms,
+        currentStep,
+      };
+      
+      try {
+        localStorage.setItem('registration_progress', JSON.stringify(dataToSave));
+      } catch (e) {
+        // Ignore localStorage errors (quota exceeded, etc.)
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [watch, currentStep]);
+  // Reserved usernames (should match backend list)
+  const RESERVED_USERNAMES = [
+    'admin', 'administrator', 'root', 'system', 'api', 'support', 'help',
+    'info', 'contact', 'sales', 'marketing', 'legal', 'privacy', 'terms',
+    'about', 'team', 'careers', 'blog', 'news', 'status', 'security',
+    'payvost', 'payvostadmin', 'official', 'verify', 'verification'
+  ];
+
   // Real-time username availability (debounced)
   const usernameValue = watch('username');
   const countryValue = watch('country');
@@ -249,8 +315,16 @@ export function RegistrationForm() {
   useEffect(() => {
     let active = true;
     const check = async () => {
-      const name = (usernameValue || '').trim();
+      const name = (usernameValue || '').trim().toLowerCase();
       if (!name || name.length < 3) { setUsernameAvailable(null); return; }
+      
+      // Check if username is reserved
+      if (RESERVED_USERNAMES.includes(name)) {
+        setUsernameAvailable(false);
+        setCheckingUsername(false);
+        return;
+      }
+      
       setCheckingUsername(true);
       try {
         const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', name), fsLimit(1));
@@ -722,6 +796,11 @@ export function RegistrationForm() {
 
     // Ensure username still available before proceeding past step containing username
     if (steps[currentStep].fields.includes('username')) {
+      const username = usernameValue?.trim().toLowerCase();
+      if (username && RESERVED_USERNAMES.includes(username)) {
+        toast({ title: 'Reserved username', description: 'This username is reserved and cannot be used. Please choose a different username.', variant: 'destructive' });
+        return;
+      }
       if (usernameAvailable === false) {
         toast({ title: 'Username unavailable', description: 'Please choose a different username.', variant: 'destructive' });
         return;
@@ -803,9 +882,10 @@ export function RegistrationForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: data.email,
+          email: data.email.trim().toLowerCase(),
           password: data.password,
-          displayName: data.fullName,
+          displayName: data.fullName.trim(),
+          username: data.username.trim(),
           phoneNumber: `+${data.countryCode}${data.phone}`,
           countryCode: data.country,
           userType: 'Pending',
@@ -813,8 +893,17 @@ export function RegistrationForm() {
       });
 
       if (!registerResponse.ok) {
-        const error = await registerResponse.json();
-        throw new Error(error.error || 'Registration failed');
+        const errorData = await registerResponse.json();
+        const errorMessage = errorData.message || errorData.error || 'Registration failed. Please try again.';
+        
+        // Handle rate limiting
+        if (registerResponse.status === 429) {
+          const retryAfter = errorData.retryAfter || 3600;
+          const minutes = Math.ceil(retryAfter / 60);
+          throw new Error(`Too many registration attempts. Please try again after ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+        }
+        
+        throw new Error(errorMessage);
       }
 
   const { customToken } = await registerResponse.json();
@@ -839,7 +928,28 @@ export function RegistrationForm() {
         photoURL: photoURL,
       });
       
-      // 5. Update the user document in Firestore with additional details
+      // 5. Calculate risk score based on user data
+      const calculateRiskScore = (): number => {
+        let score = 50; // Base score
+        
+        // Lower risk for older accounts (future consideration)
+        // Higher risk for incomplete profiles
+        if (!photoURL) score += 10;
+        if (!data.phone) score += 10;
+        if (!data.street || !data.city) score += 5;
+        
+        // Lower risk for verified email (if verified)
+        // This will be updated later when email is verified
+        
+        // Country-based risk adjustment (simplified)
+        // High-risk countries could increase score, but we'll keep neutral for now
+        
+        // Clamp score between 0 and 100
+        return Math.max(0, Math.min(100, score));
+      };
+      
+      // 6. Update the user document in Firestore with additional details
+      // Use merge to prevent overwriting if API already created basic doc
       const userDocRef = doc(db, "users", user.uid);
       const resolvedCountry = selectedCountryOption ?? countryOptions.find((option) => option.iso2 === data.country) ?? null;
       const locationPayload: Record<string, unknown> = {
@@ -869,8 +979,8 @@ export function RegistrationForm() {
         phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
-    country: data.country,
-    countryName: resolvedCountry?.name ?? '',
+        country: data.country,
+        countryName: resolvedCountry?.name ?? '',
         street: data.street,
         city: data.city,
         state: data.state,
@@ -901,48 +1011,96 @@ export function RegistrationForm() {
           },
         },
         userType: 'Pending' as const,
-        riskScore: Math.floor(Math.random() * 30),
+        riskScore: calculateRiskScore(),
         totalSpend: 0,
         wallets: [],
         transactions: [],
         beneficiaries: [],
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         bvn: tier1AdditionalValues.bvn ?? '',
       };
-      await setDoc(userDocRef, firestoreData);
+      // Use setDoc with merge to avoid overwriting if API already created user doc
+      await setDoc(userDocRef, firestoreData, { merge: true });
 
-  // Open PIN setup dialog before redirecting
-  setNewlyCreatedUserId(user.uid);
-  setPinDialogOpen(true);
+      // 7. Send email verification immediately (before PIN setup)
+      try {
+        await sendEmailVerification(user);
+        toast({ 
+          title: 'Verification email sent', 
+          description: 'Please check your email to verify your account.',
+          duration: 5000,
+        });
+      } catch (emailError: unknown) {
+        // Don't block registration if email fails, but log it
+        console.error('Failed to send verification email:', emailError);
+        toast({ 
+          title: 'Registration successful', 
+          description: 'We\'ll send a verification email shortly. You can also request a new one from your profile.',
+          variant: 'default',
+        });
+      }
 
+      // 8. Send welcome notification
+      try {
+        const notificationsColRef = collection(db, "users", user.uid, "notifications");
+        await addDoc(notificationsColRef, {
+          icon: 'gift',
+          title: 'Welcome to Payvost!',
+          description: 'We are thrilled to have you with us. Explore the features and start transacting globally.',
+          date: serverTimestamp(),
+          read: false,
+        });
+      } catch (notifError) {
+        // Don't block registration if notification fails
+        console.error('Failed to create welcome notification:', notifError);
+      }
 
-      // 6. Send welcome notification
-      const notificationsColRef = collection(db, "users", user.uid, "notifications");
-      await addDoc(notificationsColRef, {
-        icon: 'gift',
-        title: 'Welcome to Payvost!',
-        description: 'We are thrilled to have you with us. Explore the features and start transacting globally.',
-        date: serverTimestamp(),
-        read: false,
-      });
-      
-      // We will send verification email after PIN is set (in onPinCompleted)
+      // 9. Open PIN setup dialog before redirecting
+      setNewlyCreatedUserId(user.uid);
+      setPinDialogOpen(true);
 
     } catch (error: unknown) {
       console.error("Registration process failed:", error);
       let errorMessage = "An unknown error occurred during registration.";
+      let errorTitle = "Registration Failed";
+      
       const errorDetails = isErrorWithCode(error) ? error : null;
+      
+      // Handle specific error codes
       if (errorDetails?.code === 'auth/email-already-in-use') {
+        errorTitle = "Email Already Registered";
         errorMessage = 'This email is already registered. Please login or use a different email.';
+      } else if (errorDetails?.code === 'auth/weak-password') {
+        errorTitle = "Weak Password";
+        errorMessage = 'Password does not meet security requirements. Please use a stronger password.';
       } else if (errorDetails?.code === 'storage/unauthorized') {
-        errorMessage = 'There was a permission issue uploading your documents. Please check storage rules.';
-      } else if (errorDetails?.message) {
-        errorMessage = errorDetails.message;
+        errorTitle = "Upload Permission Error";
+        errorMessage = 'There was a permission issue uploading your photo. Please try again or contact support.';
+      } else if (errorDetails?.code === 'auth/too-many-requests') {
+        errorTitle = "Too Many Requests";
+        errorMessage = 'Too many registration attempts. Please wait a few minutes and try again.';
+      } else if (error instanceof Error) {
+        // Use the error message from the API or error object
+        errorMessage = error.message;
+        
+        // Check if it's a rate limit error
+        if (error.message.toLowerCase().includes('too many')) {
+          errorTitle = "Rate Limit Exceeded";
+        } else if (error.message.toLowerCase().includes('username')) {
+          errorTitle = "Username Error";
+        } else if (error.message.toLowerCase().includes('password')) {
+          errorTitle = "Password Error";
+        } else if (error.message.toLowerCase().includes('email')) {
+          errorTitle = "Email Error";
+        }
       }
+      
       toast({
-        title: "Registration Failed",
+        title: errorTitle,
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);
@@ -1005,8 +1163,15 @@ export function RegistrationForm() {
                       <Input id="username" {...register('username')} disabled={isLoading} />
                       <div className="text-xs text-muted-foreground h-4">
                         {checkingUsername && <span>Checking availability…</span>}
-                        {!checkingUsername && usernameAvailable === true && <span className="text-green-600">Available</span>}
-                        {!checkingUsername && usernameAvailable === false && <span className="text-destructive">Not available</span>}
+                        {!checkingUsername && usernameValue && RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && (
+                          <span className="text-destructive">Reserved username</span>
+                        )}
+                        {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === true && (
+                          <span className="text-green-600">Available</span>
+                        )}
+                        {!checkingUsername && usernameValue && !RESERVED_USERNAMES.includes(usernameValue.trim().toLowerCase()) && usernameAvailable === false && (
+                          <span className="text-destructive">Not available</span>
+                        )}
                       </div>
                     </div>
                     {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
@@ -1424,19 +1589,18 @@ export function RegistrationForm() {
         open={pinDialogOpen}
         onOpenChange={(open) => setPinDialogOpen(open)}
         onCompleted={async () => {
-          if (!auth.currentUser) return;
+          // Clear registration progress from localStorage
           try {
-            await sendEmailVerification(auth.currentUser);
-            toast({ title: 'Registration Successful!', description: 'A verification link has been sent to your email.' });
-          } catch (error: unknown) {
-            let message = 'Please check your email later.';
-            if (isErrorWithCode(error) && error.message) {
-              message = error.message;
-            } else if (error instanceof Error && error.message) {
-              message = error.message;
-            }
-            toast({ title: 'Could not send verification email', description: message });
+            localStorage.removeItem('registration_progress');
+          } catch (e) {
+            // Ignore localStorage errors
           }
+          
+          toast({ 
+            title: 'Registration Successful!', 
+            description: 'Your account has been created. Please verify your email to continue.',
+            duration: 5000,
+          });
           router.push('/verify-email');
         }}
         force={true}

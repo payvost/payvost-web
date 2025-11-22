@@ -66,13 +66,35 @@ export function TransactionPinSetupDialog({ userId, open, onOpenChange, onComple
     }
   }, [open]);
 
+  // Common/weak PINs that should be rejected
+  const WEAK_PINS = [
+    '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999',
+    '1234', '4321', '0123', '3210',
+    '1010', '2020', '3030', '4040', '5050', '6060', '7070', '8080', '9090',
+    '1122', '2211', '1212', '2121',
+    '0001', '1000', '1233', '3211',
+    '2468', '1357', '9753', '8642',
+  ];
+
   const pinValid = useMemo(() => /^\d{4}$/.test(pin), [pin]);
   const pinsMatch = pinValid && pin === confirmPin;
+  const isWeakPin = useMemo(() => {
+    if (!pinValid) return false;
+    return WEAK_PINS.includes(pin);
+  }, [pin, pinValid]);
 
   const handleSave = async () => {
     if (!userId) return;
     if (!pinValid) {
       toast({ title: "Invalid PIN", description: "PIN must be exactly 4 digits.", variant: "destructive" });
+      return;
+    }
+    if (isWeakPin) {
+      toast({ 
+        title: "Weak PIN", 
+        description: "This PIN is too common or predictable. Please choose a more secure PIN.", 
+        variant: "destructive" 
+      });
       return;
     }
     if (!pinsMatch) {
@@ -129,6 +151,11 @@ export function TransactionPinSetupDialog({ userId, open, onOpenChange, onComple
                   </InputOTPGroup>
               </InputOTP>
             </div>
+            {isWeakPin && (
+              <p className="text-xs text-destructive mt-1">
+                This PIN is too common or predictable. Please choose a more secure PIN.
+              </p>
+            )}
           </div>
           {/* Confirm PIN */}
           <div className="space-y-2">
