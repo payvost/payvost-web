@@ -11,7 +11,7 @@ export default async function WriterDashboardLayoutWrapper({
   // Server-side session and role verification
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('writer_session')?.value;
-  const basePath = '/writer-panel-9dj93abkD0ncfhDpLw_KIA';
+  const basePath = '/cms-9dj93abkD0ncfhDpLw_KIA';
 
   if (!sessionCookie) {
     redirect(`${basePath}/login`);

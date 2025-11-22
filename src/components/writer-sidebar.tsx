@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 export function WriterSidebar() {
   const pathname = usePathname();
-  const basePath = '/writer-panel-9dj93abkD0ncfhDpLw_KIA/dashboard';
+  const basePath = '/cms-9dj93abkD0ncfhDpLw_KIA/dashboard';
 
   const isActive = (href: string) => {
     if (href === `${basePath}`) {

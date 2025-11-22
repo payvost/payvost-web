@@ -26,7 +26,7 @@ export function WriterHeader() {
       await fetch('/api/auth/writer-session', {
         method: 'DELETE',
       });
-      router.push('/writer-panel-9dj93abkD0ncfhDpLw_KIA/login');
+      router.push('/cms-9dj93abkD0ncfhDpLw_KIA/login');
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);

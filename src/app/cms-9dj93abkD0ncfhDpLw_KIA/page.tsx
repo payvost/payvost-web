@@ -8,7 +8,7 @@ export default function WriterPanelRootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/writer-panel-9dj93abkD0ncfhDpLw_KIA/login');
+    router.replace('/cms-9dj93abkD0ncfhDpLw_KIA/login');
   }, [router]);
 
   return (
