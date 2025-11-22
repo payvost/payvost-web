@@ -14,6 +14,7 @@ import {
   Zap,
   User,
   HelpCircle,
+  PanelLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -118,7 +119,7 @@ export function SupportSidebar() {
             size="icon"
             className="fixed left-4 top-4 z-50 md:hidden"
           >
-            <Icons.menu className="h-5 w-5" />
+            <PanelLeft className="h-5 w-5" />
             <span className="sr-only">Toggle menu</span>
           </Button>
         </SheetTrigger>

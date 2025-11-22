@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { KycStatus } from '@/types/kyc';
 import { normalizeKycStatus } from '@/types/kyc';
+import { DEFAULT_KYC_CONFIG } from '@/config/kyc-config';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -637,8 +638,8 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Ticket className="h-4 w-4"/>ID Type</Label><p className="font-medium">{userData?.idType || 'N/A'}</p></div>
-                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Fingerprint className="h-4 w-4"/>ID Number</Label><p className="font-medium">{userData?.idNumber || 'N/A'}</p></div>
+                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Ticket className="h-4 w-4"/>ID Type</Label><p className="font-medium">{userData?.idType || 'Not provided'}</p></div>
+                            <div className="space-y-1"><Label className="text-muted-foreground flex items-center gap-2"><Fingerprint className="h-4 w-4"/>ID Number</Label><p className="font-medium">{userData?.idNumber || 'Not provided'}</p></div>
                         </div>
                          {userData?.bvn && (
                             <div className="space-y-1">
@@ -704,8 +705,12 @@ export default function ProfilePage() {
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm">
-                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2"/>Higher transaction limits</li>
-                                    <li className="flex items-center"><CheckCircle className="h-4 w-4 text-green-500 mr-2"/>Access to virtual cards</li>
+                                    {DEFAULT_KYC_CONFIG.tiers.tier2.services?.map((service, idx) => (
+                                        <li key={idx} className="flex items-center">
+                                            <CheckCircle className="h-4 w-4 text-green-500 mr-2"/>
+                                            {service}
+                                        </li>
+                                    ))}
                                 </ul>
                             </CardContent>
                              <CardFooter>
@@ -776,14 +781,15 @@ export default function ProfilePage() {
                                     "space-y-2 text-sm",
                                     userData?.kycProfile?.tiers?.tier3?.status === 'locked' && "text-muted-foreground"
                                 )}>
-                                    <li className="flex items-center"><CheckCircle className={cn(
-                                        "h-4 w-4 mr-2",
-                                        userData?.kycProfile?.tiers?.tier3?.status === 'locked' ? "" : "text-green-500"
-                                    )}/>Unlimited transactions</li>
-                                    <li className="flex items-center"><CheckCircle className={cn(
-                                        "h-4 w-4 mr-2",
-                                        userData?.kycProfile?.tiers?.tier3?.status === 'locked' ? "" : "text-green-500"
-                                    )}/>Business account features</li>
+                                    {DEFAULT_KYC_CONFIG.tiers.tier3.services?.map((service, idx) => (
+                                        <li key={idx} className="flex items-center">
+                                            <CheckCircle className={cn(
+                                                "h-4 w-4 mr-2",
+                                                userData?.kycProfile?.tiers?.tier3?.status === 'locked' ? "" : "text-green-500"
+                                            )}/>
+                                            {service}
+                                        </li>
+                                    ))}
                                 </ul>
                             </CardContent>
                             <CardFooter>

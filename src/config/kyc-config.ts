@@ -55,6 +55,7 @@ export interface KycTierConfig {
   additionalFields?: AdditionalFieldConfig[];
   documents?: DocumentRequirement[];
   notes?: string[];
+  services?: string[];
 }
 
 export interface CountryKycConfig {
@@ -265,6 +266,11 @@ const BASE_TIERS: Record<KycTierKey, KycTierConfig> = {
       'Date of birth and residential address',
       'Selfie or profile photo for account security',
     ],
+    services: [
+      'Basic wallet access',
+      'Local transfers',
+      'Account management',
+    ],
   },
   tier2: {
     label: 'Tier 2 – Verified',
@@ -285,6 +291,12 @@ const BASE_TIERS: Record<KycTierKey, KycTierConfig> = {
         required: true,
       },
     ],
+    services: [
+      'Higher transaction limits',
+      'Access to virtual cards',
+      'International transfers',
+      'All Tier 1 services',
+    ],
   },
   tier3: {
     label: 'Tier 3 – Enhanced Due Diligence',
@@ -294,6 +306,11 @@ const BASE_TIERS: Record<KycTierKey, KycTierConfig> = {
       'Additional AML and sanctions screening',
     ],
     notes: ['Manual compliance review may be required depending on risk profile.'],
+    services: [
+      'Unlimited transactions',
+      'Escrow services',
+      'All Tier 2 services',
+    ],
   },
 };
 
@@ -304,6 +321,7 @@ const mergeTier = (tier: KycTierKey, overrides?: Partial<KycTierConfig>): KycTie
   additionalFields: overrides?.additionalFields ?? BASE_TIERS[tier].additionalFields,
   documents: overrides?.documents ?? BASE_TIERS[tier].documents,
   notes: overrides?.notes ?? BASE_TIERS[tier].notes,
+  services: overrides?.services ?? BASE_TIERS[tier].services,
 });
 
 const createKycConfig = (
@@ -891,3 +909,61 @@ export const SUPPORTED_COUNTRY_MAP: Record<string, SupportedCountry> = SUPPORTED
   },
   {} as Record<string, SupportedCountry>
 );
+
+// Get country-specific ID types
+export function getCountryIdTypes(countryCode: string): { value: string; label: string }[] {
+  const countryMap: Record<string, { value: string; label: string }[]> = {
+    NG: [
+      { value: 'nin_slip', label: 'NIN Slip' },
+      { value: 'national_id', label: 'National ID' },
+      { value: 'voters_card', label: "Voter's Card" },
+      { value: 'drivers_license', label: "Driver's License" },
+      { value: 'passport', label: 'Passport' },
+    ],
+    US: [
+      { value: 'drivers_license', label: "Driver's License" },
+      { value: 'state_id', label: 'State ID' },
+      { value: 'passport', label: 'Passport' },
+      { value: 'passport_card', label: 'Passport Card' },
+    ],
+    GB: [
+      { value: 'passport', label: 'Passport' },
+      { value: 'drivers_license', label: "Driver's License" },
+      { value: 'national_id', label: 'National ID Card' },
+    ],
+    CA: [
+      { value: 'passport', label: 'Passport' },
+      { value: 'drivers_license', label: "Driver's License" },
+      { value: 'pr_card', label: 'Permanent Resident Card' },
+    ],
+    AU: [
+      { value: 'passport', label: 'Passport' },
+      { value: 'drivers_license', label: "Driver's License" },
+      { value: 'medicare_card', label: 'Medicare Card' },
+    ],
+    GH: [
+      { value: 'ghana_card', label: 'Ghana Card' },
+      { value: 'passport', label: 'Passport' },
+      { value: 'drivers_license', label: "Driver's License" },
+    ],
+    KE: [
+      { value: 'national_id', label: 'National ID' },
+      { value: 'passport', label: 'Passport' },
+    ],
+    ZA: [
+      { value: 'national_id', label: 'National ID' },
+      { value: 'passport', label: 'Passport' },
+    ],
+    DE: [
+      { value: 'national_id', label: 'National ID Card' },
+      { value: 'passport', label: 'Passport' },
+    ],
+  };
+
+  return countryMap[countryCode] || [
+    { value: 'passport', label: 'Passport' },
+    { value: 'national_id', label: 'National ID' },
+    { value: 'drivers_license', label: "Driver's License" },
+    { value: 'other', label: 'Other' },
+  ];
+}

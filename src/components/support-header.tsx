@@ -1,16 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { Search, Bell, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserNav } from '@/components/user-nav';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { ThemeSwitcher } from './theme-switcher';
+import { Avatar, AvatarFallback } from './ui/avatar';
 
 export function SupportHeader() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -46,7 +47,21 @@ export function SupportHeader() {
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
             <span className="sr-only">Notifications</span>
           </Button>
-          <UserNav />
+          {loading ? (
+            <Avatar className="h-9 w-9">
+              <AvatarFallback>
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+          ) : user ? (
+            <UserNav user={user} />
+          ) : (
+            <Avatar className="h-9 w-9">
+              <AvatarFallback>
+                <User className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+          )}
           <Button
             variant="ghost"
             size="icon"
