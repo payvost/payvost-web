@@ -741,7 +741,6 @@ model Content {
   @@index([category])
   @@index([publishedAt])
   @@index([slug])
-  @@fulltext([title, content, excerpt])
 }
 
 model ContentVersion {
