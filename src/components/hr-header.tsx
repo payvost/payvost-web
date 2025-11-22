@@ -28,7 +28,7 @@ export function HrHeader() {
     const pathname = usePathname();
 
     const isActive = (href: string) => {
-        if (href === '/hr-admin/dashboard') {
+        if (href === '/hr-70w7b86wOJldervcz_pob/dashboard') {
             return pathname === href;
         }
         return pathname.startsWith(href);
@@ -38,26 +38,26 @@ export function HrHeader() {
       { 
         group: 'Overview', 
         items: [
-          { href: '/hr-admin/dashboard', icon: <BarChart3 />, label: 'Dashboard' },
+          { href: '/hr-70w7b86wOJldervcz_pob/dashboard', icon: <BarChart3 />, label: 'Dashboard' },
         ]
       },
       {
         group: 'Jobs & Postings',
         items: [
-          { href: '/hr-admin/jobs', icon: <Briefcase />, label: 'Job Postings' },
+          { href: '/hr-70w7b86wOJldervcz_pob/jobs', icon: <Briefcase />, label: 'Job Postings' },
         ]
       },
       {
         group: 'Applications & Candidates',
         items: [
-          { href: '/hr-admin/applications', icon: <FileText />, label: 'All Applications' },
-          { href: '/hr-admin/candidates', icon: <UserCheck />, label: 'Candidates' },
+          { href: '/hr-70w7b86wOJldervcz_pob/applications', icon: <FileText />, label: 'All Applications' },
+          { href: '/hr-70w7b86wOJldervcz_pob/candidates', icon: <UserCheck />, label: 'Candidates' },
         ]
       },
       {
         group: 'Hiring Workflow',
         items: [
-          { href: '/hr-admin/interviews', icon: <Calendar />, label: 'Interviews' },
+          { href: '/hr-70w7b86wOJldervcz_pob/interviews', icon: <Calendar />, label: 'Interviews' },
         ]
       },
     ];
@@ -117,9 +117,9 @@ export function HrHeader() {
                </ScrollArea>
                  <div className="mt-auto p-4">
                     <Link
-                        href="/hr-admin/settings"
+                        href="/hr-70w7b86wOJldervcz_pob/settings"
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                        isActive('/hr-admin/settings')
+                        isActive('/hr-70w7b86wOJldervcz_pob/settings')
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-primary'
                         }`}

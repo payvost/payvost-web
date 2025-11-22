@@ -89,7 +89,7 @@ export function WriterSidebar() {
           <div className="flex h-14 items-center border-b px-4">
             <Link href={basePath} className="flex items-center gap-2">
               <Icons.logo className="h-6 w-6" />
-              <span className="font-semibold">CMS - Writer Portal</span>
+              <span className="font-semibold">CMS</span>
             </Link>
           </div>
           <ScrollArea className="flex-1 px-3 py-4">
@@ -113,7 +113,7 @@ export function WriterSidebar() {
           <div className="flex h-full flex-col">
             <div className="flex h-14 items-center border-b px-4">
               <Icons.logo className="h-6 w-6" />
-              <span className="ml-2 font-semibold">Writer Portal</span>
+              <span className="ml-2 font-semibold">CMS</span>
             </div>
             <ScrollArea className="flex-1 px-3 py-4">
               {renderNav()}

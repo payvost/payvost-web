@@ -90,7 +90,7 @@ export default function HrDashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/hr-admin/jobs/create">
+        <Link href="/hr-70w7b86wOJldervcz_pob/jobs/create">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader>
               <CardTitle className="text-sm font-medium">Create New Job</CardTitle>
@@ -101,7 +101,7 @@ export default function HrDashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/hr-admin/applications/pending">
+        <Link href="/hr-70w7b86wOJldervcz_pob/applications/pending">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader>
               <CardTitle className="text-sm font-medium">Review Applications</CardTitle>
@@ -113,7 +113,7 @@ export default function HrDashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/hr-admin/interviews">
+        <Link href="/hr-70w7b86wOJldervcz_pob/interviews">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader>
               <CardTitle className="text-sm font-medium">Schedule Interview</CardTitle>
@@ -124,7 +124,7 @@ export default function HrDashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/hr-admin/analytics">
+        <Link href="/hr-70w7b86wOJldervcz_pob/analytics">
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader>
               <CardTitle className="text-sm font-medium">View Analytics</CardTitle>
@@ -164,7 +164,7 @@ export default function HrDashboardPage() {
                       Shortlisted
                     </span>
                   )}
-                  <Link href={`/hr-admin/applications/${app.id}`}>
+                  <Link href={`/hr-70w7b86wOJldervcz_pob/applications/${app.id}`}>
                     <Button variant="outline" size="sm">View</Button>
                   </Link>
                 </div>
@@ -172,7 +172,7 @@ export default function HrDashboardPage() {
             ))}
           </div>
           <div className="mt-4">
-            <Link href="/hr-admin/applications">
+            <Link href="/hr-70w7b86wOJldervcz_pob/applications">
               <Button variant="outline" className="w-full">View All Applications</Button>
             </Link>
           </div>

@@ -29,7 +29,7 @@ export function HrSidebar() {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    if (href === '/hr-admin/dashboard') {
+    if (href === '/hr-70w7b86wOJldervcz_pob/dashboard') {
         return pathname === href;
     }
     return pathname.startsWith(href);
@@ -39,47 +39,47 @@ export function HrSidebar() {
       { 
         group: 'Overview', 
         items: [
-          { href: '/hr-admin/dashboard', icon: <BarChart3 />, label: 'Dashboard' },
-          { href: '/hr-admin/analytics', icon: <TrendingUp />, label: 'Analytics & Reports' },
+          { href: '/hr-70w7b86wOJldervcz_pob/dashboard', icon: <BarChart3 />, label: 'Dashboard' },
+          { href: '/hr-70w7b86wOJldervcz_pob/analytics', icon: <TrendingUp />, label: 'Analytics & Reports' },
         ]
       },
       {
         group: 'Jobs & Postings',
         items: [
-          { href: '/hr-admin/jobs', icon: <Briefcase />, label: 'Job Postings' },
-          { href: '/hr-admin/jobs/create', icon: <Briefcase />, label: 'Create Job' },
+          { href: '/hr-70w7b86wOJldervcz_pob/jobs', icon: <Briefcase />, label: 'Job Postings' },
+          { href: '/hr-70w7b86wOJldervcz_pob/jobs/create', icon: <Briefcase />, label: 'Create Job' },
         ]
       },
       {
         group: 'Applications & Candidates',
         items: [
-          { href: '/hr-admin/applications', icon: <FileText />, label: 'All Applications' },
-          { href: '/hr-admin/applications/pending', icon: <Clock />, label: 'Pending Review' },
-          { href: '/hr-admin/candidates', icon: <UserCheck />, label: 'Candidates' },
-          { href: '/hr-admin/applications/shortlisted', icon: <CheckCircle />, label: 'Shortlisted' },
-          { href: '/hr-admin/applications/rejected', icon: <XCircle />, label: 'Rejected' },
+          { href: '/hr-70w7b86wOJldervcz_pob/applications', icon: <FileText />, label: 'All Applications' },
+          { href: '/hr-70w7b86wOJldervcz_pob/applications/pending', icon: <Clock />, label: 'Pending Review' },
+          { href: '/hr-70w7b86wOJldervcz_pob/candidates', icon: <UserCheck />, label: 'Candidates' },
+          { href: '/hr-70w7b86wOJldervcz_pob/applications/shortlisted', icon: <CheckCircle />, label: 'Shortlisted' },
+          { href: '/hr-70w7b86wOJldervcz_pob/applications/rejected', icon: <XCircle />, label: 'Rejected' },
         ]
       },
       {
         group: 'Hiring Workflow',
         items: [
-          { href: '/hr-admin/interviews', icon: <Calendar />, label: 'Interviews' },
-          { href: '/hr-admin/offers', icon: <Send />, label: 'Job Offers' },
-          { href: '/hr-admin/onboarding', icon: <ClipboardList />, label: 'Onboarding' },
+          { href: '/hr-70w7b86wOJldervcz_pob/interviews', icon: <Calendar />, label: 'Interviews' },
+          { href: '/hr-70w7b86wOJldervcz_pob/offers', icon: <Send />, label: 'Job Offers' },
+          { href: '/hr-70w7b86wOJldervcz_pob/onboarding', icon: <ClipboardList />, label: 'Onboarding' },
         ]
       },
       {
         group: 'Talent Pool',
         items: [
-          { href: '/hr-admin/talent-pool', icon: <Users />, label: 'Talent Database' },
-          { href: '/hr-admin/candidates/search', icon: <Search />, label: 'Search Candidates' },
+          { href: '/hr-70w7b86wOJldervcz_pob/talent-pool', icon: <Users />, label: 'Talent Database' },
+          { href: '/hr-70w7b86wOJldervcz_pob/candidates/search', icon: <Search />, label: 'Search Candidates' },
         ]
       },
       {
         group: 'Settings',
         items: [
-          { href: '/hr-admin/settings', icon: <Settings />, label: 'HR Settings' },
-          { href: '/hr-admin/departments', icon: <Building2 />, label: 'Departments' },
+          { href: '/hr-70w7b86wOJldervcz_pob/settings', icon: <Settings />, label: 'HR Settings' },
+          { href: '/hr-70w7b86wOJldervcz_pob/departments', icon: <Building2 />, label: 'Departments' },
         ]
       }
     ];
@@ -124,9 +124,9 @@ export function HrSidebar() {
         </ScrollArea>
         <div className="mt-auto p-4">
            <Link
-              href="/hr-admin/settings"
+              href="/hr-70w7b86wOJldervcz_pob/settings"
               className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                isActive('/hr-admin/settings')
+                isActive('/hr-70w7b86wOJldervcz_pob/settings')
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-primary'
               }`}
