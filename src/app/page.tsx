@@ -296,7 +296,7 @@ export default function LandingPage() {
           </div>
         </section>
         {/* Workflow Section */}
-        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32">
+        <section className="w-full py-12 sm:py-16 md:py-20 lg:py-24">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
               <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left">
@@ -353,7 +353,7 @@ export default function LandingPage() {
         </section>
 
         {/* Developer Section */}
-        <section className="w-full py-10 sm:py-12 md:py-24 lg:py-32 bg-slate-950 text-slate-100">
+        <section className="w-full py-12 sm:py-16 md:py-20 lg:py-24 bg-slate-950 text-slate-100">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="flex flex-col lg:flex-row gap-8 sm:gap-12 lg:items-start">
               <div className="flex-1 space-y-4 sm:space-y-6 text-center lg:text-left">
@@ -401,7 +401,7 @@ export default function LandingPage() {
         </section>
 
         {/* Countries Section */}
-        <section id="countries" className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32">
+        <section id="countries" className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 max-w-3xl">
               <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
@@ -471,7 +471,7 @@ export default function LandingPage() {
         </section>
         
         {/* Testimonials Section */}
-  <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
+  <section id="testimonials" className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24 overflow-hidden">
     <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
       <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
         <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.35em] text-[10px] sm:text-xs">
@@ -598,7 +598,7 @@ export default function LandingPage() {
     </div>
   </section>
         {/* FAQ Section */}
-        <section id="faq" className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32">
+        <section id="faq" className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="grid gap-8 sm:gap-12 lg:grid-cols-[0.9fr_1.1fr] items-start">
               <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
@@ -685,7 +685,7 @@ export default function LandingPage() {
           </div>
         </section>
         {/* Blog Section */}
-        <section id="blog" className="w-full py-12 md:py-24 lg:py-32">
+        <section id="blog" className="w-full py-12 sm:py-16 md:py-20 lg:py-24">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">From the Blog</h2>
@@ -775,66 +775,104 @@ export default function LandingPage() {
         </section>
 
         {/* App Download CTA */}
-        <section className="relative w-full py-12 sm:py-16 md:py-28 lg:py-32 overflow-hidden">
+        <section className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
-            <div className="bg-accent py-12 sm:py-16 md:py-28 lg:py-32 rounded-3xl transition-all duration-300">
-              <div className="px-4 md:px-6">
-                <div className="grid items-center gap-8 sm:gap-12 grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.05fr_0.95fr]">
-                  <div className="space-y-6 sm:space-y-8 text-center md:text-left order-2 md:order-1">
-                    <div className="lg:pl-4 xl:pl-8">
-                      <Badge variant="outline" className="mx-auto md:mx-0 w-fit border-muted/40 bg-muted/10 text-foreground uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
-                      Mobile banking in motion
-                    </Badge>
-                    <div className="space-y-3 sm:space-y-4">
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight text-foreground">Download the Payvost app</h2>
-                      <p className="max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground mx-auto md:mx-0 leading-relaxed">
-                        Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
-                      </p>
-                    </div>
-                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                      <Card className="border border-primary/20 bg-background/80 rounded-2xl transition-all duration-300 hover:border-primary/40 w-full max-w-lg mx-auto">
-                        <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
-                          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
-                            <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                          </div>
-                          <div className="space-y-2 text-left w-full">
-                            <p className="text-sm font-semibold text-foreground">Instant wallet funding</p>
-                            <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">Move money in seconds with real-time notifications and smart retries.</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="border border-primary/20 bg-background/80 rounded-2xl transition-all duration-300 hover:border-primary/40 w-full max-w-md mx-auto md:max-w-lg lg:max-w-xl">
-                        <CardContent className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 mt-1">
-                          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-primary/10 flex-shrink-0">
-                            <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                          </div>
-                          <div className="space-y-2 text-left w-full">
-                            <p className="text-sm font-semibold text-foreground">Enterprise-grade security</p>
-                            <p className="text-xs text-muted-foreground leading-relaxed break-words whitespace-normal">Biometric login, device attestation, and real-time fraud monitoring.</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:justify-start sm:gap-6">
-                      <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full sm:w-auto justify-center items-center mt-6 md:mt-10">
-                        <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                          <Image src="/App Store.png" alt="Download on the App Store" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
-                        </Link>
-                        <Link href="#" className="transform transition hover:scale-105 mx-auto sm:mx-0">
-                          <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={48} className="sm:w-[180px] sm:h-[54px]" />
-                        </Link>
-                      </div>
-                    </div>
-                    </div>
+            <div className="border border-border/40 rounded-3xl bg-accent/50 p-6 sm:p-8 md:p-12 lg:p-16">
+              <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+                {/* Content Column */}
+                <div className="space-y-6 sm:space-y-8 text-center lg:text-left order-2 lg:order-1">
+                  <Badge variant="outline" className="mx-auto lg:mx-0 w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.25em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
+                    Mobile banking in motion
+                  </Badge>
+                  
+                  <div className="space-y-4 sm:space-y-5">
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl leading-tight">
+                      Download the Payvost app
+                    </h2>
+                    <p className="max-w-xl mx-auto lg:mx-0 text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed">
+                      Send money locally, pay bills globally, receive payouts, and grow balances in multi-currency wallets — all from one secure super app.
+                    </p>
                   </div>
-                  <div className="relative flex justify-center md:justify-end order-1 md:order-2">
-                    <div className="relative mx-auto w-full max-w-sm sm:max-w-md md:mx-0">
+
+                  {/* Feature Cards */}
+                  <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 pt-2">
+                    <Card className="border border-primary/20 bg-background/90 rounded-xl transition-all duration-300 hover:border-primary/40">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 flex-shrink-0">
+                            <Zap className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <h3 className="text-sm sm:text-base font-semibold text-foreground">Instant wallet funding</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              Move money in seconds with real-time notifications and smart retries.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border border-primary/20 bg-background/90 rounded-xl transition-all duration-300 hover:border-primary/40">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 flex-shrink-0">
+                            <ShieldCheck className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <h3 className="text-sm sm:text-base font-semibold text-foreground">Enterprise-grade security</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              Biometric login, device attestation, and real-time fraud monitoring.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* App Store Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-4">
+                    <Link 
+                      href="#" 
+                      className="inline-block transform transition-transform hover:scale-105 active:scale-95"
+                      aria-label="Download on the App Store"
+                    >
+                      <Image 
+                        src="/App Store.png" 
+                        alt="Download on the App Store" 
+                        width={160} 
+                        height={48} 
+                        className="h-12 w-auto sm:h-14 sm:w-[180px]"
+                        priority
+                      />
+                    </Link>
+                    <Link 
+                      href="#" 
+                      className="inline-block transform transition-transform hover:scale-105 active:scale-95"
+                      aria-label="Get it on Google Play"
+                    >
+                      <Image 
+                        src="/Google Play (2).png" 
+                        alt="Get it on Google Play" 
+                        width={160} 
+                        height={48} 
+                        className="h-12 w-auto sm:h-14 sm:w-[180px]"
+                        priority
+                      />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Image Column */}
+                <div className="relative flex justify-center lg:justify-end order-1 lg:order-2">
+                  <div className="relative w-full max-w-md sm:max-w-lg lg:max-w-xl">
+                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/40 bg-background/50">
                       <Image
-                        src="/optimized/Dashboard.jpg"
-                        alt="Payvost dashboard preview"
-                        width={480}
-                        height={360}
-                        className="h-auto w-full rounded-3xl"
+                        src="/Dashboard.png"
+                        alt="Payvost dashboard preview showing mobile app interface"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
+                        className="object-contain p-2"
+                        priority
                       />
                     </div>
                   </div>

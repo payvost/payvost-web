@@ -11,7 +11,7 @@ export default function WriterLoginPage() {
             <div className="flex justify-center mb-4">
               <Icons.logo className="h-12" />
             </div>
-            <h1 className="text-3xl font-bold">Writer Portal</h1>
+            <h1 className="text-3xl font-bold">CMS - Writer Portal</h1>
             <p className="text-balance text-muted-foreground">
               Sign in to create and manage content for Payvost.
             </p>
