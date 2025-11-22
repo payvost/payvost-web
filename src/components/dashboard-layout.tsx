@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy, PiggyBank, BarChart, LineChart, TrendingUp } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy, LineChart } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -126,15 +126,9 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', comingSoon: false, isNew: true },
   ];
 
-  const saveAndInvestItems = [
-    { href: '/dashboard/investment/portfolio', label: 'Portfolio', icon: <BarChart strokeWidth={2.5} /> },
-    { href: '/dashboard/savings', label: 'Savings', icon: <PiggyBank strokeWidth={2.5} /> },
-    { href: '/dashboard/investment', label: 'Investment', icon: <TrendingUp strokeWidth={2.5} /> },
-];
-
   const isActive = (href: string) => {
     // Exact match for parent routes, prefix match for others.
-    if (href === '/dashboard' || href === '/dashboard/investment') {
+    if (href === '/dashboard') {
         return pathname === href;
     }
     return pathname.startsWith(href);
@@ -186,23 +180,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                         </SidebarMenuItem>
                     ))}
                  </SidebarMenu>
-                 </SidebarGroup>
-                 <SidebarGroup>
-                    <SidebarGroupLabel>Save & Invest</SidebarGroupLabel>
-                    <SidebarMenu>
-                        {saveAndInvestItems.map(item => (
-                             <SidebarMenuItem key={item.label}>
-                                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                                    <Link href={item.href} className="flex justify-between items-center w-full">
-                                        <div className="flex items-center gap-2">
-                                            {item.icon}
-                                            {item.label}
-                                        </div>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
-                    </SidebarMenu>
                  </SidebarGroup>
                  <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
                     <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
