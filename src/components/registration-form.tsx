@@ -183,6 +183,7 @@ export function RegistrationForm() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [newlyCreatedUserId, setNewlyCreatedUserId] = useState<string | null>(null);
+  const [validatedSteps, setValidatedSteps] = useState<Set<number>>(new Set());
   const countryOptions = SUPPORTED_COUNTRIES;
   const countriesLoading = false;
   const [stateOptions, setStateOptions] = useState<StateOption[]>([]);
@@ -213,7 +214,8 @@ export function RegistrationForm() {
     getValues,
   } = useForm<FormValues>({
     resolver: zodResolver(registrationSchema),
-    mode: 'onTouched',
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
     defaultValues: {
         agreeTerms: false,
         countryCode: '',
@@ -795,6 +797,9 @@ export function RegistrationForm() {
     const fields = steps[currentStep].fields;
     const output = await trigger(fields as (keyof FormValues)[], { shouldFocus: true });
 
+    // Mark this step as validated
+    setValidatedSteps((prev) => new Set(prev).add(currentStep));
+
     if (!output) return;
 
     // Ensure username still available before proceeding past step containing username
@@ -822,6 +827,9 @@ export function RegistrationForm() {
   };
   
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    // Mark all steps as validated before submission
+    setValidatedSteps(new Set([0, 1]));
+    
     setIsLoading(true);
 
     const tier1AdditionalValues: Record<string, string> = {};
@@ -1124,6 +1132,12 @@ export function RegistrationForm() {
 
   const progress = ((currentStep + 1) / steps.length) * 100;
 
+  // Helper to check if error should be displayed (only after validation attempt)
+  const shouldShowError = (fieldName: keyof FormValues) => {
+    if (!validatedSteps.has(currentStep)) return false;
+    return steps[currentStep].fields.includes(fieldName as string);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
@@ -1159,7 +1173,7 @@ export function RegistrationForm() {
                     </DropdownMenu>
                     <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoChange} disabled={isLoading} />
                     <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
-                     {errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
+                     {shouldShowError('photo') && errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
                 </div>
             </div>
 
@@ -1167,12 +1181,12 @@ export function RegistrationForm() {
                  <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
                     <Input id="fullName" {...register('fullName')} disabled={isLoading} />
-                    {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
+                    {shouldShowError('fullName') && errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    {shouldShowError('email') && errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>
 
@@ -1208,7 +1222,7 @@ export function RegistrationForm() {
                         <span className="text-destructive">Not available</span>
                       )}
                     </div>
-                    {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
+                    {shouldShowError('username') && errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
@@ -1260,7 +1274,7 @@ export function RegistrationForm() {
                             />
                         <Input id="phone" {...register('phone')} disabled={isLoading} placeholder="Your phone number" className="flex-1"/>
                     </div>
-                    {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+                    {shouldShowError('phone') && errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
                 </div>
             </div>
 
@@ -1288,7 +1302,7 @@ export function RegistrationForm() {
                         </div>
                     </div>
                 )}
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                {shouldShowError('password') && errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -1298,7 +1312,7 @@ export function RegistrationForm() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                   </Button>
                 </div>
-                {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+                {shouldShowError('confirmPassword') && errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1319,7 +1333,7 @@ export function RegistrationForm() {
                             />
                         )}
                     />
-                    {errors.dateOfBirth && <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>}
+                    {shouldShowError('dateOfBirth') && errors.dateOfBirth && <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>}
                 </div>
                 <div className="space-y-2">
                 <Label htmlFor="country">Country of Residence</Label>
@@ -1341,7 +1355,7 @@ export function RegistrationForm() {
                     />
                   )}
                 />
-                {errors.country && <p className="text-sm text-destructive">{errors.country.message}</p>}
+                {shouldShowError('country') && errors.country && <p className="text-sm text-destructive">{errors.country.message}</p>}
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1380,12 +1394,12 @@ export function RegistrationForm() {
                         isLoading={statesLoading}
                         placeholder={placeholder}
                         emptyLabel="No states found"
-                        helperText={!errors.state ? helperText : undefined}
+                        helperText={!shouldShowError('state') || !errors.state ? helperText : undefined}
                       />
                     );
                   }}
                 />
-                {errors.state && (
+                {shouldShowError('state') && errors.state && (
                   <p className="text-sm text-destructive">
                     {errors.state.message || 'Please enter your state / province'}
                   </p>
@@ -1426,13 +1440,13 @@ export function RegistrationForm() {
                         isLoading={citiesLoading}
                         placeholder={placeholder}
                         emptyLabel="No cities found"
-                        helperText={!errors.city ? helperText : undefined}
+                        helperText={!shouldShowError('city') || !errors.city ? helperText : undefined}
                         disabled={!stateValue || isLoading}
                       />
                     );
                   }}
                 />
-                {errors.city && (
+                {shouldShowError('city') && errors.city && (
                   <p className="text-sm text-destructive">
                     {errors.city.message || 'Please enter your city'}
                   </p>
@@ -1446,7 +1460,7 @@ export function RegistrationForm() {
                   disabled={isLoading}
                   placeholder="e.g., 12345 or SW1A 1AA"
                 />
-                {errors.zip && (
+                {shouldShowError('zip') && errors.zip && (
                   <p className="text-sm text-destructive">
                     {errors.zip.message || 'Please enter your ZIP / postal code'}
                   </p>
@@ -1469,11 +1483,11 @@ export function RegistrationForm() {
                     onAddressSelected={handleAddressSelection}
                     countryCode={countryValue}
                     disabled={isLoading}
-                    error={errors.street?.message}
+                    error={shouldShowError('street') ? errors.street?.message : undefined}
                   />
                 )}
               />
-              {!errors.street && (
+              {(!shouldShowError('street') || !errors.street) && (
                 <p className="text-xs text-muted-foreground">Start typing to see suggestions</p>
               )}
             </div>
@@ -1559,7 +1573,7 @@ export function RegistrationForm() {
                         {field.helperText && (
                           <p className="text-xs text-muted-foreground">{field.helperText}</p>
                         )}
-                        {fieldError && (
+                        {shouldShowError(fieldName) && fieldError && (
                           <p className="text-sm text-destructive">{errorMessage ?? 'Please check this value.'}</p>
                         )}
                       </div>
@@ -1588,7 +1602,7 @@ export function RegistrationForm() {
                 </Link>
               </Label>
             </div>
-            {errors.agreeTerms && <p className="text-sm text-destructive">{errors.agreeTerms.message}</p>}
+            {shouldShowError('agreeTerms') && errors.agreeTerms && <p className="text-sm text-destructive">{errors.agreeTerms.message}</p>}
           </div>
         )}
 
