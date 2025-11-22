@@ -6,6 +6,7 @@ import { getAuth, Auth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics, logEvent } from "firebase/analytics"; // ✅ Added
+import { getPerformance, Performance } from "firebase/performance"; // ✅ Added
 import { errorEmitter } from "./error-emitter";
 import { FirestorePermissionError } from "./errors";
 
@@ -66,6 +67,18 @@ if (typeof window !== "undefined") {
   });
 }
 
+// --- Initialize Performance Monitoring (client-side only) ---
+let perf: Performance | null = null;
+
+if (typeof window !== "undefined") {
+  try {
+    perf = getPerformance(app);
+    console.log("✅ Firebase Performance Monitoring initialized");
+  } catch (err) {
+    console.warn("⚠️ Firebase Performance Monitoring not available:", err);
+  }
+}
+
 // --- Global Firestore Permission Error Handling ---
 if (typeof window !== 'undefined') {
   errorEmitter.on('permission-error', (error: FirestorePermissionError) => {
@@ -78,4 +91,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { app, auth, db, storage, analytics, logEvent, FirestoreError, signInWithCustomToken };
+export { app, auth, db, storage, analytics, perf, logEvent, FirestoreError, signInWithCustomToken };

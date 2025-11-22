@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
@@ -10,19 +10,24 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Badge }from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
-import { ArrowRight, BrainCircuit, Globe, Handshake, Briefcase, Search, HeartPulse, Laptop, Coffee, Plane, BookOpen, Clock, Users } from 'lucide-react';
+import { ArrowRight, BrainCircuit, Globe, Handshake, Briefcase, Search, HeartPulse, Laptop, Coffee, Plane, BookOpen, Clock, Users, MapPin, DollarSign } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import React from 'react';
 import { SiteFooter } from "@/components/site-footer";
+import { useAuth } from '@/hooks/use-auth';
 
-const jobOpenings = [
-    { department: 'Engineering', title: 'Senior Frontend Engineer', location: 'Remote', type: 'Full-time' },
-    { department: 'Engineering', title: 'Backend Engineer (Go)', location: 'New York, NY', type: 'Full-time' },
-    { department: 'Product', title: 'Product Manager, Core Payments', location: 'London, UK', type: 'Full-time' },
-    { department: 'Design', title: 'UX/UI Designer', location: 'Remote', type: 'Full-time' },
-    { department: 'Engineering', title: 'DevOps Engineer', location: 'Remote', type: 'Full-time' },
-    { department: 'Marketing', title: 'Content Marketing Manager', location: 'New York, NY', type: 'Part-time' },
-];
+interface Job {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  salary?: string;
+  postedDate?: string;
+  description?: string;
+  requirements?: string[];
+  status?: 'active' | 'closed';
+}
 
 const companyValues = [
     { title: 'Innovation at Heart', description: 'We are driven by a passion to create what\'s next.', icon: <BrainCircuit className="h-8 w-8 text-primary" /> },
@@ -45,13 +50,49 @@ export default function CareersPage() {
     const [selectedDepartment, setSelectedDepartment] = useState('All');
     const [selectedLocation, setSelectedLocation] = useState('All');
     const [selectedType, setSelectedType] = useState('All');
+    const [jobs, setJobs] = useState<Job[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
 
+    useEffect(() => {
+        // Fetch jobs from API
+        async function fetchJobs() {
+            try {
+                const response = await fetch('/api/hr/jobs?status=active');
+                if (response.ok) {
+                    const data = await response.json();
+                    setJobs(data.jobs || []);
+                } else {
+                    // Fallback to mock data if API fails
+                    setJobs([
+                        { id: '1', department: 'Engineering', title: 'Senior Frontend Engineer', location: 'Remote', type: 'Full-time', status: 'active' },
+                        { id: '2', department: 'Engineering', title: 'Backend Engineer (Go)', location: 'New York, NY', type: 'Full-time', status: 'active' },
+                        { id: '3', department: 'Product', title: 'Product Manager, Core Payments', location: 'London, UK', type: 'Full-time', status: 'active' },
+                        { id: '4', department: 'Design', title: 'UX/UI Designer', location: 'Remote', type: 'Full-time', status: 'active' },
+                        { id: '5', department: 'Engineering', title: 'DevOps Engineer', location: 'Remote', type: 'Full-time', status: 'active' },
+                        { id: '6', department: 'Marketing', title: 'Content Marketing Manager', location: 'New York, NY', type: 'Part-time', status: 'active' },
+                    ]);
+                }
+            } catch (error) {
+                console.error('Error fetching jobs:', error);
+                // Fallback to mock data
+                setJobs([
+                    { id: '1', department: 'Engineering', title: 'Senior Frontend Engineer', location: 'Remote', type: 'Full-time', status: 'active' },
+                    { id: '2', department: 'Engineering', title: 'Backend Engineer (Go)', location: 'New York, NY', type: 'Full-time', status: 'active' },
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchJobs();
+    }, []);
 
-    const departments = ['All', ...Array.from(new Set(jobOpenings.map(j => j.department)))];
-    const locations = ['All', ...Array.from(new Set(jobOpenings.map(j => j.location)))];
-    const types = ['All', ...Array.from(new Set(jobOpenings.map(j => j.type)))];
+    const departments = ['All', ...Array.from(new Set(jobs.map(j => j.department)))];
+    const locations = ['All', ...Array.from(new Set(jobs.map(j => j.location)))];
+    const types = ['All', ...Array.from(new Set(jobs.map(j => j.type)))];
 
-    const filteredJobs = jobOpenings.filter(job => 
+    const filteredJobs = jobs.filter(job => 
+        job.status === 'active' &&
         (selectedDepartment === 'All' || job.department === selectedDepartment) &&
         (selectedLocation === 'All' || job.location === selectedLocation) &&
         (selectedType === 'All' || job.type === selectedType) &&
@@ -130,24 +171,52 @@ export default function CareersPage() {
                         
                         {/* Job List */}
                         <div className="max-w-4xl mx-auto space-y-4">
-                            {filteredJobs.length > 0 ? filteredJobs.map(job => (
-                                <Link href="#" key={job.title}>
-                                    <Card className="hover:bg-muted/50 transition-colors">
-                                        <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                            <div>
-                                                <h3 className="font-semibold text-lg">{job.title}</h3>
-                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                                                    <div className="flex items-center gap-2"><Briefcase className="h-4 w-4" />{job.department}</div>
-                                                    <div className="flex items-center gap-2"><Globe className="h-4 w-4" />{job.location}</div>
+                            {loading ? (
+                                <div className="text-center text-muted-foreground py-12">Loading job openings...</div>
+                            ) : filteredJobs.length > 0 ? filteredJobs.map(job => (
+                                <Card key={job.id} className="hover:bg-muted/50 transition-colors">
+                                    <CardContent className="p-6">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                            <div className="flex-1">
+                                                <Link href={`/careers/jobs/${job.id}`}>
+                                                    <h3 className="font-semibold text-lg hover:text-primary transition-colors cursor-pointer">{job.title}</h3>
+                                                </Link>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Briefcase className="h-4 w-4" />
+                                                        {job.department}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="h-4 w-4" />
+                                                        {job.location}
+                                                    </div>
+                                                    {job.salary && (
+                                                        <div className="flex items-center gap-2">
+                                                            <DollarSign className="h-4 w-4" />
+                                                            {job.salary}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4 mt-2 sm:mt-0">
                                                 <Badge variant="secondary">{job.type}</Badge>
-                                                <Button variant="outline" size="sm">Apply Now <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                                                {user ? (
+                                                    <Link href={`/careers/jobs/${job.id}/apply`}>
+                                                        <Button variant="default" size="sm">
+                                                            Apply Now <ArrowRight className="ml-2 h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                ) : (
+                                                    <Link href={`/login?redirect=/careers/jobs/${job.id}/apply`}>
+                                                        <Button variant="default" size="sm">
+                                                            Sign in to Apply <ArrowRight className="ml-2 h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                )}
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             )) : (
                                 <p className="text-center text-muted-foreground py-12">No open positions match your search.</p>
                             )}

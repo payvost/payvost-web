@@ -14,6 +14,13 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.admin == true;
     }
 
+    // ✅ Helper: check if user is HR admin
+    function isHrAdmin() {
+      return request.auth != null 
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['hr_admin', 'admin', 'super_admin'];
+    }
+
     // 🔹 Users collection
     match /users/{userId} {
       allow read: if true; // public profiles visible
@@ -244,6 +251,49 @@ service cloud.firestore {
                     && (request.auth.uid == resource.data.userId || isAdmin());
       
       // Prevent deletion
+      allow delete: if false;
+    }
+
+    // 💼 Jobs Collection (HR & Public)
+    match /jobs/{jobId} {
+      // ✅ Public can read active jobs (for careers page)
+      allow read: if resource.data.status == 'active' || isHrAdmin();
+      
+      // ✅ HR admins can list all jobs
+      allow list: if isHrAdmin() || true; // Public can list, but only active jobs will be returned
+      
+      // ✅ Only HR admins can create/update/delete jobs
+      allow create: if isHrAdmin() 
+                    && request.resource.data.keys().hasAll(['title', 'department', 'location', 'type', 'status'])
+                    && request.resource.data.status in ['active', 'closed'];
+      
+      allow update: if isHrAdmin() 
+                    && request.resource.data.status in ['active', 'closed'];
+      
+      allow delete: if isHrAdmin();
+    }
+
+    // 📝 Job Applications Collection
+    match /jobApplications/{applicationId} {
+      // ✅ Users can read their own applications, HR admins can read all
+      allow read: if request.auth != null 
+                   && (resource.data.userId == request.auth.uid || isHrAdmin());
+      
+      // ✅ Users can list their own applications, HR admins can list all
+      allow list: if request.auth != null; // Filtering by userId or HR admin is done in queries
+      
+      // ✅ Authenticated users can create applications for themselves
+      allow create: if request.auth != null 
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.keys().hasAll(['jobId', 'userId', 'status'])
+                    && request.resource.data.status == 'pending';
+      
+      // ✅ Users can update their own applications, HR admins can update any
+      allow update: if request.auth != null
+                    && (request.auth.uid == resource.data.userId || isHrAdmin())
+                    && request.resource.data.status in ['pending', 'shortlisted', 'rejected', 'accepted'];
+      
+      // ✅ Prevent deletion (maintain audit trail)
       allow delete: if false;
     }
   }

@@ -8,7 +8,7 @@ const serviceAccount = require(path.resolve(__dirname, 'serviceAccountKey.json')
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://payvost-default-rtdb.firebaseio.com"
+  databaseURL: "https://payvost-web-default-rtdb.firebaseio.com"
 });
 
 const app = express();

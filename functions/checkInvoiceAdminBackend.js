@@ -7,7 +7,7 @@ if (!invoiceId) {
   process.exit(1);
 }
 
-const keyPath = path.join(__dirname, '..', 'backend', 'payvost-f28db3f2f0bc.json');
+const keyPath = path.join(__dirname, '..', 'backend', 'payvost-web-firebase-adminsdk-fbsvc-f14c86f5d6.json');
 try {
   const serviceAccount = require(keyPath);
   admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
