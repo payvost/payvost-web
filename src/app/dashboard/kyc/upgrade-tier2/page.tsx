@@ -5,7 +5,7 @@ import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Loader2, UploadCloud, BadgeCheck, Clock, CheckCircle, FileText, Home } from 'lucide-react';
+import { ArrowLeft, Loader2, UploadCloud, BadgeCheck, Clock, CheckCircle, FileText, Home, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -25,8 +25,13 @@ interface DocumentFile {
 
 export default function UpgradeTier2Page() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted'>('idle');
+  const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted' | 'approved' | 'pending_review'>('idle');
   const [userData, setUserData] = useState<any>(null);
+  const [verificationResult, setVerificationResult] = useState<{
+    autoApproved?: boolean;
+    confidenceScore?: number;
+    status?: string;
+  } | null>(null);
   const [documents, setDocuments] = useState<Record<DocumentType, DocumentFile>>({
     'government-id': { file: null, url: null },
     'proof-of-address': { file: null, url: null },
@@ -145,21 +150,98 @@ export default function UpgradeTier2Page() {
       // Store submission
       await setDoc(doc(collection(db, 'kyc_submissions'), submissionId), submission);
 
-      // Update user's kycProfile to mark tier2 as submitted
-      const userRef = doc(db, 'users', user.uid);
-      const currentData = await getDoc(userRef);
-      if (currentData.exists()) {
-        const currentKycProfile = currentData.data()?.kycProfile || {};
+      // Call verification API
+      try {
+        const verificationResponse = await fetch('/api/kyc/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            submissionId,
+            tier: 'tier2',
+            country: countryCode,
+            email: userData?.email || user?.email,
+            phone: userData?.phone,
+            fullName: userData?.name || user?.displayName,
+            dateOfBirth: userData?.dateOfBirth,
+            residentialAddress: userData?.addressLine1 || userData?.street,
+            taxID: userData?.bvn || userData?.additionalFields?.bvn,
+            documentUrls: {
+              idDocument: uploadedDocs.find(d => d.key === 'government-id')?.url,
+              proofOfAddress: uploadedDocs.find(d => d.key === 'proof-of-address')?.url,
+              selfie: uploadedDocs.find(d => d.key === 'face-match')?.url,
+            },
+            metadata: {
+              ...(userData?.additionalFields || {}),
+            },
+          }),
+        });
+
+        if (!verificationResponse.ok) {
+          throw new Error('Verification API call failed');
+        }
+
+        const result = await verificationResponse.json();
+        setVerificationResult(result);
+
+        // Update user's kycProfile based on verification result
+        const userRef = doc(db, 'users', user.uid);
+        const currentData = await getDoc(userRef);
+        if (currentData.exists()) {
+          const updateData: any = {
+            updatedAt: serverTimestamp(),
+          };
+
+          if (result.autoApproved && result.verificationStatus === 'approved') {
+            updateData['kycProfile.status'] = 'approved';
+            updateData['kycProfile.tiers.tier2.status'] = 'approved';
+            updateData['kycProfile.tiers.tier2.approvedAt'] = serverTimestamp();
+            updateData['kycProfile.tiers.tier2.confidenceScore'] = result.confidenceScore;
+            updateData['kycProfile.tiers.tier2.autoApproved'] = true;
+            updateData['kycTier'] = 'tier2';
+            updateData['kycStatus'] = 'verified';
+            updateData['kycLevel'] = 'Full';
+            updateData['userType'] = 'Tier 2';
+
+            setSubmissionState('approved');
+            toast({ 
+              title: 'Verification Approved!', 
+              description: `Your Tier 2 verification was automatically approved with ${result.confidenceScore}% confidence.`,
+            });
+          } else {
+            updateData['kycProfile.status'] = 'pending_review';
+            updateData['kycProfile.tiers.tier2.status'] = 'submitted';
+            updateData['kycProfile.tiers.tier2.submittedAt'] = serverTimestamp();
+            if (result.confidenceScore) {
+              updateData['kycProfile.tiers.tier2.confidenceScore'] = result.confidenceScore;
+            }
+
+            setSubmissionState('pending_review');
+            toast({ 
+              title: 'Submitted for Review', 
+              description: 'Your Tier 2 documents have been submitted for manual review.',
+            });
+          }
+
+          await updateDoc(userRef, updateData);
+        }
+      } catch (verificationError) {
+        console.error('Verification error:', verificationError);
+        // Still mark as submitted even if verification fails
+        const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, {
           'kycProfile.status': 'pending_review',
           'kycProfile.tiers.tier2.status': 'submitted',
           'kycProfile.tiers.tier2.submittedAt': serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
-      }
 
-      setSubmissionState('submitted');
-      toast({ title: 'Submitted', description: 'Your Tier 2 documents have been submitted for review.' });
+        setSubmissionState('pending_review');
+        toast({ 
+          title: 'Submitted', 
+          description: 'Your documents have been submitted. Verification will be processed shortly.',
+        });
+      }
     } catch (error) {
       console.error('Tier 2 submission error:', error);
       toast({ title: 'Submission Failed', description: 'An error occurred. Please try again.', variant: 'destructive' });
@@ -167,20 +249,56 @@ export default function UpgradeTier2Page() {
     }
   };
 
-  if (submissionState === 'submitted') {
+  if (submissionState === 'approved' || submissionState === 'pending_review' || submissionState === 'submitted') {
+    const isApproved = submissionState === 'approved';
+    const isAutoApproved = verificationResult?.autoApproved === true;
+
     return (
       <DashboardLayout language={language} setLanguage={setLanguage}>
         <main className="flex-1 p-4 lg:p-6 flex items-center justify-center">
           <Card className="w-full max-w-md text-center">
             <CardHeader>
-              <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit">
-                <Clock className="h-10 w-10 text-primary" />
+              <div className={`mx-auto ${isApproved ? 'bg-green-100 dark:bg-green-900/20' : 'bg-primary/10'} p-4 rounded-full w-fit`}>
+                {isApproved ? (
+                  <CheckCircle className="h-10 w-10 text-green-600" />
+                ) : (
+                  <Clock className="h-10 w-10 text-primary" />
+                )}
               </div>
-              <CardTitle className="mt-4">Review in Progress</CardTitle>
+              <CardTitle className="mt-4">
+                {isApproved ? 'Verification Approved!' : 'Review in Progress'}
+              </CardTitle>
               <CardDescription>
-                We have received your Tier 2 documents and are reviewing them. We will notify you within 24-48 hours.
+                {isApproved ? (
+                  <span>
+                    {isAutoApproved 
+                      ? `Your Tier 2 verification was automatically approved with ${verificationResult?.confidenceScore || 0}% confidence.`
+                      : 'Your Tier 2 verification has been approved.'}
+                  </span>
+                ) : (
+                  'We have received your Tier 2 documents and are reviewing them. We will notify you within 24-48 hours.'
+                )}
               </CardDescription>
             </CardHeader>
+            {isApproved && isAutoApproved && verificationResult?.confidenceScore && (
+              <CardContent>
+                <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center mb-2">
+                    <Sparkles className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-400">Auto-Approved</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Confidence Score: <span className="font-semibold">{verificationResult.confidenceScore}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all"
+                      style={{ width: `${verificationResult.confidenceScore}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            )}
             <CardFooter>
               <Button className="w-full" onClick={() => router.push('/dashboard/profile')}>
                 Back to Profile

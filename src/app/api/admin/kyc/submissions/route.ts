@@ -129,6 +129,30 @@ export async function GET(request: NextRequest) {
            (data.decidedAt?._seconds ? new Date(data.decidedAt._seconds * 1000).toISOString() : null)) : 
           null;
 
+        // Fetch verification details if available
+        const tierLevel = data.level === 'Basic' || data.level === 'tier1' ? 'tier1' :
+                         data.level === 'Full' || data.level === 'tier2' ? 'tier2' :
+                         data.level === 'Advanced' || data.level === 'tier3' ? 'tier3' : 'tier2';
+        
+        const verificationId = `${doc.id}_${tierLevel}`;
+        let verificationDetails: any = null;
+        
+        try {
+          const verificationDoc = await db.collection('kyc_verifications').doc(verificationId).get();
+          if (verificationDoc.exists) {
+            const verificationData = verificationDoc.data();
+            verificationDetails = {
+              autoApproved: verificationData?.autoApproved || false,
+              confidenceScore: verificationData?.confidenceScore || null,
+              status: verificationData?.status || null,
+              requiresManualReview: verificationData?.requiresManualReview || false,
+            };
+          }
+        } catch (verificationError) {
+          // If verification details don't exist yet, that's fine
+          console.debug('Verification details not found for submission:', doc.id);
+        }
+
         return {
           id: doc.id,
           userId: data.userId,
@@ -140,6 +164,9 @@ export async function GET(request: NextRequest) {
           decidedAt,
           decidedBy: data.decidedBy || null,
           rejectionReason: data.rejectionReason || null,
+          autoApproved: verificationDetails?.autoApproved ?? data.autoApproved ?? false,
+          confidenceScore: verificationDetails?.confidenceScore ?? data.confidenceScore ?? null,
+          verificationResultId: data.verificationResultId || null,
         };
       })
     );

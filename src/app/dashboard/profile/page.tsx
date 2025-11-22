@@ -680,6 +680,27 @@ export default function ProfilePage() {
                                         <Badge variant="secondary">Under Review</Badge>
                                     )}
                                 </CardTitle>
+                                {userData?.kycProfile?.tiers?.tier2?.autoApproved && userData?.kycProfile?.tiers?.tier2?.status === 'approved' && (
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      <Sparkles className="h-3 w-3 mr-1" /> Auto-Approved
+                                    </Badge>
+                                  </div>
+                                )}
+                                {userData?.kycProfile?.tiers?.tier2?.confidenceScore && userData?.kycProfile?.tiers?.tier2?.status === 'approved' && (
+                                  <div className="mt-2 space-y-1">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                      <span>Confidence Score</span>
+                                      <span className="font-semibold">{userData.kycProfile.tiers.tier2.confidenceScore}%</span>
+                                    </div>
+                                    <div className="w-full bg-muted rounded-full h-2">
+                                      <div 
+                                        className="bg-green-600 h-2 rounded-full transition-all"
+                                        style={{ width: `${userData.kycProfile.tiers.tier2.confidenceScore}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-sm">
@@ -728,6 +749,27 @@ export default function ProfilePage() {
                                         <Badge variant="secondary">Under Review</Badge>
                                     )}
                                 </CardTitle>
+                                {userData?.kycProfile?.tiers?.tier3?.autoApproved && userData?.kycProfile?.tiers?.tier3?.status === 'approved' && (
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      <Sparkles className="h-3 w-3 mr-1" /> Auto-Approved
+                                    </Badge>
+                                  </div>
+                                )}
+                                {userData?.kycProfile?.tiers?.tier3?.confidenceScore && userData?.kycProfile?.tiers?.tier3?.status === 'approved' && (
+                                  <div className="mt-2 space-y-1">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                      <span>Confidence Score</span>
+                                      <span className="font-semibold">{userData.kycProfile.tiers.tier3.confidenceScore}%</span>
+                                    </div>
+                                    <div className="w-full bg-muted rounded-full h-2">
+                                      <div 
+                                        className="bg-green-600 h-2 rounded-full transition-all"
+                                        style={{ width: `${userData.kycProfile.tiers.tier3.confidenceScore}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <ul className={cn(

@@ -6,12 +6,12 @@ import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Loader2, UploadCloud, BadgeCheck, Clock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, UploadCloud, BadgeCheck, Clock, CheckCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { db, storage } from '@/lib/firebase';
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -20,8 +20,13 @@ import type { KycDocKey, KycDocument, KycSubmission } from '@/types/kyc';
 
 export default function VerifyBusinessPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted'>('idle');
+  const [submissionState, setSubmissionState] = useState<'idle' | 'submitting' | 'submitted' | 'approved' | 'pending_review'>('idle');
   const [countryCode, setCountryCode] = useState<string>('NG');
+  const [verificationResult, setVerificationResult] = useState<{
+    autoApproved?: boolean;
+    confidenceScore?: number;
+    status?: string;
+  } | null>(null);
   const [files, setFiles] = useState<Record<KycDocKey, File | null>>({
     government_id: null,
     proof_of_address: null,
@@ -93,7 +98,7 @@ export default function VerifyBusinessPage() {
         uploadedDocs.push({ key: req.key, name: f.name, url, status: 'submitted', contentType: f.type, size: f.size });
       }
 
-      // Create KYC submission record
+      // Create KYC submission record first
       const sub: KycSubmission = {
         id: submissionId,
         userId: user.uid,
@@ -107,6 +112,68 @@ export default function VerifyBusinessPage() {
         createdAt: serverTimestamp(),
       });
 
+      // Get user data for verification
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+
+      // Call verification API
+      try {
+        const verificationResponse = await fetch('/api/kyc/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            submissionId,
+            tier: 'tier3', // Business verification is Tier 3
+            country: countryCode,
+            email: userData?.email || user?.email,
+            phone: userData?.phone,
+            fullName: userData?.name || user?.displayName,
+            dateOfBirth: userData?.dateOfBirth,
+            residentialAddress: userData?.addressLine1 || userData?.street,
+            documentUrls: {
+              idDocument: uploadedDocs.find(d => d.key === 'government_id')?.url,
+              proofOfAddress: uploadedDocs.find(d => d.key === 'proof_of_address')?.url,
+              selfie: uploadedDocs.find(d => d.key === 'selfie')?.url,
+            },
+            metadata: {
+              businessOnboardingId,
+              ...(userData?.additionalFields || {}),
+            },
+          }),
+        });
+
+        if (!verificationResponse.ok) {
+          throw new Error('Verification API call failed');
+        }
+
+        const result = await verificationResponse.json();
+        setVerificationResult(result);
+
+        // If auto-approved, set state to approved, otherwise pending_review
+        if (result.autoApproved && result.verificationStatus === 'approved') {
+          setSubmissionState('approved');
+          toast({ 
+            title: 'Verification Approved!', 
+            description: `Your business verification was automatically approved with ${result.confidenceScore}% confidence.`,
+          });
+        } else {
+          setSubmissionState('pending_review');
+          toast({ 
+            title: 'Submitted for Review', 
+            description: 'Your documents have been submitted for manual review.',
+          });
+        }
+      } catch (verificationError) {
+        console.error('Verification error:', verificationError);
+        // Still mark as submitted even if verification fails
+        setSubmissionState('pending_review');
+        toast({ 
+          title: 'Submitted', 
+          description: 'Your documents have been submitted. Verification will be processed shortly.',
+        });
+      }
+
       // If this is part of business onboarding, create the complete business onboarding record with all data
       if (businessOnboardingId && businessOnboardingDataStr) {
         try {
@@ -119,7 +186,7 @@ export default function VerifyBusinessPage() {
             countryCode,
             documents: uploadedDocs,
             kycSubmissionId: submissionId,
-            status: 'pending_review',
+            status: verificationResult?.autoApproved ? 'approved' : 'pending_review',
             submittedAt: serverTimestamp(),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -133,9 +200,6 @@ export default function VerifyBusinessPage() {
       // Clear localStorage after successful save
       localStorage.removeItem('businessOnboardingData');
       localStorage.removeItem('businessOnboardingId');
-
-      setSubmissionState('submitted');
-      toast({ title: 'Submitted', description: 'Your documents have been submitted for review.' });
     } catch (error) {
       console.error('KYC submission error:', error);
       toast({ title: 'Submission Failed', description: 'An error occurred. Please try again.', variant: 'destructive' });
@@ -143,20 +207,56 @@ export default function VerifyBusinessPage() {
     }
   };
 
-  if (submissionState === 'submitted') {
+  if (submissionState === 'approved' || submissionState === 'pending_review' || submissionState === 'submitted') {
+    const isApproved = submissionState === 'approved';
+    const isAutoApproved = verificationResult?.autoApproved === true;
+
     return (
        <DashboardLayout language={language} setLanguage={setLanguage}>
             <main className="flex-1 p-4 lg:p-6 flex items-center justify-center">
                 <Card className="w-full max-w-md text-center">
                     <CardHeader>
-                        <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit">
-                            <Clock className="h-10 w-10 text-primary" />
+                        <div className={`mx-auto ${isApproved ? 'bg-green-100 dark:bg-green-900/20' : 'bg-primary/10'} p-4 rounded-full w-fit`}>
+                            {isApproved ? (
+                              <CheckCircle className="h-10 w-10 text-green-600" />
+                            ) : (
+                              <Clock className="h-10 w-10 text-primary" />
+                            )}
                         </div>
-                        <CardTitle className="mt-4">Review in Progress</CardTitle>
+                        <CardTitle className="mt-4">
+                          {isApproved ? 'Verification Approved!' : 'Review in Progress'}
+                        </CardTitle>
                         <CardDescription>
-                            We have received your documents and are reviewing your business information. We will notify you within 4 business hours.
+                          {isApproved ? (
+                            <span>
+                              {isAutoApproved 
+                                ? `Your business verification was automatically approved with ${verificationResult?.confidenceScore || 0}% confidence.`
+                                : 'Your business verification has been approved.'}
+                            </span>
+                          ) : (
+                            'We have received your documents and are reviewing your business information. We will notify you within 4 business hours.'
+                          )}
                         </CardDescription>
                     </CardHeader>
+                    {isApproved && isAutoApproved && verificationResult?.confidenceScore && (
+                      <CardContent>
+                        <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 justify-center mb-2">
+                            <Sparkles className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-semibold text-green-700 dark:text-green-400">Auto-Approved</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Confidence Score: <span className="font-semibold">{verificationResult.confidenceScore}%</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2 mt-2">
+                            <div 
+                              className="bg-green-600 h-2 rounded-full transition-all"
+                              style={{ width: `${verificationResult.confidenceScore}%` }}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
                     <CardFooter>
                         <Button className="w-full" onClick={() => router.push('/dashboard')}>
                             Back to Dashboard
