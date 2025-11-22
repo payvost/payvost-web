@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, Suspense } from 'react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -127,7 +127,7 @@ const priorityConfig: Record<TicketPriority, { label: string; variant: "default"
   URGENT: { label: 'Urgent', variant: 'destructive' },
 };
 
-export default function SupportPage() {
+function SupportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -1231,5 +1231,21 @@ export default function SupportPage() {
 
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function SupportPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout language="en" setLanguage={() => {}}>
+        <main className="flex flex-1 flex-col w-full">
+          <div className="container mx-auto px-4 md:px-6 max-w-7xl py-12">
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </main>
+      </DashboardLayout>
+    }>
+      <SupportPageContent />
+    </Suspense>
   );
 }
