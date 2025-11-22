@@ -1,4 +1,18 @@
-import { PrismaClient, Prisma, ContentType, ContentStatus } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+
+// Define enum types locally to avoid Prisma import issues during build
+export type ContentType = 
+  | 'BLOG'
+  | 'PRESS_RELEASE'
+  | 'DOCUMENTATION'
+  | 'KNOWLEDGE_BASE';
+
+export type ContentStatus = 
+  | 'DRAFT'
+  | 'REVIEW'
+  | 'PUBLISHED'
+  | 'ARCHIVED'
+  | 'SCHEDULED';
 
 export interface CreateContentInput {
   title: string;
@@ -102,7 +116,6 @@ export class ContentService {
     const {
       slug,
       status = 'DRAFT',
-      version = 1,
       isPublic = true,
       allowComments = false,
       language = 'en',
@@ -231,7 +244,7 @@ export class ContentService {
       offset = 0,
     } = filters;
 
-    const where: Prisma.ContentWhereInput = {};
+    const where: any = {};
 
     if (contentType) {
       where.contentType = contentType;
@@ -444,7 +457,7 @@ export class ContentService {
    * Get content statistics
    */
   async getContentStats(authorId?: string) {
-    const where: Prisma.ContentWhereInput = authorId ? { authorId } : {};
+    const where: any = authorId ? { authorId } : {};
 
     const [total, published, draft, byType] = await Promise.all([
       this.prisma.content.count({ where }),
@@ -463,7 +476,7 @@ export class ContentService {
       draft,
       review: await this.prisma.content.count({ where: { ...where, status: 'REVIEW' } }),
       archived: await this.prisma.content.count({ where: { ...where, status: 'ARCHIVED' } }),
-      byType: byType.reduce((acc, item) => {
+      byType: byType.reduce((acc: Record<string, number>, item: { contentType: string; _count: number }) => {
         acc[item.contentType] = item._count;
         return acc;
       }, {} as Record<string, number>),
