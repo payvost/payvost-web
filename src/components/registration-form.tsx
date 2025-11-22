@@ -31,6 +31,7 @@ import { CountrySelector, CountryOption } from '@/components/location/country-se
 import { StateSelector, StateOption } from '@/components/location/state-selector';
 import { CitySelector } from '@/components/location/city-selector';
 import { AddressAutocomplete, AddressSelection } from '@/components/location/address-autocomplete';
+import { SearchableLocationInput } from '@/components/location/searchable-location-input';
 import {
   SUPPORTED_COUNTRIES,
   DEFAULT_KYC_CONFIG,
@@ -1346,31 +1347,25 @@ export function RegistrationForm() {
                   name="state"
                   control={control}
                   render={({ field }) => {
-                    const showDropdown = statesLoading || stateOptions.length > 0;
-                    if (!showDropdown || !countryValue) {
-                      const placeholder = !countryValue
-                        ? 'Select a country first'
-                        : statesLoading
-                          ? 'Loading states…'
-                          : 'Type or select your state / province';
-                      return (
-                        <Input
-                          id="state"
-                          value={field.value ?? ''}
-                          onChange={(event) => {
-                            pendingLocationRef.current = null;
-                            setSelectedCoordinates(null);
-                            field.onChange(event.target.value);
-                          }}
-                          disabled={isLoading || !countryValue}
-                          placeholder={placeholder}
-                          className={cn(!countryValue && 'opacity-60')}
-                        />
-                      );
-                    }
+                    const placeholder = !countryValue
+                      ? 'Select a country first, then type your state'
+                      : statesLoading
+                        ? 'Loading states…'
+                        : stateOptions.length > 0
+                          ? 'Type to search or enter manually'
+                          : 'Type your state / province name';
+                    
+                    const helperText = !countryValue
+                      ? 'Please select a country first'
+                      : statesError
+                        ? statesError
+                        : stateOptions.length > 0
+                          ? `${stateOptions.length} states available - select from list or type manually`
+                          : 'Enter your state / province name manually';
 
                     return (
-                      <StateSelector
+                      <SearchableLocationInput
+                        id="state"
                         value={field.value ?? ''}
                         onChange={(value) => {
                           pendingLocationRef.current = null;
@@ -1379,8 +1374,9 @@ export function RegistrationForm() {
                         }}
                         options={stateOptions}
                         isLoading={statesLoading}
-                        disabled={isLoading}
-                        placeholder={countryValue ? 'Select your state / province' : 'Select a country first'}
+                        placeholder={placeholder}
+                        emptyLabel="No states found"
+                        helperText={!errors.state ? helperText : undefined}
                       />
                     );
                   }}
@@ -1388,14 +1384,8 @@ export function RegistrationForm() {
                 {errors.state && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <span>•</span>
-                    <span>{errors.state.message || 'Please select or enter your state / province'}</span>
+                    <span>{errors.state.message || 'Please enter your state / province'}</span>
                   </p>
-                )}
-                {!errors.state && statesError && (
-                  <p className="text-xs text-muted-foreground">{statesError}</p>
-                )}
-                {!errors.state && !statesError && countryValue && !stateValue && (
-                  <p className="text-xs text-muted-foreground">Select from the list or type manually</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -1404,31 +1394,25 @@ export function RegistrationForm() {
                   name="city"
                   control={control}
                   render={({ field }) => {
-                    const showDropdown = citiesLoading || cityOptions.length > 0;
-                    if (!showDropdown || !stateValue) {
-                      const placeholder = !stateValue
-                        ? 'Select a state / province first'
-                        : citiesLoading
-                          ? 'Loading cities…'
-                          : 'Type or select your city';
-                      return (
-                        <Input
-                          id="city"
-                          value={field.value ?? ''}
-                          onChange={(event) => {
-                            pendingLocationRef.current = null;
-                            setSelectedCoordinates(null);
-                            field.onChange(event.target.value);
-                          }}
-                          disabled={isLoading || !stateValue}
-                          placeholder={placeholder}
-                          className={cn(!stateValue && 'opacity-60')}
-                        />
-                      );
-                    }
+                    const placeholder = !stateValue
+                      ? 'Select a state first, then type your city'
+                      : citiesLoading
+                        ? 'Loading cities…'
+                        : cityOptions.length > 0
+                          ? 'Type to search or enter manually'
+                          : 'Type your city name';
+                    
+                    const helperText = !stateValue
+                      ? 'Please select a state / province first'
+                      : citiesError
+                        ? citiesError
+                        : cityOptions.length > 0
+                          ? `${cityOptions.length} cities available - select from list or type manually`
+                          : 'Enter your city name manually';
 
                     return (
-                      <CitySelector
+                      <SearchableLocationInput
+                        id="city"
                         value={field.value ?? ''}
                         onChange={(value) => {
                           pendingLocationRef.current = null;
@@ -1437,8 +1421,9 @@ export function RegistrationForm() {
                         }}
                         options={cityOptions}
                         isLoading={citiesLoading}
-                        disabled={isLoading}
-                        placeholder={stateValue ? 'Select your city' : 'Select a state / province first'}
+                        placeholder={placeholder}
+                        emptyLabel="No cities found"
+                        helperText={!errors.city ? helperText : undefined}
                       />
                     );
                   }}
@@ -1446,14 +1431,8 @@ export function RegistrationForm() {
                 {errors.city && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <span>•</span>
-                    <span>{errors.city.message || 'Please select or enter your city'}</span>
+                    <span>{errors.city.message || 'Please enter your city'}</span>
                   </p>
-                )}
-                {!errors.city && citiesError && (
-                  <p className="text-xs text-muted-foreground">{citiesError}</p>
-                )}
-                {!errors.city && !citiesError && stateValue && !cityValue && (
-                  <p className="text-xs text-muted-foreground">Select from the list or type manually</p>
                 )}
               </div>
               <div className="space-y-2">
