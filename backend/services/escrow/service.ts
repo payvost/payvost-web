@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, MilestoneStatus as PrismaMilestoneStatus } from '@prisma/client';
 import type { EscrowStatus, EscrowPartyRole, MilestoneStatus } from './types';
 import { Decimal } from '@prisma/client/runtime/library';
 import DecimalJS from 'decimal.js';
@@ -269,7 +269,7 @@ export async function fundMilestone(
       where: { id: input.milestoneId },
       data: {
         amountFunded: new Decimal(newFundedAmount.toString()),
-        status: isFunded ? MilestoneStatusEnum.FUNDED : MilestoneStatusEnum.AWAITING_FUNDING as MilestoneStatus,
+        status: isFunded ? PrismaMilestoneStatus.FUNDED : PrismaMilestoneStatus.AWAITING_FUNDING,
         fundedAt: isFunded ? new Date() : undefined,
       },
     });
