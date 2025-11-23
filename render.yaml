@@ -11,9 +11,7 @@ services:
       - key: RATE_ALERT_SERVICE_PORT
         value: 3009
       - key: DATABASE_URL
-        fromDatabase:
-          name: payvost-db
-          property: connectionString
+        sync: false  # Set to your Neon database connection string in Render Dashboard
       - key: MAILGUN_API_KEY
         sync: false
       - key: MAILGUN_DOMAIN
@@ -59,9 +57,7 @@ services:
       - key: FRAUD_SERVICE_PORT
         value: 3011
       - key: DATABASE_URL
-        fromDatabase:
-          name: payvost-db
-          property: connectionString
+        sync: false  # Set to your Neon database connection string in Render Dashboard
       - key: INTERNAL_API_KEY
         sync: false
       - key: NODE_ENV
@@ -79,9 +75,7 @@ services:
       - key: CORE_BANKING_SERVICE_PORT
         value: 3012
       - key: DATABASE_URL
-        fromDatabase:
-          name: payvost-db
-          property: connectionString
+        sync: false  # Set to your Neon database connection string in Render Dashboard
       - key: INTERNAL_API_KEY
         sync: false
       - key: NODE_ENV
