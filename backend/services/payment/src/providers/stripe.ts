@@ -5,7 +5,7 @@ export class StripeProvider implements PaymentProvider {
   private stripe: Stripe;
   
   constructor(apiKey: string) {
-    this.stripe = new Stripe(apiKey, { apiVersion: '2025-09-30.clover' });
+    this.stripe = new Stripe(apiKey, { apiVersion: '2023-10-16' });
   }
   
   name = 'stripe';
