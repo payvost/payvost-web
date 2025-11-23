@@ -20,7 +20,7 @@ import {
   BarChart,
   Repeat
 } from 'lucide-react';
-import { LiveChat } from '@/components/live-chat';
+import { EnhancedLiveChat } from '@/components/enhanced-live-chat';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -143,7 +143,7 @@ export default function BusinessSupportPage() {
                                         <CardTitle className="flex items-center gap-2"><Bot className="h-6 w-6"/> AI Support Assistant</CardTitle>
                                         <CardDescription>Get instant answers to your questions about our business tools and services.</CardDescription>
                                     </CardHeader>
-                                    <LiveChat />
+                                    <EnhancedLiveChat />
                                 </Card>
                                 <div className="space-y-6">
                                      <Card>

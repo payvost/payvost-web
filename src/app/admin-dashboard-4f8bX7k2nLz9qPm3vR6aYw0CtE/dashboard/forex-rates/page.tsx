@@ -20,8 +20,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const statusConfig = {
-  Active: 'bg-green-500/20 text-green-700 dark:text-green-400',
-  Paused: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400',
+  Active: 'bg-green-500/20 text-green-700 dark:text-green-300 dark:bg-green-500/30',
+  Paused: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-500/30',
 };
 
 interface ForexSummary {

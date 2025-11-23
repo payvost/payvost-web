@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         name: data.fullName || data.displayName || data.name || data.email || 'Unknown',
         email: data.email || '',
         phone: data.phoneNumber || data.phone || '',
-  kycStatus: typeof data.kycStatus === 'string' ? data.kycStatus.toLowerCase() : 'unverified',
+        kycStatus: typeof data.kycStatus === 'string' ? data.kycStatus.toLowerCase() : 'unverified',
         userType: data.userType || 'Normal User',
         country: data.country || 'Unknown',
         countryCode: data.countryCode || 'US',
@@ -26,6 +26,9 @@ export async function GET(request: NextRequest) {
         associatedAccounts: data.associatedAccounts || [],
         createdAt: data.createdAt || null,
         updatedAt: data.updatedAt || null,
+        joinedDate: data.joinedDate || data.createdAt || null,
+        kycProfile: data.kycProfile || null,
+        kycTier: data.kycTier || null,
       };
     });
 

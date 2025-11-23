@@ -22,9 +22,9 @@ const samplePartners: PayoutPartner[] = [
 ];
 
 const statusConfig: { [key in PayoutPartner['status']]: string } = {
-    Active: 'bg-green-500/20 text-green-700',
-    Inactive: 'bg-gray-500/20 text-gray-700',
-    'Issues Detected': 'bg-yellow-500/20 text-yellow-700',
+    Active: 'bg-green-500/20 text-green-700 dark:text-green-300 dark:bg-green-500/30',
+    Inactive: 'bg-gray-500/20 text-gray-700 dark:text-gray-300 dark:bg-gray-500/30',
+    'Issues Detected': 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-500/30',
 };
 
 export default function BankIntegrationsPage() {

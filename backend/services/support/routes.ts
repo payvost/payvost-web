@@ -276,6 +276,77 @@ router.post('/tickets/:id/messages', verifyFirebaseToken, requireSupportTeam, as
 // ==================== Chat Session Routes ====================
 
 /**
+ * POST /api/support/chat/sessions/user
+ * Create a new chat session for authenticated user
+ */
+router.post('/chat/sessions/user', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    // Check for existing active session
+    const existingSession = await prisma.chatSession.findFirst({
+      where: {
+        customerId: userId,
+        status: { in: ['WAITING', 'ACTIVE'] },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (existingSession) {
+      return res.json(existingSession);
+    }
+
+    // Create new session
+    const session = await SupportService.createChatSession({ customerId: userId });
+    res.status(201).json(session);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to create chat session' });
+    }
+  }
+});
+
+/**
+ * GET /api/support/chat/sessions/active
+ * Get active chat session for authenticated user
+ */
+router.get('/chat/sessions/active', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const session = await prisma.chatSession.findFirst({
+      where: {
+        customerId: userId,
+        status: { in: ['WAITING', 'ACTIVE'] },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+        },
+      },
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'No active session found' });
+    }
+
+    res.json({ sessionId: session.id, session });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch active session' });
+  }
+});
+
+/**
  * GET /api/support/chat/sessions
  * List chat sessions with filters
  */

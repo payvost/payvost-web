@@ -42,12 +42,22 @@ export interface CustomerData {
     bvn?: string; // Bank Verification Number
     ssn?: string; // Social Security Number
     ssnLast4?: string; // Last 4 digits of SSN
+    kycProfile?: {
+        tiers?: {
+            tier1?: { status?: string; submittedAt?: string | Timestamp };
+            tier2?: { status?: string; submittedAt?: string | Timestamp };
+            tier3?: { status?: string; submittedAt?: string | Timestamp };
+        };
+    };
+    kycTier?: 'tier1' | 'tier2' | 'tier3' | string;
   userType: UserType;
   riskScore: number;
   totalSpend: number;
   wallets: WalletBalance[];
   transactions: Transaction[];
   joinedDate?: string | Timestamp;
+  createdAt?: string | Timestamp;
+  updatedAt?: string | Timestamp;
   associatedAccounts?: AssociatedAccount[];
   transactionPin?: string;
   pinSetupNotified?: boolean;

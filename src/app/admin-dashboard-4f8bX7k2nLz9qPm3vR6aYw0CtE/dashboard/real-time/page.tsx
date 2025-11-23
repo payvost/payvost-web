@@ -146,17 +146,17 @@ function detectDevice(userAgent?: string, device?: string): DeviceType {
 }
 
 const statusConfig: Record<TransactionStatus, { icon: React.ReactNode; color: string; label: string }> = {
-    success: { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'bg-green-500/10 text-green-700 dark:text-green-400', label: 'Success' },
-    completed: { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'bg-green-500/10 text-green-700 dark:text-green-400', label: 'Completed' },
-    processing: { icon: <Clock className="h-4 w-4 text-amber-500" />, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', label: 'Processing' },
-    pending: { icon: <Clock className="h-4 w-4 text-amber-500" />, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', label: 'Pending' },
-    failed: { icon: <AlertCircle className="h-4 w-4 text-red-500" />, color: 'bg-red-500/10 text-red-700 dark:text-red-400', label: 'Failed' },
+    success: { icon: <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />, color: 'bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20', label: 'Success' },
+    completed: { icon: <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />, color: 'bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20', label: 'Completed' },
+    processing: { icon: <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:bg-amber-500/20', label: 'Processing' },
+    pending: { icon: <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:bg-amber-500/20', label: 'Pending' },
+    failed: { icon: <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />, color: 'bg-red-500/10 text-red-700 dark:text-red-300 dark:bg-red-500/20', label: 'Failed' },
 };
 
 const riskConfig: Record<RiskLevel, { color: string; label: string }> = {
-    low: { color: 'bg-green-500/20 text-green-800 dark:text-green-300', label: 'Low' },
-    medium: { color: 'bg-amber-500/20 text-amber-800 dark:text-amber-300', label: 'Medium' },
-    high: { color: 'bg-red-500/20 text-red-800 dark:text-red-300', label: 'High' },
+    low: { color: 'bg-green-500/20 text-green-700 dark:text-green-300 dark:bg-green-500/30', label: 'Low' },
+    medium: { color: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 dark:bg-amber-500/30', label: 'Medium' },
+    high: { color: 'bg-red-500/20 text-red-700 dark:text-red-300 dark:bg-red-500/30', label: 'High' },
 };
 
 type SortField = 'timestamp' | 'amount' | 'status' | 'risk' | 'email';

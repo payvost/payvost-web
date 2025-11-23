@@ -20,11 +20,11 @@ import axios from 'axios';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    verified: { color: 'text-green-700', variant: 'default' },
-    pending: { color: 'text-yellow-700', variant: 'secondary' },
-    unverified: { color: 'text-gray-700', variant: 'outline' },
-    restricted: { color: 'text-orange-700', variant: 'destructive' },
-    rejected: { color: 'text-red-700', variant: 'destructive' },
+    verified: { color: 'text-green-700 dark:text-green-300', variant: 'default' },
+    pending: { color: 'text-yellow-700 dark:text-yellow-300', variant: 'secondary' },
+    unverified: { color: 'text-gray-700 dark:text-gray-300', variant: 'outline' },
+    restricted: { color: 'text-orange-700 dark:text-orange-300', variant: 'destructive' },
+    rejected: { color: 'text-red-700 dark:text-red-300', variant: 'destructive' },
 };
 
 export default function CustomersPage() {
@@ -194,7 +194,20 @@ export default function CustomersPage() {
                                         <Badge variant="outline">{user.userType}</Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={status.variant} className={cn('capitalize', status.color, status.color.replace('text-','bg-').replace('-700','-500/20'))}>{statusLabel}</Badge>
+                                        <Badge 
+                                            variant={status.variant} 
+                                            className={cn(
+                                                'capitalize',
+                                                status.color,
+                                                status.color.includes('green') ? 'bg-green-500/20 dark:bg-green-500/30' :
+                                                status.color.includes('yellow') ? 'bg-yellow-500/20 dark:bg-yellow-500/30' :
+                                                status.color.includes('orange') ? 'bg-orange-500/20 dark:bg-orange-500/30' :
+                                                status.color.includes('red') ? 'bg-red-500/20 dark:bg-red-500/30' :
+                                                status.color.includes('gray') ? 'bg-gray-500/20 dark:bg-gray-500/30' : ''
+                                            )}
+                                        >
+                                            {statusLabel}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         {getRiskBadge(user.riskScore)}
