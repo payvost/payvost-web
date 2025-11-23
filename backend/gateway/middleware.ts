@@ -3,13 +3,16 @@ import admin from 'firebase-admin';
 import * as jwt from 'jsonwebtoken';
 import { AuthenticationError, AuthorizationError, KYCError } from './index';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET || JWT_SECRET === 'changeme') {
-  throw new Error(
-    'JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
-    'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-  );
+// Lazy check for JWT_SECRET - only validate when verifyJWT is actually called
+function getJWTSecret(): string {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+    throw new Error(
+      'JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
+      'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+  return JWT_SECRET;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -78,8 +81,7 @@ export function verifyJWT(
     }
 
     const token = authHeader.substring(7);
-    // JWT_SECRET is validated at module load time, so it's safe to use here
-    const decoded = jwt.verify(token, JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, getJWTSecret()) as any;
 
     req.user = {
       uid: decoded.userId,

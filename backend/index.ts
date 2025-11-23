@@ -24,7 +24,7 @@ initRedis();
 const localRequire = createRequire(__filename);
 
 // Helper to load modules in both TS (dev) and JS (prod) builds
-function loadService(modPath: string) {
+function loadService(modPath: string, required = true) {
   const candidates = [
     modPath,
     `${modPath}.ts`,
@@ -42,7 +42,10 @@ function loadService(modPath: string) {
       // try next candidate
     }
   }
-  throw new Error(`Cannot load module: ${modPath}`);
+  if (required) {
+    throw new Error(`Cannot load module: ${modPath}`);
+  }
+  return null;
 }
 
 let userRoutes: any;
@@ -61,24 +64,45 @@ let supportRoutes: any;
 
 try {
   logger.info('Firebase Admin SDK initialized');
-  // Load service routes
-  userRoutes = loadService('./services/user/routes/userRoutes');
-  walletRoutes = loadService('./services/wallet/routes');
-  transactionRoutes = loadService('./services/transaction/routes');
-  fraudRoutes = loadService('./services/fraud/routes');
-  notificationRoutes = loadService('./services/notification/routes');
-  currencyRoutes = loadService('./services/currency/routes');
-  paymentRoutes = loadService('./services/payment/src/routes');
-  escrowRoutes = loadService('./services/escrow/routes');
-  errorTrackerRoutes = loadService('./services/error-tracker/routes');
-  invoiceRoutes = loadService('./services/invoice/routes');
-  businessRoutes = loadService('./services/business/routes');
-  contentRoutes = loadService('./services/content/routes');
-  supportRoutes = loadService('./services/support/routes');
-  logger.info('All service routes loaded');
+  // Load service routes (userRoutes is optional - it requires JWT_SECRET)
+  userRoutes = loadService('./services/user/routes/userRoutes', false);
+  walletRoutes = loadService('./services/wallet/routes', false);
+  transactionRoutes = loadService('./services/transaction/routes', false);
+  fraudRoutes = loadService('./services/fraud/routes', false);
+  notificationRoutes = loadService('./services/notification/routes', false);
+  currencyRoutes = loadService('./services/currency/routes', false);
+  paymentRoutes = loadService('./services/payment/src/routes', false);
+  escrowRoutes = loadService('./services/escrow/routes', false);
+  errorTrackerRoutes = loadService('./services/error-tracker/routes', false);
+  invoiceRoutes = loadService('./services/invoice/routes', false);
+  businessRoutes = loadService('./services/business/routes', false);
+  contentRoutes = loadService('./services/content/routes', false);
+  supportRoutes = loadService('./services/support/routes', false);
+  
+  const loadedServices = [
+    userRoutes && 'User',
+    walletRoutes && 'Wallet',
+    transactionRoutes && 'Transaction',
+    fraudRoutes && 'Fraud',
+    notificationRoutes && 'Notification',
+    currencyRoutes && 'Currency',
+    paymentRoutes && 'Payment',
+    escrowRoutes && 'Escrow',
+    errorTrackerRoutes && 'ErrorTracker',
+    invoiceRoutes && 'Invoice',
+    businessRoutes && 'Business',
+    contentRoutes && 'Content',
+    supportRoutes && 'Support',
+  ].filter(Boolean);
+  
+  logger.info({ services: loadedServices }, 'Service routes loaded');
+  
+  if (!userRoutes) {
+    logger.warn('User service not loaded - JWT_SECRET may not be configured');
+  }
 } catch (err) {
   logger.error({ err }, 'Failed to load backend modules');
-  process.exit(1);
+  // Don't exit - continue with available services
 }
 
 // Create gateway application

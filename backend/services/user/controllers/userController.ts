@@ -11,14 +11,7 @@ const adminMod = localRequire('../../../firebase');
 const admin = adminMod && adminMod.default ? adminMod.default : adminMod;
 import type { User } from '../models/user';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET || JWT_SECRET === 'changeme') {
-  throw new Error(
-    'JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
-    'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-  );
-}
+// Note: This service uses Firebase Auth, not JWT. JWT_SECRET is not needed here.
 const firestore = admin.firestore();
 const usersCollection = firestore.collection('users');
 
