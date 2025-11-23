@@ -1,0 +1,103 @@
+services:
+  # Rate Alert Monitor Service (Background Worker / Cron Job)
+  - type: web
+    name: payvost-rate-alert-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/rate-alert-service && npm install && npm run build
+    startCommand: cd backend/services/rate-alert-service && npm start
+    envVars:
+      - key: RATE_ALERT_SERVICE_PORT
+        value: 3009
+      - key: DATABASE_URL
+        fromDatabase:
+          name: payvost-db
+          property: connectionString
+      - key: MAILGUN_API_KEY
+        sync: false
+      - key: MAILGUN_DOMAIN
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_EMAIL
+        value: alerts@payvost.com
+      - key: OPEN_EXCHANGE_RATES_APP_ID
+        sync: false
+      - key: AUTO_RUN_ON_STARTUP
+        value: "false"
+      - key: NODE_ENV
+        value: production
+
+  # Currency Service
+  - type: web
+    name: payvost-currency-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/currency-service && npm install && npm run build
+    startCommand: cd backend/services/currency-service && npm start
+    envVars:
+      - key: CURRENCY_SERVICE_PORT
+        value: 3010
+      - key: OPEN_EXCHANGE_RATES_APP_ID
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # Fraud Detection Service
+  - type: web
+    name: payvost-fraud-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/fraud-service && npm install && npm run build
+    startCommand: cd backend/services/fraud-service && npm start
+    envVars:
+      - key: FRAUD_SERVICE_PORT
+        value: 3011
+      - key: DATABASE_URL
+        fromDatabase:
+          name: payvost-db
+          property: connectionString
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # Core Banking Service
+  - type: web
+    name: payvost-core-banking-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/core-banking-service && npm install && npm run build
+    startCommand: cd backend/services/core-banking-service && npm start
+    envVars:
+      - key: CORE_BANKING_SERVICE_PORT
+        value: 3012
+      - key: DATABASE_URL
+        fromDatabase:
+          name: payvost-db
+          property: connectionString
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+
+  # Existing services (already deployed)
+  # - payvost-web-hook-services
+  # - payvost-admin-stat-service
+  # - payvost-pdf-generator
+  # - payvost-email-service
+
+# Optional: Cron Job for Rate Alert Monitor (alternative to always-on service)
+# Uncomment if you prefer scheduled execution instead of always-on service
+# cronJobs:
+#   - name: payvost-rate-alert-cron
+#     schedule: "*/15 * * * *"  # Every 15 minutes
+#     service: payvost-rate-alert-service
+#     command: curl -X POST http://localhost:3009/run
+
