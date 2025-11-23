@@ -174,14 +174,14 @@ Context: User has ${context.recentTickets?.length || 0} recent tickets.`,
     
     const hasNegativeSentiment = negativeKeywords.some(kw => lowerMessage.includes(kw));
     const hasEscalationKeywords = escalationKeywords.some(kw => lowerMessage.includes(kw));
-    const hasMultipleTickets = hasNegativeSentiment && context.recentTickets && context.recentTickets.length > 2;
+    const hasMultipleTickets = Boolean(hasNegativeSentiment && context.recentTickets && context.recentTickets.length > 2);
     const shouldEscalate = hasEscalationKeywords || hasMultipleTickets;
 
     return {
       intent: 'general_inquiry',
       sentiment: hasNegativeSentiment ? 'negative' : 'neutral',
       confidence: 0.6,
-      shouldEscalate,
+      shouldEscalate: Boolean(shouldEscalate),
     };
   }
 
