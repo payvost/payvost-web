@@ -109,7 +109,7 @@ export class AIOrchestrator {
     return {
       userId,
       sessionId,
-      messageHistory: messages.map((msg) => ({
+      messageHistory: messages.map((msg: { senderId: string; content: string }) => ({
         role: msg.senderId === userId ? 'user' : msg.senderId === 'AI_ASSISTANT' ? 'assistant' : 'user',
         content: msg.content,
       })),
@@ -173,9 +173,9 @@ Context: User has ${context.recentTickets?.length || 0} recent tickets.`,
     const escalationKeywords = ['speak to human', 'agent', 'manager', 'complaint', 'supervisor', 'representative'];
     
     const hasNegativeSentiment = negativeKeywords.some(kw => lowerMessage.includes(kw));
-    const shouldEscalate = 
-      escalationKeywords.some(kw => lowerMessage.includes(kw)) ||
-      (hasNegativeSentiment && context.recentTickets && context.recentTickets.length > 2);
+    const hasEscalationKeywords = escalationKeywords.some(kw => lowerMessage.includes(kw));
+    const hasMultipleTickets = hasNegativeSentiment && context.recentTickets && context.recentTickets.length > 2;
+    const shouldEscalate = hasEscalationKeywords || hasMultipleTickets;
 
     return {
       intent: 'general_inquiry',
