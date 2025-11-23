@@ -1,85 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth';
+import {
+  checkAPIGatewayHealth,
+  checkDatabaseHealth,
+  checkAuthenticationServiceHealth,
+  checkStripeHealth,
+  checkPayPalHealth,
+  checkFXProviderHealth,
+  checkEmailServiceHealth,
+  checkSettlementEngineHealth,
+  checkWebDashboardHealth,
+  storeHealthCheck,
+  calculateUptime,
+  detectAndStoreIncidents,
+  type ServiceStatus,
+} from '@/lib/health-check-service';
+import { prisma } from '@/lib/prisma';
 
-// Service health check functions
+interface ServiceHealthData {
+  name: string;
+  status: ServiceStatus;
+  description: string;
+  responseTime?: number;
+  lastChecked?: string;
+  uptime?: number;
+  components?: Array<{ name: string; status: ServiceStatus }>;
+}
+
+/**
+ * Main health check function that routes to appropriate checker
+ */
 async function checkServiceHealth(serviceName: string): Promise<{
-  status: 'Operational' | 'Degraded Performance' | 'Major Outage';
+  status: ServiceStatus;
   responseTime?: number;
   lastChecked: string;
   details?: any;
 }> {
-  const startTime = Date.now();
-  
-  try {
-    switch (serviceName) {
-      case 'API Gateway':
-        // Check if backend gateway is responding
-        try {
-          const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/health`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(5000),
-          });
-          const responseTime = Date.now() - startTime;
-          if (response.ok && responseTime < 1000) {
-            return { status: 'Operational', responseTime, lastChecked: new Date().toISOString() };
-          } else if (responseTime < 3000) {
-            return { status: 'Degraded Performance', responseTime, lastChecked: new Date().toISOString() };
-          } else {
-            return { status: 'Major Outage', responseTime, lastChecked: new Date().toISOString() };
-          }
-        } catch {
-          return { status: 'Major Outage', lastChecked: new Date().toISOString() };
-        }
+  switch (serviceName) {
+    case 'API Gateway':
+      return await checkAPIGatewayHealth();
+    
+    case 'Database Cluster':
+      return await checkDatabaseHealth();
+    
+    case 'Authentication Service':
+      return await checkAuthenticationServiceHealth();
+    
+    case 'Payment Processing':
+      // Check multiple payment gateways
+      const [stripeHealth, paypalHealth] = await Promise.all([
+        checkStripeHealth(),
+        checkPayPalHealth(),
+      ]);
       
-      case 'Database Cluster':
-        // Simulate database check (in production, check actual DB connection)
-        const dbResponseTime = Math.random() * 200 + 50;
-        if (dbResponseTime < 100) {
-          return { status: 'Operational', responseTime: dbResponseTime, lastChecked: new Date().toISOString() };
-        } else if (dbResponseTime < 300) {
-          return { status: 'Degraded Performance', responseTime: dbResponseTime, lastChecked: new Date().toISOString() };
-        } else {
-          return { status: 'Major Outage', responseTime: dbResponseTime, lastChecked: new Date().toISOString() };
-        }
-      
-      case 'Payment Processing':
-        // Check payment gateway status (simulated)
-        const paymentStatus = Math.random() > 0.15 ? 'Operational' : 'Degraded Performance';
-        return { 
-          status: paymentStatus as any, 
-          responseTime: Math.random() * 500 + 100,
-          lastChecked: new Date().toISOString(),
-          details: {
-            stripe: Math.random() > 0.1 ? 'Operational' : 'Degraded Performance',
-            paypal: Math.random() > 0.2 ? 'Operational' : 'Degraded Performance',
-            bankTransfer: 'Operational'
-          }
-        };
-      
-      case 'Third-Party FX Provider':
-        // Simulate FX provider check
-        const fxStatus = Math.random() > 0.1 ? 'Operational' : (Math.random() > 0.5 ? 'Degraded Performance' : 'Major Outage');
-        return { 
-          status: fxStatus as any, 
-          responseTime: Math.random() * 800 + 200,
-          lastChecked: new Date().toISOString() 
-        };
-      
-      default:
-        // Default: simulate operational with random response time
-        return { 
-          status: Math.random() > 0.1 ? 'Operational' : 'Degraded Performance' as any,
-          responseTime: Math.random() * 300 + 50,
-          lastChecked: new Date().toISOString() 
-        };
-    }
-  } catch (error) {
-    return { 
-      status: 'Major Outage', 
-      lastChecked: new Date().toISOString(),
-      details: { error: error instanceof Error ? error.message : 'Unknown error' }
-    };
+      // Determine overall payment processing status
+      let overallStatus: ServiceStatus;
+      const responseTimes = [stripeHealth.responseTime, paypalHealth.responseTime].filter(Boolean) as number[];
+      const avgResponseTime = responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+        : undefined;
+
+      if (stripeHealth.status === 'Major Outage' && paypalHealth.status === 'Major Outage') {
+        overallStatus = 'Major Outage';
+      } else if (stripeHealth.status === 'Major Outage' || paypalHealth.status === 'Major Outage') {
+        overallStatus = 'Degraded Performance';
+      } else if (stripeHealth.status === 'Degraded Performance' || paypalHealth.status === 'Degraded Performance') {
+        overallStatus = 'Degraded Performance';
+      } else {
+        overallStatus = 'Operational';
+      }
+
+      return {
+        status: overallStatus,
+        responseTime: avgResponseTime,
+        lastChecked: new Date().toISOString(),
+        details: {
+          stripe: stripeHealth.status,
+          paypal: paypalHealth.status,
+          bankTransfer: 'Operational', // Bank transfers don't have external API to check
+        },
+      };
+    
+    case 'Third-Party FX Provider':
+      return await checkFXProviderHealth();
+    
+    case 'Email Notifications':
+      return await checkEmailServiceHealth();
+    
+    case 'Settlement Engine':
+      return await checkSettlementEngineHealth();
+    
+    case 'Web Dashboard':
+      return await checkWebDashboardHealth();
+    
+    default:
+      // Default: assume operational
+      return {
+        status: 'Operational',
+        lastChecked: new Date().toISOString(),
+      };
   }
 }
 
@@ -90,7 +109,7 @@ export async function GET(request: NextRequest) {
       await requireAuth(request);
     } catch (error) {
       // For development, allow unauthenticated requests with mock data
-      // In production, remove this and require authentication
+      // In production, require authentication
       if (process.env.NODE_ENV === 'production') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -108,23 +127,29 @@ export async function GET(request: NextRequest) {
     ];
 
     // Check all services in parallel
-    const serviceChecks = await Promise.all(
+    const healthCheckResults = await Promise.all(
       services.map(async (serviceName) => {
         const health = await checkServiceHealth(serviceName);
         
+        // Store health check result in database
+        await storeHealthCheck(serviceName, health);
+        
+        // Calculate uptime from historical data
+        const uptime = await calculateUptime(serviceName, 30);
+        
         // Map service names to their components
-        let components;
+        let components: Array<{ name: string; status: ServiceStatus }> | undefined;
         if (serviceName === 'API Gateway') {
           components = [
             { name: 'Public API', status: health.status },
             { name: 'Internal API', status: health.status },
           ];
-        } else if (serviceName === 'Payment Processing') {
-          components = health.details ? [
+        } else if (serviceName === 'Payment Processing' && health.details) {
+          components = [
             { name: 'Stripe Gateway', status: health.details.stripe || 'Operational' },
             { name: 'PayPal Gateway', status: health.details.paypal || 'Operational' },
             { name: 'Bank Transfer Processor', status: health.details.bankTransfer || 'Operational' },
-          ] : undefined;
+          ];
         }
 
         return {
@@ -134,25 +159,65 @@ export async function GET(request: NextRequest) {
           responseTime: health.responseTime,
           lastChecked: health.lastChecked,
           components,
-          uptime: calculateUptime(serviceName, health.status),
+          uptime,
         };
       })
     );
 
-    // Calculate overall system status
-    const hasOutage = serviceChecks.some(s => s.status === 'Major Outage');
-    const hasDegraded = serviceChecks.some(s => s.status === 'Degraded Performance');
-    const overallStatus = hasOutage ? 'Major Outage' : hasDegraded ? 'Degraded Performance' : 'Operational';
+    // Detect and store incidents based on service status
+    await detectAndStoreIncidents(
+      healthCheckResults.map(s => ({
+        name: s.name,
+        status: s.status,
+        lastChecked: s.lastChecked || new Date().toISOString(),
+      }))
+    );
 
-    // Get recent incidents (simulated - in production, fetch from database)
-    const incidents = getRecentIncidents();
+    // Calculate overall system status
+    const hasOutage = healthCheckResults.some(s => s.status === 'Major Outage');
+    const hasDegraded = healthCheckResults.some(s => s.status === 'Degraded Performance');
+    const overallStatus: ServiceStatus = hasOutage ? 'Major Outage' : hasDegraded ? 'Degraded Performance' : 'Operational';
+
+    // Fetch recent incidents from database
+    const recentIncidents = await prisma.systemIncident.findMany({
+      where: {
+        OR: [
+          { status: { in: ['INVESTIGATING', 'MONITORING'] } },
+          {
+            status: 'RESOLVED',
+            resolvedAt: {
+              gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+            },
+          },
+        ],
+      },
+      orderBy: {
+        startedAt: 'desc',
+      },
+      take: 10,
+    });
+
+    // Map database incidents to API format
+    const incidents = recentIncidents.map(incident => ({
+      id: incident.id,
+      title: incident.title,
+      description: incident.description,
+      status: incident.status.toLowerCase() as 'resolved' | 'monitoring' | 'investigating',
+      severity: incident.severity.toLowerCase() as 'high' | 'medium' | 'low',
+      startedAt: incident.startedAt.toISOString(),
+      resolvedAt: incident.resolvedAt?.toISOString(),
+      affectedServices: incident.affectedServices,
+    }));
+
+    // Calculate system-wide uptime from all services
+    const systemUptime = await calculateSystemUptime(healthCheckResults);
 
     return NextResponse.json({
       overallStatus,
-      services: serviceChecks,
+      services: healthCheckResults,
       incidents,
       lastUpdated: new Date().toISOString(),
-      systemUptime: calculateSystemUptime(),
+      systemUptime,
     });
   } catch (error) {
     console.error('Error fetching system status:', error);
@@ -210,44 +275,22 @@ function getServiceDescription(serviceName: string, status: string): string {
   return descriptions[serviceName]?.[status] || 'Service status unknown.';
 }
 
-function calculateUptime(serviceName: string, currentStatus: string): number {
-  // Simulated uptime calculation (in production, calculate from historical data)
-  const baseUptime = 99.5 + Math.random() * 0.5;
-  if (currentStatus === 'Major Outage') {
-    return Math.max(95, baseUptime - 2);
-  } else if (currentStatus === 'Degraded Performance') {
-    return Math.max(98, baseUptime - 0.5);
+/**
+ * Calculate system-wide uptime from all service uptimes
+ */
+async function calculateSystemUptime(services: ServiceHealthData[]): Promise<number> {
+  try {
+    // Calculate average uptime across all services
+    const uptimes = services.filter(s => s.uptime !== undefined).map(s => s.uptime!);
+    
+    if (uptimes.length === 0) {
+      return 99.5; // Default if no uptime data
+    }
+
+    const avgUptime = uptimes.reduce((a, b) => a + b, 0) / uptimes.length;
+    return Math.max(0, Math.min(100, avgUptime));
+  } catch (error) {
+    console.error('Failed to calculate system uptime:', error);
+    return 99.5;
   }
-  return baseUptime;
 }
-
-function calculateSystemUptime(): number {
-  // Simulated system-wide uptime (in production, calculate from all services)
-  return 99.7 + Math.random() * 0.3;
-}
-
-function getRecentIncidents() {
-  // Simulated incident history (in production, fetch from database)
-  return [
-    {
-      id: '1',
-      title: 'Third-Party FX Provider Outage',
-      description: 'Primary FX rate provider experienced connectivity issues. Automatically failed over to secondary provider.',
-      status: 'resolved',
-      severity: 'high',
-      startedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      resolvedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      affectedServices: ['Third-Party FX Provider'],
-    },
-    {
-      id: '2',
-      title: 'Payment Processing Delays',
-      description: 'Intermittent delays detected with PayPal gateway. Transactions processed successfully but with increased latency.',
-      status: 'monitoring',
-      severity: 'medium',
-      startedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-      affectedServices: ['Payment Processing'],
-    },
-  ];
-}
-
