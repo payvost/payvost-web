@@ -1,4 +1,40 @@
 services:
+  # Main Backend API Gateway (includes Support Service and all other services)
+  - type: web
+    name: payvost-backend-gateway
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend && npm install --include=dev && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false  # Set to your Neon database connection string in Render Dashboard
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false  # Firebase service account JSON (as string)
+      - key: FIREBASE_DATABASE_URL
+        sync: false  # Optional: Firebase Realtime Database URL
+      - key: FRONTEND_URL
+        sync: false  # Comma-separated list of allowed origins (e.g., "https://www.payvost.com,https://payvost.com")
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        sync: false  # Optional: Redis connection URL if using Redis
+      - key: MAILGUN_API_KEY
+        sync: false  # Optional: If using Mailgun for emails
+      - key: MAILGUN_DOMAIN
+        sync: false  # Optional: Mailgun domain
+      - key: TWILIO_ACCOUNT_SID
+        sync: false  # Optional: If using Twilio for SMS
+      - key: TWILIO_AUTH_TOKEN
+        sync: false  # Optional: Twilio auth token
+      - key: TWILIO_FROM_NUMBER
+        sync: false  # Optional: Twilio phone number
+      - key: JWT_SECRET
+        sync: false  # Optional: JWT secret for token signing
+
   # Rate Alert Monitor Service (Background Worker / Cron Job)
   - type: web
     name: payvost-rate-alert-service
