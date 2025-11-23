@@ -65,7 +65,7 @@ async function getExchangeRates(base: string, target?: string): Promise<Record<s
     const oxrUrl = `https://openexchangerates.org/api/latest.json?app_id=${OXR_APP_ID}${base !== 'USD' ? `&base=${base}` : ''}&symbols=${symbols}`;
     
     const response = await fetch(oxrUrl);
-    const data = await response.json();
+    const data = await response.json() as { rates?: Record<string, number>; message?: string };
 
     if (!data.rates) {
       console.error('[Currency Service] OpenExchangeRates API error:', data.message || 'Unknown error');

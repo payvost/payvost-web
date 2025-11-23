@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Bell,
   Mail,
@@ -30,13 +33,63 @@ import {
   MessageCircleQuestion,
   AlertTriangle,
   Trash2,
+  Sparkles,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { TwoFactorSettings } from '@/components/two-factor-settings';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const { user, loading: authLoading } = useAuth();
+  const [businessProfile, setBusinessProfile] = useState<any>(null);
+  const [loadingBusiness, setLoadingBusiness] = useState(true);
+
+  useEffect(() => {
+    if (!user || authLoading) {
+      setLoadingBusiness(false);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        const profile = userData.businessProfile;
+        if (profile && (profile.status === 'approved' || profile.status === 'Approved')) {
+          setBusinessProfile(profile);
+        } else {
+          setBusinessProfile(null);
+        }
+      } else {
+        setBusinessProfile(null);
+      }
+      setLoadingBusiness(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading]);
+
+  const getBusinessInitials = (name?: string) => {
+    if (!name) return 'B';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const businessTypeMap: { [key: string]: string } = {
+    'sole-prop': 'Sole Proprietorship',
+    'llc': 'LLC',
+    'corporation': 'Corporation',
+    'non-profit': 'Non-Profit',
+  };
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -120,18 +173,138 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* Business Settings Placeholder */}
-            <Card className="border-dashed">
+            {/* Business & Corporate Settings */}
+            <Card className={businessProfile ? "" : "border-dashed"}>
               <CardHeader>
-                <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5"/> Business & Corporate Settings</CardTitle>
-                <CardDescription>Manage your team, roles, and company details. (Pro feature)</CardDescription>
+                <CardTitle className="flex items-center">
+                  <Briefcase className="mr-2 h-5 w-5"/> 
+                  Business & Corporate Settings
+                </CardTitle>
+                <CardDescription>
+                  {businessProfile 
+                    ? "Manage your team, roles, and company details."
+                    : "Manage your team, roles, and company details. (Pro feature)"
+                  }
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                 <Button variant="outline" className="w-full justify-between" disabled><span>Manage Team Members</span><Users className="h-4 w-4" /></Button>
-                 <Button variant="outline" className="w-full justify-between" disabled><span>Company Details & Documents</span><Building className="h-4 w-4" /></Button>
+              <CardContent>
+                {loadingBusiness ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : businessProfile ? (
+                  <div className="space-y-4">
+                    {/* Business Summary */}
+                    <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/30">
+                      <Avatar className="h-16 w-16 border-2 border-primary/20">
+                        <AvatarImage src={businessProfile.logoUrl} alt={businessProfile.legalName || businessProfile.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                          {getBusinessInitials(businessProfile.legalName || businessProfile.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{businessProfile.legalName || businessProfile.name}</h3>
+                            {businessProfile.industry && (
+                              <p className="text-sm text-muted-foreground">{businessProfile.industry}</p>
+                            )}
+                          </div>
+                          <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Approved
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          {businessProfile.businessType && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Building className="h-3.5 w-3.5" />
+                              <span>{businessTypeMap[businessProfile.businessType] || businessProfile.businessType}</span>
+                            </div>
+                          )}
+                          {businessProfile.website && (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Globe className="h-3.5 w-3.5" />
+                              <a 
+                                href={businessProfile.website.startsWith('http') ? businessProfile.website : `https://${businessProfile.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                {businessProfile.website}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Button asChild variant="outline" className="w-full justify-between">
+                        <Link href="/business/settings">
+                          <span>Manage Team Members</span>
+                          <Users className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" className="w-full justify-between">
+                        <Link href="/business/settings">
+                          <span>Company Details & Documents</span>
+                          <Building className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                      <div className="rounded-full bg-primary/10 p-4">
+                        <Sparkles className="h-8 w-8 text-primary" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-semibold text-lg">Explore Business Features</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm">
+                          Unlock powerful tools for managing your business finances, team members, and corporate transactions.
+                        </p>
+                      </div>
+                      <ul className="text-sm text-muted-foreground space-y-1 text-left w-full max-w-sm">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          Team member management
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          Advanced financial controls
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          Corporate invoicing
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                          Enhanced security features
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </CardContent>
-               <CardFooter>
-                    <Button variant="secondary">Upgrade to Business</Button>
+              <CardFooter>
+                {businessProfile ? (
+                  <Button asChild className="w-full">
+                    <Link href="/business">
+                      Switch to Business Dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="secondary" className="w-full">
+                    <Link href="/dashboard/get-started">
+                      Explore Business Features
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
               </CardFooter>
             </Card>
 
