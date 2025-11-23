@@ -3,7 +3,10 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc -b",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
+    "prisma:copy": "node scripts/copy-prisma-client.js",
+    "build": "npm run prisma:generate && npm run prisma:copy && tsc -b",
+    "prestart": "npm run prisma:generate && npm run prisma:copy || true",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only index.ts",
     "dev:server": "ts-node-dev --respawn --transpile-only index.ts"
