@@ -1001,7 +1001,9 @@ function SupportPageContent() {
                                             Our AI assistant is here to help you 24/7.
                                         </SheetDescription>
                                     </SheetHeader>
-                                    <EnhancedLiveChat />
+                                    <div className="flex-1">
+                                        <EnhancedLiveChat inline />
+                                    </div>
                                 </SheetContent>
                             </Sheet>
                         </CardContent>

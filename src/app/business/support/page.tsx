@@ -143,7 +143,9 @@ export default function BusinessSupportPage() {
                                         <CardTitle className="flex items-center gap-2"><Bot className="h-6 w-6"/> AI Support Assistant</CardTitle>
                                         <CardDescription>Get instant answers to your questions about our business tools and services.</CardDescription>
                                     </CardHeader>
-                                    <EnhancedLiveChat />
+                                    <CardContent className="flex-1 p-0">
+                                        <EnhancedLiveChat inline />
+                                    </CardContent>
                                 </Card>
                                 <div className="space-y-6">
                                      <Card>
