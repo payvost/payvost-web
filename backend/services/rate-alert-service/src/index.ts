@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import webpush from 'web-push';
@@ -176,7 +176,7 @@ export async function runRateAlertMonitor(): Promise<{ processed: number; notifi
               if (error.statusCode === 410 || error.statusCode === 404) {
                 await prisma.rateAlert.update({
                   where: { id },
-                  data: { pushSubscription: Prisma.JsonNull },
+                  data: { pushSubscription: null as any },
                 });
               }
               errors++;
