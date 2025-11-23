@@ -54,7 +54,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { LiveChat } from '@/components/live-chat';
+import { EnhancedLiveChat } from '@/components/enhanced-live-chat';
 import Link from 'next/link';
 import { supportService, type TicketPriority, type SupportTicket, type TicketStatus } from '@/services/supportService';
 import { storage } from '@/lib/firebase';
@@ -140,6 +140,9 @@ function SupportPageContent() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Tab state for main tabs (Help Center vs My Tickets)
+  const [mainTab, setMainTab] = useState<'help-center' | 'my-tickets'>('help-center');
+  
   // Tickets state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [recentTickets, setRecentTickets] = useState<SupportTicket[]>([]);
@@ -150,7 +153,14 @@ function SupportPageContent() {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [ticketsSheetOpen, setTicketsSheetOpen] = useState(false);
+
+  // Initialize tab from URL params
+  useEffect(() => {
+    const tab = searchParams.get('tab') as 'help-center' | 'my-tickets';
+    if (tab === 'help-center' || tab === 'my-tickets') {
+      setMainTab(tab);
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -227,19 +237,19 @@ function SupportPageContent() {
     }
   }, [user?.uid, page, statusFilter, priorityFilter, search, toast]);
 
-  // Fetch recent tickets
+  // Fetch recent tickets for widget
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && mainTab === 'help-center') {
       fetchRecentTickets();
     }
-  }, [user?.uid, fetchRecentTickets]);
+  }, [user?.uid, mainTab, fetchRecentTickets]);
 
-  // Fetch full tickets list when sheet opens
+  // Fetch full tickets list
   useEffect(() => {
-    if (user?.uid && ticketsSheetOpen) {
+    if (user?.uid && mainTab === 'my-tickets') {
       fetchTickets();
     }
-  }, [user?.uid, ticketsSheetOpen, fetchTickets]);
+  }, [user?.uid, mainTab, fetchTickets]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -264,6 +274,20 @@ function SupportPageContent() {
         {config.label}
       </Badge>
     );
+  };
+
+  const handleMainTabChange = (value: 'help-center' | 'my-tickets') => {
+    setMainTab(value);
+    // Update URL without navigation
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (value === 'help-center') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', value);
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
   };
 
   // Calculate notification count (tickets with messages or active status)
@@ -394,10 +418,11 @@ function SupportPageContent() {
       setOpenTicketDialog(false);
       setActiveTab('payments');
       
-      // Refresh tickets
-      fetchRecentTickets();
-      if (ticketsSheetOpen) {
+      // Refresh tickets if on my-tickets tab
+      if (mainTab === 'my-tickets') {
         fetchTickets();
+      } else {
+        fetchRecentTickets();
       }
     } catch (error: any) {
       console.error('Error creating ticket:', error);
@@ -430,15 +455,16 @@ function SupportPageContent() {
                     <Input
                     type="search"
                     placeholder="Search for answers..."
-                    className="w-full rounded-full bg-background py-6 pl-12 pr-20 text-lg"
+                    className="w-full rounded-full bg-background py-6 pl-12 pr-32 text-lg"
                     />
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full relative"
-                      onClick={() => setTicketsSheetOpen(true)}
+                      variant={mainTab === 'my-tickets' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-9 px-3 rounded-full relative flex items-center gap-2"
+                      onClick={() => handleMainTabChange(mainTab === 'help-center' ? 'my-tickets' : 'help-center')}
                     >
-                      <Ticket className="h-5 w-5" />
+                      <Ticket className="h-4 w-4" />
+                      <span className="text-sm font-medium">My Tickets</span>
                       {notificationCount > 0 && (
                         <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-semibold">
                           {notificationCount > 9 ? '9+' : notificationCount}
@@ -451,9 +477,11 @@ function SupportPageContent() {
           </div>
         </section>
 
-        {/* Main Content */}
+        {/* Main Tabs */}
         <div className="container mx-auto px-4 md:px-6 max-w-7xl mt-6">
-          <div className="space-y-6">
+          <Tabs value={mainTab} onValueChange={(v) => handleMainTabChange(v as 'help-center' | 'my-tickets')} className="w-full">
+            {/* Help Center Tab */}
+            <TabsContent value="help-center" className="space-y-6 mt-0">
 
         {/* Categories Section */}
         <section className="w-full py-12 md:py-20 lg:py-24">
@@ -504,7 +532,7 @@ function SupportPageContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setTicketsSheetOpen(true)}
+                        onClick={() => handleMainTabChange('my-tickets')}
                         className="h-auto p-0 text-xs"
                       >
                         View All
@@ -973,7 +1001,7 @@ function SupportPageContent() {
                                             Our AI assistant is here to help you 24/7.
                                         </SheetDescription>
                                     </SheetHeader>
-                                    <LiveChat />
+                                    <EnhancedLiveChat />
                                 </SheetContent>
                             </Sheet>
                         </CardContent>
@@ -983,24 +1011,17 @@ function SupportPageContent() {
                   </Card>
                 </div>
               </div>
-          </div>
-        </div>
+            </TabsContent>
 
-        {/* My Tickets Sheet */}
-        <Sheet open={ticketsSheetOpen} onOpenChange={setTicketsSheetOpen}>
-          <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5" />
-                My Support Tickets
-              </SheetTitle>
-              <SheetDescription>
-                View and track all your support requests
-              </SheetDescription>
-            </SheetHeader>
-            
-            <div className="mt-6 space-y-6">
-              <div className="flex items-center justify-end">
+            {/* My Tickets Tab */}
+            <TabsContent value="my-tickets" className="space-y-6 mt-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">My Support Tickets</h2>
+                  <p className="text-muted-foreground mt-1">
+                    View and track all your support requests
+                  </p>
+                </div>
                 <Button onClick={() => setOpenTicketDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Ticket
@@ -1215,9 +1236,9 @@ function SupportPageContent() {
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </TabsContent>
+          </Tabs>
+        </div>
 
       </main>
     </DashboardLayout>

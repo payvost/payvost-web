@@ -683,11 +683,11 @@ export default function AdminNotificationCenterPage() {
                         </div>
                         {(item.successCount !== undefined || item.failureCount !== undefined) && (
                           <div className="flex gap-2 text-xs">
-                            <Badge variant="outline" className="bg-green-50">
+                            <Badge variant="outline" className="bg-green-50 dark:bg-green-500/20 text-green-700 dark:text-green-300">
                               ✓ {item.successCount || 0}
                             </Badge>
                             {item.failureCount ? (
-                              <Badge variant="outline" className="bg-red-50">
+                              <Badge variant="outline" className="bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-300">
                                 ✗ {item.failureCount}
                               </Badge>
                             ) : null}

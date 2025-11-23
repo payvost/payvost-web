@@ -39,9 +39,9 @@ export function VirtualCard({ card }: { card: VirtualCardData }) {
                         <Badge
                             variant={card.status === 'active' ? 'default' : card.status === 'frozen' ? 'secondary' : 'destructive'}
                             className={cn("mt-1 capitalize",
-                                card.status === 'active' ? 'bg-green-500/80 border-transparent' :
-                                card.status === 'frozen' ? 'bg-blue-400/80 border-transparent' :
-                                'bg-red-500/80 border-transparent'
+                                card.status === 'active' ? 'bg-green-500/80 dark:bg-green-500/90 border-transparent text-white' :
+                                card.status === 'frozen' ? 'bg-blue-400/80 dark:bg-blue-400/90 border-transparent text-white' :
+                                'bg-red-500/80 dark:bg-red-500/90 border-transparent text-white'
                             )}
                         >
                             {card.status}

@@ -929,6 +929,7 @@ model ChatSession {
   status      ChatStatus    @default(WAITING)
   startedAt   DateTime      @default(now())
   endedAt     DateTime?
+  metadata    Json?         // For escalation info, AI analysis, etc.
   messages    ChatMessage[]
   
   @@index([status, agentId])
@@ -942,9 +943,12 @@ model ChatMessage {
   sessionId String
   senderId  String
   content   String       @db.Text
-  type      String       @default("text") // text, file, system
+  type      String       @default("text") // text, file, system, ai_response
+  isRead    Boolean      @default(false)
+  metadata  Json?        // For file attachments, AI analysis, etc.
   createdAt DateTime     @default(now())
   
   @@index([sessionId])
   @@index([createdAt])
+  @@index([senderId])
 }

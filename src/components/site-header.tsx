@@ -328,7 +328,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </Button>
                 )}
                 {showRegister && (
-                    <Button className="bg-primary text-white hover:opacity-95" asChild>
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
                         <Link href="/register">Create account</Link>
                     </Button>
                 )}

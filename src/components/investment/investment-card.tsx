@@ -15,9 +15,9 @@ interface InvestmentCardProps {
 }
 
 const riskConfig: Record<InvestmentRiskLevel, { color: string, label: string }> = {
-    Low: { color: 'bg-green-500/20 text-green-700 border-green-500/30', label: 'Low Risk' },
-    Medium: { color: 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30', label: 'Medium Risk' },
-    High: { color: 'bg-red-500/20 text-red-700 border-red-500/30', label: 'High Risk' },
+    Low: { color: 'bg-green-500/20 text-green-700 dark:text-green-300 dark:bg-green-500/30 border-green-500/30 dark:border-green-500/50', label: 'Low Risk' },
+    Medium: { color: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-500/30 border-yellow-500/30 dark:border-yellow-500/50', label: 'Medium Risk' },
+    High: { color: 'bg-red-500/20 text-red-700 dark:text-red-300 dark:bg-red-500/30 border-red-500/30 dark:border-red-500/50', label: 'High Risk' },
 };
 
 

@@ -27,9 +27,9 @@ interface HealthScoreData {
 }
 
 const statusColors: { [key: string]: string } = {
-    good: 'bg-green-500/10 text-green-700',
-    warning: 'bg-yellow-500/10 text-yellow-700',
-    bad: 'bg-red-500/10 text-red-700',
+    good: 'bg-green-500/10 text-green-700 dark:text-green-300 dark:bg-green-500/20',
+    warning: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-500/20',
+    bad: 'bg-red-500/10 text-red-700 dark:text-red-300 dark:bg-red-500/20',
 };
 
 const metricIcons: { [key: string]: React.ReactNode } = {

@@ -22,11 +22,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const kycStatusConfig: Record<KycStatus, { color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    verified: { color: 'text-green-700', variant: 'default' },
-    pending: { color: 'text-yellow-700', variant: 'secondary' },
-    unverified: { color: 'text-gray-700', variant: 'outline' },
-    restricted: { color: 'text-orange-700', variant: 'destructive' },
-    rejected: { color: 'text-red-700', variant: 'destructive' },
+    verified: { color: 'text-green-700 dark:text-green-300', variant: 'default' },
+    pending: { color: 'text-yellow-700 dark:text-yellow-300', variant: 'secondary' },
+    unverified: { color: 'text-gray-700 dark:text-gray-300', variant: 'outline' },
+    restricted: { color: 'text-orange-700 dark:text-orange-300', variant: 'destructive' },
+    rejected: { color: 'text-red-700 dark:text-red-300', variant: 'destructive' },
 };
 
 export default function CustomersPage() {
@@ -68,8 +68,8 @@ export default function CustomersPage() {
 
     const getRiskBadge = (score: number) => {
         if (score > 75) return <Badge variant="destructive">High</Badge>;
-        if (score > 40) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700">Medium</Badge>;
-        return <Badge variant="default" className="bg-green-500/20 text-green-700">Low</Badge>;
+        if (score > 40) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-500/30">Medium</Badge>;
+        return <Badge variant="default" className="bg-green-500/20 text-green-700 dark:text-green-300 dark:bg-green-500/30">Low</Badge>;
     }
 
     // Calculate new signups in the last 30 days
@@ -78,21 +78,106 @@ export default function CustomersPage() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
         return customers.filter(customer => {
-            if (!customer.joinedDate) return false;
+            const dateField = customer.joinedDate || customer.createdAt;
+            if (!dateField) return false;
             
             let joinDate: Date;
-            if (typeof customer.joinedDate === 'string') {
-                joinDate = new Date(customer.joinedDate);
-            } else if (customer.joinedDate.toDate) {
-                joinDate = customer.joinedDate.toDate();
-            } else if ((customer.joinedDate as any)._seconds) {
-                joinDate = new Date((customer.joinedDate as any)._seconds * 1000);
+            if (typeof dateField === 'string') {
+                joinDate = new Date(dateField);
+            } else if (dateField.toDate) {
+                joinDate = dateField.toDate();
+            } else if ((dateField as any)._seconds) {
+                joinDate = new Date((dateField as any)._seconds * 1000);
+            } else if (dateField instanceof Date) {
+                joinDate = dateField;
             } else {
                 return false;
             }
             
             return joinDate >= thirtyDaysAgo;
         }).length;
+    };
+
+    // Calculate KYC pending users
+    const getKycPending = () => {
+        return customers.filter(customer => {
+            const kycStatus = typeof customer.kycStatus === 'string' ? customer.kycStatus.toLowerCase() : '';
+            
+            // Check for various pending statuses
+            const pendingStatuses = [
+                'pending',
+                'tier1_pending_review',
+                'in_review',
+                'submitted',
+                'pending_review'
+            ];
+            
+            if (pendingStatuses.includes(kycStatus)) {
+                return true;
+            }
+            
+            // Check kycProfile for tier statuses
+            if (customer.kycProfile?.tiers) {
+                const tiers = customer.kycProfile.tiers;
+                // Check if any tier has pending/submitted status
+                if (tiers.tier1?.status === 'submitted' || tiers.tier1?.status === 'pending_review') {
+                    return true;
+                }
+                if (tiers.tier2?.status === 'submitted' || tiers.tier2?.status === 'pending_review' || tiers.tier2?.status === 'in_review') {
+                    return true;
+                }
+                if (tiers.tier3?.status === 'submitted' || tiers.tier3?.status === 'pending_review' || tiers.tier3?.status === 'in_review') {
+                    return true;
+                }
+            }
+            
+            // Check userType for pending users
+            if (customer.userType === 'Pending') {
+                return true;
+            }
+            
+            return false;
+        }).length;
+    };
+
+    // Calculate users from last month (30-60 days ago)
+    const getUsersFromLastMonth = () => {
+        const now = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        
+        return customers.filter(customer => {
+            const dateField = customer.joinedDate || customer.createdAt;
+            if (!dateField) return false;
+            
+            let joinDate: Date;
+            if (typeof dateField === 'string') {
+                joinDate = new Date(dateField);
+            } else if (dateField.toDate) {
+                joinDate = dateField.toDate();
+            } else if ((dateField as any)._seconds) {
+                joinDate = new Date((dateField as any)._seconds * 1000);
+            } else if (dateField instanceof Date) {
+                joinDate = dateField;
+            } else {
+                return false;
+            }
+            
+            return joinDate >= sixtyDaysAgo && joinDate < thirtyDaysAgo;
+        }).length;
+    };
+
+    // Calculate change from last month
+    const getMonthOverMonthChange = () => {
+        const lastMonthCount = getUsersFromLastMonth();
+        const currentMonthCount = getNewSignups();
+        const change = currentMonthCount - lastMonthCount;
+        
+        if (change === 0) return 'No change from last month';
+        if (change > 0) return `+${change.toLocaleString()} from last month`;
+        return `${change.toLocaleString()} from last month`;
     };
 
 
@@ -116,7 +201,7 @@ export default function CustomersPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-20" /> : customers.length}</div>
-                        <p className="text-xs text-muted-foreground">+2,130 from last month</p>
+                        <p className="text-xs text-muted-foreground">{loading ? <Skeleton className="h-4 w-32" /> : getMonthOverMonthChange()}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -135,7 +220,7 @@ export default function CustomersPage() {
                         <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-10" /> : customers.filter(c => typeof c.kycStatus === 'string' && c.kycStatus.toLowerCase() === 'pending').length}</div>
+                        <div className="text-2xl font-bold">{loading ? <Skeleton className="h-8 w-10" /> : getKycPending()}</div>
                         <p className="text-xs text-muted-foreground">Awaiting document review</p>
                     </CardContent>
                 </Card>
@@ -216,7 +301,20 @@ export default function CustomersPage() {
                                         <Badge variant="outline">{userType}</Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={status.variant} className={cn('capitalize', status.color, status.color.replace('text-','bg-').replace('-700','-500/20'))}>{statusLabel}</Badge>
+                                        <Badge 
+                                            variant={status.variant} 
+                                            className={cn(
+                                                'capitalize',
+                                                status.color,
+                                                status.color.includes('green') ? 'bg-green-500/20 dark:bg-green-500/30' :
+                                                status.color.includes('yellow') ? 'bg-yellow-500/20 dark:bg-yellow-500/30' :
+                                                status.color.includes('orange') ? 'bg-orange-500/20 dark:bg-orange-500/30' :
+                                                status.color.includes('red') ? 'bg-red-500/20 dark:bg-red-500/30' :
+                                                status.color.includes('gray') ? 'bg-gray-500/20 dark:bg-gray-500/30' : ''
+                                            )}
+                                        >
+                                            {statusLabel}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         {getRiskBadge(riskScore)}

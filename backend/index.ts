@@ -372,6 +372,15 @@ app.get('/api/pdf/health', async (_req, res) => {
 // Global error handler (must be last)
 app.use(errorHandler);
 
-app.listen(port, () => {
+// Create HTTP server for WebSocket support
+import { createServer } from 'http';
+import { initializeChatWebSocket } from './services/chat/websocket-server';
+
+const httpServer = createServer(app);
+
+// Initialize WebSocket server
+initializeChatWebSocket(httpServer);
+
+httpServer.listen(port, () => {
   logger.info({ port, env: process.env.NODE_ENV || 'development' }, 'Payvost API Gateway started');
 });
