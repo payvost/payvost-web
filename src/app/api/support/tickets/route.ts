@@ -11,6 +11,11 @@ async function proxyRequest(
   useSupportSession: boolean = false
 ) {
   try {
+    // Check if BACKEND_URL is configured
+    if (!BACKEND_URL || BACKEND_URL === 'http://localhost:3001') {
+      console.warn('BACKEND_URL not configured, using default:', BACKEND_URL);
+    }
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -31,19 +36,75 @@ async function proxyRequest(
 
     // Forward request to backend
     const url = `${BACKEND_URL}${endpoint}`;
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+    } catch (fetchError: any) {
+      // Handle network errors (connection refused, timeout, etc.)
+      console.error('Fetch error connecting to backend:', {
+        url,
+        error: fetchError.message,
+        code: fetchError.code,
+        cause: fetchError.cause,
+      });
+      
+      if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+        return NextResponse.json(
+          { error: 'Request timeout: Backend service did not respond in time' },
+          { status: 504 }
+        );
+      }
+      
+      if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed')) {
+        return NextResponse.json(
+          { error: 'Backend service is not available. Please check if the backend server is running and BACKEND_URL is configured correctly.' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: `Network error: ${fetchError.message || 'Failed to connect to backend'}` },
+        { status: 503 }
+      );
+    }
 
-    const data = await response.json().catch(() => ({}));
+    // Try to parse response as JSON
+    let data: any;
+    try {
+      const text = await response.text();
+      if (text) {
+        data = JSON.parse(text);
+      } else {
+        data = {};
+      }
+    } catch (parseError) {
+      // If response is not JSON, return error with status
+      console.error('Failed to parse backend response as JSON:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+      });
+      return NextResponse.json(
+        { error: `Backend returned invalid response (Status: ${response.status})` },
+        { status: response.status || 500 }
+      );
+    }
     
     return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
-    console.error('Support API proxy error:', error);
+    console.error('Support API proxy error:', {
+      error: error.message,
+      stack: error.stack,
+      endpoint,
+    });
     return NextResponse.json(
-      { error: error.message || 'Failed to proxy request' },
+      { error: error.message || 'Failed to proxy request to backend' },
       { status: 500 }
     );
   }

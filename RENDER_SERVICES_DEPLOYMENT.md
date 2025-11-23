@@ -40,7 +40,7 @@ This document describes the deployment of all Payvost services on Render.
    - `MAILGUN_DOMAIN`
    - `VAPID_PUBLIC_KEY`
    - `VAPID_PRIVATE_KEY`
-   - `OPEN_EXCHANGE_RATES_APP_ID`
+   - `OPEN_EXCHANGE_RATES_APP_ID` h
    
    **Currency Service:**
    - `OPEN_EXCHANGE_RATES_APP_ID`

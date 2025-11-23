@@ -123,18 +123,50 @@ async function apiRequest<T>(
   }
 
   // Use relative URL to hit Next.js API routes
-  const response = await fetch(endpoint, {
-    ...options,
-    headers,
-    credentials: 'include', // Include cookies
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      ...options,
+      headers,
+      credentials: 'include', // Include cookies
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+  } catch (fetchError: any) {
+    // Handle network errors
+    if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+      throw new Error('Request timeout: The server did not respond in time. Please try again.');
+    }
+    
+    if (fetchError.message?.includes('fetch failed') || fetchError.code === 'ECONNREFUSED') {
+      throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
+    }
+    
+    throw new Error(fetchError.message || 'Network error occurred while making the request');
   }
 
-  return response.json();
+  if (!response.ok) {
+    let error: any = { error: 'Unknown error' };
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        error = await response.json();
+      } else {
+        const text = await response.text();
+        error = { error: text || `HTTP ${response.status} Error` };
+      }
+    } catch (parseError) {
+      error = { error: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    
+    const errorMessage = error.error || error.message || `HTTP ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  try {
+    return await response.json();
+  } catch (parseError) {
+    throw new Error('Invalid response from server: Expected JSON but received other content');
+  }
 }
 
 export const supportService = {
