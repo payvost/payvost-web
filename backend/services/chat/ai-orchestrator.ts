@@ -87,7 +87,7 @@ export class AIOrchestrator {
         id: true,
         email: true,
         name: true,
-        phone: true,
+        twoFactorPhone: true,
       },
     });
 
@@ -249,7 +249,7 @@ ${context.recentTickets && context.recentTickets.length > 0
             sessionId,
             analysis,
             escalatedFrom: 'AI_CHAT',
-          },
+          } as any,
         },
       });
 

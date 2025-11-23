@@ -144,10 +144,10 @@ export function initializeChatWebSocket(httpServer: HTTPServer) {
         });
 
         // Update session last activity
+        // Note: updatedAt is auto-updated by Prisma, so we don't set it manually
         await prisma.chatSession.update({
           where: { id: data.sessionId },
           data: { 
-            updatedAt: new Date(),
             status: session.status === 'WAITING' ? 'ACTIVE' : session.status,
           },
         });
