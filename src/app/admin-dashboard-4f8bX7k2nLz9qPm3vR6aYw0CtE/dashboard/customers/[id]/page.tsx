@@ -807,11 +807,39 @@ export default function CustomerDetailsPage() {
                                     <div>
                                         <p className="text-sm text-muted-foreground mb-1">Submitted At</p>
                                         <p className="text-sm font-medium">
-                                            {customer.kycProfile.tiers.tier1.submittedAt 
-                                                ? (typeof customer.kycProfile.tiers.tier1.submittedAt === 'string' 
-                                                    ? new Date(customer.kycProfile.tiers.tier1.submittedAt).toLocaleString()
-                                                    : customer.kycProfile.tiers.tier1.submittedAt.toDate?.().toLocaleString() || 'N/A')
-                                                : 'N/A'}
+                                            {(() => {
+                                                // Try multiple sources for the submission date
+                                                const submittedAt = customer.kycProfile.tiers.tier1.submittedAt || 
+                                                                    customer.kycProfile.tiers.tier1.createdAt ||
+                                                                    customer.kycProfile.createdAt ||
+                                                                    customer.joinedDate ||
+                                                                    customer.createdAt;
+                                                
+                                                if (!submittedAt) return 'N/A';
+                                                
+                                                try {
+                                                    if (typeof submittedAt === 'string') {
+                                                        const date = new Date(submittedAt);
+                                                        if (!isNaN(date.getTime())) {
+                                                            return date.toLocaleString();
+                                                        }
+                                                    }
+                                                    if (submittedAt.toDate && typeof submittedAt.toDate === 'function') {
+                                                        return submittedAt.toDate().toLocaleString();
+                                                    }
+                                                    if (submittedAt._seconds) {
+                                                        return new Date(submittedAt._seconds * 1000).toLocaleString();
+                                                    }
+                                                    // Try to convert to Date directly
+                                                    const date = new Date(submittedAt);
+                                                    if (!isNaN(date.getTime())) {
+                                                        return date.toLocaleString();
+                                                    }
+                                                } catch (e) {
+                                                    console.error('Error formatting submittedAt:', e);
+                                                }
+                                                return 'N/A';
+                                            })()}
                                         </p>
                                     </div>
                                 </div>
@@ -821,22 +849,41 @@ export default function CustomerDetailsPage() {
                                 <div>
                                     <p className="text-sm font-medium mb-3">Identity Information</p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {customer.kycIdType && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground mb-1">ID Type</p>
+                                                <p className="text-sm font-medium">{customer.kycIdType}</p>
+                                            </div>
+                                        )}
+                                        {customer.kycIdNumber && (
+                                            <div>
+                                                <p className="text-xs text-muted-foreground mb-1">ID Number</p>
+                                                <p className="text-sm font-mono font-medium">{customer.kycIdNumber}</p>
+                                            </div>
+                                        )}
                                         {customer.bvn && (
                                             <div>
                                                 <p className="text-xs text-muted-foreground mb-1">BVN (Bank Verification Number)</p>
                                                 <p className="text-sm font-mono font-medium">{customer.bvn}</p>
                                             </div>
                                         )}
-                                        {customer.kycProfile.tiers.tier1.additionalFields && Object.entries(customer.kycProfile.tiers.tier1.additionalFields).map(([key, value]) => (
-                                            key !== 'bvn' && (
+                                        {customer.kycProfile.tiers.tier1.additionalFields && Object.entries(customer.kycProfile.tiers.tier1.additionalFields).map(([key, value]) => {
+                                            // Skip fields we've already displayed explicitly
+                                            const skipKeys = ['bvn', 'idType', 'idNumber', 'governmentIdType', 'governmentIdNumber', 'documentType', 'documentNumber'];
+                                            const normalizedKey = key.toLowerCase();
+                                            const shouldSkip = skipKeys.some(skipKey => normalizedKey.includes(skipKey.toLowerCase()));
+                                            
+                                            if (shouldSkip) return null;
+                                            
+                                            return (
                                                 <div key={key}>
                                                     <p className="text-xs text-muted-foreground mb-1">
                                                         {key.split(/(?=[A-Z])/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                                     </p>
                                                     <p className="text-sm font-mono font-medium">{String(value)}</p>
                                                 </div>
-                                            )
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -889,7 +936,7 @@ export default function CustomerDetailsPage() {
                                             <div>
                                                 <textarea 
                                                     className="w-full border rounded-md p-2 min-h-[100px]" 
-                                                    placeholder="Reason for rejection (e.g., Invalid BVN, Information mismatch, etc.)" 
+                                                    placeholder="Reason for rejection (e.g., Invalid ID type/number, Invalid BVN, Information mismatch, etc.) - Note: ID type and ID number are now provided." 
                                                     value={tier1RejectReason} 
                                                     onChange={e => setTier1RejectReason(e.target.value)} 
                                                 />
