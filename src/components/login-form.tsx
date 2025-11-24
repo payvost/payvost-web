@@ -60,7 +60,10 @@ export function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
+    setIsSendingVerification(false);
+    
     try {
+      console.log('Login attempt started for:', data.credential.includes('@') ? data.credential : 'username');
       let emailToUse = data.credential;
       if (!data.credential.includes('@')) {
         // Resolve username -> email via Firestore
@@ -78,9 +81,11 @@ export function LoginForm() {
 
       const userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
       const user = userCredential.user;
+      console.log('✅ Firebase sign-in successful, user ID:', user.uid);
 
       // Reload user to get latest email verification status
       await user.reload();
+      console.log('✅ User reloaded, email verified:', user.emailVerified);
 
       if (!user.emailVerified) {
         toast({
@@ -93,13 +98,13 @@ export function LoginForm() {
         return;
       }
 
-      // Email is verified, now send a login verification email link
-      // Note: Firebase's sendEmailVerification will send an email even if already verified
-      // The link will verify the email if not already verified, or do nothing if already verified
+      // Email is verified - send a login verification email link for additional security
+      // This adds an extra layer of verification for each login attempt
       try {
         setIsSendingVerification(true);
         
         // Send email verification link (Firebase handles this automatically)
+        // This will send an email even if already verified, which is fine for login confirmation
         await sendEmailVerification(user);
         
         toast({
@@ -116,19 +121,21 @@ export function LoginForm() {
       } catch (verificationError: any) {
         console.error('Failed to send verification email:', verificationError);
         
-        // If sending verification fails, we can still allow login but track it
+        // If sending verification fails, we still allow login to proceed
+        // This ensures users can login even if email service has temporary issues
         // Track login event and redirect to dashboard
         try {
           const idToken = await user.getIdToken();
-          await axios.post('/api/auth/track-login', { idToken });
+          await axios.post('/api/auth/track-login', { idToken }).catch(() => {
+            // Non-critical, continue even if tracking fails
+          });
         } catch (trackError) {
           console.warn('Failed to track login:', trackError);
         }
         
         toast({
           title: "Login Successful",
-          description: "Could not send verification email, but login was successful.",
-          variant: "default"
+          description: "Login successful. Redirecting to dashboard...",
         });
         
         setIsLoading(false);
@@ -136,20 +143,39 @@ export function LoginForm() {
         router.push('/dashboard');
       }
     } catch (error: any) {
+      console.error('❌ Login error details:', {
+        code: error.code,
+        message: error.message,
+        error: error
+      });
       
       let errorMessage = "An unknown error occurred.";
-       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      let errorTitle = "Login Failed";
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later."
+        errorMessage = "Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "This account has been disabled. Please contact support.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address format.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
+      // Always show error to user
       toast({
-        title: "Login Failed",
+        title: errorTitle,
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
+        duration: 5000
       });
     } finally {
         setIsLoading(false);
+        setIsSendingVerification(false);
     }
   }
 
