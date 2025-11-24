@@ -5,9 +5,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
-import { Icons } from "@/components/icons";
-import { ArrowRight, Download, Mail, Rss, Newspaper, Image as ImageIcon, Loader2 } from 'lucide-react';
-import Image from "next/image";
+import { ArrowRight, Download, Mail, Loader2 } from 'lucide-react';
 import { SiteFooter } from "@/components/site-footer";
 import { contentService, Content } from '@/services/contentService';
 import { format } from 'date-fns';
@@ -19,6 +17,19 @@ const featuredInLogos = [
     { name: 'The Verge', logo: 'https://placehold.co/150x40.png', hint: 'the verge logo' },
     { name: 'Wired', logo: 'https://placehold.co/150x40.png', hint: 'wired logo' },
 ];
+
+function formatDateSafely(dateString: string | undefined): string | null {
+    if (!dateString) return null;
+    try {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+            return format(date, 'MMMM dd, yyyy');
+        }
+    } catch (e) {
+        console.error('Error formatting date:', e);
+    }
+    return null;
+}
 
 export default function PressPage() {
     const [pressReleases, setPressReleases] = useState<Content[]>([]);
@@ -33,16 +44,30 @@ export default function PressPage() {
                     status: 'PUBLISHED',
                     limit: 50,
                 });
-                setPressReleases(result.items);
-            } catch (error) {
+                setPressReleases(result?.items || []);
+            } catch (error: any) {
+                // Log error details for debugging
                 console.error('Failed to fetch press releases:', error);
+                console.error('Error details:', {
+                    message: error?.message,
+                    response: error?.response?.data,
+                    status: error?.response?.status,
+                });
+                // Fallback to empty array on error - page should still render
                 setPressReleases([]);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchPressReleases();
+        // Wrap in try-catch to handle any synchronous errors
+        try {
+            fetchPressReleases();
+        } catch (error) {
+            console.error('Error setting up press releases fetch:', error);
+            setLoading(false);
+            setPressReleases([]);
+        }
     }, []);
 
     return (
@@ -79,26 +104,36 @@ export default function PressPage() {
                             </div>
                         ) : (
                             <div className="max-w-4xl mx-auto space-y-8">
-                                {pressReleases.map(release => (
-                                    <Link href={`/blog/${release.slug}`} key={release.id}>
-                                        <Card className="hover:bg-muted/50 transition-colors group">
-                                            <CardHeader>
-                                                {release.publishedAt && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {format(new Date(release.publishedAt), 'MMMM dd, yyyy')}
-                                                    </p>
-                                                )}
-                                                <CardTitle className="text-xl group-hover:text-primary transition-colors">{release.title}</CardTitle>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p className="text-muted-foreground">{release.excerpt || 'No excerpt available.'}</p>
-                                            </CardContent>
-                                            <CardFooter>
-                                                <span className="text-sm font-semibold text-primary">Read Full Story <ArrowRight className="inline-block ml-1 h-4 w-4" /></span>
-                                            </CardFooter>
-                                        </Card>
-                                    </Link>
-                                ))}
+                                {pressReleases.map(release => {
+                                    if (!release || !release.id || !release.slug) {
+                                        return null;
+                                    }
+                                    return (
+                                        <Link href={`/blog/${release.slug}`} key={release.id}>
+                                            <Card className="hover:bg-muted/50 transition-colors group">
+                                                <CardHeader>
+                                                    {(() => {
+                                                        const formattedDate = formatDateSafely(release.publishedAt);
+                                                        return formattedDate ? (
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {formattedDate}
+                                                            </p>
+                                                        ) : null;
+                                                    })()}
+                                                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                                                        {release.title || 'Untitled'}
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-muted-foreground">{release.excerpt || 'No excerpt available.'}</p>
+                                                </CardContent>
+                                                <CardFooter>
+                                                    <span className="text-sm font-semibold text-primary">Read Full Story <ArrowRight className="inline-block ml-1 h-4 w-4" /></span>
+                                                </CardFooter>
+                                            </Card>
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
