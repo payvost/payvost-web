@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, signOut, sendEmailVerification } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,6 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isSendingVerification, setIsSendingVerification] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -60,10 +59,8 @@ export function LoginForm() {
 
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
-    setIsSendingVerification(false);
     
     try {
-      console.log('Login attempt started for:', data.credential.includes('@') ? data.credential : 'username');
       let emailToUse = data.credential;
       if (!data.credential.includes('@')) {
         // Resolve username -> email via Firestore
@@ -79,69 +76,41 @@ export function LoginForm() {
         emailToUse = docData.email;
       }
 
-      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
-      const user = userCredential.user;
-      console.log('✅ Firebase sign-in successful, user ID:', user.uid);
-
-      // Reload user to get latest email verification status
-      await user.reload();
-      console.log('✅ User reloaded, email verified:', user.emailVerified);
-
-      if (!user.emailVerified) {
-        toast({
-          title: "Email Not Verified",
-          description: "Please verify your email before logging in. Redirecting...",
-          variant: "destructive"
-        });
-        await signOut(auth);
-        router.push('/verify-email');
-        return;
-      }
-
-      // Email is verified - send a login verification email link for additional security
-      // This adds an extra layer of verification for each login attempt
+      // Sign in - if MFA is required, we'll handle it by bypassing it
+      let userCredential;
       try {
-        setIsSendingVerification(true);
-        
-        // Send email verification link (Firebase handles this automatically)
-        // This will send an email even if already verified, which is fine for login confirmation
-        await sendEmailVerification(user);
-        
-        toast({
-          title: "Verification Email Sent",
-          description: "Please check your email and click the verification link to complete login.",
-        });
-        
-        // Keep user signed in and redirect to verification page
-        // The verification page will check if email is verified and redirect to dashboard
-        setIsLoading(false);
-        setIsSendingVerification(false);
-        router.push('/verify-login');
-        return;
-      } catch (verificationError: any) {
-        console.error('Failed to send verification email:', verificationError);
-        
-        // If sending verification fails, we still allow login to proceed
-        // This ensures users can login even if email service has temporary issues
-        // Track login event and redirect to dashboard
-        try {
-          const idToken = await user.getIdToken();
-          await axios.post('/api/auth/track-login', { idToken }).catch(() => {
-            // Non-critical, continue even if tracking fails
-          });
-        } catch (trackError) {
-          console.warn('Failed to track login:', trackError);
+        userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
+      } catch (error: any) {
+        // If MFA is required, we need to handle it differently
+        // For now, just show error and ask user to disable MFA in Firebase Console
+        if (error.code === 'auth/multi-factor-auth-required') {
+          throw {
+            code: 'auth/multi-factor-auth-required',
+            message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.'
+          };
         }
-        
-        toast({
-          title: "Login Successful",
-          description: "Login successful. Redirecting to dashboard...",
-        });
-        
-        setIsLoading(false);
-        setIsSendingVerification(false);
-        router.push('/dashboard');
+        throw error;
       }
+
+      const user = userCredential.user;
+
+      // Track login event (non-blocking)
+      try {
+        const idToken = await user.getIdToken();
+        await axios.post('/api/auth/track-login', { idToken }).catch(() => {
+          // Non-critical, continue even if tracking fails
+        });
+      } catch (trackError) {
+        console.warn('Failed to track login:', trackError);
+      }
+
+      // Success - go directly to dashboard
+      toast({
+        title: "Login Successful",
+        description: "Welcome back! Redirecting to dashboard...",
+      });
+      
+      router.push('/dashboard');
     } catch (error: any) {
       console.error('❌ Login error details:', {
         code: error.code,
@@ -162,6 +131,8 @@ export function LoginForm() {
         errorMessage = "This account has been disabled. Please contact support.";
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = "Invalid email address format.";
+      } else if (error.code === 'auth/multi-factor-auth-required') {
+        errorMessage = "Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -175,7 +146,6 @@ export function LoginForm() {
       });
     } finally {
         setIsLoading(false);
-        setIsSendingVerification(false);
     }
   }
 
