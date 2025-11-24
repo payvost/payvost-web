@@ -201,12 +201,12 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
     const [productsOpen, setProductsOpen] = useState(false);
     
     return (
-        <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center bg-background/95 border-b rounded-b-md">
-            <Link href="/" className="flex items-center justify-center">
+        <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center bg-background/95 border-b rounded-b-md">
+            <Link href="/" className="flex items-center justify-start">
                 <Icons.logo className="h-8" />
             </Link>
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex gap-6 mx-auto">
+            <nav className="hidden lg:flex gap-6 justify-center">
                 <NavigationMenu>
                     <NavigationMenuList>
                         <NavigationMenuItem>
@@ -319,7 +319,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 </NavigationMenu>
             </nav>
             {/* Desktop Right Actions */}
-            <nav className="hidden lg:flex ml-auto items-center gap-4">
+            <nav className="hidden lg:flex items-center gap-4 justify-end">
                 <CountrySelector />
                 <ThemeSwitcher />
                 {showLogin && (
