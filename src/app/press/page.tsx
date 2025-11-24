@@ -11,11 +11,10 @@ import { contentService, Content } from '@/services/contentService';
 import { format } from 'date-fns';
 
 const featuredInLogos = [
-    { name: 'TechCrunch', logo: 'https://placehold.co/150x40.png', hint: 'techcrunch logo' },
-    { name: 'Forbes', logo: 'https://placehold.co/150x40.png', hint: 'forbes logo' },
-    { name: 'Bloomberg', logo: 'https://placehold.co/150x40.png', hint: 'bloomberg logo' },
-    { name: 'The Verge', logo: 'https://placehold.co/150x40.png', hint: 'the verge logo' },
-    { name: 'Wired', logo: 'https://placehold.co/150x40.png', hint: 'wired logo' },
+    { name: 'TechCrunch', logo: '/featured-news/TechCrunch_logo.svg.png', hint: 'techcrunch logo' },
+    { name: 'Forbes', logo: '/featured-news/Forbes_logo.svg.png', hint: 'forbes logo' },
+    { name: 'Bloomberg', logo: '/featured-news/Bloomberg_logo.svg.png', hint: 'bloomberg logo' },
+    { name: 'Wired', logo: '/featured-news/Wired_logo.svg.png', hint: 'wired logo' },
 ];
 
 function formatDateSafely(dateString: string | undefined): string | null {
