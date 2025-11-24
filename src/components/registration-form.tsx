@@ -1221,9 +1221,9 @@ export function RegistrationForm() {
                     {shouldShowError('firstName') && errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
-                    {shouldShowError('email') && errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                    <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
+                    <Input id="lastName" {...register('lastName')} placeholder="Enter your last name" disabled={isLoading} />
+                    {shouldShowError('lastName') && errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
                 </div>
             </div>
             
@@ -1234,9 +1234,9 @@ export function RegistrationForm() {
                     {shouldShowError('middleName') && errors.middleName && <p className="text-sm text-destructive">{errors.middleName.message}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
-                    <Input id="lastName" {...register('lastName')} placeholder="Enter your last name" disabled={isLoading} />
-                    {shouldShowError('lastName') && errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
+                    {shouldShowError('email') && errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>
 
