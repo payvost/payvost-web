@@ -1,19 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { sendEmailVerification, reload } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MailCheck, Smartphone, CheckCircle2 } from 'lucide-react';
-import { SMSVerificationDialog } from '@/components/sms-verification-dialog';
-import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+
+// Lazy load components to avoid circular dependency issues during initialization
+const SMSVerificationDialog = lazy(() => 
+  import('@/components/sms-verification-dialog').then(module => ({ 
+    default: module.SMSVerificationDialog 
+  }))
+);
+
+const TransactionPinSetupDialog = lazy(() => 
+  import('@/components/transaction-pin-setup-dialog').then(module => ({ 
+    default: module.TransactionPinSetupDialog 
+  }))
+);
 
 export default function VerifyRegistrationPage() {
   const { user, loading } = useAuth();
@@ -325,21 +335,25 @@ export default function VerifyRegistrationPage() {
       </Card>
 
       {emailVerified && !phoneVerified && phoneNumber && (
-        <SMSVerificationDialog
-          open={smsDialogOpen}
-          onOpenChange={setSmsDialogOpen}
-          onVerificationComplete={handleSMSVerificationComplete}
-          phoneNumber={phoneNumber}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+          <SMSVerificationDialog
+            open={smsDialogOpen}
+            onOpenChange={setSmsDialogOpen}
+            onVerificationComplete={handleSMSVerificationComplete}
+            phoneNumber={phoneNumber}
+          />
+        </Suspense>
       )}
 
       {emailVerified && phoneVerified && user && (
-        <TransactionPinSetupDialog
-          open={pinDialogOpen}
-          onOpenChange={setPinDialogOpen}
-          userId={user.uid}
-          onCompleted={handlePinSetupComplete}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+          <TransactionPinSetupDialog
+            open={pinDialogOpen}
+            onOpenChange={setPinDialogOpen}
+            userId={user.uid}
+            onCompleted={handlePinSetupComplete}
+          />
+        </Suspense>
       )}
     </div>
   );
