@@ -3,6 +3,8 @@ import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gat
 import { ValidationError } from '../../gateway/index';
 import { prisma } from '../../common/prisma';
 import { Prisma } from '@prisma/client';
+import admin from 'firebase-admin';
+import { rapydService, CreateWalletRequest, RapydError } from '../rapyd';
 
 const router = Router();
 
@@ -32,6 +34,7 @@ router.get('/accounts', verifyFirebaseToken, async (req: AuthenticatedRequest, r
 /**
  * POST /api/wallet/accounts
  * Create a new account for the authenticated user
+ * Also creates a Rapyd wallet if credentials are configured
  */
 router.post('/accounts', verifyFirebaseToken, requireKYC, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -55,16 +58,81 @@ router.post('/accounts', verifyFirebaseToken, requireKYC, async (req: Authentica
       return res.status(409).json({ error: 'Account already exists for this currency' });
     }
 
+    // Try to create Rapyd wallet
+    let rapydWalletId: string | null = null;
+    try {
+      // Fetch user data from Firestore for Rapyd wallet creation
+      const userDoc = await admin.firestore().collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (userData && userData.email) {
+        // Prepare name from user data
+        const fullName = userData.fullName || userData.name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0] || 'User';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Prepare Rapyd wallet creation data
+        const rapydWalletData: CreateWalletRequest = {
+          first_name: firstName,
+          last_name: lastName,
+          email: userData.email,
+          ewallet_reference_id: userId, // Use Firebase UID as reference
+          type: type === 'BUSINESS' ? 'company' : 'person',
+          metadata: {
+            userId: userId,
+            currency: currency,
+            accountType: type,
+            platform: 'payvost',
+          },
+          contact: {
+            email: userData.email,
+            phone_number: userData.phone || userData.phoneNumber || undefined,
+            country: userData.countryCode || userData.country || undefined,
+            first_name: firstName,
+            last_name: lastName,
+          },
+        };
+
+        // Create Rapyd wallet
+        const rapydWallet = await rapydService.createWallet(rapydWalletData);
+        rapydWalletId = rapydWallet.id;
+        
+        console.log(`[Rapyd] Successfully created wallet ${rapydWalletId} for user ${userId} (${currency})`);
+      } else {
+        console.warn(`[Rapyd] User ${userId} missing email, skipping Rapyd wallet creation`);
+      }
+    } catch (rapydError: any) {
+      // Log error but don't fail wallet creation - allow database-only fallback
+      if (rapydError instanceof RapydError) {
+        console.error(`[Rapyd] Failed to create wallet for user ${userId}:`, rapydError.message);
+        if (rapydError.statusCode) {
+          console.error(`[Rapyd] Status code: ${rapydError.statusCode}`);
+        }
+      } else {
+        console.error('[Rapyd] Unexpected error creating wallet:', rapydError);
+      }
+      console.warn('[Rapyd] Proceeding with database-only wallet creation (fallback mode)');
+      // Continue with database creation even if Rapyd fails
+    }
+
+    // Create account in database (with or without Rapyd wallet ID)
     const account = await prisma.account.create({
       data: {
         userId,
         currency,
         type,
         balance: 0,
+        rapydWalletId: rapydWalletId,
       },
     });
 
-    res.status(201).json({ account });
+    const response: any = { account };
+    if (rapydWalletId) {
+      response.rapydWalletId = rapydWalletId;
+    }
+
+    res.status(201).json(response);
   } catch (error: any) {
     console.error('Error creating account:', error);
     res.status(500).json({ error: error.message || 'Failed to create account' });
