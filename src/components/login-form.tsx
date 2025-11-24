@@ -7,7 +7,8 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signInWithEmailAndPassword, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, MultiFactorResolver } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,8 +68,6 @@ export function LoginForm() {
       let emailToUse = data.credential;
       if (!data.credential.includes('@')) {
         // Resolve username -> email via Firestore
-        const { db } = await import('@/lib/firebase');
-        const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
         const q = query(collection(db, 'users'), where('username', '==', data.credential), limit(1));
         const snap = await getDocs(q);
         if (snap.empty) {
@@ -96,8 +95,6 @@ export function LoginForm() {
       }
 
       // Check phone verification status
-      const { db } = await import('@/lib/firebase');
-      const { doc, getDoc } = await import('firebase/firestore');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (userDoc.exists()) {
@@ -201,8 +198,6 @@ export function LoginForm() {
       }
 
       // Check phone verification status
-      const { db } = await import('@/lib/firebase');
-      const { doc, getDoc } = await import('firebase/firestore');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
       if (userDoc.exists()) {
