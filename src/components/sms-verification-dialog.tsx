@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,11 +39,13 @@ export function SMSVerificationDialog({
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [hasAttemptedSend, setHasAttemptedSend] = useState(false);
+  const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
-  // Cleanup reCAPTCHA verifier on unmount or when dialog closes
+  // Cleanup reCAPTCHA verifier on unmount
   useEffect(() => {
     return () => {
       if (recaptchaVerifierRef.current) {
@@ -57,15 +59,46 @@ export function SMSVerificationDialog({
     };
   }, []);
 
+  // Reset state when dialog closes
   useEffect(() => {
-    if (open && phoneNumber && !confirmationResult && !verificationId) {
+    if (!open) {
+      setVerificationCode('');
+      setConfirmationResult(null);
+      setVerificationId(null);
+      setCountdown(0);
+      setHasAttemptedSend(false);
+      setRetryAfter(null);
+      
+      // Clean up reCAPTCHA
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+        recaptchaVerifierRef.current = null;
+      }
+      
+      // Clear container
+      const container = document.getElementById('sms-recaptcha-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+    }
+  }, [open]);
+
+  // Only auto-send if dialog opens and we haven't attempted yet
+  useEffect(() => {
+    if (open && phoneNumber && !confirmationResult && !verificationId && !hasAttemptedSend && !sendingCode) {
       // Small delay to ensure DOM is ready
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         sendVerificationCode();
       }, 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [open, phoneNumber]);
+  }, [open, phoneNumber, confirmationResult, verificationId, hasAttemptedSend, sendingCode, sendVerificationCode]);
 
+  // Countdown timer
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -73,7 +106,17 @@ export function SMSVerificationDialog({
     }
   }, [countdown]);
 
-  const sendVerificationCode = async () => {
+  // Retry countdown
+  useEffect(() => {
+    if (retryAfter !== null && retryAfter > 0) {
+      const timer = setTimeout(() => setRetryAfter(retryAfter - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (retryAfter === 0) {
+      setRetryAfter(null);
+    }
+  }, [retryAfter]);
+
+  const sendVerificationCode = useCallback(async () => {
     if (!phoneNumber) {
       toast({
         title: 'Phone number required',
@@ -83,7 +126,23 @@ export function SMSVerificationDialog({
       return;
     }
 
+    // Check if we're in retry cooldown
+    if (retryAfter !== null && retryAfter > 0) {
+      toast({
+        title: 'Please wait',
+        description: `Too many requests. Please try again in ${retryAfter} seconds.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Prevent duplicate sends
+    if (sendingCode) {
+      return;
+    }
+
     setSendingCode(true);
+    setHasAttemptedSend(true);
     try {
       // Clean up existing reCAPTCHA verifier if it exists
       if (recaptchaVerifierRef.current) {
@@ -130,6 +189,7 @@ export function SMSVerificationDialog({
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
       setConfirmationResult(confirmation);
       setCountdown(60); // 60 second countdown
+      setRetryAfter(null); // Clear retry delay on success
       
       toast({
         title: 'Code sent',
@@ -138,13 +198,18 @@ export function SMSVerificationDialog({
     } catch (error: any) {
       console.error('SMS verification error:', error);
       let errorMessage = 'Failed to send verification code';
+      let shouldSetRetry = false;
+      let retrySeconds = 60; // Default 60 seconds
       
       if (error.code === 'auth/invalid-phone-number') {
         errorMessage = 'Invalid phone number format. Please check the number and try again.';
       } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many requests. Please try again later.';
+        errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
+        shouldSetRetry = true;
+        retrySeconds = 300; // 5 minutes for too-many-requests
       } else if (error.code === 'auth/captcha-check-failed') {
         errorMessage = 'reCAPTCHA verification failed. Please try again.';
+        retrySeconds = 30; // 30 seconds for captcha failure
       } else if (error.message?.includes('already been rendered')) {
         errorMessage = 'Please refresh the page and try again.';
         // Try to recover by clearing and retrying
@@ -164,6 +229,10 @@ export function SMSVerificationDialog({
         errorMessage = 'Phone authentication is not enabled. Please contact support.';
       }
       
+      if (shouldSetRetry) {
+        setRetryAfter(retrySeconds);
+      }
+      
       toast({
         title: 'Error',
         description: errorMessage,
@@ -172,7 +241,7 @@ export function SMSVerificationDialog({
     } finally {
       setSendingCode(false);
     }
-  };
+  }, [phoneNumber, retryAfter, toast]);
 
   const verifyCode = async () => {
     if (!confirmationResult || verificationCode.length !== 6) {
@@ -239,6 +308,8 @@ export function SMSVerificationDialog({
       setConfirmationResult(null);
       setVerificationId(null);
       setCountdown(0);
+      setHasAttemptedSend(false);
+      setRetryAfter(null);
       
       // Clean up reCAPTCHA
       if (recaptchaVerifierRef.current) {
@@ -316,7 +387,7 @@ export function SMSVerificationDialog({
             <Button
               variant="outline"
               onClick={sendVerificationCode}
-              disabled={sendingCode || countdown > 0}
+              disabled={sendingCode || countdown > 0 || (retryAfter !== null && retryAfter > 0)}
               className="w-full sm:w-auto"
             >
               {sendingCode ? (
@@ -324,10 +395,12 @@ export function SMSVerificationDialog({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
+              ) : retryAfter !== null && retryAfter > 0 ? (
+                `Wait ${retryAfter}s`
+              ) : countdown > 0 ? (
+                `Resend Code (${countdown}s)`
               ) : (
-                <>
-                  Resend Code {countdown > 0 && `(${countdown}s)`}
-                </>
+                'Resend Code'
               )}
             </Button>
             <Button
