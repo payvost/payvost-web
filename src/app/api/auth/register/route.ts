@@ -104,7 +104,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    // Parse request body
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('[Register API] Failed to parse request body:', jsonError);
+      return NextResponse.json(
+        { error: 'Invalid request', message: 'Invalid JSON in request body.' },
+        { status: 400 }
+      );
+    }
+
     let { email, password, displayName, phoneNumber, countryCode, userType, username } = body;
 
     // Sanitize inputs
@@ -177,29 +188,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate phone number format if provided
+    // Validate phone number format if provided (non-blocking - we'll store it even if format is slightly off)
     if (phoneNumber && !validatePhoneNumber(phoneNumber, countryCode)) {
-      return NextResponse.json(
-        { error: 'Invalid phone number', message: 'Please provide a valid phone number in international format.' },
-        { status: 400 }
-      );
+      console.warn('[Register API] Phone number format validation failed, but continuing registration:', {
+        phoneNumber: phoneNumber.substring(0, 5) + '...',
+        countryCode,
+      });
+      // Don't block registration for phone number format issues - just log a warning
+      // Phone number will still be stored in Firestore
     }
 
     // Create user with Firebase Admin SDK (bypasses client restrictions)
+    // Note: phoneNumber is not set during user creation to avoid issues if phone verification is not enabled
+    // Phone number will be stored in Firestore instead
     let userRecord;
     try {
-      userRecord = await adminAuth.createUser({
+      const createUserParams: {
+        email: string;
+        password: string;
+        displayName: string;
+        emailVerified: boolean;
+        phoneNumber?: string;
+      } = {
         email,
         password,
         displayName,
-        phoneNumber: phoneNumber || undefined,
         emailVerified: false,
-      });
+      };
+      
+      // Only include phoneNumber if it's valid and phone verification is expected to be enabled
+      // For now, we'll skip phoneNumber in Auth and store it in Firestore only
+      // This avoids errors if phone verification is not configured in Firebase Console
+      
+      userRecord = await adminAuth.createUser(createUserParams);
     } catch (authError: unknown) {
       const authErrorDetails = authError as { code?: string; message?: string };
       console.error('[Register API] Firebase Auth user creation failed:', {
         code: authErrorDetails?.code,
         message: authErrorDetails?.message,
+        email: email.substring(0, 5) + '...', // Log partial email for debugging
       });
       // Re-throw to be handled by outer catch
       throw authError;
@@ -207,7 +234,7 @@ export async function POST(request: NextRequest) {
 
     // Create user document in Firestore (minimal initial document - frontend will update with full details)
     try {
-      await adminDb.collection('users').doc(userRecord.uid).set({
+      const userDocData = {
         uid: userRecord.uid,
         email,
         displayName,
@@ -223,13 +250,17 @@ export async function POST(request: NextRequest) {
         wallets: [],
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      });
+      };
+      
+      await adminDb.collection('users').doc(userRecord.uid).set(userDocData);
+      console.log('[Register API] User document created successfully in Firestore');
     } catch (firestoreError: unknown) {
-      const firestoreErrorDetails = firestoreError as { code?: string; message?: string };
+      const firestoreErrorDetails = firestoreError as { code?: string; message?: string; stack?: string };
       console.error('[Register API] Firestore write failed:', {
         code: firestoreErrorDetails?.code,
         message: firestoreErrorDetails?.message,
         uid: userRecord.uid,
+        stack: process.env.NODE_ENV === 'development' ? firestoreErrorDetails?.stack : undefined,
       });
       
       // Try to clean up the created user if Firestore write fails
@@ -285,6 +316,9 @@ export async function POST(request: NextRequest) {
       message: errorMessage,
       stack: process.env.NODE_ENV === 'development' ? errorDetails?.stack : undefined,
       timestamp: new Date().toISOString(),
+      errorType: errorDetails?.constructor?.name || typeof error,
+      // Log full error object in development
+      ...(process.env.NODE_ENV === 'development' && { fullError: errorDetails }),
     });
 
     // Handle specific Firebase errors with user-friendly messages
