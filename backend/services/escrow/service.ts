@@ -269,7 +269,7 @@ export async function fundMilestone(
       where: { id: input.milestoneId },
       data: {
         amountFunded: new Decimal(newFundedAmount.toString()),
-        status: isFunded ? MilestoneStatusEnum.FUNDED : MilestoneStatusEnum.AWAITING_FUNDING,
+        status: isFunded ? MilestoneStatusEnum.FUNDED as MilestoneStatus : MilestoneStatusEnum.AWAITING_FUNDING as MilestoneStatus,
         fundedAt: isFunded ? new Date() : undefined,
       },
     });
