@@ -114,7 +114,9 @@ const isErrorWithCode = (value: unknown): value is ErrorWithCode => {
 
 const registrationSchema = z
   .object({
-    fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+    firstName: z.string().min(2, 'First name must be at least 2 characters'),
+    middleName: z.string().optional(),
+    lastName: z.string().min(2, 'Last name must be at least 2 characters'),
     username: z
       .string()
       .min(3, 'Username must be at least 3 characters')
@@ -162,7 +164,7 @@ const steps = [
   {
     id: 1,
     name: 'Personal & Address',
-    fields: ['fullName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'],
+    fields: ['firstName', 'middleName', 'lastName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'],
   },
   {
     id: 2,
@@ -236,7 +238,20 @@ export function RegistrationForm() {
       if (savedData) {
         const parsed = JSON.parse(savedData);
         // Restore form values (excluding sensitive fields and files)
-        if (parsed.fullName) setValue('fullName', parsed.fullName, { shouldDirty: false });
+        if (parsed.firstName) setValue('firstName', parsed.firstName, { shouldDirty: false });
+        if (parsed.middleName) setValue('middleName', parsed.middleName, { shouldDirty: false });
+        if (parsed.lastName) setValue('lastName', parsed.lastName, { shouldDirty: false });
+        // Backward compatibility: if old fullName exists, try to split it
+        if (parsed.fullName && !parsed.firstName && !parsed.lastName) {
+          const nameParts = parsed.fullName.trim().split(/\s+/);
+          if (nameParts.length >= 2) {
+            setValue('firstName', nameParts[0], { shouldDirty: false });
+            if (nameParts.length > 2) {
+              setValue('middleName', nameParts.slice(1, -1).join(' '), { shouldDirty: false });
+            }
+            setValue('lastName', nameParts[nameParts.length - 1], { shouldDirty: false });
+          }
+        }
         if (parsed.username) setValue('username', parsed.username, { shouldDirty: false });
         if (parsed.email) setValue('email', parsed.email, { shouldDirty: false });
         if (parsed.countryCode) setValue('countryCode', parsed.countryCode, { shouldDirty: false });
@@ -261,7 +276,9 @@ export function RegistrationForm() {
     const subscription = watch((value) => {
       // Don't save passwords or files to localStorage
       const dataToSave = {
-        fullName: value.fullName,
+        firstName: value.firstName,
+        middleName: value.middleName,
+        lastName: value.lastName,
         username: value.username,
         email: value.email,
         countryCode: value.countryCode,
@@ -725,12 +742,13 @@ export function RegistrationForm() {
   };
 
 
-  const getInitials = (name: string) => {
-    const names = name.split(' ');
-    if (names.length > 1 && names[1]) {
-      return `${names[0][0]}${names[1][0]}`;
+  const getInitials = (firstName: string, lastName: string, middleName?: string) => {
+    const first = firstName?.[0]?.toUpperCase() || '';
+    const last = lastName?.[0]?.toUpperCase() || '';
+    if (first && last) {
+      return `${first}${last}`;
     }
-    return name.substring(0, 2).toUpperCase();
+    return (firstName + lastName).substring(0, 2).toUpperCase();
   };
   
     const startCamera = async () => {
@@ -781,9 +799,17 @@ export function RegistrationForm() {
     }
   };
 
-  const fullName = watch('fullName');
+  const firstName = watch('firstName');
+  const middleName = watch('middleName');
+  const lastName = watch('lastName');
   const password = watch('password', '');
   const passwordStrength = checkPasswordStrength(password);
+  
+  // Helper function to combine names for display
+  const getFullName = () => {
+    const parts = [firstName, middleName, lastName].filter(Boolean);
+    return parts.join(' ').trim();
+  };
   
   const getStrengthColor = (strength: number) => {
     if (strength < 40) return 'bg-red-500';
@@ -892,6 +918,9 @@ export function RegistrationForm() {
         return;
       }
 
+      // Combine names for display
+      const fullName = [data.firstName.trim(), data.middleName?.trim(), data.lastName.trim()].filter(Boolean).join(' ');
+      
       // 1. Call backend API to create user (bypasses client restrictions)
       const registerResponse = await fetch('/api/auth/register', {
         method: 'POST',
@@ -899,7 +928,7 @@ export function RegistrationForm() {
         body: JSON.stringify({
           email: data.email.trim().toLowerCase(),
           password: data.password,
-          displayName: data.fullName.trim(),
+          displayName: fullName,
           username: data.username.trim(),
           phoneNumber: `+${data.countryCode}${data.phone}`,
           countryCode: data.country,
@@ -939,7 +968,7 @@ export function RegistrationForm() {
 
       // 4. Update Auth profile
       await updateProfile(user, {
-        displayName: data.fullName,
+        displayName: fullName,
         photoURL: photoURL,
       });
       
@@ -988,7 +1017,10 @@ export function RegistrationForm() {
 
       const firestoreData = {
         uid: user.uid,
-        name: data.fullName,
+        name: fullName,
+        firstName: data.firstName.trim(),
+        middleName: data.middleName?.trim() || '',
+        lastName: data.lastName.trim(),
         username: data.username,
         email: data.email,
         phone: `+${data.countryCode}${data.phone}`,
@@ -1156,7 +1188,7 @@ export function RegistrationForm() {
              <div className="flex items-center gap-4 pb-2">
                 <Avatar className="h-20 w-20 flex-shrink-0">
                     <AvatarImage src={previewImage || undefined} alt="Profile picture preview" />
-                    <AvatarFallback>{fullName ? getInitials(fullName) : 'PIC'}</AvatarFallback>
+                    <AvatarFallback>{firstName && lastName ? getInitials(firstName, lastName, middleName) : 'PIC'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
                     <DropdownMenu>
@@ -1184,14 +1216,27 @@ export function RegistrationForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input id="fullName" {...register('fullName')} disabled={isLoading} />
-                    {shouldShowError('fullName') && errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
+                    <Label htmlFor="firstName">First Name <span className="text-destructive">*</span></Label>
+                    <Input id="firstName" {...register('firstName')} placeholder="Enter your first name" disabled={isLoading} />
+                    {shouldShowError('firstName') && errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
                     <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
                     {shouldShowError('email') && errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="middleName">Middle Name <span className="text-xs text-muted-foreground">(Optional)</span></Label>
+                    <Input id="middleName" {...register('middleName')} placeholder="Enter your middle name" disabled={isLoading} />
+                    {shouldShowError('middleName') && errors.middleName && <p className="text-sm text-destructive">{errors.middleName.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name <span className="text-destructive">*</span></Label>
+                    <Input id="lastName" {...register('lastName')} placeholder="Enter your last name" disabled={isLoading} />
+                    {shouldShowError('lastName') && errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
                 </div>
             </div>
 
