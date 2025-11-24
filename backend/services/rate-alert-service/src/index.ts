@@ -1,10 +1,9 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import formData from 'form-data';
-import Mailgun from 'mailgun.js';
 import webpush from 'web-push';
 import axios from 'axios';
 import cors from 'cors';
+import { sendRateAlertEmail as sendEmailViaMailgun, isMailgunConfigured } from '../../../common/mailgun';
 
 const app = express();
 const PORT = process.env.RATE_ALERT_SERVICE_PORT || 3009;
@@ -19,15 +18,10 @@ const prisma = new PrismaClient({
   log: NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-// Initialize Mailgun
-const mailgunApiKey = process.env.MAILGUN_API_KEY;
-const mailgunDomain = process.env.MAILGUN_DOMAIN;
-let mailgunClient: any = null;
-
-if (mailgunApiKey && mailgunDomain) {
-  const mailgun = new Mailgun(formData);
-  mailgunClient = mailgun.client({ username: 'api', key: mailgunApiKey, url: 'https://api.mailgun.net' });
-  console.log('[Rate Alert Service] Mailgun initialized');
+// Check Mailgun configuration
+const mailgunConfigured = isMailgunConfigured();
+if (mailgunConfigured) {
+  console.log('[Rate Alert Service] Mailgun API initialized');
 } else {
   console.warn('[Rate Alert Service] Mailgun not configured (MAILGUN_API_KEY or MAILGUN_DOMAIN missing)');
 }
@@ -61,20 +55,19 @@ async function fetchRates(base = 'USD'): Promise<Record<string, number>> {
 }
 
 /**
- * Send rate alert email via Mailgun
+ * Send rate alert email via Mailgun API
  */
 async function sendRateAlertEmail(to: string, subject: string, text: string): Promise<void> {
-  if (!mailgunClient || !mailgunDomain) {
+  if (!mailgunConfigured) {
     console.warn('[Rate Alert Service] Cannot send email - Mailgun not configured');
     return;
   }
 
-  await mailgunClient.messages.create(mailgunDomain, {
-    from: `alerts@${mailgunDomain}`,
-    to: [to],
-    subject,
-    text,
-  });
+  const result = await sendEmailViaMailgun(to, subject, text);
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to send rate alert email');
+  }
 }
 
 /**
@@ -216,7 +209,7 @@ app.get('/health', (_req: Request, res: Response) => {
     service: 'rate-alert-service',
     timestamp: new Date().toISOString(),
     prismaConnected: true,
-    mailgunConfigured: !!mailgunClient,
+    mailgunConfigured: mailgunConfigured,
     webpushConfigured: !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
     oxrConfigured: !!OXR_APP_ID,
   });

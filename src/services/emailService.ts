@@ -1,18 +1,7 @@
 
 'use server';
 
-import nodemailer from 'nodemailer';
-
-// --- Mailgun/Nodemailer Configuration ---
-const transporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false, // Use TLS
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN,
-    pass: process.env.MAILGUN_SMTP_PASSWORD,
-  },
-});
+import { sendEmail } from '@/lib/mailgun';
 
 const FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
@@ -77,32 +66,41 @@ interface PaymentRequestEmail {
 
 
 export async function sendPaymentRequestEmail(details: PaymentRequestEmail) {
-  const mailOptions = {
-    from: FROM_EMAIL,
-    to: details.to,
-    subject: `Payment Request from ${details.requesterName}`,
-    html: `
-      <div style="font-family: sans-serif; padding: 20px; color: #333;">
-        <h2>You've Received a Payment Request</h2>
-        <p>Hello,</p>
-        <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
-        <p>
-          <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-            Pay Securely Now
-          </a>
-        </p>
-        <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
-      </div>
-    `,
-  };
+  const html = `
+    <div style="font-family: sans-serif; padding: 20px; color: #333;">
+      <h2>You've Received a Payment Request</h2>
+      <p>Hello,</p>
+      <p>${details.requesterName} is requesting a payment of <strong>${details.amount} ${details.currency}</strong> for: "${details.description}".</p>
+      <p>
+        <a href="${details.paymentLink}" style="background-color: #3CB371; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          Pay Securely Now
+        </a>
+      </p>
+      <p style="font-size: 12px; color: #888;">If you were not expecting this, please ignore this email.</p>
+    </div>
+  `;
+
+  const text = `You've Received a Payment Request\n\n${details.requesterName} is requesting a payment of ${details.amount} ${details.currency} for: "${details.description}".\n\nPay securely at: ${details.paymentLink}\n\nIf you were not expecting this, please ignore this email.`;
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Payment request email sent successfully to', details.to, 'with ID:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const result = await sendEmail({
+      to: details.to,
+      subject: `Payment Request from ${details.requesterName}`,
+      html,
+      text,
+      from: `Payvost <${FROM_EMAIL}>`,
+      tags: ['payment-request'],
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send payment request email');
+    }
+
+    console.log('Payment request email sent successfully to', details.to, 'via Mailgun API with ID:', result.messageId);
+    return { success: true, messageId: result.messageId };
   } catch (error: any) {
     console.error('Error sending payment request email:', error);
-    throw new Error('Failed to send payment request email.');
+    throw new Error(error.message || 'Failed to send payment request email.');
   }
 }
 

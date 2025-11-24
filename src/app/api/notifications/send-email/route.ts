@@ -1,21 +1,11 @@
 /**
  * Vercel Edge Function for sending email notifications
  * This replaces the need for Firebase Functions for manual email sending
+ * Uses Mailgun API for email delivery
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-
-// Email configuration
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
+import { sendEmail } from '@/lib/mailgun';
 
 const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
@@ -123,20 +113,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send email
+    // Send email via Mailgun API
     const html = getEmailHTML(type, data);
-    const info = await emailTransporter.sendMail({
-      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+    const result = await sendEmail({
       to,
       subject,
       html,
+      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+      tags: ['notification', type],
     });
 
-    console.log('✅ Email sent successfully:', info.messageId);
+    if (!result.success) {
+      console.error('❌ Failed to send email:', result.error);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: result.error || 'Failed to send email' 
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Email sent successfully:', result.messageId);
 
     return NextResponse.json({
       success: true,
-      messageId: info.messageId,
+      messageId: result.messageId,
     });
   } catch (error: any) {
     console.error('❌ Failed to send email:', error);

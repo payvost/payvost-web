@@ -1,3 +1,8 @@
+/**
+ * Mailgun API Service for Next.js API Routes
+ * Provides email sending functionality using Mailgun API
+ */
+
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 
@@ -43,11 +48,6 @@ export interface SendEmailOptions {
   cc?: string | string[];
   bcc?: string | string[];
   replyTo?: string;
-  attachments?: Array<{
-    filename: string;
-    data: Buffer | string;
-    contentType?: string;
-  }>;
   tags?: string[];
   variables?: Record<string, any>;
 }
@@ -101,14 +101,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       });
     }
 
-    if (options.attachments && options.attachments.length > 0) {
-      messageData.attachment = options.attachments.map(att => ({
-        filename: att.filename,
-        data: att.data,
-        contentType: att.contentType,
-      }));
-    }
-
     const result = await mg.messages.create(domain, messageData);
 
     return {
@@ -124,40 +116,3 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
   }
 }
 
-/**
- * Send batch emails (one email to multiple recipients)
- */
-export async function sendBatchEmail(
-  recipients: string[],
-  subject: string,
-  html: string,
-  text?: string,
-  options?: Omit<SendEmailOptions, 'to' | 'subject' | 'html' | 'text'>
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  return sendEmail({
-    ...options,
-    to: recipients,
-    subject,
-    html,
-    text,
-  });
-}
-
-/**
- * Send rate alert email (backward compatibility)
- */
-export async function sendRateAlertEmail(to: string, subject: string, text: string) {
-  const result = await sendEmail({
-    to,
-    subject,
-    text,
-    from: `alerts@${domain}`,
-    tags: ['rate-alert'],
-  });
-
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to send rate alert email');
-  }
-
-  return result;
-}

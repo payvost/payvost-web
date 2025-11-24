@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
-import nodemailer from 'nodemailer';
 import {
   sendPushNotification,
   sendMulticastNotification,
@@ -11,24 +10,14 @@ import {
 } from './fcm';
 import { sendSMS, initTwilio } from './twilio';
 import { logger } from '../../common/logger';
+import { sendEmail, isMailgunConfigured } from '../../common/mailgun';
 
 const router = Router();
 
-// Initialize Nodemailer with Mailgun SMTP
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
-
 // Check if email service is configured
-const isEmailConfigured = !!( process.env.MAILGUN_SMTP_LOGIN && process.env.MAILGUN_SMTP_PASSWORD);
+const isEmailConfigured = isMailgunConfigured();
 if (!isEmailConfigured) {
-  logger.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
+  logger.warn('Mailgun API not configured. Email notifications will be disabled.');
 }
 
 // Initialize Twilio
@@ -338,16 +327,25 @@ async function sendEmailNotification(params: {
 
   try {
     const html = getEmailTemplate(template, variables || {});
+    const text = html.replace(/<[^>]*>/g, '').trim(); // Generate text version from HTML
 
-    const info = await emailTransporter.sendMail({
-      from: `Payvost <${process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com'}>`,
+    const result = await sendEmail({
       to: email,
       subject,
       html,
+      text,
+      from: `Payvost <${process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com'}>`,
+      tags: ['notification', template],
+      variables: variables || {},
     });
 
-    logger.info({ messageId: info.messageId, email }, 'Email sent successfully');
-    return { success: true, messageId: info.messageId };
+    if (result.success) {
+      logger.info({ messageId: result.messageId, email }, 'Email sent successfully via Mailgun API');
+      return { success: true, messageId: result.messageId };
+    } else {
+      logger.error({ error: result.error, email }, 'Email sending error');
+      return { success: false, error: result.error };
+    }
   } catch (error: any) {
     logger.error({ err: error, email }, 'Email sending error');
     return { success: false, error: error.message };

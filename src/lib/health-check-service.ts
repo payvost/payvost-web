@@ -304,9 +304,11 @@ export async function checkEmailServiceHealth(): Promise<HealthCheckResult> {
   const lastChecked = new Date().toISOString();
 
   const sendGridKey = process.env.SENDGRID_API_KEY;
-  const mailgunKey = process.env.MAILGUN_SMTP_PASSWORD;
+  const mailgunApiKey = process.env.MAILGUN_API_KEY;
+  const mailgunDomain = process.env.MAILGUN_DOMAIN;
+  const mailgunConfigured = !!(mailgunApiKey && mailgunDomain);
 
-  if (!sendGridKey && !mailgunKey) {
+  if (!sendGridKey && !mailgunConfigured) {
     return {
       status: 'Degraded Performance',
       lastChecked,
@@ -337,13 +339,18 @@ export async function checkEmailServiceHealth(): Promise<HealthCheckResult> {
     }
 
     // If SendGrid check didn't succeed or using Mailgun, consider service operational if configured
-    // Mailgun uses SMTP so we can't easily check without attempting a test email
+    // Mailgun API configuration verified
     const responseTime = Date.now() - startTime;
     return {
       status: 'Operational',
       responseTime,
       lastChecked,
-      details: { provider: mailgunKey ? 'Mailgun' : 'SendGrid', configured: true, note: 'Configuration verified' },
+      details: { 
+        provider: mailgunConfigured ? 'Mailgun API' : 'SendGrid', 
+        configured: true, 
+        method: mailgunConfigured ? 'API' : 'API',
+        note: 'Configuration verified' 
+      },
     };
   } catch (error) {
     return {
