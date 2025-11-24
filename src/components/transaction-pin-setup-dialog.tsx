@@ -135,7 +135,7 @@ export function TransactionPinSetupDialog({ userId, open, onOpenChange, onComple
           {/* Enter PIN */}
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="pin-input">Enter PIN</label>
-            <div id="pin-input" className="flex justify-start">
+            <div id="pin-input" className="flex justify-center">
               <InputOTP
                 maxLength={4}
                 value={pin}
@@ -160,7 +160,7 @@ export function TransactionPinSetupDialog({ userId, open, onOpenChange, onComple
           {/* Confirm PIN */}
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="pin-confirm-input">Confirm PIN</label>
-            <div id="pin-confirm-input" className="flex justify-start">
+            <div id="pin-confirm-input" className="flex justify-center">
               <InputOTP
                 maxLength={4}
                 value={confirmPin}
