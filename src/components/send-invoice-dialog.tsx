@@ -118,6 +118,70 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
     });
   };
 
+  const handleDownloadInvoice = () => {
+    if (!invoiceId) return;
+
+    // Use Vercel serverless function for PDF generation
+    const downloadUrl = `/api/pdf/invoice/${invoiceId}`;
+    
+    // Show loading toast
+    toast({
+      title: "Preparing Download",
+      description: "Generating your invoice PDF...",
+    });
+
+    // Attempt download with error handling
+    fetch(downloadUrl)
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          
+          // Check if it's the billing/service unavailable error
+          if (errorText.includes('not available yet') || errorText.includes('try again in 30 seconds')) {
+            toast({
+              title: "Service Temporarily Unavailable",
+              description: "The PDF generation service is currently unavailable. Please try again later or contact support.",
+              variant: "destructive",
+            });
+          } else if (errorText.includes('not configured')) {
+            toast({
+              title: "Configuration Error",
+              description: "The PDF service is not properly configured. Please contact support.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Download Failed",
+              description: `Unable to generate PDF. ${errorText}`,
+              variant: "destructive",
+            });
+          }
+          throw new Error(errorText);
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `invoice-${invoiceId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Download Complete",
+          description: "Your invoice has been downloaded successfully.",
+        });
+      })
+      .catch((error) => {
+        console.error('[Invoice Download] Error:', error);
+        // Error toast already shown above
+      });
+  };
+
   const handleShare = async () => {
     const publicUrl = getPublicUrl();
     if (!publicUrl) return;
@@ -198,7 +262,7 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
             {invoiceData && (
                 <div className="space-y-2 pt-4">
                      <div className="grid grid-cols-2 gap-2">
-                        <Button asChild type="button" variant="outline"><a href={`/api/pdf/invoice/${invoiceData.id}`} target="_blank" rel="noopener noreferrer"><Download className="mr-2 h-4 w-4"/>Download PDF</a></Button>
+                        <Button type="button" variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                         <Button type="button" variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
                      </div>
                 </div>
