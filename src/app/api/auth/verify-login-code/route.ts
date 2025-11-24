@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { auth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 /**
  * POST /api/auth/verify-login-code
@@ -18,11 +17,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the ID token to get user info
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
     // Get stored code from Firestore
-    const codeDoc = await db.collection('loginCodes').doc(uid).get();
+    const codeDoc = await adminDb.collection('loginCodes').doc(uid).get();
 
     if (!codeDoc.exists) {
       return NextResponse.json(
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
     // Check if code has expired
     if (now > expiresAt) {
       // Delete expired code
-      await db.collection('loginCodes').doc(uid).delete();
+      await adminDb.collection('loginCodes').doc(uid).delete();
       return NextResponse.json(
         { error: 'Verification code has expired. Please request a new code.' },
         { status: 400 }
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Check attempts (max 5 attempts)
     if (codeData.attempts >= 5) {
       // Delete code after too many attempts
-      await db.collection('loginCodes').doc(uid).delete();
+      await adminDb.collection('loginCodes').doc(uid).delete();
       return NextResponse.json(
         { error: 'Too many failed attempts. Please request a new code.' },
         { status: 400 }
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Verify code
     if (codeData.code !== code) {
       // Increment attempts
-      await db.collection('loginCodes').doc(uid).update({
+      await adminDb.collection('loginCodes').doc(uid).update({
         attempts: (codeData.attempts || 0) + 1,
       });
 
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code is valid - delete it
-    await db.collection('loginCodes').doc(uid).delete();
+    await adminDb.collection('loginCodes').doc(uid).delete();
 
     console.log(`✅ Login code verified successfully for user ${uid}`);
 

@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { auth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth, admin } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 
-// Email configuration
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
+// Email configuration - only create transporter if credentials are available
+let emailTransporter: nodemailer.Transporter | null = null;
+
+function getEmailTransporter(): nodemailer.Transporter {
+  if (emailTransporter) {
+    return emailTransporter;
+  }
+
+  const mailgunLogin = process.env.MAILGUN_SMTP_LOGIN;
+  const mailgunPassword = process.env.MAILGUN_SMTP_PASSWORD;
+
+  if (!mailgunLogin || !mailgunPassword) {
+    throw new Error('Mailgun SMTP credentials are not configured. Please set MAILGUN_SMTP_LOGIN and MAILGUN_SMTP_PASSWORD environment variables.');
+  }
+
+  emailTransporter = nodemailer.createTransport({
+    host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
+    port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
+    secure: false,
+    auth: {
+      user: mailgunLogin,
+      pass: mailgunPassword,
+    },
+  });
+
+  return emailTransporter;
+}
 
 const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
@@ -39,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the ID token to get user info
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
     const email = decodedToken.email;
 
@@ -55,24 +71,26 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Store code in Firestore with expiration
-    await db.collection('loginCodes').doc(uid).set({
+    const FieldValue = admin.firestore.FieldValue;
+    await adminDb.collection('loginCodes').doc(uid).set({
       code,
       email,
-      expiresAt,
-      createdAt: new Date(),
+      expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+      createdAt: admin.firestore.Timestamp.fromDate(new Date()),
       attempts: 0,
     });
 
     // Get user's name from Firestore if available
     let userName = 'User';
     try {
-      const userDoc = await db.collection('users').doc(uid).get();
+      const userDoc = await adminDb.collection('users').doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
         userName = userData?.displayName || userData?.name || userData?.firstName || 'User';
       }
     } catch (err) {
       // Continue with default name
+      console.warn('Could not fetch user name:', err);
     }
 
     // Send email with verification code
@@ -94,7 +112,9 @@ export async function POST(request: NextRequest) {
       </div>
     `;
 
-    await emailTransporter.sendMail({
+    // Get email transporter and send email
+    const transporter = getEmailTransporter();
+    await transporter.sendMail({
       from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
       to: email,
       subject: 'Your Payvost Login Verification Code',
@@ -111,12 +131,27 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error sending login code:', error);
     
+    // Provide more specific error messages
+    let errorMessage = 'Failed to send verification code';
+    let statusCode = 500;
+    
+    if (error.message?.includes('Mailgun SMTP credentials')) {
+      errorMessage = 'Email service is not configured. Please contact support.';
+      statusCode = 503; // Service Unavailable
+    } else if (error.message?.includes('ID token')) {
+      errorMessage = 'Invalid authentication token';
+      statusCode = 401;
+    } else if (error.code === 'auth/invalid-id-token') {
+      errorMessage = 'Invalid or expired authentication token';
+      statusCode = 401;
+    }
+    
     return NextResponse.json(
       {
-        error: 'Failed to send verification code',
-        details: error.message,
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }
