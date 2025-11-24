@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,6 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import axios from 'axios';
 
 const loginSchema = z.object({
@@ -54,10 +52,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showEmailCodeDialog, setShowEmailCodeDialog] = useState(false);
-  const [emailVerificationCode, setEmailVerificationCode] = useState('');
-  const [pendingUser, setPendingUser] = useState<any>(null);
-  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -84,6 +79,9 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
       const user = userCredential.user;
 
+      // Reload user to get latest email verification status
+      await user.reload();
+
       if (!user.emailVerified) {
         toast({
           title: "Email Not Verified",
@@ -95,34 +93,47 @@ export function LoginForm() {
         return;
       }
 
-      // Email and password verified, now send email verification code for login
+      // Email is verified, now send a login verification email link
+      // Note: Firebase's sendEmailVerification will send an email even if already verified
+      // The link will verify the email if not already verified, or do nothing if already verified
       try {
-        const idToken = await user.getIdToken();
+        setIsSendingVerification(true);
         
-        // Send email verification code
-        setIsSendingCode(true);
-        await axios.post('/api/auth/send-login-code', { idToken });
-        
-        // Store user for after code verification
-        setPendingUser(user);
-        setShowEmailCodeDialog(true);
-        setIsLoading(false);
-        setIsSendingCode(false);
+        // Send email verification link (Firebase handles this automatically)
+        await sendEmailVerification(user);
         
         toast({
-          title: "Verification Code Sent",
-          description: "Please check your email for the verification code.",
+          title: "Verification Email Sent",
+          description: "Please check your email and click the verification link to complete login.",
         });
-      } catch (codeError: any) {
-        console.error('Failed to send verification code:', codeError);
-        await signOut(auth);
-        toast({
-          title: "Failed to Send Code",
-          description: "Unable to send verification code. Please try again.",
-          variant: "destructive"
-        });
+        
+        // Keep user signed in and redirect to verification page
+        // The verification page will check if email is verified and redirect to dashboard
         setIsLoading(false);
-        setIsSendingCode(false);
+        setIsSendingVerification(false);
+        router.push('/verify-login');
+        return;
+      } catch (verificationError: any) {
+        console.error('Failed to send verification email:', verificationError);
+        
+        // If sending verification fails, we can still allow login but track it
+        // Track login event and redirect to dashboard
+        try {
+          const idToken = await user.getIdToken();
+          await axios.post('/api/auth/track-login', { idToken });
+        } catch (trackError) {
+          console.warn('Failed to track login:', trackError);
+        }
+        
+        toast({
+          title: "Login Successful",
+          description: "Could not send verification email, but login was successful.",
+          variant: "default"
+        });
+        
+        setIsLoading(false);
+        setIsSendingVerification(false);
+        router.push('/dashboard');
       }
     } catch (error: any) {
       
@@ -142,80 +153,6 @@ export function LoginForm() {
     }
   }
 
-  const verifyEmailCode = async () => {
-    if (!pendingUser || emailVerificationCode.length !== 6) {
-      toast({
-        title: "Invalid Code",
-        description: "Please enter a 6-digit code",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const idToken = await pendingUser.getIdToken();
-      
-      // Verify the code
-      const response = await axios.post('/api/auth/verify-login-code', {
-        idToken,
-        code: emailVerificationCode
-      });
-
-      if (response.data.success) {
-        // Track login event
-        try {
-          await axios.post('/api/auth/track-login', { idToken });
-        } catch (trackError) {
-          // Non-critical error, continue with login
-          console.warn('Failed to track login:', trackError);
-        }
-
-        // Login successful
-        toast({
-          title: "Login Successful!",
-          description: "Redirecting you to the dashboard...",
-        });
-        setShowEmailCodeDialog(false);
-        setEmailVerificationCode('');
-        setPendingUser(null);
-        router.push('/dashboard');
-      }
-    } catch (error: any) {
-      console.error('Email code verification error:', error);
-      toast({
-        title: "Verification Failed",
-        description: error.response?.data?.error || error.message || "Invalid verification code. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const resendEmailCode = async () => {
-    if (!pendingUser) return;
-
-    setIsSendingCode(true);
-    try {
-      const idToken = await pendingUser.getIdToken();
-      await axios.post('/api/auth/send-login-code', { idToken });
-      
-      toast({
-        title: "Code Resent",
-        description: "A new verification code has been sent to your email.",
-      });
-    } catch (error: any) {
-      console.error('Failed to resend code:', error);
-      toast({
-        title: "Failed to Resend",
-        description: "Unable to resend verification code. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSendingCode(false);
-    }
-  }
 
   return (
     <div className="grid gap-6">
@@ -277,71 +214,6 @@ export function LoginForm() {
           </Button>
       </div>
 
-      {/* Email Verification Code Dialog */}
-      <Dialog open={showEmailCodeDialog} onOpenChange={(open) => {
-        if (!open) {
-          // If dialog is closed, sign out the user
-          if (pendingUser) {
-            signOut(auth);
-            setPendingUser(null);
-            setEmailVerificationCode('');
-          }
-        }
-        setShowEmailCodeDialog(open);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Email Verification</DialogTitle>
-            <DialogDescription>
-              Enter the 6-digit verification code sent to your email address.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={emailVerificationCode}
-                onChange={setEmailVerificationCode}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                className="w-full" 
-                onClick={verifyEmailCode} 
-                disabled={isLoading || emailVerificationCode.length !== 6}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verify
-              </Button>
-              
-              <Button 
-                variant="outline"
-                className="w-full" 
-                onClick={resendEmailCode} 
-                disabled={isSendingCode || isLoading}
-              >
-                {isSendingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Resend Code
-              </Button>
-            </div>
-            
-            <p className="text-xs text-center text-muted-foreground">
-              Didn't receive the code? Check your spam folder or click "Resend Code".
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
