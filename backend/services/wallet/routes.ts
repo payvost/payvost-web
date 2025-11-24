@@ -5,6 +5,7 @@ import { prisma } from '../../common/prisma';
 import { Prisma } from '@prisma/client';
 import admin from 'firebase-admin';
 import { rapydService, CreateWalletRequest, RapydError } from '../rapyd';
+import { ensurePrismaUser } from '../user/syncUser';
 
 const router = Router();
 
@@ -17,6 +18,15 @@ router.get('/accounts', verifyFirebaseToken, async (req: AuthenticatedRequest, r
     const userId = req.user?.uid;
     if (!userId) {
       throw new ValidationError('User ID is required');
+    }
+
+    // Ensure Prisma User exists (sync from Firebase if needed)
+    // Don't fail if sync fails - just log and continue
+    try {
+      await ensurePrismaUser(userId);
+    } catch (syncError: any) {
+      console.warn('[Wallet] Failed to sync user to Prisma (non-blocking):', syncError);
+      // Continue anyway - user might not exist in Prisma yet but accounts might
     }
 
     const accounts = await prisma.account.findMany({
@@ -47,6 +57,14 @@ router.post('/accounts', verifyFirebaseToken, requireKYC, async (req: Authentica
 
     if (!currency) {
       throw new ValidationError('Currency is required');
+    }
+
+    // Ensure Prisma User exists (sync from Firebase if needed)
+    try {
+      await ensurePrismaUser(userId);
+    } catch (syncError: any) {
+      console.error('[Wallet] Failed to sync user to Prisma:', syncError);
+      throw new ValidationError(`User sync failed: ${syncError.message}`);
     }
 
     // Check if user already has an account in this currency
