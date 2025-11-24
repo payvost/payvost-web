@@ -61,7 +61,7 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
       }
 
       // Allow access to verification pages without checking phone
-      if (pathname === '/verify-email' || pathname === '/verify-registration') {
+      if (pathname === '/verify-email' || pathname === '/verify-registration' || pathname === '/verify-login') {
         setCheckingPhone(false);
         setPhoneVerified(null);
         return;
@@ -69,8 +69,8 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
 
       if (!user.emailVerified) {
         // If logged in but email not verified,
-        // and they are not on the verify-email page, redirect them.
-        if (pathname !== '/verify-email' && pathname !== '/verify-registration') {
+        // and they are not on a verification page, redirect them.
+        if (pathname !== '/verify-email' && pathname !== '/verify-registration' && pathname !== '/verify-login') {
             router.push('/verify-email');
         }
         return;
