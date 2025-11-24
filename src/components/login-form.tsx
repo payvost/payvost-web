@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, signOut, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, MultiFactorResolver } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,12 +54,10 @@ export function LoginForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [show2FADialog, setShow2FADialog] = useState(false);
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
-  const [phoneVerificationId, setPhoneVerificationId] = useState<string | null>(null);
-  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
-  const [mfaFactorType, setMfaFactorType] = useState<'totp' | 'phone' | null>(null);
+  const [showEmailCodeDialog, setShowEmailCodeDialog] = useState(false);
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [pendingUser, setPendingUser] = useState<any>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -97,60 +95,36 @@ export function LoginForm() {
         return;
       }
 
-      // Check phone verification status
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const isPhoneVerified = userData.phoneVerified || false;
-        
-        if (!isPhoneVerified) {
-          toast({
-            title: "Phone Not Verified",
-            description: "Please verify your phone number to complete login. Redirecting...",
-            variant: "destructive"
-          });
-          // Don't sign out - keep them logged in so they can verify
-          router.push('/verify-registration');
-          return;
-        }
-      }
-
-      // Track login event
+      // Email and password verified, now send email verification code for login
       try {
         const idToken = await user.getIdToken();
-        await axios.post('/api/auth/track-login', { idToken });
-      } catch (trackError) {
-        // Non-critical error, continue with login
-        console.warn('Failed to track login:', trackError);
-      }
-
-      // No MFA enrolled, proceed with login
-      toast({
-          title: "Login Successful!",
-          description: "Redirecting you to the dashboard...",
-      });
-      router.push('/dashboard');
-    } catch (error: any) {
-      // Handle MFA required
-      if (error.code === 'auth/multi-factor-auth-required') {
-        const resolver = error.resolver;
-        setMfaResolver(resolver);
         
-        // Detect MFA factor type
-        if (resolver.hints && resolver.hints.length > 0) {
-          const factorId = resolver.hints[0].factorId;
-          if (factorId === TotpMultiFactorGenerator.FACTOR_ID) {
-            setMfaFactorType('totp');
-          } else if (factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
-            setMfaFactorType('phone');
-          }
-        }
+        // Send email verification code
+        setIsSendingCode(true);
+        await axios.post('/api/auth/send-login-code', { idToken });
         
-        setShow2FADialog(true);
+        // Store user for after code verification
+        setPendingUser(user);
+        setShowEmailCodeDialog(true);
         setIsLoading(false);
-        return;
+        setIsSendingCode(false);
+        
+        toast({
+          title: "Verification Code Sent",
+          description: "Please check your email for the verification code.",
+        });
+      } catch (codeError: any) {
+        console.error('Failed to send verification code:', codeError);
+        await signOut(auth);
+        toast({
+          title: "Failed to Send Code",
+          description: "Unable to send verification code. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        setIsSendingCode(false);
       }
+    } catch (error: any) {
       
       let errorMessage = "An unknown error occurred.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
@@ -168,91 +142,8 @@ export function LoginForm() {
     }
   }
 
-  const sendPhoneVerificationCode = async () => {
-    if (!mfaResolver || !mfaResolver.hints || mfaResolver.hints.length === 0) {
-      toast({
-        title: "Error",
-        description: "Unable to send verification code. Please try logging in again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const selectedHint = mfaResolver.hints[0];
-      
-      if (selectedHint.factorId !== PhoneMultiFactorGenerator.FACTOR_ID) {
-        throw new Error('Expected phone MFA factor');
-      }
-
-      // Initialize reCAPTCHA verifier if not already done
-      let verifier = recaptchaVerifier;
-      if (!verifier) {
-        verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-          callback: () => {
-            // reCAPTCHA solved
-          },
-          'expired-callback': () => {
-            toast({
-              title: "reCAPTCHA Expired",
-              description: "Please try again",
-              variant: "destructive"
-            });
-          }
-        });
-        setRecaptchaVerifier(verifier);
-      }
-
-      // Send SMS code using PhoneAuthProvider with multi-factor info
-      const phoneInfoOptions = {
-        multiFactorHint: selectedHint,
-        session: mfaResolver.session
-      };
-
-      const phoneAuthProvider = new PhoneAuthProvider(auth);
-      const verificationId = await phoneAuthProvider.verifyPhoneNumber(
-        phoneInfoOptions,
-        verifier
-      );
-
-      setPhoneVerificationId(verificationId);
-      
-      toast({
-        title: "SMS Code Sent",
-        description: "Please check your phone for the verification code",
-      });
-    } catch (error: any) {
-      console.error('SMS send error:', error);
-      toast({
-        title: "Failed to Send SMS",
-        description: error.message || "Unable to send verification code. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const verify2FA = async () => {
-    if (!mfaResolver) {
-      toast({
-        title: "Error",
-        description: "MFA resolver not available. Please try logging in again.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // For Phone MFA, we need to send SMS first if not already sent
-    if (mfaFactorType === 'phone' && !phoneVerificationId) {
-      await sendPhoneVerificationCode();
-      return;
-    }
-
-    // Validate code length
-    if (twoFactorCode.length !== 6) {
+  const verifyEmailCode = async () => {
+    if (!pendingUser || emailVerificationCode.length !== 6) {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit code",
@@ -263,85 +154,38 @@ export function LoginForm() {
 
     setIsLoading(true);
     try {
-      const selectedHint = mfaResolver.hints[0];
-      let multiFactorAssertion;
-
-      if (selectedHint.factorId === TotpMultiFactorGenerator.FACTOR_ID) {
-        // TOTP verification
-        multiFactorAssertion = TotpMultiFactorGenerator.assertionForSignIn(
-          selectedHint.uid,
-          twoFactorCode
-        );
-      } else if (selectedHint.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
-        // Phone verification - verify the SMS code
-        if (!phoneVerificationId) {
-          throw new Error('SMS verification ID not available. Please request a new code.');
-        }
-        const cred = PhoneAuthProvider.credential(phoneVerificationId, twoFactorCode);
-        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
-      } else {
-        throw new Error('Unsupported MFA method');
-      }
-
-      // Resolve sign-in with MFA
-      const userCredential = await mfaResolver.resolveSignIn(multiFactorAssertion);
-      const user = userCredential.user;
-
-      if (!user.emailVerified) {
-        toast({
-          title: "Email Not Verified",
-          description: "Please verify your email before logging in.",
-          variant: "destructive"
-        });
-        await signOut(auth);
-        router.push('/verify-email');
-        return;
-      }
-
-      // Check phone verification status
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const idToken = await pendingUser.getIdToken();
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const isPhoneVerified = userData.phoneVerified || false;
-        
-        if (!isPhoneVerified) {
-          toast({
-            title: "Phone Not Verified",
-            description: "Please verify your phone number to complete login. Redirecting...",
-            variant: "destructive"
-          });
-          setShow2FADialog(false);
-          // Don't sign out - keep them logged in so they can verify
-          router.push('/verify-registration');
-          return;
-        }
-      }
-
-      // Track login event
-      try {
-        const idToken = await user.getIdToken();
-        await axios.post('/api/auth/track-login', { idToken });
-      } catch (trackError) {
-        // Non-critical error, continue with login
-        console.warn('Failed to track login:', trackError);
-      }
-
-      // 2FA successful
-      toast({
-        title: "Login Successful!",
-        description: "Redirecting you to the dashboard...",
+      // Verify the code
+      const response = await axios.post('/api/auth/verify-login-code', {
+        idToken,
+        code: emailVerificationCode
       });
-      setShow2FADialog(false);
-      setPhoneVerificationId(null);
-      setTwoFactorCode('');
-      setMfaFactorType(null);
-      router.push('/dashboard');
+
+      if (response.data.success) {
+        // Track login event
+        try {
+          await axios.post('/api/auth/track-login', { idToken });
+        } catch (trackError) {
+          // Non-critical error, continue with login
+          console.warn('Failed to track login:', trackError);
+        }
+
+        // Login successful
+        toast({
+          title: "Login Successful!",
+          description: "Redirecting you to the dashboard...",
+        });
+        setShowEmailCodeDialog(false);
+        setEmailVerificationCode('');
+        setPendingUser(null);
+        router.push('/dashboard');
+      }
     } catch (error: any) {
-      console.error('2FA verification error:', error);
+      console.error('Email code verification error:', error);
       toast({
         title: "Verification Failed",
-        description: error.message || "Invalid verification code. Please try again.",
+        description: error.response?.data?.error || error.message || "Invalid verification code. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -349,11 +193,32 @@ export function LoginForm() {
     }
   }
 
+  const resendEmailCode = async () => {
+    if (!pendingUser) return;
+
+    setIsSendingCode(true);
+    try {
+      const idToken = await pendingUser.getIdToken();
+      await axios.post('/api/auth/send-login-code', { idToken });
+      
+      toast({
+        title: "Code Resent",
+        description: "A new verification code has been sent to your email.",
+      });
+    } catch (error: any) {
+      console.error('Failed to resend code:', error);
+      toast({
+        title: "Failed to Resend",
+        description: "Unable to resend verification code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingCode(false);
+    }
+  }
+
   return (
     <div className="grid gap-6">
-      {/* Hidden reCAPTCHA container for Phone MFA */}
-      <div id="recaptcha-container" className="hidden"></div>
-      
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
@@ -412,73 +277,68 @@ export function LoginForm() {
           </Button>
       </div>
 
-      {/* 2FA Verification Dialog */}
-      <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+      {/* Email Verification Code Dialog */}
+      <Dialog open={showEmailCodeDialog} onOpenChange={(open) => {
+        if (!open) {
+          // If dialog is closed, sign out the user
+          if (pendingUser) {
+            signOut(auth);
+            setPendingUser(null);
+            setEmailVerificationCode('');
+          }
+        }
+        setShowEmailCodeDialog(open);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Two-Factor Authentication</DialogTitle>
+            <DialogTitle>Email Verification</DialogTitle>
             <DialogDescription>
-              {mfaFactorType === 'phone' 
-                ? phoneVerificationId 
-                  ? "Enter the 6-digit code sent to your phone."
-                  : "Click verify to receive a code on your phone."
-                : "Enter the 6-digit code from your authenticator app."}
+              Enter the 6-digit verification code sent to your email address.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            {mfaFactorType === 'phone' && !phoneVerificationId && (
-              <div className="text-center text-sm text-muted-foreground">
-                <p>An SMS code will be sent to your registered phone number.</p>
-              </div>
-            )}
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={emailVerificationCode}
+                onChange={setEmailVerificationCode}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
             
-            {phoneVerificationId && (
-              <div className="flex justify-center">
-                <InputOTP
-                  maxLength={6}
-                  value={twoFactorCode}
-                  onChange={setTwoFactorCode}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-            )}
+            <div className="flex flex-col gap-2">
+              <Button 
+                className="w-full" 
+                onClick={verifyEmailCode} 
+                disabled={isLoading || emailVerificationCode.length !== 6}
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify
+              </Button>
+              
+              <Button 
+                variant="outline"
+                className="w-full" 
+                onClick={resendEmailCode} 
+                disabled={isSendingCode || isLoading}
+              >
+                {isSendingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Resend Code
+              </Button>
+            </div>
             
-            {mfaFactorType === 'totp' && (
-              <div className="flex justify-center">
-                <InputOTP
-                  maxLength={6}
-                  value={twoFactorCode}
-                  onChange={setTwoFactorCode}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-            )}
-            
-            <Button 
-              className="w-full" 
-              onClick={verify2FA} 
-              disabled={isLoading || (phoneVerificationId && twoFactorCode.length !== 6) || (mfaFactorType === 'totp' && twoFactorCode.length !== 6)}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mfaFactorType === 'phone' && !phoneVerificationId ? 'Send Code' : 'Verify'}
-            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Didn't receive the code? Check your spam folder or click "Resend Code".
+            </p>
           </div>
         </DialogContent>
       </Dialog>
