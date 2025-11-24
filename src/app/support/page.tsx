@@ -53,7 +53,7 @@ export default function SupportPage() {
         {/* Hero Section */}
         <section className="w-full bg-muted">
           <div className="py-20 md:py-28 lg:py-32">
-            <div className="container px-4 md:px-6 text-center">
+            <div className="container px-4 md:px-6 mx-auto text-center">
                 <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
                     How can we help?
                 </h1>
