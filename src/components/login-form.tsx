@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, MultiFactorResolver } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, MultiFactorResolver } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -89,7 +89,7 @@ export function LoginForm() {
           description: "Please verify your email before logging in. Redirecting...",
           variant: "destructive"
         });
-        await auth.signOut();
+        await signOut(auth);
         router.push('/verify-email');
         return;
       }
@@ -192,7 +192,7 @@ export function LoginForm() {
           description: "Please verify your email before logging in.",
           variant: "destructive"
         });
-        await auth.signOut();
+        await signOut(auth);
         router.push('/verify-email');
         return;
       }
