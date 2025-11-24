@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { DashboardLayout } from '@/components/dashboard-layout';
 
 interface AuthContextType {
@@ -48,6 +48,8 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
     const { user, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [checkingPhone, setCheckingPhone] = useState(true);
+    const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
   
     useEffect(() => {
       if (loading) return;
@@ -61,14 +63,49 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
       if (!user.emailVerified) {
         // If logged in but email not verified,
         // and they are not on the verify-email page, redirect them.
-        if (pathname !== '/verify-email') {
+        if (pathname !== '/verify-email' && pathname !== '/verify-registration') {
             router.push('/verify-email');
         }
+        return;
       }
 
+      // Check phone verification status
+      const checkPhoneVerification = async () => {
+        if (!user) return;
+        
+        setCheckingPhone(true);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const isPhoneVerified = userData.phoneVerified || false;
+            setPhoneVerified(isPhoneVerified);
+            
+            // If phone not verified and not on verification pages, redirect
+            if (!isPhoneVerified && pathname !== '/verify-registration' && pathname !== '/verify-email') {
+              router.push('/verify-registration');
+            }
+          } else {
+            // User document doesn't exist, assume not verified
+            setPhoneVerified(false);
+            if (pathname !== '/verify-registration' && pathname !== '/verify-email') {
+              router.push('/verify-registration');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking phone verification:', error);
+          // On error, allow access but log it
+          setPhoneVerified(true);
+        } finally {
+          setCheckingPhone(false);
+        }
+      };
+
+      checkPhoneVerification();
     }, [user, loading, router, pathname]);
   
-    if (loading || !user || (!user.emailVerified && pathname !== '/verify-email')) {
+    // Show loading if checking auth or phone verification
+    if (loading || checkingPhone || !user || (!user.emailVerified && pathname !== '/verify-email' && pathname !== '/verify-registration') || (phoneVerified === false && pathname !== '/verify-registration' && pathname !== '/verify-email')) {
       return (
         <div className="flex flex-col min-h-screen">
           <div className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] lg:px-6">

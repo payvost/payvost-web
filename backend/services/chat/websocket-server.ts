@@ -140,16 +140,26 @@ export function initializeChatWebSocket(httpServer: HTTPServer) {
             content: data.content,
             type: data.type || 'text',
             metadata: data.metadata || null,
+            attachments: data.metadata?.attachments || null,
           },
         });
 
-        // Update session last activity
-        // Note: updatedAt is auto-updated by Prisma, so we don't set it manually
+        // Update session last activity and track first response
+        const updateData: any = {
+          status: session.status === 'WAITING' ? 'ACTIVE' : session.status,
+          lastMessageAt: new Date(),
+        };
+
+        // Track first response time (if agent is responding for first time)
+        if (socket.userRole === 'SUPPORT_AGENT' || socket.userRole === 'ADMIN') {
+          if (!session.firstResponseAt) {
+            updateData.firstResponseAt = new Date();
+          }
+        }
+
         await prisma.chatSession.update({
           where: { id: data.sessionId },
-          data: { 
-            status: session.status === 'WAITING' ? 'ACTIVE' : session.status,
-          },
+          data: updateData,
         });
 
         // Broadcast to all in session
@@ -204,20 +214,150 @@ export function initializeChatWebSocket(httpServer: HTTPServer) {
       });
     });
 
-    // Read receipts
+    // Read receipts (enhanced)
     socket.on('message:read', async (data: { messageId: string }) => {
       try {
-        await prisma.chatMessage.update({
+        const message = await prisma.chatMessage.findUnique({
           where: { id: data.messageId },
-          data: { isRead: true },
+          select: { senderId: true, sessionId: true },
         });
 
-        socket.to(`session:${socket.sessionId}`).emit('message:read', {
+        if (!message) {
+          socket.emit('error', { message: 'Message not found' });
+          return;
+        }
+
+        await prisma.chatMessage.update({
+          where: { id: data.messageId },
+          data: { 
+            isRead: true,
+            readAt: new Date(),
+            readBy: socket.userId,
+          },
+        });
+
+        // Notify sender and all in session
+        io.to(`session:${message.sessionId}`).emit('message:read', {
           messageId: data.messageId,
           userId: socket.userId,
+          readAt: new Date().toISOString(),
         });
       } catch (error) {
         logger.error({ err: error }, 'Failed to mark message as read');
+      }
+    });
+
+    // Tag management
+    socket.on('session:tag:add', async (data: { sessionId: string; tag: string }) => {
+      try {
+        const session = await prisma.chatSession.findUnique({
+          where: { id: data.sessionId },
+          select: { tags: true, customerId: true, agentId: true },
+        });
+
+        if (!session) {
+          socket.emit('error', { message: 'Session not found' });
+          return;
+        }
+
+        // Check permissions
+        const hasAccess =
+          session.customerId === socket.userId ||
+          session.agentId === socket.userId ||
+          socket.userRole === 'SUPPORT_AGENT' ||
+          socket.userRole === 'ADMIN';
+
+        if (!hasAccess) {
+          socket.emit('error', { message: 'Access denied' });
+          return;
+        }
+
+        const updatedTags = [...(session.tags || []), data.tag];
+        await prisma.chatSession.update({
+          where: { id: data.sessionId },
+          data: { tags: updatedTags },
+        });
+
+        io.to(`session:${data.sessionId}`).emit('session:tag:added', {
+          sessionId: data.sessionId,
+          tag: data.tag,
+          tags: updatedTags,
+        });
+      } catch (error) {
+        logger.error({ err: error }, 'Failed to add tag');
+        socket.emit('error', { message: 'Failed to add tag' });
+      }
+    });
+
+    socket.on('session:tag:remove', async (data: { sessionId: string; tag: string }) => {
+      try {
+        const session = await prisma.chatSession.findUnique({
+          where: { id: data.sessionId },
+          select: { tags: true, customerId: true, agentId: true },
+        });
+
+        if (!session) {
+          socket.emit('error', { message: 'Session not found' });
+          return;
+        }
+
+        // Check permissions (only agents/admins can remove tags)
+        const hasAccess =
+          socket.userRole === 'SUPPORT_AGENT' ||
+          socket.userRole === 'ADMIN';
+
+        if (!hasAccess) {
+          socket.emit('error', { message: 'Access denied' });
+          return;
+        }
+
+        const updatedTags = (session.tags || []).filter(t => t !== data.tag);
+        await prisma.chatSession.update({
+          where: { id: data.sessionId },
+          data: { tags: updatedTags },
+        });
+
+        io.to(`session:${data.sessionId}`).emit('session:tag:removed', {
+          sessionId: data.sessionId,
+          tag: data.tag,
+          tags: updatedTags,
+        });
+      } catch (error) {
+        logger.error({ err: error }, 'Failed to remove tag');
+        socket.emit('error', { message: 'Failed to remove tag' });
+      }
+    });
+
+    // Notes management (agents only)
+    socket.on('session:note:update', async (data: { sessionId: string; note: string }) => {
+      try {
+        // Only agents can add notes
+        if (socket.userRole !== 'SUPPORT_AGENT' && socket.userRole !== 'ADMIN') {
+          socket.emit('error', { message: 'Access denied' });
+          return;
+        }
+
+        const session = await prisma.chatSession.findUnique({
+          where: { id: data.sessionId },
+        });
+
+        if (!session) {
+          socket.emit('error', { message: 'Session not found' });
+          return;
+        }
+
+        await prisma.chatSession.update({
+          where: { id: data.sessionId },
+          data: { notes: data.note },
+        });
+
+        io.to(`session:${data.sessionId}`).emit('session:note:updated', {
+          sessionId: data.sessionId,
+          note: data.note,
+        });
+      } catch (error) {
+        logger.error({ err: error }, 'Failed to update note');
+        socket.emit('error', { message: 'Failed to update note' });
       }
     });
 

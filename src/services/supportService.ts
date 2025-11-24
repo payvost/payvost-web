@@ -393,5 +393,84 @@ export const supportService = {
     const queryString = params.toString();
     return apiRequest(`/api/support/chat/stats${queryString ? `?${queryString}` : ''}`);
   },
+
+  /**
+   * Add tag to chat session
+   */
+  async addChatTag(sessionId: string, tag: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/tags`, {
+      method: 'POST',
+      body: JSON.stringify({ tag }),
+    });
+  },
+
+  /**
+   * Remove tag from chat session
+   */
+  async removeChatTag(sessionId: string, tag: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/tags/${tag}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Update notes for chat session
+   */
+  async updateChatNotes(sessionId: string, note: string): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    });
+  },
+
+  /**
+   * Update priority for chat session
+   */
+  async updateChatPriority(sessionId: string, priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'): Promise<any> {
+    return apiRequest(`/api/support/chat/sessions/${sessionId}/priority`, {
+      method: 'POST',
+      body: JSON.stringify({ priority }),
+    });
+  },
+
+  /**
+   * Get saved replies
+   */
+  async getSavedReplies(category?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    const queryString = params.toString();
+    return apiRequest(`/api/support/chat/saved-replies${queryString ? `?${queryString}` : ''}`);
+  },
+
+  /**
+   * Create saved reply
+   */
+  async createSavedReply(title: string, content: string, category?: string): Promise<any> {
+    return apiRequest('/api/support/chat/saved-replies', {
+      method: 'POST',
+      body: JSON.stringify({ title, content, category }),
+    });
+  },
+
+  /**
+   * Use saved reply (increment usage)
+   */
+  async useSavedReply(id: string): Promise<any> {
+    return apiRequest(`/api/support/chat/saved-replies/${id}/use`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Get chat analytics
+   */
+  async getChatAnalytics(startDate?: string, endDate?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const queryString = params.toString();
+    return apiRequest(`/api/support/chat/analytics${queryString ? `?${queryString}` : ''}`);
+  },
 };
 

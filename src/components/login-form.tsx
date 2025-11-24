@@ -95,6 +95,27 @@ export function LoginForm() {
         return;
       }
 
+      // Check phone verification status
+      const { db } = await import('@/lib/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const isPhoneVerified = userData.phoneVerified || false;
+        
+        if (!isPhoneVerified) {
+          toast({
+            title: "Phone Not Verified",
+            description: "Please verify your phone number to complete login. Redirecting...",
+            variant: "destructive"
+          });
+          // Don't sign out - keep them logged in so they can verify
+          router.push('/verify-registration');
+          return;
+        }
+      }
+
       // Track login event
       try {
         const idToken = await user.getIdToken();
@@ -177,6 +198,28 @@ export function LoginForm() {
         await auth.signOut();
         router.push('/verify-email');
         return;
+      }
+
+      // Check phone verification status
+      const { db } = await import('@/lib/firebase');
+      const { doc, getDoc } = await import('firebase/firestore');
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const isPhoneVerified = userData.phoneVerified || false;
+        
+        if (!isPhoneVerified) {
+          toast({
+            title: "Phone Not Verified",
+            description: "Please verify your phone number to complete login. Redirecting...",
+            variant: "destructive"
+          });
+          setShow2FADialog(false);
+          // Don't sign out - keep them logged in so they can verify
+          router.push('/verify-registration');
+          return;
+        }
       }
 
       // Track login event

@@ -77,7 +77,7 @@ export default function ContactPage() {
             </section>
             
             <section className="w-full py-12 md:py-24 lg:py-32">
-                <div className="container px-4 md:px-6 grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <div className="container px-4 md:px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
                     {/* Contact Form */}
                     <div className="lg:col-span-2">
                         <Card>
