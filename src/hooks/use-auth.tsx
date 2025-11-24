@@ -48,7 +48,7 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
     const { user, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [checkingPhone, setCheckingPhone] = useState(true);
+    const [checkingPhone, setCheckingPhone] = useState(false);
     const [phoneVerified, setPhoneVerified] = useState<boolean | null>(null);
   
     useEffect(() => {
@@ -57,6 +57,13 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
       if (!user) {
         // If not logged in, redirect to login
         router.push('/login');
+        return;
+      }
+
+      // Allow access to verification pages without checking phone
+      if (pathname === '/verify-email' || pathname === '/verify-registration') {
+        setCheckingPhone(false);
+        setPhoneVerified(null);
         return;
       }
 
@@ -69,7 +76,7 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Check phone verification status
+      // Check phone verification status only for protected routes
       const checkPhoneVerification = async () => {
         if (!user) return;
         
