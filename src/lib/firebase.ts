@@ -7,6 +7,7 @@ import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics, logEvent } from "firebase/analytics"; // ✅ Added
 import { getPerformance, Performance } from "firebase/performance"; // ✅ Added
+import { initializeAppCheck, ReCaptchaV3Provider, AppCheck } from "firebase/app-check"; // ✅ Added for App Check
 import { errorEmitter } from "./error-emitter";
 import { FirestorePermissionError } from "./errors";
 
@@ -79,6 +80,26 @@ if (typeof window !== "undefined") {
   }
 }
 
+// --- Initialize App Check (client-side only) ---
+let appCheck: AppCheck | null = null;
+
+if (typeof window !== "undefined") {
+  try {
+    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (recaptchaSiteKey) {
+      appCheck = initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true,
+      });
+      console.log("✅ Firebase App Check initialized with reCAPTCHA v3");
+    } else {
+      console.warn("⚠️ Firebase App Check not initialized: NEXT_PUBLIC_RECAPTCHA_SITE_KEY not set");
+    }
+  } catch (err) {
+    console.warn("⚠️ Firebase App Check not available:", err);
+  }
+}
+
 // --- Global Firestore Permission Error Handling ---
 if (typeof window !== 'undefined') {
   errorEmitter.on('permission-error', (error: FirestorePermissionError) => {
@@ -91,4 +112,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { app, auth, db, storage, analytics, perf, logEvent, FirestoreError, signInWithCustomToken };
+export { app, auth, db, storage, analytics, perf, appCheck, logEvent, FirestoreError, signInWithCustomToken };

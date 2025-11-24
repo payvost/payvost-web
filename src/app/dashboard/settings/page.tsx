@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 import {
   Bell,
   Mail,
@@ -43,18 +45,26 @@ import { TwoFactorSettings } from '@/components/two-factor-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { sendEmailVerification, reload } from 'firebase/auth';
+import { Mail, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user, loading: authLoading } = useAuth();
   const [businessProfile, setBusinessProfile] = useState<any>(null);
   const [loadingBusiness, setLoadingBusiness] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user || authLoading) {
       setLoadingBusiness(false);
       return;
     }
+
+    // Check email verification status
+    setEmailVerified(user.emailVerified || false);
 
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
@@ -71,8 +81,41 @@ export default function SettingsPage() {
       setLoadingBusiness(false);
     });
 
-    return () => unsub();
+    // Poll for email verification status
+    const emailCheckInterval = setInterval(async () => {
+      if (user) {
+        await user.reload();
+        setEmailVerified(user.emailVerified || false);
+      }
+    }, 5000);
+
+    return () => {
+      unsub();
+      clearInterval(emailCheckInterval);
+    };
   }, [user, authLoading]);
+
+  const handleResendEmailVerification = async () => {
+    if (!user) return;
+    
+    setSendingVerification(true);
+    try {
+      await sendEmailVerification(user);
+      toast({
+        title: 'Verification email sent',
+        description: 'Please check your email and click the verification link.',
+      });
+    } catch (error: any) {
+      console.error('Failed to send verification email:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send verification email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingVerification(false);
+    }
+  };
 
   const getBusinessInitials = (name?: string) => {
     if (!name) return 'B';
@@ -311,6 +354,71 @@ export default function SettingsPage() {
           </div>
 
           <div className="lg:col-span-1 space-y-6">
+
+            {/* Email Verification */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="h-5 w-5" />
+                      Email Verification
+                    </CardTitle>
+                    <CardDescription>
+                      Verify your email address for account security
+                    </CardDescription>
+                  </div>
+                  {emailVerified ? (
+                    <Badge variant="default" className="bg-green-600">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <X className="h-3 w-3 mr-1" />
+                      Not Verified
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {emailVerified ? (
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription>
+                      Your email address <strong>{user?.email}</strong> has been verified.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Your email address <strong>{user?.email}</strong> has not been verified.
+                        Please verify your email to ensure account security.
+                      </AlertDescription>
+                    </Alert>
+                    <Button
+                      onClick={handleResendEmailVerification}
+                      disabled={sendingVerification}
+                      className="w-full"
+                    >
+                      {sendingVerification ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Resend Verification Email
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Two-Factor Authentication */}
             <TwoFactorSettings />

@@ -1040,12 +1040,12 @@ export function RegistrationForm() {
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });
 
-      // 7. Send email verification immediately (before PIN setup)
+      // 7. Send email verification immediately
       try {
         await sendEmailVerification(user);
         toast({ 
-          title: 'Verification email sent', 
-          description: 'Please check your email to verify your account.',
+          title: 'Registration successful!', 
+          description: 'Please verify your email and phone number to complete registration.',
           duration: 5000,
         });
       } catch (emailError: unknown) {
@@ -1064,7 +1064,7 @@ export function RegistrationForm() {
         await addDoc(notificationsColRef, {
           icon: 'gift',
           title: 'Welcome to Payvost!',
-          description: 'We are thrilled to have you with us. Explore the features and start transacting globally.',
+          description: 'We are thrilled to have you with us. Please verify your email and phone to get started.',
           date: serverTimestamp(),
           read: false,
         });
@@ -1073,9 +1073,8 @@ export function RegistrationForm() {
         console.error('Failed to create welcome notification:', notifError);
       }
 
-      // 9. Open PIN setup dialog before redirecting
-      setNewlyCreatedUserId(user.uid);
-      setPinDialogOpen(true);
+      // 9. Redirect to verification page (email -> SMS -> PIN setup)
+      router.push('/verify-registration');
 
     } catch (error: unknown) {
       console.error("Registration process failed:", error);
