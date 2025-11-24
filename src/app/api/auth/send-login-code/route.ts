@@ -42,6 +42,9 @@ function generateVerificationCode(): string {
 /**
  * POST /api/auth/send-login-code
  * Sends a verification code to the user's email for login
+ * 
+ * @deprecated This endpoint is no longer used. Login now uses Firebase email verification links instead.
+ * Kept for potential future use when Mailgun account is reactivated.
  */
 export async function POST(request: NextRequest) {
   try {

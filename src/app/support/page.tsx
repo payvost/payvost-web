@@ -21,7 +21,6 @@ import {
 import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
 import { useRouter } from 'next/navigation';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { EnhancedLiveChat } from '@/components/enhanced-live-chat';
 
 const supportCategories = [
@@ -44,6 +43,7 @@ const featuredArticles = [
 
 export default function SupportPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showChat, setShowChat] = useState(false);
   const router = useRouter();
 
   return (
@@ -139,24 +139,13 @@ export default function SupportPage() {
                                 <MessageSquarePlus className="mr-2 h-4 w-4" /> Contact Us
                             </Link>
                            </Button>
-                           <Sheet>
-                                <SheetTrigger asChild>
-                                    <Button variant="outline" className="w-full">
-                                        <MessageSquare className="mr-2 h-4 w-4" /> Start Live Chat
-                                    </Button>
-                                </SheetTrigger>
-                                <SheetContent className="w-full md:w-[450px] p-0 flex flex-col">
-                                    <SheetHeader className="p-4 border-b">
-                                        <SheetTitle>AI Support Chat</SheetTitle>
-                                        <SheetDescription>
-                                            Our AI assistant is here to help you 24/7.
-                                        </SheetDescription>
-                                    </SheetHeader>
-                                    <div className="flex-1">
-                                        <EnhancedLiveChat inline />
-                                    </div>
-                                </SheetContent>
-                            </Sheet>
+                           <Button 
+                             variant="outline" 
+                             className="w-full"
+                             onClick={() => setShowChat(true)}
+                           >
+                             <MessageSquare className="mr-2 h-4 w-4" /> Start Live Chat
+                           </Button>
                         </CardContent>
                         <CardFooter className="text-center text-xs text-muted-foreground">
                             <p>Our team is available 24/7 to assist you with any questions or issues.</p>
@@ -168,6 +157,14 @@ export default function SupportPage() {
 
       </main>
       <SiteFooter />
+      
+      {/* Floating Live Chat Widget */}
+      {showChat && (
+        <EnhancedLiveChat 
+          initialMinimized={false}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div>
   );
 }

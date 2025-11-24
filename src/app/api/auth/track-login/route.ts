@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
-import { auth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth, admin } from '@/lib/firebase-admin';
 
 /**
  * POST /api/auth/track-login
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the ID token
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
     // Extract IP address from request headers
@@ -63,22 +62,22 @@ export async function POST(request: NextRequest) {
     const deviceInfo = getDeviceInfo(userAgent);
 
     // Update user document in Firestore
-    const userRef = db.collection('users').doc(uid);
+    const userRef = adminDb.collection('users').doc(uid);
     const now = new Date();
 
     // Update last login fields
     await userRef.update({
-      lastLoginAt: now,
+      lastLoginAt: admin.firestore.Timestamp.fromDate(now),
       lastLoginIp: ip,
       lastLoginDevice: deviceInfo,
-      updatedAt: now,
+      updatedAt: admin.firestore.Timestamp.fromDate(now),
     });
 
     // Also add to login history if it exists
     try {
       const loginHistoryRef = userRef.collection('loginHistory');
       await loginHistoryRef.add({
-        timestamp: now,
+        timestamp: admin.firestore.Timestamp.fromDate(now),
         ip: ip,
         device: deviceInfo,
         userAgent: userAgent,

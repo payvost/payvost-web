@@ -4,6 +4,9 @@ import { adminDb, adminAuth } from '@/lib/firebase-admin';
 /**
  * POST /api/auth/verify-login-code
  * Verifies the login code and returns success if valid
+ * 
+ * @deprecated This endpoint is no longer used. Login now uses Firebase email verification links instead.
+ * Kept for potential future use when Mailgun account is reactivated.
  */
 export async function POST(request: NextRequest) {
   try {

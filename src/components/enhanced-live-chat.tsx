@@ -41,6 +41,7 @@ interface EnhancedLiveChatProps {
   className?: string;
   initialMinimized?: boolean;
   inline?: boolean; // If true, render inline instead of fixed position
+  onClose?: () => void; // Optional callback to close the widget completely
 }
 
 // Quick actions
@@ -73,6 +74,7 @@ export function EnhancedLiveChat({
   className,
   initialMinimized = false,
   inline = false,
+  onClose,
 }: EnhancedLiveChatProps) {
   const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -414,7 +416,7 @@ export function EnhancedLiveChat({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className={cn(
-          'fixed bottom-4 right-4 z-50',
+          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50',
           className
         )}
       >
@@ -441,7 +443,7 @@ export function EnhancedLiveChat({
       className={cn(
         inline 
           ? 'w-full h-full flex flex-col' 
-          : 'fixed bottom-4 right-4 w-96 h-[600px] bg-background border rounded-lg shadow-2xl flex flex-col z-50',
+          : 'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-[380px] h-[500px] max-h-[calc(100vh-2rem)] bg-background border rounded-lg shadow-2xl flex flex-col z-50',
         className
       )}
     >
@@ -472,13 +474,26 @@ export function EnhancedLiveChat({
           </div>
         </div>
         {!inline && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMinimized(true)}
-          >
-            <Minimize2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMinimized(true)}
+              className="h-8 w-8"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
 
