@@ -77,15 +77,35 @@ export default function VerifyRegistrationPage() {
           setPhoneVerified(isPhoneVerified);
 
           if (!isPhoneVerified && userData.phone) {
+            // Phone not verified, open SMS dialog
             setSmsDialogOpen(true);
           } else if (isPhoneVerified) {
             // Both verified, redirect to dashboard
             router.push('/dashboard');
+          } else if (!userData.phone) {
+            // No phone number on file - this shouldn't happen for registered users
+            toast({
+              title: 'Phone number missing',
+              description: 'Please contact support to add your phone number.',
+              variant: 'destructive',
+            });
           }
+        } else {
+          // User document doesn't exist - shouldn't happen
+          toast({
+            title: 'Account error',
+            description: 'Your account information could not be found. Please contact support.',
+            variant: 'destructive',
+          });
         }
       }
     } catch (error) {
       console.error('Error checking verification status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to check verification status. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setCheckingStatus(false);
     }

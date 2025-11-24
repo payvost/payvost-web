@@ -833,6 +833,19 @@ enum ChatStatus {
   ENDED
 }
 
+// Chat Event Types for analytics
+enum ChatEventType {
+  PAGE_VISIT
+  WIDGET_OPENED
+  MESSAGE_SENT
+  MESSAGE_RECEIVED
+  SESSION_STARTED
+  SESSION_ENDED
+  AGENT_ASSIGNED
+  ESCALATED
+  RATED
+}
+
 model SupportTicket {
   id              String         @id @default(uuid())
   ticketNumber    String         @unique
@@ -930,11 +943,28 @@ model ChatSession {
   startedAt   DateTime      @default(now())
   endedAt     DateTime?
   metadata    Json?         // For escalation info, AI analysis, etc.
+  
+  // Enhanced fields
+  tags        String[]      @default([])           // Conversation tags
+  priority    String?       @default("NORMAL")     // LOW, NORMAL, HIGH, URGENT
+  rating      Int?          // 1-5 star rating
+  notes       String?       @db.Text               // Agent notes
+  lastMessageAt DateTime?   // Track last activity
+  firstResponseAt DateTime? // First response time
+  resolvedAt  DateTime?     // Resolution time
+  
+  // Customer metadata
+  customerMetadata Json?    // Device, browser, location, pages visited
+  
   messages    ChatMessage[]
+  events      ChatEvent[]
   
   @@index([status, agentId])
   @@index([customerId])
   @@index([startedAt])
+  @@index([priority])
+  @@index([lastMessageAt])
+  @@index([tags])
 }
 
 model ChatMessage {
@@ -943,14 +973,53 @@ model ChatMessage {
   sessionId String
   senderId  String
   content   String       @db.Text
-  type      String       @default("text") // text, file, system, ai_response
-  isRead    Boolean      @default(false)
-  metadata  Json?        // For file attachments, AI analysis, etc.
+  type      String       @default("text") // text, file, card, button, list, system, ai_response
+  
+  // Enhanced fields
+  attachments Json?      // Array of file attachments
+  metadata    Json?      // Rich message data (for cards, buttons, etc.)
+  isRead      Boolean    @default(false)
+  readAt      DateTime?  // When message was read
+  readBy      String?    // Who read it
+  reactions   Json?      // Emoji reactions
+  
   createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
   
   @@index([sessionId])
   @@index([createdAt])
   @@index([senderId])
+  @@index([isRead])
+  @@index([type])
+}
+
+// Chat Events for analytics and tracking
+model ChatEvent {
+  id          String        @id @default(uuid())
+  session     ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId   String
+  eventType   ChatEventType
+  metadata    Json?        // Event-specific data (page URL, device info, etc.)
+  createdAt   DateTime     @default(now())
+  
+  @@index([sessionId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// Saved Replies (canned responses for agents)
+model SavedReply {
+  id          String   @id @default(uuid())
+  title       String
+  content     String   @db.Text
+  category    String?  // Common categories (greeting, closing, technical, etc.)
+  createdBy   String   // Agent ID
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([createdBy])
+  @@index([category])
 }
 
 // System Health Monitoring Models

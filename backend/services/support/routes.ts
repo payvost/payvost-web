@@ -513,5 +513,489 @@ router.get('/chat/stats', verifyFirebaseToken, requireSupportTeam, async (req: A
   }
 });
 
+/**
+ * POST /api/support/chat/sessions/:id/tags
+ * Add tag to chat session
+ */
+router.post('/chat/sessions/:id/tags', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tag } = req.body;
+    if (!tag) {
+      throw new ValidationError('Tag is required');
+    }
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: req.params.id },
+      select: { tags: true },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    const updatedTags = [...(session.tags || []), tag];
+    const updated = await prisma.chatSession.update({
+      where: { id: req.params.id },
+      data: { tags: updatedTags },
+    });
+
+    res.json({ tags: updated.tags });
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to add tag' });
+    }
+  }
+});
+
+/**
+ * DELETE /api/support/chat/sessions/:id/tags/:tag
+ * Remove tag from chat session
+ */
+router.delete('/chat/sessions/:id/tags/:tag', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const session = await prisma.chatSession.findUnique({
+      where: { id: req.params.id },
+      select: { tags: true },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    const updatedTags = (session.tags || []).filter(t => t !== req.params.tag);
+    const updated = await prisma.chatSession.update({
+      where: { id: req.params.id },
+      data: { tags: updatedTags },
+    });
+
+    res.json({ tags: updated.tags });
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to remove tag' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/notes
+ * Update notes for chat session
+ */
+router.post('/chat/sessions/:id/notes', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { note } = req.body;
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    const updated = await prisma.chatSession.update({
+      where: { id: req.params.id },
+      data: { notes: note || null },
+    });
+
+    res.json({ notes: updated.notes });
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to update notes' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/priority
+ * Update priority for chat session
+ */
+router.post('/chat/sessions/:id/priority', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { priority } = req.body;
+    if (!priority || !['LOW', 'NORMAL', 'HIGH', 'URGENT'].includes(priority)) {
+      throw new ValidationError('Priority must be LOW, NORMAL, HIGH, or URGENT');
+    }
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    const updated = await prisma.chatSession.update({
+      where: { id: req.params.id },
+      data: { priority },
+    });
+
+    res.json({ priority: updated.priority });
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to update priority' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/sessions/:id/rate
+ * Rate chat session (customer only)
+ */
+router.post('/chat/sessions/:id/rate', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      throw new ValidationError('Rating must be between 1 and 5');
+    }
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: req.params.id },
+      select: { customerId: true },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    if (session.customerId !== userId) {
+      throw new AuthorizationError('Only the customer can rate this session');
+    }
+
+    const updated = await prisma.chatSession.update({
+      where: { id: req.params.id },
+      data: { rating },
+    });
+
+    res.json({ rating: updated.rating });
+  } catch (error: any) {
+    if (error instanceof ValidationError || error instanceof AuthorizationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to rate session' });
+    }
+  }
+});
+
+/**
+ * GET /api/support/chat/saved-replies
+ * Get saved replies for authenticated agent
+ */
+router.get('/chat/saved-replies', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const category = req.query.category as string | undefined;
+
+    const where: any = { createdBy: userId };
+    if (category) {
+      where.category = category;
+    }
+
+    const replies = await prisma.savedReply.findMany({
+      where,
+      orderBy: { usageCount: 'desc' },
+    });
+
+    res.json(replies);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch saved replies' });
+  }
+});
+
+/**
+ * POST /api/support/chat/saved-replies
+ * Create saved reply
+ */
+router.post('/chat/saved-replies', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const { title, content, category } = req.body;
+
+    if (!title || !content) {
+      throw new ValidationError('Title and content are required');
+    }
+
+    const reply = await prisma.savedReply.create({
+      data: {
+        title,
+        content,
+        category: category || null,
+        createdBy: userId,
+      },
+    });
+
+    res.status(201).json(reply);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to create saved reply' });
+    }
+  }
+});
+
+/**
+ * PUT /api/support/chat/saved-replies/:id
+ * Update saved reply
+ */
+router.put('/chat/saved-replies/:id', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { title, content, category } = req.body;
+
+    const reply = await prisma.savedReply.findUnique({
+      where: { id: req.params.id },
+      select: { createdBy: true },
+    });
+
+    if (!reply) {
+      throw new ValidationError('Saved reply not found');
+    }
+
+    if (reply.createdBy !== userId) {
+      throw new AuthorizationError('You can only update your own saved replies');
+    }
+
+    const updated = await prisma.savedReply.update({
+      where: { id: req.params.id },
+      data: {
+        title,
+        content,
+        category: category || null,
+      },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    if (error instanceof ValidationError || error instanceof AuthorizationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to update saved reply' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/saved-replies/:id/use
+ * Increment usage count for saved reply
+ */
+router.post('/chat/saved-replies/:id/use', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const reply = await prisma.savedReply.findUnique({
+      where: { id: req.params.id },
+      select: { usageCount: true },
+    });
+
+    if (!reply) {
+      throw new ValidationError('Saved reply not found');
+    }
+
+    const updated = await prisma.savedReply.update({
+      where: { id: req.params.id },
+      data: { usageCount: reply.usageCount + 1 },
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to update usage count' });
+    }
+  }
+});
+
+/**
+ * DELETE /api/support/chat/saved-replies/:id
+ * Delete saved reply
+ */
+router.delete('/chat/saved-replies/:id', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const reply = await prisma.savedReply.findUnique({
+      where: { id: req.params.id },
+      select: { createdBy: true },
+    });
+
+    if (!reply) {
+      throw new ValidationError('Saved reply not found');
+    }
+
+    if (reply.createdBy !== userId) {
+      throw new AuthorizationError('You can only delete your own saved replies');
+    }
+
+    await prisma.savedReply.delete({
+      where: { id: req.params.id },
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    if (error instanceof ValidationError || error instanceof AuthorizationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to delete saved reply' });
+    }
+  }
+});
+
+/**
+ * POST /api/support/chat/events
+ * Track chat event (for analytics)
+ */
+router.post('/chat/events', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { sessionId, eventType, metadata } = req.body;
+
+    if (!sessionId || !eventType) {
+      throw new ValidationError('sessionId and eventType are required');
+    }
+
+    // Verify session exists and user has access
+    const session = await prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: { customerId: true },
+    });
+
+    if (!session) {
+      throw new ValidationError('Session not found');
+    }
+
+    if (session.customerId !== userId) {
+      throw new AuthorizationError('Access denied');
+    }
+
+    const event = await prisma.chatEvent.create({
+      data: {
+        sessionId,
+        eventType: eventType as any,
+        metadata: metadata || null,
+      },
+    });
+
+    res.status(201).json(event);
+  } catch (error: any) {
+    if (error instanceof ValidationError || error instanceof AuthorizationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to track event' });
+    }
+  }
+});
+
+/**
+ * GET /api/support/chat/analytics
+ * Get chat analytics
+ */
+router.get('/chat/analytics', verifyFirebaseToken, requireSupportTeam, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+
+    // Get session statistics
+    const totalSessions = await prisma.chatSession.count({
+      where: {
+        startedAt: { gte: startDate, lte: endDate },
+      },
+    });
+
+    const activeSessions = await prisma.chatSession.count({
+      where: {
+        status: 'ACTIVE',
+        startedAt: { gte: startDate, lte: endDate },
+      },
+    });
+
+    const endedSessions = await prisma.chatSession.count({
+      where: {
+        status: 'ENDED',
+        startedAt: { gte: startDate, lte: endDate },
+      },
+    });
+
+    // Average first response time
+    const sessionsWithFirstResponse = await prisma.chatSession.findMany({
+      where: {
+        firstResponseAt: { not: null },
+        startedAt: { gte: startDate, lte: endDate },
+      },
+      select: { startedAt: true, firstResponseAt: true },
+    });
+
+    const avgFirstResponseTime = sessionsWithFirstResponse.length > 0
+      ? sessionsWithFirstResponse.reduce((acc, s) => {
+          const diff = s.firstResponseAt!.getTime() - s.startedAt.getTime();
+          return acc + diff;
+        }, 0) / sessionsWithFirstResponse.length / 1000 / 60 // Convert to minutes
+      : 0;
+
+    // Average resolution time
+    const resolvedSessions = await prisma.chatSession.findMany({
+      where: {
+        resolvedAt: { not: null },
+        startedAt: { gte: startDate, lte: endDate },
+      },
+      select: { startedAt: true, resolvedAt: true },
+    });
+
+    const avgResolutionTime = resolvedSessions.length > 0
+      ? resolvedSessions.reduce((acc, s) => {
+          const diff = s.resolvedAt!.getTime() - s.startedAt.getTime();
+          return acc + diff;
+        }, 0) / resolvedSessions.length / 1000 / 60 // Convert to minutes
+      : 0;
+
+    // Average rating
+    const ratedSessions = await prisma.chatSession.findMany({
+      where: {
+        rating: { not: null },
+        startedAt: { gte: startDate, lte: endDate },
+      },
+      select: { rating: true },
+    });
+
+    const avgRating = ratedSessions.length > 0
+      ? ratedSessions.reduce((acc, s) => acc + (s.rating || 0), 0) / ratedSessions.length
+      : 0;
+
+    // Total messages
+    const totalMessages = await prisma.chatMessage.count({
+      where: {
+        createdAt: { gte: startDate, lte: endDate },
+      },
+    });
+
+    res.json({
+      totalSessions,
+      activeSessions,
+      endedSessions,
+      avgFirstResponseTime: Math.round(avgFirstResponseTime * 100) / 100,
+      avgResolutionTime: Math.round(avgResolutionTime * 100) / 100,
+      avgRating: Math.round(avgRating * 100) / 100,
+      totalMessages,
+      period: { startDate, endDate },
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch analytics' });
+  }
+});
+
 export default router;
 

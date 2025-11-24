@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, CarouselApi } from "@/components/ui/carousel";
-import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, MoreHorizontal, Star, ArrowUpRight, FileCheck, Server, Clock, CheckCircle2, MessageCircle, PhoneCall, QrCode, Layers, Calendar, TrendingUp } from "lucide-react";
 import React, { useRef, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -636,18 +636,18 @@ export default function LandingPage() {
                     </CardContent>
                   </Card>
                   <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-                    <Card className="border border-border/40 bg-background/70 p-4 sm:p-5">
-                      <div className="flex items-start gap-2 sm:gap-3">
+                    <Card className="border-2 border-border bg-background/70 p-4 sm:p-5">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3">
                         <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
                           <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
-                        <div>
+                        <div className="text-center sm:text-left">
                           <p className="text-xs sm:text-sm font-semibold text-foreground">Avg. response time</p>
                           <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Under 8 minutes during business hours</p>
                         </div>
                       </div>
                     </Card>
-                    <Card className="border border-border/40 bg-background/70 p-4 sm:p-5">
+                    <Card className="border-2 border-border bg-background/70 p-4 sm:p-5">
                       <div className="flex items-start gap-2 sm:gap-3">
                         <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
                           <PhoneCall className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -685,91 +685,196 @@ export default function LandingPage() {
           </div>
         </section>
         {/* Blog Section */}
-        <section id="blog" className="w-full py-12 sm:py-16 md:py-20 lg:py-24">
+        <section id="blog" className="w-full py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-b from-background to-muted/20">
           <div className="container mx-auto max-w-screen-2xl px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">From the Blog</h2>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Stay updated with the latest news and insights from the world of finance.
+            {/* Header Section */}
+            <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12 sm:mb-16">
+              <Badge variant="outline" className="w-fit border-primary/40 bg-primary/10 text-primary uppercase tracking-[0.3em] sm:tracking-[0.4em] text-xs sm:text-sm px-3 py-1">
+                Insights & Updates
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
+                From the Blog
+              </h2>
+              <p className="max-w-2xl text-muted-foreground text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
+                Stay updated with the latest news and insights from the world of finance, technology, and cross-border payments.
               </p>
             </div>
-            <div className="grid items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
-              <Link href="/blog/payvost-partners-with-google" className="group">
-                <Card className="flex flex-col h-full overflow-hidden transition-all group-hover:border-primary/50 border">
-                    <div className="relative aspect-video w-full">
+
+            {/* Featured Post */}
+            <div className="mb-8 sm:mb-12">
+              <Link href="/blog/payvost-partners-with-google" className="group block">
+                <Card className="overflow-hidden border-border/40 bg-background/90 transition-all duration-500 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5">
+                  <div className="grid gap-0 lg:grid-cols-2">
+                    <div className="relative aspect-video lg:aspect-auto lg:h-full min-h-[280px] overflow-hidden">
                       <Image
                         src={blogImages.payvost_google_partnership.src}
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        sizes="(max-width: 1024px) 100vw, 50vw"
                         data-ai-hint={blogImages.payvost_google_partnership.hint}
                         alt="Payvost partners with Google"
-                        className="object-cover"
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-primary text-primary-foreground border-primary/20 shadow-lg">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          Featured
+                        </Badge>
+                      </div>
                     </div>
-                    <CardHeader>
-                      <CardTitle className="text-xl md:text-2xl group-hover:text-primary">Payvost Partners with Google’s Anti-Money Laundering AI for Risk and Fraud Management</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                      <p className="text-muted-foreground">
-                        A brief summary of the blog post goes here. Catch the reader's interest and give them a reason to click and read more about this exciting topic.
+                    <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+                      <div className="flex items-center gap-3 mb-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                        <Badge variant="secondary" className="text-xs">Partnerships</Badge>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          Jan 15, 2024
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          5 min read
+                        </span>
+                      </div>
+                      <CardTitle className="text-2xl sm:text-3xl md:text-4xl mb-4 group-hover:text-primary transition-colors leading-tight">
+                        Payvost Partners with Google's Anti-Money Laundering AI for Risk and Fraud Management
+                      </CardTitle>
+                      <p className="text-muted-foreground text-sm sm:text-base mb-6 leading-relaxed line-clamp-3">
+                        Discover how Payvost is revolutionizing financial security by integrating Google's cutting-edge AI technology to enhance risk management and prevent fraud in cross-border transactions.
                       </p>
-                    </CardContent>
-                    <CardFooter>
-                      <Button variant="link" className="p-0 -ml-1 group-hover:underline">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
-                    </CardFooter>
-                  </Card>
+                      <div className="flex items-center gap-2 text-primary font-semibold text-sm sm:text-base group-hover:gap-3 transition-all">
+                        Read Full Article
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </Link>
-                 <Card className="flex flex-col h-full">
-                  <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
+            </div>
+
+            {/* Blog Grid */}
+            <div className="grid items-stretch gap-6 sm:gap-8 sm:grid-cols-2 lg:gap-8 mb-12">
+              <Link href="/blog/ai-remittance" className="group">
+                <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 group-hover:border-primary/50 group-hover:shadow-lg border-border/40 bg-background/90">
+                  <div className="relative aspect-video w-full overflow-hidden">
                     <Image
                       src={blogImages.ai_remittance.src}
                       fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
                       data-ai-hint={blogImages.ai_remittance.hint}
                       alt="AI in Remittance"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute top-3 right-3">
+                      <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/80">
+                        Technology
+                      </Badge>
+                    </div>
                   </div>
-                  <CardHeader>
-                    <CardTitle className="text-xl md:text-2xl">The Future of Remittances: How AI is Changing the Game</CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Dec 20, 2023</span>
+                      <span className="mx-1">•</span>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>4 min read</span>
+                    </div>
+                    <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors leading-tight">
+                      The Future of Remittances: How AI is Changing the Game
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="text-muted-foreground">
-                      Discover the revolutionary impact of artificial intelligence on cross-border payments.
+                  <CardContent className="flex-grow pb-3">
+                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed line-clamp-2">
+                      Discover the revolutionary impact of artificial intelligence on cross-border payments and how it's reshaping the remittance landscape.
                     </p>
                   </CardContent>
-                  <CardFooter>
-                    <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  <CardFooter className="pt-3">
+                    <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
+                      Read More
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </CardFooter>
                 </Card>
-                 <Card className="flex flex-col h-full">
-                  <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
+              </Link>
+
+              <Link href="/blog/secure-transfers" className="group">
+                <Card className="flex flex-col h-full overflow-hidden transition-all duration-300 group-hover:border-primary/50 group-hover:shadow-lg border-border/40 bg-background/90">
+                  <div className="relative aspect-video w-full overflow-hidden">
                     <Image
                       src={blogImages.secure_transfers.src}
                       fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw"
                       data-ai-hint={blogImages.secure_transfers.hint}
                       alt="Secure Transfers"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute top-3 right-3">
+                      <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/80">
+                        Security
+                      </Badge>
+                    </div>
                   </div>
-                  <CardHeader>
-                    <CardTitle className="text-xl md:text-2xl">5 Tips for Secure International Money Transfers</CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Nov 28, 2023</span>
+                      <span className="mx-1">•</span>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>6 min read</span>
+                    </div>
+                    <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors leading-tight">
+                      5 Tips for Secure International Money Transfers
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="text-muted-foreground">
-                      Protect your money and personal information with these essential security tips.
+                  <CardContent className="flex-grow pb-3">
+                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed line-clamp-2">
+                      Protect your money and personal information with these essential security tips for safe cross-border transactions.
                     </p>
                   </CardContent>
-                  <CardFooter>
-                    <Button variant="link" className="p-0">Read More <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                  <CardFooter className="pt-3">
+                    <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
+                      Read More
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </CardFooter>
                 </Card>
+              </Link>
             </div>
-             <div className="flex justify-center mt-12">
-                <Button asChild size="lg">
-                    <Link href="/blog">View All Posts <ArrowRight className="ml-2 h-4 w-4"/></Link>
+
+            {/* Newsletter CTA & View All */}
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr] items-center">
+              {/* Newsletter Subscription */}
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background p-6 sm:p-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg sm:text-xl font-semibold">Stay in the loop</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                    Get weekly insights on fintech, payments, and financial innovation delivered to your inbox.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      className="flex-1"
+                    />
+                    <Button className="whitespace-nowrap">
+                      Subscribe
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              {/* View All Posts Button */}
+              <div className="flex justify-center sm:justify-end">
+                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-primary/40 text-primary hover:bg-primary/10 h-12 text-base group">
+                  <Link href="/blog">
+                    View All Posts
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </Button>
+              </div>
             </div>
           </div>
         </section>
