@@ -41,10 +41,10 @@ model User {
   twoFactorVerified    Boolean  @default(false) // Whether 2FA setup is verified
 
   // Support relations
-  customerTickets  SupportTicket[]      @relation("CustomerTickets")
-  assignedTickets  SupportTicket[]      @relation("AssignedTickets")
-  createdTickets   SupportTicket[]      @relation("CreatedTickets")
-  ticketMessages   TicketMessage[]
+  customerTickets   SupportTicket[]        @relation("CustomerTickets")
+  assignedTickets   SupportTicket[]        @relation("AssignedTickets")
+  createdTickets    SupportTicket[]        @relation("CreatedTickets")
+  ticketMessages    TicketMessage[]
   ticketAttachments TicketAttachment[]
   kbArticlesCreated KnowledgeBaseArticle[] @relation("KBArticlesCreated")
   kbArticlesUpdated KnowledgeBaseArticle[] @relation("KBArticlesUpdated")
@@ -688,62 +688,62 @@ enum ContentStatus {
 }
 
 model Content {
-  id            String       @id @default(uuid())
-  title         String
-  slug          String       @unique
-  contentType   ContentType
-  status        ContentStatus @default(DRAFT)
-  
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  contentType ContentType
+  status      ContentStatus @default(DRAFT)
+
   // Content
-  excerpt       String?      @db.Text
-  content       String       @db.Text // HTML/Rich text
-  rawContent    Json?        // For structured content (JSON)
-  
+  excerpt    String? @db.Text
+  content    String  @db.Text // HTML/Rich text
+  rawContent Json? // For structured content (JSON)
+
   // SEO
-  metaTitle     String?
-  metaDescription String?    @db.Text
-  metaKeywords  String[]
-  canonicalUrl  String?
-  
+  metaTitle       String?
+  metaDescription String?  @db.Text
+  metaKeywords    String[]
+  canonicalUrl    String?
+
   // Organization
-  category      String?
-  tags          String[]
-  
+  category String?
+  tags     String[]
+
   // Media
-  featuredImage String?      // URL to image
-  mediaIds      String[]     // Array of media IDs
-  
+  featuredImage String? // URL to image
+  mediaIds      String[] // Array of media IDs
+
   // Authorship
-  authorId      String       // Firebase UID
-  authorName    String
-  coAuthors     String[]     // Array of Firebase UIDs
-  
+  authorId   String // Firebase UID
+  authorName String
+  coAuthors  String[] // Array of Firebase UIDs
+
   // Publishing
-  publishedAt   DateTime?
-  scheduledAt   DateTime?
-  expiresAt     DateTime?
-  
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  expiresAt   DateTime?
+
   // Versioning
-  version       Int          @default(1)
-  parentId      String?      // For revisions
-  
+  version  Int     @default(1)
+  parentId String? // For revisions
+
   // Analytics
-  viewCount     Int          @default(0)
-  likeCount     Int          @default(0)
-  
+  viewCount Int @default(0)
+  likeCount Int @default(0)
+
   // Metadata
-  isPublic      Boolean      @default(true)
-  allowComments Boolean      @default(false)
-  language      String       @default("en")
-  
+  isPublic      Boolean @default(true)
+  allowComments Boolean @default(false)
+  language      String  @default("en")
+
   // Relations
-  versions      ContentVersion[]
-  comments      ContentComment[]
-  media         ContentMedia[]
-  
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  
+  versions ContentVersion[]
+  comments ContentComment[]
+  media    ContentMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([contentType])
   @@index([status])
   @@index([authorId])
@@ -763,39 +763,39 @@ model ContentVersion {
   authorId    String
   authorName  String
   createdAt   DateTime @default(now())
-  
+
   @@unique([contentId, version])
   @@index([contentId])
 }
 
 model ContentComment {
-  id          String   @id @default(uuid())
-  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  contentId   String
-  authorId    String
-  authorName  String
-  comment     String   @db.Text
-  parentId    String?  // For nested comments
-  isApproved  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  
+  id         String   @id @default(uuid())
+  content    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId  String
+  authorId   String
+  authorName String
+  comment    String   @db.Text
+  parentId   String? // For nested comments
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
   @@index([contentId])
   @@index([parentId])
 }
 
 model ContentMedia {
-  id          String   @id @default(uuid())
-  content     Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
-  contentId   String?
-  fileName    String
-  fileUrl     String
-  fileType    String
-  fileSize    Int
-  altText     String?
-  caption     String?
-  uploadedBy  String
-  createdAt   DateTime @default(now())
-  
+  id         String   @id @default(uuid())
+  content    Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+  contentId  String?
+  fileName   String
+  fileUrl    String
+  fileType   String
+  fileSize   Int
+  altText    String?
+  caption    String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
   @@index([contentId])
   @@index([uploadedBy])
 }
@@ -865,13 +865,13 @@ model SupportTicket {
   closedAt        DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  
-  customer        User           @relation("CustomerTickets", fields: [customerId], references: [id])
-  assignedTo      User?          @relation("AssignedTickets", fields: [assignedToId], references: [id])
-  createdBy       User?          @relation("CreatedTickets", fields: [createdById], references: [id])
-  messages        TicketMessage[]
-  attachments     TicketAttachment[]
-  
+
+  customer    User               @relation("CustomerTickets", fields: [customerId], references: [id])
+  assignedTo  User?              @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdBy   User?              @relation("CreatedTickets", fields: [createdById], references: [id])
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
+
   @@index([status, priority])
   @@index([assignedToId])
   @@index([customerId])
@@ -880,85 +880,85 @@ model SupportTicket {
 }
 
 model TicketMessage {
-  id        String       @id @default(uuid())
+  id        String        @id @default(uuid())
   ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   ticketId  String
-  author    User         @relation(fields: [authorId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id])
   authorId  String
-  content   String       @db.Text
-  type      MessageType  @default(PUBLIC_REPLY)
-  isRead    Boolean      @default(false)
-  createdAt DateTime     @default(now())
-  
+  content   String        @db.Text
+  type      MessageType   @default(PUBLIC_REPLY)
+  isRead    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
   @@index([ticketId])
   @@index([authorId])
   @@index([createdAt])
 }
 
 model TicketAttachment {
-  id          String         @id @default(uuid())
-  ticket      SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  ticketId    String
-  fileName    String
-  fileUrl     String
-  fileSize    Int
-  mimeType    String
-  uploadedBy  User           @relation(fields: [uploadedById], references: [id])
+  id           String        @id @default(uuid())
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId     String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  uploadedBy   User          @relation(fields: [uploadedById], references: [id])
   uploadedById String
-  createdAt   DateTime       @default(now())
-  
+  createdAt    DateTime      @default(now())
+
   @@index([ticketId])
   @@index([uploadedById])
 }
 
 model KnowledgeBaseArticle {
-  id            String        @id @default(uuid())
-  title         String
-  content       String        @db.Text
-  slug          String        @unique
-  category      String
-  tags          String[]
-  status        ArticleStatus @default(DRAFT)
-  language      String        @default("en")
-  views         Int           @default(0)
-  helpfulCount  Int           @default(0)
-  createdBy     User          @relation("KBArticlesCreated", fields: [createdById], references: [id])
-  createdById   String
-  updatedBy     User?         @relation("KBArticlesUpdated", fields: [updatedById], references: [id])
-  updatedById   String?
-  publishedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
+  id           String        @id @default(uuid())
+  title        String
+  content      String        @db.Text
+  slug         String        @unique
+  category     String
+  tags         String[]
+  status       ArticleStatus @default(DRAFT)
+  language     String        @default("en")
+  views        Int           @default(0)
+  helpfulCount Int           @default(0)
+  createdBy    User          @relation("KBArticlesCreated", fields: [createdById], references: [id])
+  createdById  String
+  updatedBy    User?         @relation("KBArticlesUpdated", fields: [updatedById], references: [id])
+  updatedById  String?
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
   @@index([status, category])
   @@index([slug])
   @@index([createdById])
 }
 
 model ChatSession {
-  id          String        @id @default(uuid())
-  customerId  String
-  agentId     String?
-  status      ChatStatus    @default(WAITING)
-  startedAt   DateTime      @default(now())
-  endedAt     DateTime?
-  metadata    Json?         // For escalation info, AI analysis, etc.
-  
+  id         String     @id @default(uuid())
+  customerId String
+  agentId    String?
+  status     ChatStatus @default(WAITING)
+  startedAt  DateTime   @default(now())
+  endedAt    DateTime?
+  metadata   Json? // For escalation info, AI analysis, etc.
+
   // Enhanced fields
-  tags        String[]      @default([])           // Conversation tags
-  priority    String?       @default("NORMAL")     // LOW, NORMAL, HIGH, URGENT
-  rating      Int?          // 1-5 star rating
-  notes       String?       @db.Text               // Agent notes
-  lastMessageAt DateTime?   // Track last activity
+  tags            String[]  @default([]) // Conversation tags
+  priority        String?   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  rating          Int? // 1-5 star rating
+  notes           String?   @db.Text // Agent notes
+  lastMessageAt   DateTime? // Track last activity
   firstResponseAt DateTime? // First response time
-  resolvedAt  DateTime?     // Resolution time
-  
+  resolvedAt      DateTime? // Resolution time
+
   // Customer metadata
-  customerMetadata Json?    // Device, browser, location, pages visited
-  
-  messages    ChatMessage[]
-  events      ChatEvent[]
-  
+  customerMetadata Json? // Device, browser, location, pages visited
+
+  messages ChatMessage[]
+  events   ChatEvent[]
+
   @@index([status, agentId])
   @@index([customerId])
   @@index([startedAt])
@@ -968,24 +968,24 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id        String       @id @default(uuid())
-  session   ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id        String      @id @default(uuid())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sessionId String
   senderId  String
-  content   String       @db.Text
-  type      String       @default("text") // text, file, card, button, list, system, ai_response
-  
+  content   String      @db.Text
+  type      String      @default("text") // text, file, card, button, list, system, ai_response
+
   // Enhanced fields
-  attachments Json?      // Array of file attachments
-  metadata    Json?      // Rich message data (for cards, buttons, etc.)
-  isRead      Boolean    @default(false)
-  readAt      DateTime?  // When message was read
-  readBy      String?    // Who read it
-  reactions   Json?      // Emoji reactions
-  
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  
+  attachments Json? // Array of file attachments
+  metadata    Json? // Rich message data (for cards, buttons, etc.)
+  isRead      Boolean   @default(false)
+  readAt      DateTime? // When message was read
+  readBy      String? // Who read it
+  reactions   Json? // Emoji reactions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([sessionId])
   @@index([createdAt])
   @@index([senderId])
@@ -995,13 +995,13 @@ model ChatMessage {
 
 // Chat Events for analytics and tracking
 model ChatEvent {
-  id          String        @id @default(uuid())
-  session     ChatSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sessionId   String
-  eventType   ChatEventType
-  metadata    Json?        // Event-specific data (page URL, device info, etc.)
-  createdAt   DateTime     @default(now())
-  
+  id        String        @id @default(uuid())
+  session   ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  eventType ChatEventType
+  metadata  Json? // Event-specific data (page URL, device info, etc.)
+  createdAt DateTime      @default(now())
+
   @@index([sessionId])
   @@index([eventType])
   @@index([createdAt])
@@ -1009,15 +1009,15 @@ model ChatEvent {
 
 // Saved Replies (canned responses for agents)
 model SavedReply {
-  id          String   @id @default(uuid())
-  title       String
-  content     String   @db.Text
-  category    String?  // Common categories (greeting, closing, technical, etc.)
-  createdBy   String   // Agent ID
-  usageCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         String   @id @default(uuid())
+  title      String
+  content    String   @db.Text
+  category   String? // Common categories (greeting, closing, technical, etc.)
+  createdBy  String // Agent ID
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@index([createdBy])
   @@index([category])
 }
@@ -1043,15 +1043,15 @@ enum IncidentSeverity {
 }
 
 model ServiceHealthCheck {
-  id            String        @id @default(uuid())
-  serviceName   String
-  status        ServiceStatus
-  responseTime  Int?          // Response time in milliseconds
-  uptime        Decimal?      @db.Decimal(5, 2) // Uptime percentage
-  lastChecked   DateTime      @default(now())
-  details       Json?         // Additional service-specific details
-  errorMessage  String?       @db.Text
-  createdAt     DateTime      @default(now())
+  id           String        @id @default(uuid())
+  serviceName  String
+  status       ServiceStatus
+  responseTime Int? // Response time in milliseconds
+  uptime       Decimal?      @db.Decimal(5, 2) // Uptime percentage
+  lastChecked  DateTime      @default(now())
+  details      Json? // Additional service-specific details
+  errorMessage String?       @db.Text
+  createdAt    DateTime      @default(now())
 
   @@index([serviceName])
   @@index([status])
@@ -1060,17 +1060,17 @@ model ServiceHealthCheck {
 }
 
 model SystemIncident {
-  id              String          @id @default(uuid())
-  title           String
-  description     String          @db.Text
-  status          IncidentStatus  @default(INVESTIGATING)
-  severity        IncidentSeverity @default(MEDIUM)
-  affectedServices String[]       // Array of service names
-  startedAt       DateTime        @default(now())
-  resolvedAt      DateTime?
-  metadata        Json?           // Additional incident data
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id               String           @id @default(uuid())
+  title            String
+  description      String           @db.Text
+  status           IncidentStatus   @default(INVESTIGATING)
+  severity         IncidentSeverity @default(MEDIUM)
+  affectedServices String[] // Array of service names
+  startedAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  metadata         Json? // Additional incident data
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([status])
   @@index([severity])
