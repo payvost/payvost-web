@@ -68,9 +68,9 @@ export default function ContactPage() {
         <SiteHeader />
         <main className="flex-1">
             <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-                 <div className="container px-4 md:px-6 text-center">
+                 <div className="container px-4 md:px-6 mx-auto flex flex-col items-center justify-center text-center">
                     <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">Get in Touch</h1>
-                    <p className="max-w-[700px] mx-auto text-muted-foreground md:text-xl mt-4">
+                    <p className="max-w-[700px] text-muted-foreground md:text-xl mt-4">
                         We're here to help with any questions or issues you may have.
                     </p>
                 </div>
