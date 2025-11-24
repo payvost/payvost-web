@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import nodemailer from 'nodemailer';
 import cors from 'cors';
+import { sendEmail, isMailgunConfigured } from '../../../common/mailgun';
 
 const app = express();
 const PORT = process.env.EMAIL_SERVICE_PORT || 3006;
@@ -9,17 +9,6 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Email transporter configuration
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
 
 const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
@@ -38,7 +27,8 @@ app.get('/health', (_req: Request, res: Response) => {
     status: 'healthy',
     service: 'email-service',
     timestamp: new Date().toISOString(),
-    smtpConfigured: !!(process.env.MAILGUN_SMTP_HOST && process.env.MAILGUN_SMTP_LOGIN),
+    mailgunConfigured: isMailgunConfigured(),
+    method: 'API',
   });
 });
 
@@ -58,7 +48,7 @@ app.get('/', (_req: Request, res: Response) => {
 // Single email endpoint
 app.post('/single', async (req: Request, res: Response) => {
   try {
-    const { to, subject, html, text } = req.body;
+    const { to, subject, html, text, from, cc, bcc, replyTo, tags } = req.body;
 
     if (!to || !subject || !html) {
       return res.status(400).json({
@@ -69,19 +59,31 @@ app.post('/single', async (req: Request, res: Response) => {
 
     console.log(`[Email Service] Sending single email to: ${to}`);
 
-    const info = await emailTransporter.sendMail({
-      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+    const result = await sendEmail({
       to,
       subject,
       html,
       text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      from: from || `Payvost <${MAILGUN_FROM_EMAIL}>`,
+      cc,
+      bcc,
+      replyTo,
+      tags,
     });
 
-    console.log(`[Email Service] Email sent successfully: ${info.messageId}`);
+    if (!result.success) {
+      console.error(`[Email Service] Failed to send email: ${result.error}`);
+      return res.status(500).json({
+        error: 'Failed to send email',
+        message: result.error,
+      });
+    }
+
+    console.log(`[Email Service] Email sent successfully: ${result.messageId}`);
 
     return res.status(200).json({
       success: true,
-      messageId: info.messageId,
+      messageId: result.messageId,
     });
   } catch (error: any) {
     console.error('[Email Service] Error sending email:', error.message);
@@ -125,13 +127,19 @@ app.post('/batch', async (req: Request, res: Response) => {
           throw new Error('Missing required fields: to, subject, html');
         }
 
-        return emailTransporter.sendMail({
-          from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+        const result = await sendEmail({
           to: email.to,
           subject: email.subject,
           html: email.html,
           text: email.text || email.html.replace(/<[^>]*>/g, ''),
+          from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
         });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send email');
+        }
+
+        return { messageId: result.messageId };
       })
     );
 
@@ -165,7 +173,6 @@ app.post('/batch', async (req: Request, res: Response) => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Email Service] Shutting down gracefully...');
-  emailTransporter.close();
   process.exit(0);
 };
 
@@ -176,7 +183,8 @@ process.on('SIGINT', shutdown);
 app.listen(PORT, () => {
   console.log(`[Email Service] Running on port ${PORT}`);
   console.log(`[Email Service] Environment: ${NODE_ENV}`);
-  console.log(`[Email Service] SMTP Host: ${process.env.MAILGUN_SMTP_HOST || 'not configured'}`);
+  console.log(`[Email Service] Mailgun API: ${isMailgunConfigured() ? 'configured' : 'not configured'}`);
+  console.log(`[Email Service] Domain: ${process.env.MAILGUN_DOMAIN || 'not set'}`);
   console.log(`[Email Service] Endpoints:`);
   console.log(`  - GET http://localhost:${PORT}/health`);
   console.log(`  - POST http://localhost:${PORT}/single`);

@@ -1,21 +1,10 @@
 /**
  * Newsletter Subscription API Route
- * Handles newsletter subscriptions using Mailgun
+ * Handles newsletter subscriptions using Mailgun API
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-
-// Email configuration
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-  port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.MAILGUN_SMTP_LOGIN || '',
-    pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-  },
-});
+import { sendEmail } from '@/lib/mailgun';
 
 const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 const NEWSLETTER_LIST_EMAIL = process.env.NEWSLETTER_LIST_EMAIL || 'newsletter@payvost.com';
@@ -103,21 +92,28 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send welcome email to subscriber
-    await emailTransporter.sendMail({
-      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+    const welcomeResult = await sendEmail({
       to: trimmedEmail,
       subject: 'Welcome to Payvost Newsletter! 🎉',
       html: welcomeHTML,
+      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+      tags: ['newsletter', 'welcome'],
     });
+
+    if (!welcomeResult.success) {
+      console.error('Failed to send welcome email:', welcomeResult.error);
+      // Continue anyway - subscription is still successful
+    }
 
     // Optionally send notification to admin/list
     if (NEWSLETTER_LIST_EMAIL && NEWSLETTER_LIST_EMAIL !== 'newsletter@payvost.com') {
       try {
-        await emailTransporter.sendMail({
-          from: `Payvost Newsletter <${MAILGUN_FROM_EMAIL}>`,
+        await sendEmail({
           to: NEWSLETTER_LIST_EMAIL,
           subject: `New Newsletter Subscription: ${trimmedEmail}`,
           html: notificationHTML,
+          from: `Payvost Newsletter <${MAILGUN_FROM_EMAIL}>`,
+          tags: ['newsletter', 'admin-notification'],
         });
       } catch (notificationError) {
         // Log but don't fail the subscription

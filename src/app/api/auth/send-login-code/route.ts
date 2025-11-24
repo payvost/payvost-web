@@ -1,34 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, admin } from '@/lib/firebase-admin';
-import nodemailer from 'nodemailer';
-
-// Email configuration - only create transporter if credentials are available
-let emailTransporter: nodemailer.Transporter | null = null;
-
-function getEmailTransporter(): nodemailer.Transporter {
-  if (emailTransporter) {
-    return emailTransporter;
-  }
-
-  const mailgunLogin = process.env.MAILGUN_SMTP_LOGIN;
-  const mailgunPassword = process.env.MAILGUN_SMTP_PASSWORD;
-
-  if (!mailgunLogin || !mailgunPassword) {
-    throw new Error('Mailgun SMTP credentials are not configured. Please set MAILGUN_SMTP_LOGIN and MAILGUN_SMTP_PASSWORD environment variables.');
-  }
-
-  emailTransporter = nodemailer.createTransport({
-    host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-    port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-      user: mailgunLogin,
-      pass: mailgunPassword,
-    },
-  });
-
-  return emailTransporter;
-}
+import { sendEmail } from '@/lib/mailgun';
 
 const MAILGUN_FROM_EMAIL = process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
 
@@ -115,16 +87,20 @@ export async function POST(request: NextRequest) {
       </div>
     `;
 
-    // Get email transporter and send email
-    const transporter = getEmailTransporter();
-    await transporter.sendMail({
-      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+    // Send email via Mailgun API
+    const result = await sendEmail({
       to: email,
       subject: 'Your Payvost Login Verification Code',
       html: emailHTML,
+      from: `Payvost <${MAILGUN_FROM_EMAIL}>`,
+      tags: ['login-code', 'verification'],
     });
 
-    console.log(`✅ Login verification code sent to ${email} for user ${uid}`);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send verification code email');
+    }
+
+    console.log(`✅ Login verification code sent to ${email} for user ${uid} via Mailgun API`);
 
     return NextResponse.json({
       success: true,
@@ -138,7 +114,7 @@ export async function POST(request: NextRequest) {
     let errorMessage = 'Failed to send verification code';
     let statusCode = 500;
     
-    if (error.message?.includes('Mailgun SMTP credentials')) {
+    if (error.message?.includes('Mailgun') || error.message?.includes('not configured')) {
       errorMessage = 'Email service is not configured. Please contact support.';
       statusCode = 503; // Service Unavailable
     } else if (error.message?.includes('ID token')) {

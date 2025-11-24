@@ -1,10 +1,9 @@
 /**
  * Notification Service
- * Handles email notifications via Mailgun/Nodemailer and SMS via Twilio
+ * Handles email notifications via Mailgun API and SMS via Twilio
  */
 
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import { sendEmail, isMailgunConfigured } from '@/lib/mailgun';
 
 // Email notification types
 export interface EmailNotification {
@@ -36,42 +35,23 @@ export interface SMSNotification {
 }
 
 class NotificationService {
-  private emailTransporter: Transporter | null = null;
+  private emailConfigured: boolean = false;
   private twilioConfigured: boolean = false;
 
   constructor() {
-    this.initializeEmailTransporter();
+    this.checkEmailConfig();
     this.checkTwilioConfig();
   }
 
   /**
-   * Initialize Nodemailer with Mailgun SMTP
+   * Check if Mailgun API is configured
    */
-  private initializeEmailTransporter() {
-    const mailgunLogin = process.env.MAILGUN_SMTP_LOGIN;
-    const mailgunPassword = process.env.MAILGUN_SMTP_PASSWORD;
-    const mailgunHost = process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org';
-    const mailgunPort = parseInt(process.env.MAILGUN_SMTP_PORT || '587');
-
-    if (!mailgunLogin || !mailgunPassword) {
-      console.warn('Mailgun SMTP credentials not configured. Email notifications will be disabled.');
-      return;
-    }
-
-    try {
-      this.emailTransporter = nodemailer.createTransport({
-        host: mailgunHost,
-        port: mailgunPort,
-        secure: mailgunPort === 465, // true for 465, false for other ports
-        auth: {
-          user: mailgunLogin,
-          pass: mailgunPassword,
-        },
-      });
-
-      console.log('Email transporter initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize email transporter:', error);
+  private checkEmailConfig() {
+    this.emailConfigured = isMailgunConfigured();
+    if (!this.emailConfigured) {
+      console.warn('Mailgun API not configured. Email notifications will be disabled.');
+    } else {
+      console.log('Mailgun API configured successfully');
     }
   }
 
@@ -285,29 +265,36 @@ class NotificationService {
   }
 
   /**
-   * Send email notification
+   * Send email notification via Mailgun API
    */
   async sendEmail(notification: EmailNotification): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    if (!this.emailTransporter) {
-      console.error('Email transporter not initialized');
+    if (!this.emailConfigured) {
+      console.error('Email service not configured');
       return { success: false, error: 'Email service not configured' };
     }
 
     try {
       const from = notification.from || process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com';
-      const recipients = Array.isArray(notification.to) ? notification.to.join(', ') : notification.to;
-
       const html = this.getEmailTemplate(notification.template, notification.variables);
+      const text = html.replace(/<[^>]*>/g, '').trim(); // Generate text version from HTML
 
-      const info = await this.emailTransporter.sendMail({
-        from: `Payvost <${from}>`,
-        to: recipients,
+      const result = await sendEmail({
+        to: notification.to,
         subject: notification.subject,
         html,
+        text,
+        from: `Payvost <${from}>`,
+        tags: ['notification', notification.template],
+        variables: notification.variables,
       });
 
-      console.log('Email sent successfully:', info.messageId);
-      return { success: true, messageId: info.messageId };
+      if (result.success) {
+        console.log('Email sent successfully via Mailgun API:', result.messageId);
+        return { success: true, messageId: result.messageId };
+      } else {
+        console.error('Failed to send email:', result.error);
+        return { success: false, error: result.error };
+      }
     } catch (error: any) {
       console.error('Failed to send email:', error);
       return { success: false, error: error.message };
