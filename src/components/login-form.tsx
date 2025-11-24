@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, signOut, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, MultiFactorResolver } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, multiFactor, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, MultiFactorResolver } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,9 @@ export function LoginForm() {
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [phoneVerificationId, setPhoneVerificationId] = useState<string | null>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [mfaFactorType, setMfaFactorType] = useState<'totp' | 'phone' | null>(null);
   
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
@@ -131,7 +134,19 @@ export function LoginForm() {
     } catch (error: any) {
       // Handle MFA required
       if (error.code === 'auth/multi-factor-auth-required') {
-        setMfaResolver(error.resolver);
+        const resolver = error.resolver;
+        setMfaResolver(resolver);
+        
+        // Detect MFA factor type
+        if (resolver.hints && resolver.hints.length > 0) {
+          const factorId = resolver.hints[0].factorId;
+          if (factorId === TotpMultiFactorGenerator.FACTOR_ID) {
+            setMfaFactorType('totp');
+          } else if (factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+            setMfaFactorType('phone');
+          }
+        }
+        
         setShow2FADialog(true);
         setIsLoading(false);
         return;
@@ -153,8 +168,91 @@ export function LoginForm() {
     }
   }
 
+  const sendPhoneVerificationCode = async () => {
+    if (!mfaResolver || !mfaResolver.hints || mfaResolver.hints.length === 0) {
+      toast({
+        title: "Error",
+        description: "Unable to send verification code. Please try logging in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedHint = mfaResolver.hints[0];
+      
+      if (selectedHint.factorId !== PhoneMultiFactorGenerator.FACTOR_ID) {
+        throw new Error('Expected phone MFA factor');
+      }
+
+      // Initialize reCAPTCHA verifier if not already done
+      let verifier = recaptchaVerifier;
+      if (!verifier) {
+        verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+          callback: () => {
+            // reCAPTCHA solved
+          },
+          'expired-callback': () => {
+            toast({
+              title: "reCAPTCHA Expired",
+              description: "Please try again",
+              variant: "destructive"
+            });
+          }
+        });
+        setRecaptchaVerifier(verifier);
+      }
+
+      // Send SMS code using PhoneAuthProvider with multi-factor info
+      const phoneInfoOptions = {
+        multiFactorHint: selectedHint,
+        session: mfaResolver.session
+      };
+
+      const phoneAuthProvider = new PhoneAuthProvider(auth);
+      const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+        phoneInfoOptions,
+        verifier
+      );
+
+      setPhoneVerificationId(verificationId);
+      
+      toast({
+        title: "SMS Code Sent",
+        description: "Please check your phone for the verification code",
+      });
+    } catch (error: any) {
+      console.error('SMS send error:', error);
+      toast({
+        title: "Failed to Send SMS",
+        description: error.message || "Unable to send verification code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   const verify2FA = async () => {
-    if (!mfaResolver || twoFactorCode.length !== 6) {
+    if (!mfaResolver) {
+      toast({
+        title: "Error",
+        description: "MFA resolver not available. Please try logging in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // For Phone MFA, we need to send SMS first if not already sent
+    if (mfaFactorType === 'phone' && !phoneVerificationId) {
+      await sendPhoneVerificationCode();
+      return;
+    }
+
+    // Validate code length
+    if (twoFactorCode.length !== 6) {
       toast({
         title: "Invalid Code",
         description: "Please enter a 6-digit code",
@@ -175,9 +273,12 @@ export function LoginForm() {
           twoFactorCode
         );
       } else if (selectedHint.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
-        // Phone verification (this would need additional SMS flow)
-        // For now, we'll just show an error
-        throw new Error('Phone MFA verification not yet fully implemented in login');
+        // Phone verification - verify the SMS code
+        if (!phoneVerificationId) {
+          throw new Error('SMS verification ID not available. Please request a new code.');
+        }
+        const cred = PhoneAuthProvider.credential(phoneVerificationId, twoFactorCode);
+        multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
       } else {
         throw new Error('Unsupported MFA method');
       }
@@ -232,8 +333,12 @@ export function LoginForm() {
         description: "Redirecting you to the dashboard...",
       });
       setShow2FADialog(false);
+      setPhoneVerificationId(null);
+      setTwoFactorCode('');
+      setMfaFactorType(null);
       router.push('/dashboard');
     } catch (error: any) {
+      console.error('2FA verification error:', error);
       toast({
         title: "Verification Failed",
         description: error.message || "Invalid verification code. Please try again.",
@@ -246,6 +351,9 @@ export function LoginForm() {
 
   return (
     <div className="grid gap-6">
+      {/* Hidden reCAPTCHA container for Phone MFA */}
+      <div id="recaptcha-container" className="hidden"></div>
+      
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
@@ -310,35 +418,66 @@ export function LoginForm() {
           <DialogHeader>
             <DialogTitle>Two-Factor Authentication</DialogTitle>
             <DialogDescription>
-              Enter the 6-digit code from your authenticator app or the code sent to your email/phone.
+              {mfaFactorType === 'phone' 
+                ? phoneVerificationId 
+                  ? "Enter the 6-digit code sent to your phone."
+                  : "Click verify to receive a code on your phone."
+                : "Enter the 6-digit code from your authenticator app."}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={twoFactorCode}
-                onChange={setTwoFactorCode}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
+            {mfaFactorType === 'phone' && !phoneVerificationId && (
+              <div className="text-center text-sm text-muted-foreground">
+                <p>An SMS code will be sent to your registered phone number.</p>
+              </div>
+            )}
+            
+            {phoneVerificationId && (
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={setTwoFactorCode}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            )}
+            
+            {mfaFactorType === 'totp' && (
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={setTwoFactorCode}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            )}
             
             <Button 
               className="w-full" 
               onClick={verify2FA} 
-              disabled={isLoading || twoFactorCode.length !== 6}
+              disabled={isLoading || (phoneVerificationId && twoFactorCode.length !== 6) || (mfaFactorType === 'totp' && twoFactorCode.length !== 6)}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify
+              {mfaFactorType === 'phone' && !phoneVerificationId ? 'Send Code' : 'Verify'}
             </Button>
           </div>
         </DialogContent>
