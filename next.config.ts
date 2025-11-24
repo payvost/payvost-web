@@ -1,10 +1,3 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// Get __filename equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -67,16 +60,6 @@ const nextConfig = {
       // Remove buildDependencies to let Next.js handle it automatically
       delete config.cache.buildDependencies.config;
     }
-    
-    // Fix for "Cannot access before initialization" errors
-    // Ensure proper module initialization order
-    config.optimization = {
-      ...config.optimization,
-      moduleIds: 'deterministic',
-      runtimeChunk: {
-        name: 'runtime',
-      },
-    };
     
     return config;
   },

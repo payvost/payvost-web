@@ -1,4 +1,4 @@
-# PowerShell script to fix "Cannot access before initialization" build errors
+# PowerShell script to fix build errors
 # This clears Next.js cache and rebuilds the application
 
 Write-Host "🧹 Cleaning Next.js cache and build artifacts..." -ForegroundColor Cyan
@@ -20,6 +20,10 @@ if (Test-Path "tsconfig.tsbuildinfo") {
     Remove-Item -Force "tsconfig.tsbuildinfo"
     Write-Host "✅ Removed tsconfig.tsbuildinfo" -ForegroundColor Green
 }
+
+# Install dependencies to ensure @next/swc is available
+Write-Host "📦 Installing dependencies..." -ForegroundColor Cyan
+npm install
 
 Write-Host "✅ Cache cleared. Now rebuilding..." -ForegroundColor Cyan
 
