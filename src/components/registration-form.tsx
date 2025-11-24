@@ -1105,8 +1105,8 @@ export function RegistrationForm() {
         console.error('Failed to create welcome notification:', notifError);
       }
 
-      // 9. Redirect to verification page (email -> SMS -> PIN setup)
-      router.push('/verify-registration');
+      // 9. Redirect to email verification page
+      router.push('/verify-email');
 
     } catch (error: unknown) {
       console.error("Registration process failed:", error);
