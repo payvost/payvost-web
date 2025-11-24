@@ -117,11 +117,77 @@ services:
       - key: NODE_ENV
         value: production
 
-  # Existing services (already deployed)
-  # - payvost-web-hook-services
-  # - payvost-admin-stat-service
-  # - payvost-pdf-generator
-  # - payvost-email-service
+  # Webhook Service
+  - type: web
+    name: payvost-web-hook-services
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/webhooks && npm install --include=dev && npm run build
+    startCommand: cd backend/services/webhooks && npm start
+    envVars:
+      - key: WEBHOOK_SERVICE_PORT
+        value: 3008
+      - key: DATABASE_URL
+        sync: false  # Set to your Neon database connection string in Render Dashboard
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false  # Firebase service account JSON (as string)
+      - key: RELOADLY_WEBHOOK_SECRET
+        sync: false  # Reloadly webhook secret for signature verification
+      - key: NODE_ENV
+        value: production
+
+  # Admin Stats Service
+  - type: web
+    name: payvost-admin-stat-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/admin-stats && npm install --include=dev && npm run build
+    startCommand: cd backend/services/admin-stats && npm start
+    envVars:
+      - key: ADMIN_STATS_SERVICE_PORT
+        value: 3007
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false  # Firebase service account JSON (as string)
+      - key: NODE_ENV
+        value: production
+
+  # PDF Generator Service
+  - type: web
+    name: payvost-pdf-generator
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd services/pdf-generator && npm install
+    startCommand: cd services/pdf-generator && npm start
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: VERCEL_BASE_URL
+        sync: false  # Optional: Vercel base URL for invoice data fetching
+      - key: NODE_ENV
+        value: production
+
+  # Email Service
+  - type: web
+    name: payvost-email-service
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/email && npm install --include=dev && npm run build
+    startCommand: cd backend/services/email && npm start
+    envVars:
+      - key: EMAIL_SERVICE_PORT
+        value: 3006
+      - key: MAILGUN_API_KEY
+        sync: false  # Mailgun API key
+      - key: MAILGUN_DOMAIN
+        sync: false  # Mailgun domain
+      - key: MAILGUN_FROM_EMAIL
+        sync: false  # From email address (e.g., no-reply@payvost.com)
+      - key: NODE_ENV
+        value: production
 
 # Optional: Cron Job for Rate Alert Monitor (alternative to always-on service)
 # Uncomment if you prefer scheduled execution instead of always-on service
