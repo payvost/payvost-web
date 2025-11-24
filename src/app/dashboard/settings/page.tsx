@@ -38,6 +38,8 @@ import {
   Sparkles,
   CheckCircle2,
   ExternalLink,
+  X,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeSwitcher } from '@/components/theme-switcher';
@@ -46,7 +48,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { sendEmailVerification, reload } from 'firebase/auth';
-import { Mail, CheckCircle2, X, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
