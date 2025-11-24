@@ -57,6 +57,7 @@ model Account {
   currency      String
   balance       Decimal           @default(0) @db.Decimal(20, 8)
   type          String            @default("PERSONAL")
+  rapydWalletId String?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   activities    AccountActivity[]
@@ -66,6 +67,7 @@ model Account {
   appliedFees   AppliedFee[]
 
   @@index([userId])
+  @@index([rapydWalletId])
 }
 
 model LedgerEntry {
