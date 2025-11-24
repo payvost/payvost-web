@@ -15,11 +15,14 @@ import {
   Code2,
   MessageSquarePlus,
   ArrowRight,
-  LifeBuoy
+  LifeBuoy,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
 import { useRouter } from 'next/navigation';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
+import { EnhancedLiveChat } from '@/components/enhanced-live-chat';
 
 const supportCategories = [
   { title: 'Getting Started', description: 'Set up your account and make your first transfer.', icon: <Rocket className="h-8 w-8 text-primary" />, href: '/help?category=Getting Started' },
@@ -83,7 +86,7 @@ export default function SupportPage() {
 
         {/* Categories Section */}
         <section className="w-full py-12 md:py-20 lg:py-24">
-            <div className="container px-4 md:px-6">
+            <div className="container px-4 md:px-6 mx-auto">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {supportCategories.map((category) => (
                         <Card key={category.title} className="hover:shadow-lg transition-shadow">
@@ -105,7 +108,7 @@ export default function SupportPage() {
             </div>
         </section>
 
-        <div className="container px-4 md:px-6 mb-24">
+        <div className="container px-4 md:px-6 mx-auto mb-24">
             <div className="grid gap-12 lg:grid-cols-3">
                 {/* Featured Articles */}
                 <div className="lg:col-span-2">
@@ -130,12 +133,30 @@ export default function SupportPage() {
                             <CardTitle>Can't find an answer?</CardTitle>
                             <CardDescription>Our support team is here to help.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-3">
                            <Button className="w-full" asChild>
                              <Link href="/contact">
-                                <MessageSquarePlus className="mr-2 h-4 w-4" /> Contact Support
+                                <MessageSquarePlus className="mr-2 h-4 w-4" /> Contact Us
                             </Link>
                            </Button>
+                           <Sheet>
+                                <SheetTrigger asChild>
+                                    <Button variant="outline" className="w-full">
+                                        <MessageSquare className="mr-2 h-4 w-4" /> Start Live Chat
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent className="w-full md:w-[450px] p-0 flex flex-col">
+                                    <SheetHeader className="p-4 border-b">
+                                        <SheetTitle>AI Support Chat</SheetTitle>
+                                        <SheetDescription>
+                                            Our AI assistant is here to help you 24/7.
+                                        </SheetDescription>
+                                    </SheetHeader>
+                                    <div className="flex-1">
+                                        <EnhancedLiveChat inline />
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
                         </CardContent>
                         <CardFooter className="text-center text-xs text-muted-foreground">
                             <p>Our team is available 24/7 to assist you with any questions or issues.</p>
