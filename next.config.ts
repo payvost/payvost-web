@@ -68,6 +68,16 @@ const nextConfig = {
       delete config.cache.buildDependencies.config;
     }
     
+    // Fix for "Cannot access before initialization" errors
+    // Ensure proper module initialization order
+    config.optimization = {
+      ...config.optimization,
+      moduleIds: 'deterministic',
+      runtimeChunk: {
+        name: 'runtime',
+      },
+    };
+    
     return config;
   },
 };
