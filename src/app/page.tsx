@@ -972,7 +972,7 @@ export default function LandingPage() {
                   <div className="relative w-full max-w-md sm:max-w-lg lg:max-w-xl">
                     <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border/40 bg-background/50">
                       <Image
-                        src="/Dashboard.png"
+                        src="/optimized/Dashboard.jpg"
                         alt="Payvost dashboard preview showing mobile app interface"
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 40vw"
