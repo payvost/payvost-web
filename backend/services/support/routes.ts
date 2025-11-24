@@ -564,7 +564,7 @@ router.delete('/chat/sessions/:id/tags/:tag', verifyFirebaseToken, requireSuppor
       throw new ValidationError('Session not found');
     }
 
-    const updatedTags = (session.tags || []).filter(t => t !== req.params.tag);
+    const updatedTags = (session.tags || []).filter((t: string) => t !== req.params.tag);
     const updated = await prisma.chatSession.update({
       where: { id: req.params.id },
       data: { tags: updatedTags },
@@ -940,7 +940,7 @@ router.get('/chat/analytics', verifyFirebaseToken, requireSupportTeam, async (re
     });
 
     const avgFirstResponseTime = sessionsWithFirstResponse.length > 0
-      ? sessionsWithFirstResponse.reduce((acc, s) => {
+      ? sessionsWithFirstResponse.reduce((acc: number, s: { startedAt: Date; firstResponseAt: Date | null }) => {
           const diff = s.firstResponseAt!.getTime() - s.startedAt.getTime();
           return acc + diff;
         }, 0) / sessionsWithFirstResponse.length / 1000 / 60 // Convert to minutes
@@ -956,7 +956,7 @@ router.get('/chat/analytics', verifyFirebaseToken, requireSupportTeam, async (re
     });
 
     const avgResolutionTime = resolvedSessions.length > 0
-      ? resolvedSessions.reduce((acc, s) => {
+      ? resolvedSessions.reduce((acc: number, s: { startedAt: Date; resolvedAt: Date | null }) => {
           const diff = s.resolvedAt!.getTime() - s.startedAt.getTime();
           return acc + diff;
         }, 0) / resolvedSessions.length / 1000 / 60 // Convert to minutes
@@ -972,7 +972,7 @@ router.get('/chat/analytics', verifyFirebaseToken, requireSupportTeam, async (re
     });
 
     const avgRating = ratedSessions.length > 0
-      ? ratedSessions.reduce((acc, s) => acc + (s.rating || 0), 0) / ratedSessions.length
+      ? ratedSessions.reduce((acc: number, s: { rating: number | null }) => acc + (s.rating || 0), 0) / ratedSessions.length
       : 0;
 
     // Total messages

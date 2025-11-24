@@ -311,7 +311,7 @@ export function initializeChatWebSocket(httpServer: HTTPServer) {
           return;
         }
 
-        const updatedTags = (session.tags || []).filter(t => t !== data.tag);
+        const updatedTags = (session.tags || []).filter((t: string) => t !== data.tag);
         await prisma.chatSession.update({
           where: { id: data.sessionId },
           data: { tags: updatedTags },
