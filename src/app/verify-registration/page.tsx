@@ -28,29 +28,42 @@ export default function VerifyRegistrationPage() {
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return; // Wait for auth to finish loading
+    
+    if (!user) {
       router.push('/login');
       return;
     }
 
+    // Only check verification status if we have a user
     if (user) {
-      checkVerificationStatus();
+      // Use a small timeout to ensure everything is initialized
+      const timeoutId = setTimeout(() => {
+        checkVerificationStatus();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [user, loading, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
 
   useEffect(() => {
     if (!user || emailVerified) return;
 
     const interval = setInterval(async () => {
       if (user) {
-        await user.reload();
-        if (user.emailVerified) {
-          setEmailVerified(true);
-          clearInterval(interval);
-          // Get phone number from Firestore
-          await loadPhoneNumber();
-          // Open SMS verification dialog
-          setSmsDialogOpen(true);
+        try {
+          await user.reload();
+          if (user.emailVerified) {
+            setEmailVerified(true);
+            clearInterval(interval);
+            // Get phone number from Firestore
+            await loadPhoneNumber();
+            // Open SMS verification dialog
+            setSmsDialogOpen(true);
+          }
+        } catch (error) {
+          console.error('Error reloading user:', error);
         }
       }
     }, 3000);
@@ -59,42 +72,62 @@ export default function VerifyRegistrationPage() {
   }, [user, emailVerified]);
 
   const checkVerificationStatus = async () => {
-    if (!user) return;
+    if (!user) {
+      setCheckingStatus(false);
+      return;
+    }
     
     setCheckingStatus(true);
     try {
-      await user.reload();
+      // Reload user to get latest email verification status
+      try {
+        await user.reload();
+      } catch (reloadError) {
+        console.error('Error reloading user:', reloadError);
+        // Continue even if reload fails
+      }
+      
       const isEmailVerified = user.emailVerified;
       setEmailVerified(isEmailVerified);
 
       if (isEmailVerified) {
         // Check if phone is already verified
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setPhoneNumber(userData.phone || '');
-          const isPhoneVerified = userData.phoneVerified || false;
-          setPhoneVerified(isPhoneVerified);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setPhoneNumber(userData.phone || userData.phoneNumber || '');
+            const isPhoneVerified = userData.phoneVerified || false;
+            setPhoneVerified(isPhoneVerified);
 
-          if (!isPhoneVerified && userData.phone) {
-            // Phone not verified, open SMS dialog
-            setSmsDialogOpen(true);
-          } else if (isPhoneVerified) {
-            // Both verified, redirect to dashboard
-            router.push('/dashboard');
-          } else if (!userData.phone) {
-            // No phone number on file - this shouldn't happen for registered users
+            if (!isPhoneVerified && (userData.phone || userData.phoneNumber)) {
+              // Phone not verified, open SMS dialog
+              setSmsDialogOpen(true);
+            } else if (isPhoneVerified) {
+              // Both verified, redirect to dashboard
+              router.push('/dashboard');
+            } else if (!userData.phone && !userData.phoneNumber) {
+              // No phone number on file - this shouldn't happen for registered users
+              toast({
+                title: 'Phone number missing',
+                description: 'Please contact support to add your phone number.',
+                variant: 'destructive',
+              });
+            }
+          } else {
+            // User document doesn't exist - shouldn't happen
+            console.warn('User document not found for uid:', user.uid);
             toast({
-              title: 'Phone number missing',
-              description: 'Please contact support to add your phone number.',
+              title: 'Account error',
+              description: 'Your account information could not be found. Please contact support.',
               variant: 'destructive',
             });
           }
-        } else {
-          // User document doesn't exist - shouldn't happen
+        } catch (firestoreError) {
+          console.error('Error reading from Firestore:', firestoreError);
           toast({
-            title: 'Account error',
-            description: 'Your account information could not be found. Please contact support.',
+            title: 'Error',
+            description: 'Failed to check phone verification status. Please try again.',
             variant: 'destructive',
           });
         }
@@ -103,7 +136,7 @@ export default function VerifyRegistrationPage() {
       console.error('Error checking verification status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to check verification status. Please try again.',
+        description: 'Failed to check verification status. Please refresh the page and try again.',
         variant: 'destructive',
       });
     } finally {
@@ -118,11 +151,12 @@ export default function VerifyRegistrationPage() {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        const phone = userData.phone || '';
+        const phone = userData.phone || userData.phoneNumber || '';
         setPhoneNumber(phone);
       }
     } catch (error) {
       console.error('Error loading phone number:', error);
+      // Don't show toast here as it's called from multiple places
     }
   };
 
