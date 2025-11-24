@@ -1579,10 +1579,11 @@ export function RegistrationForm() {
                     rules={{ required: 'ID Type is required' }}
                     render={({ field }) => {
                       const idTypes = countryValue ? getCountryIdTypes(countryValue) : [];
+                      const selectValue = field.value || '';
                       return (
                         <Select 
                           onValueChange={field.onChange} 
-                          value={field.value} 
+                          value={selectValue || undefined} 
                           disabled={isLoading || !countryValue}
                         >
                           <SelectTrigger id="idType">

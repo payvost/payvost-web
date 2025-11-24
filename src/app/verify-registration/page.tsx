@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { sendEmailVerification, reload } from 'firebase/auth';
@@ -12,17 +13,29 @@ import { Loader2, MailCheck, Smartphone, CheckCircle2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-// Lazy load components to avoid circular dependency issues during initialization
-const SMSVerificationDialog = lazy(() => 
-  import('@/components/sms-verification-dialog').then(module => ({ 
-    default: module.SMSVerificationDialog 
-  }))
+// Use Next.js dynamic import to avoid circular dependency issues
+const SMSVerificationDialog = dynamic(
+  () => import('@/components/sms-verification-dialog').then(mod => ({ default: mod.SMSVerificationDialog })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 );
 
-const TransactionPinSetupDialog = lazy(() => 
-  import('@/components/transaction-pin-setup-dialog').then(module => ({ 
-    default: module.TransactionPinSetupDialog 
-  }))
+const TransactionPinSetupDialog = dynamic(
+  () => import('@/components/transaction-pin-setup-dialog').then(mod => ({ default: mod.TransactionPinSetupDialog })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 );
 
 export default function VerifyRegistrationPage() {
@@ -335,25 +348,21 @@ export default function VerifyRegistrationPage() {
       </Card>
 
       {emailVerified && !phoneVerified && phoneNumber && (
-        <Suspense fallback={<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-          <SMSVerificationDialog
-            open={smsDialogOpen}
-            onOpenChange={setSmsDialogOpen}
-            onVerificationComplete={handleSMSVerificationComplete}
-            phoneNumber={phoneNumber}
-          />
-        </Suspense>
+        <SMSVerificationDialog
+          open={smsDialogOpen}
+          onOpenChange={setSmsDialogOpen}
+          onVerificationComplete={handleSMSVerificationComplete}
+          phoneNumber={phoneNumber}
+        />
       )}
 
       {emailVerified && phoneVerified && user && (
-        <Suspense fallback={<div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-          <TransactionPinSetupDialog
-            open={pinDialogOpen}
-            onOpenChange={setPinDialogOpen}
-            userId={user.uid}
-            onCompleted={handlePinSetupComplete}
-          />
-        </Suspense>
+        <TransactionPinSetupDialog
+          open={pinDialogOpen}
+          onOpenChange={setPinDialogOpen}
+          userId={user.uid}
+          onCompleted={handlePinSetupComplete}
+        />
       )}
     </div>
   );
