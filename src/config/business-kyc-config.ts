@@ -281,6 +281,146 @@ export const COUNTRY_BUSINESS_REQUIREMENTS: Record<
     registryName: 'Handelsregister (Commercial Register)',
     taxIdLabel: 'Steuernummer (Tax Number)',
   },
+  FR: {
+    registrationDocumentType: 'Extrait Kbis',
+    registryName: 'Registre du Commerce et des Sociétés (RCS)',
+    taxIdLabel: 'Numéro SIRET / TVA Intracommunautaire',
+  },
+  IT: {
+    registrationDocumentType: 'Visura Camerale',
+    registryName: 'Camera di Commercio',
+    taxIdLabel: 'Codice Fiscale / Partita IVA',
+  },
+  ES: {
+    registrationDocumentType: 'Certificado de Inscripción',
+    registryName: 'Registro Mercantil',
+    taxIdLabel: 'Número de Identificación Fiscal (NIF)',
+  },
+  NL: {
+    registrationDocumentType: 'Uittreksel Kamer van Koophandel',
+    registryName: 'Kamer van Koophandel (KVK)',
+    taxIdLabel: 'BTW-nummer (VAT Number)',
+  },
+  BE: {
+    registrationDocumentType: 'Extrait de la Banque-Carrefour des Entreprises',
+    registryName: 'Banque-Carrefour des Entreprises',
+    taxIdLabel: 'Numéro de TVA / Numéro BCE',
+  },
+  PT: {
+    registrationDocumentType: 'Certidão Permanente',
+    registryName: 'Conservatória do Registo Comercial',
+    taxIdLabel: 'Número de Identificação Fiscal (NIF)',
+  },
+  IE: {
+    registrationDocumentType: 'Certificate of Incorporation',
+    registryName: 'Companies Registration Office (CRO)',
+    taxIdLabel: 'Tax Registration Number / VAT Number',
+  },
+  AT: {
+    registrationDocumentType: 'Firmenbuchauszug',
+    registryName: 'Firmenbuch (Commercial Register)',
+    taxIdLabel: 'UID-Nummer (VAT Number)',
+  },
+  CH: {
+    registrationDocumentType: 'Handelsregisterauszug',
+    registryName: 'Handelsregisteramt',
+    taxIdLabel: 'UID-Nummer (VAT Number)',
+  },
+  SE: {
+    registrationDocumentType: 'Registreringsbevis',
+    registryName: 'Bolagsverket (Swedish Companies Registration Office)',
+    taxIdLabel: 'Organisationsnummer',
+  },
+  NO: {
+    registrationDocumentType: 'Foretaksregisterutskrift',
+    registryName: 'Foretaksregisteret',
+    taxIdLabel: 'Organisasjonsnummer',
+  },
+  DK: {
+    registrationDocumentType: 'CVR-Uddrag',
+    registryName: 'Erhvervsstyrelsen (Danish Business Authority)',
+    taxIdLabel: 'CVR-nummer',
+  },
+  FI: {
+    registrationDocumentType: 'Yritystieto',
+    registryName: 'Yritys- ja yhteisötietojärjestelmä (YTJ)',
+    taxIdLabel: 'Y-tunnus',
+  },
+  PL: {
+    registrationDocumentType: 'Wypis z KRS',
+    registryName: 'Krajowy Rejestr Sądowy (KRS)',
+    taxIdLabel: 'NIP (Tax Identification Number)',
+  },
+  CZ: {
+    registrationDocumentType: 'Výpis z obchodního rejstříku',
+    registryName: 'Obchodní rejstřík',
+    taxIdLabel: 'IČO (Identification Number) / DIČ (VAT Number)',
+  },
+  GR: {
+    registrationDocumentType: 'Απόδειξη Εγγραφής',
+    registryName: 'Γενικό Εμπορικό Μητρώο (GEMI)',
+    taxIdLabel: 'ΑΦΜ (Tax Identification Number)',
+  },
+  RO: {
+    registrationDocumentType: 'Extras din Registrul Comerțului',
+    registryName: 'Oficiul Național al Registrului Comerțului',
+    taxIdLabel: 'CUI (Cod Unic de Înregistrare)',
+  },
+  HU: {
+    registrationDocumentType: 'Cégkivonat',
+    registryName: 'Cégközlöny',
+    taxIdLabel: 'Adószám (Tax Number)',
+  },
+  BG: {
+    registrationDocumentType: 'Удостоверение за регистрация',
+    registryName: 'Търговски регистър',
+    taxIdLabel: 'ЕИК (Единен идентификационен код)',
+  },
+  HR: {
+    registrationDocumentType: 'Izvadak iz sudskog registra',
+    registryName: 'Sudski registar',
+    taxIdLabel: 'OIB (Osobni identifikacijski broj)',
+  },
+  SK: {
+    registrationDocumentType: 'Výpis z obchodného registra',
+    registryName: 'Obchodný register',
+    taxIdLabel: 'IČO / DIČ',
+  },
+  SI: {
+    registrationDocumentType: 'Izvitek iz registra',
+    registryName: 'AJPES (Agencija za javnopravne evidence in storitve)',
+    taxIdLabel: 'Davčna številka',
+  },
+  LT: {
+    registrationDocumentType: 'Įmonės pažymėjimas',
+    registryName: 'Juridinių asmenų registras',
+    taxIdLabel: 'Įmonės kodas / PVM mokėtojo kodas',
+  },
+  LV: {
+    registrationDocumentType: 'Izziņa no Uzņēmumu reģistra',
+    registryName: 'Uzņēmumu reģistrs',
+    taxIdLabel: 'Reģistrācijas numurs / PVN maksātāja numurs',
+  },
+  EE: {
+    registrationDocumentType: 'Äriregistri väljavõte',
+    registryName: 'Äriregister',
+    taxIdLabel: 'Registrikood / KMKR number',
+  },
+  LU: {
+    registrationDocumentType: 'Extrait du Registre de Commerce',
+    registryName: 'Registre de Commerce et des Sociétés',
+    taxIdLabel: 'Numéro TVA',
+  },
+  MT: {
+    registrationDocumentType: 'Certificate of Incorporation',
+    registryName: 'Malta Business Registry',
+    taxIdLabel: 'VAT Number',
+  },
+  CY: {
+    registrationDocumentType: 'Certificate of Incorporation',
+    registryName: 'Department of Registrar of Companies',
+    taxIdLabel: 'VAT Number',
+  },
 };
 
 /**
@@ -343,4 +483,79 @@ export function createBusinessKycConfig(country?: string): BusinessTierConfigs {
  * Export default config
  */
 export const DEFAULT_BUSINESS_KYC_CONFIG = createBusinessKycConfig();
+
+/**
+ * Business document requirement interface for verification
+ */
+export interface BusinessDocumentRequirement {
+  key: string;
+  label: string;
+  description?: string;
+  required: boolean;
+  acceptedFormats?: string[];
+  maxSizeMB?: number;
+}
+
+/**
+ * Get business document requirements for a specific tier and country
+ */
+export function getBusinessDocumentRequirements(
+  tier: BusinessTierKey,
+  countryCode?: string,
+  businessType?: string
+): BusinessDocumentRequirement[] {
+  const config = getBusinessTierConfig(tier, countryCode);
+  const countryReq = countryCode ? COUNTRY_BUSINESS_REQUIREMENTS[countryCode] : null;
+
+  if (!config.documents) {
+    return [];
+  }
+
+  const requirements: BusinessDocumentRequirement[] = config.documents.map(doc => {
+    // Customize labels based on country
+    let label = doc.label;
+    let description = doc.description;
+
+    if (countryReq) {
+      if (doc.type === 'certificate_of_incorporation') {
+        label = countryReq.registrationDocumentType;
+        description = `Official business registration document from ${countryReq.registryName}`;
+      } else if (doc.type === 'tax_id') {
+        label = countryReq.taxIdLabel;
+        description = `Tax identification number as required by ${countryReq.registryName}`;
+      }
+    }
+
+    // Business type specific requirements
+    if (businessType === 'sole_proprietor' && doc.type === 'certificate_of_incorporation') {
+      label = 'Business Name Registration Certificate';
+      description = 'Government-issued business name registration certificate';
+    }
+
+    return {
+      key: doc.type,
+      label,
+      description,
+      required: doc.required,
+      acceptedFormats: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+      maxSizeMB: 10,
+    };
+  });
+
+  // Add country-specific additional documents
+  if (countryReq?.additionalDocuments) {
+    countryReq.additionalDocuments.forEach(doc => {
+      requirements.push({
+        key: doc.type,
+        label: doc.label,
+        description: doc.description,
+        required: doc.required,
+        acceptedFormats: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+        maxSizeMB: 10,
+      });
+    });
+  }
+
+  return requirements;
+}
 

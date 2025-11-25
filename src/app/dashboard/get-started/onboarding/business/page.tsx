@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Building, Loader2, Clock } from 'lucide-react';
+import { ArrowLeft, Building, Loader2, Clock, UploadCloud, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OnboardingFormPage() {
@@ -24,6 +25,10 @@ export default function OnboardingFormPage() {
   const [userData, setUserData] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [businessOnboarding, setBusinessOnboarding] = useState<any>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -65,6 +70,38 @@ export default function OnboardingFormPage() {
     return () => unsub();
   }, [user, authLoading]);
 
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file type', description: 'Please upload an image file.', variant: 'destructive' });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Logo must be less than 5MB.', variant: 'destructive' });
+      return;
+    }
+
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) {
@@ -76,6 +113,26 @@ export default function OnboardingFormPage() {
     
     try {
       const formData = new FormData(e.currentTarget);
+      let logoUrl: string | null = null;
+
+      // Upload logo if provided
+      if (logoFile) {
+        try {
+          setUploadingLogo(true);
+          const logoRef = ref(storage, `business_logos/${user.uid}/${Date.now()}_${logoFile.name}`);
+          await uploadBytes(logoRef, logoFile);
+          logoUrl = await getDownloadURL(logoRef);
+        } catch (logoError) {
+          console.error('Error uploading logo:', logoError);
+          toast({ title: 'Logo upload failed', description: 'Please try uploading the logo again.', variant: 'destructive' });
+          setIsLoading(false);
+          setUploadingLogo(false);
+          return;
+        } finally {
+          setUploadingLogo(false);
+        }
+      }
+
       const businessData = {
         userId: user.uid,
         name: formData.get('business-name'),
@@ -86,6 +143,7 @@ export default function OnboardingFormPage() {
         address: formData.get('business-address'),
         email: formData.get('contact-email'),
         website: formData.get('website') || null,
+        logo: logoUrl,
       };
       
       // Generate a unique submission ID
@@ -157,6 +215,58 @@ export default function OnboardingFormPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="business-logo">Business Logo (Optional)</Label>
+                        <div className="flex items-center gap-4">
+                            {logoPreview ? (
+                                <div className="relative">
+                                    <img src={logoPreview} alt="Business logo preview" className="w-24 h-24 object-contain border rounded-lg" />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={removeLogo}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted">
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                            )}
+                            <div className="flex-1">
+                                <input
+                                    ref={logoInputRef}
+                                    id="business-logo"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleLogoChange}
+                                    className="hidden"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => logoInputRef.current?.click()}
+                                    disabled={uploadingLogo}
+                                >
+                                    {uploadingLogo ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Uploading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <UploadCloud className="mr-2 h-4 w-4" />
+                                            {logoPreview ? 'Change Logo' : 'Upload Logo'}
+                                        </>
+                                    )}
+                                </Button>
+                                <p className="text-xs text-muted-foreground mt-1">PNG, JPG, or WEBP. Max 5MB.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <Label htmlFor="business-name">Business Name</Label>
                         <Input id="business-name" name="business-name" placeholder="Your Company LLC" required />
