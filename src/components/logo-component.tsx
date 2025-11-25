@@ -17,6 +17,10 @@ export function LogoComponent(props: Omit<React.ComponentProps<typeof Image>, 's
   
   // Different logos have different dimensions, use the larger one for better quality
   const dimensions = logoSrc.includes('White') ? { width: 678, height: 184 } : { width: 441, height: 114 };
+  
+  // Use fixed aspect ratio to prevent layout shift when switching between logos
+  // Light: 441/114 ≈ 3.868, Dark: 678/184 ≈ 3.685, use average ~3.77 for consistency
+  const FIXED_ASPECT_RATIO = 3.77;
 
   const { className, style, ...rest } = props as {
     className?: string;
@@ -24,20 +28,29 @@ export function LogoComponent(props: Omit<React.ComponentProps<typeof Image>, 's
   } & Omit<React.ComponentProps<typeof Image>, 'src' | 'alt' | 'className' | 'style'>;
 
   return (
-    <Image
-      src={logoSrc}
-      alt="Payvost Logo"
-      width={dimensions.width}
-      height={dimensions.height}
-      // Let Tailwind height classes control the rendered size while preserving aspect ratio
+    <div 
       className={className}
       style={{
+        display: 'inline-flex',
+        alignItems: 'center',
         width: 'auto',
-        objectFit: 'contain',
-        maxHeight: '100%',
+        aspectRatio: `${FIXED_ASPECT_RATIO}`,
         ...style,
       }}
-      {...rest}
-    />
+    >
+      <Image
+        src={logoSrc}
+        alt="Payvost Logo"
+        width={dimensions.width}
+        height={dimensions.height}
+        className="h-full w-auto object-contain"
+        style={{
+          height: '100%',
+          width: 'auto',
+          objectFit: 'contain',
+        }}
+        {...rest}
+      />
+    </div>
   );
 }

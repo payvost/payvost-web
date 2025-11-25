@@ -26,6 +26,7 @@ const invoiceSettingsSchema = z.object({
   enableTax: z.boolean(),
   defaultTaxRate: z.preprocess((val) => (val === '' ? 0 : Number(val)), z.number().min(0, 'Tax rate cannot be negative').optional()),
   autoInvoiceForRecurring: z.boolean(),
+  invoiceTemplate: z.enum(['default', 'classic', 'professional']).optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSettingsSchema>;
@@ -71,6 +72,7 @@ export function BusinessInvoiceSettings() {
                     enableTax: invoiceSettings.enableTax ?? true,
                     defaultTaxRate: invoiceSettings.defaultTaxRate || 0,
                     autoInvoiceForRecurring: invoiceSettings.autoInvoiceForRecurring ?? true,
+                    invoiceTemplate: invoiceSettings.invoiceTemplate || 'default',
                 });
             }
         });
@@ -179,6 +181,21 @@ export function BusinessInvoiceSettings() {
                                 )}
                             </div>
                         </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="invoiceTemplate">Invoice Template Style</Label>
+                        <select 
+                            id="invoiceTemplate" 
+                            {...register('invoiceTemplate')} 
+                            className="w-full p-2 border rounded-md bg-background"
+                        >
+                            <option value="default">Default - Simple & Clean</option>
+                            <option value="classic">Classic - Structured & Business-Oriented</option>
+                            <option value="professional">Professional - Premium Stripe-Style</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground">
+                            Choose your preferred invoice template. Default is recommended for universal use.
+                        </p>
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="defaultFooter">Default Invoice Footer</Label>

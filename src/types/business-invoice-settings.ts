@@ -5,4 +5,5 @@ export interface InvoiceSettings {
     enableTax: boolean;
     defaultTaxRate?: number;
     autoInvoiceForRecurring: boolean;
+    invoiceTemplate?: 'default' | 'classic' | 'professional'; // Default: 'default'
 }

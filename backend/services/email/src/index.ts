@@ -48,28 +48,47 @@ app.get('/', (_req: Request, res: Response) => {
 // Single email endpoint
 app.post('/single', async (req: Request, res: Response) => {
   try {
-    const { to, subject, html, text, from, cc, bcc, replyTo, tags } = req.body;
+    const { to, subject, html, text, from, cc, bcc, replyTo, tags, template, templateVariables } = req.body;
 
-    if (!to || !subject || !html) {
+    if (!to || !subject) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['to', 'subject', 'html'],
+        required: ['to', 'subject'],
       });
     }
 
-    console.log(`[Email Service] Sending single email to: ${to}`);
+    // Either template or html must be provided
+    if (!template && !html) {
+      return res.status(400).json({
+        error: 'Either template or html must be provided',
+      });
+    }
 
-    const result = await sendEmail({
+    console.log(`[Email Service] Sending single email to: ${to}${template ? ` using template: ${template}` : ''}`);
+
+    // Prepare email options
+    const emailOptions: any = {
       to,
       subject,
-      html,
-      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
       from: from || `Payvost <${MAILGUN_FROM_EMAIL}>`,
       cc,
       bcc,
       replyTo,
       tags,
-    });
+    };
+
+    // If using Mailgun template
+    if (template) {
+      emailOptions.template = template;
+      emailOptions.variables = templateVariables || {}; // mailgun.ts expects 'variables'
+      // Don't set html when using template - Mailgun will use the template
+    } else {
+      // Use HTML directly
+      emailOptions.html = html;
+      emailOptions.text = text || html.replace(/<[^>]*>/g, ''); // Strip HTML for text version
+    }
+
+    const result = await sendEmail(emailOptions);
 
     if (!result.success) {
       console.error(`[Email Service] Failed to send email: ${result.error}`);
