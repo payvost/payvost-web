@@ -289,17 +289,11 @@ export default function PublicInvoicePage() {
 
   const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
   const taxAmount = invoice.grandTotal - subtotal;
-  const itemCount = invoice.items?.length || 0;
-  const isCompactMode = itemCount <= 3 && foundInCollection === 'invoices'; // Only for personal invoices with 3 or fewer items
   const amountInWords = numberToWords(invoice.grandTotal, invoice.currency);
 
   return (
     <>
       <style jsx global>{`
-        @page {
-          size: A4;
-          margin: ${isCompactMode ? '12mm' : '16mm'};
-        }
         @media print {
           html, body { background: #fff !important; }
           body { margin: 0; padding: 0; }
@@ -309,21 +303,13 @@ export default function PublicInvoicePage() {
           [id*="cookie"], [id*="notification"], [id*="onesignal"], [class*="onesignal"] { 
             display: none !important; 
           }
-          .print-only { display: block !important; }
           .invoice-card { 
             box-shadow: none !important; 
             border: none !important;
             max-width: 100% !important;
             margin: 0 !important;
             background: #fff !important;
-            padding: ${isCompactMode ? '20px' : '24px'} !important;
           }
-          .compact-invoice {
-            font-size: 13px !important;
-          }
-        }
-        @media screen {
-          .print-only { display: none; }
         }
         ${isRenderForPdf ? `
           /* Apply print-like layout when ?pdf=1 or ?print=1 for PDF generation */
@@ -339,386 +325,121 @@ export default function PublicInvoicePage() {
             max-width: 800px !important;
             margin: 0 auto !important;
             background: #fff !important;
-            padding: ${isCompactMode ? '20px' : '24px'} !important;
           }
           html, body { background: #fff !important; }
-          .print-only { display: block !important; }
         ` : ''}
-        .compact-invoice {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-        .compact-invoice .invoice-header {
-          border-bottom: 3px solid #0066FF;
-          padding-bottom: 16px;
-          margin-bottom: 20px;
-        }
-        .compact-invoice .invoice-title {
-          font-size: 28px;
-          font-weight: 700;
-          letter-spacing: -0.5px;
-          color: #1D1D1F;
-          margin: 0;
-        }
-        .compact-invoice .invoice-meta-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 8px;
-        }
-        .compact-invoice .status-badge-compact {
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .compact-invoice .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 24px;
-          margin-bottom: 20px;
-        }
-        .compact-invoice .info-block h4 {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #6E6E73;
-          margin: 0 0 8px 0;
-        }
-        .compact-invoice .info-block p {
-          font-size: 13px;
-          color: #1D1D1F;
-          margin: 3px 0;
-          line-height: 1.4;
-        }
-        .compact-invoice .items-table-compact {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 16px;
-        }
-        .compact-invoice .items-table-compact thead {
-          border-bottom: 2px solid #E5E5E5;
-        }
-        .compact-invoice .items-table-compact th {
-          text-align: left;
-          padding: 10px 0;
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #6E6E73;
-        }
-        .compact-invoice .items-table-compact td {
-          padding: 12px 0;
-          font-size: 13px;
-          color: #1D1D1F;
-          border-bottom: 1px solid #F5F5F7;
-        }
-        .compact-invoice .items-table-compact th.text-right,
-        .compact-invoice .items-table-compact td.text-right {
-          text-align: right;
-        }
-        .compact-invoice .items-table-compact th.text-center,
-        .compact-invoice .items-table-compact td.text-center {
-          text-align: center;
-        }
-        .compact-invoice .totals-compact {
-          display: flex;
-          justify-content: flex-end;
-          margin-bottom: 16px;
-        }
-        .compact-invoice .totals-box-compact {
-          width: 280px;
-        }
-        .compact-invoice .total-row-compact {
-          display: flex;
-          justify-content: space-between;
-          padding: 6px 0;
-          font-size: 13px;
-        }
-        .compact-invoice .total-row-compact.grand {
-          padding-top: 12px;
-          margin-top: 8px;
-          border-top: 2px solid #0066FF;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1D1D1F;
-        }
-        .compact-invoice .amount-words {
-          background: #F5F5F7;
-          padding: 12px 16px;
-          border-radius: 6px;
-          margin-bottom: 16px;
-          border-left: 3px solid #0066FF;
-        }
-        .compact-invoice .amount-words-label {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #6E6E73;
-          margin-bottom: 4px;
-        }
-        .compact-invoice .amount-words-value {
-          font-size: 13px;
-          color: #1D1D1F;
-          font-weight: 500;
-          font-style: italic;
-        }
-        .compact-invoice .notes-compact {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid #E5E5E5;
-        }
-        .compact-invoice .notes-compact h5 {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #6E6E73;
-          margin: 0 0 6px 0;
-        }
-        .compact-invoice .notes-compact p {
-          font-size: 12px;
-          color: #6E6E73;
-          line-height: 1.5;
-          margin: 0;
-        }
       `}</style>
-      
-      <div className="flex flex-col min-h-screen bg-muted/10">
-        <SiteHeader />
-        <main className="flex-1 py-12 px-4">
-          <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2 no-print">
-            <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
-            <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
-            <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
-          </div>
+    <div className="flex flex-col min-h-screen bg-muted/10">
+      <SiteHeader />
+      <main className="flex-1 py-12 px-4">
+        <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2 no-print">
+          <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
+          <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
+          <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+        </div>
 
-          {isCompactMode ? (
-            <Card className={`max-w-3xl mx-auto w-full invoice-card compact-invoice`}>
-              <CardContent className="p-5">
-                {/* Compact Header */}
-                <div className="invoice-header">
-                  <div className="invoice-meta-row">
-                    <div>
-                      <h1 className="invoice-title">INVOICE</h1>
-                      <p style={{ fontSize: '12px', color: '#6E6E73', marginTop: '4px' }}>#{invoice.invoiceNumber}</p>
-                    </div>
-                    <Badge 
-                      variant={currentStatusInfo.variant} 
-                      className={`status-badge-compact capitalize`}
-                      style={{
-                        backgroundColor: currentStatus === 'Paid' ? '#D1FAE5' : currentStatus === 'Pending' ? '#FEF3C7' : currentStatus === 'Overdue' ? '#FEE2E2' : '#F3F4F6',
-                        color: currentStatus === 'Paid' ? '#10B981' : currentStatus === 'Pending' ? '#F59E0B' : currentStatus === 'Overdue' ? '#EF4444' : '#6B7280',
-                        border: 'none'
-                      }}
-                    >
-                      {currentStatusInfo.icon} {invoice.status}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Info Grid */}
-                <div className="info-grid">
-                  <div className="info-block">
-                    <h4>Billed To</h4>
-                    <p style={{ fontWeight: 600 }}>{invoice.toName}</p>
-                    {invoice.toAddress && <p>{invoice.toAddress}</p>}
-                    {invoice.toEmail && <p>{invoice.toEmail}</p>}
-                  </div>
-                  <div className="info-block">
-                    <h4>From</h4>
-                    <p style={{ fontWeight: 600 }}>{invoice.fromName}</p>
-                    {invoice.fromAddress && <p>{invoice.fromAddress}</p>}
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#6E6E73' }}>
-                      <p><strong>Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'MMM dd, yyyy')}</p>
-                      <p><strong>Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'MMM dd, yyyy')}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <table className="items-table-compact">
-                  <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th className="text-center">Qty</th>
-                      <th className="text-right">Unit Price</th>
-                      <th className="text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoice.items.map((item: any, index: number) => (
-                      <tr key={index}>
-                        <td style={{ fontWeight: 500 }}>{item.description}</td>
-                        <td className="text-center">{item.quantity}</td>
-                        <td className="text-right">{formatCurrency(item.price, invoice.currency)}</td>
-                        <td className="text-right" style={{ fontWeight: 600 }}>{formatCurrency(item.quantity * item.price, invoice.currency)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Totals */}
-                <div className="totals-compact">
-                  <div className="totals-box-compact">
-                    <div className="total-row-compact">
-                      <span style={{ color: '#6E6E73' }}>Subtotal</span>
-                      <span>{formatCurrency(subtotal, invoice.currency)}</span>
-                    </div>
-                    {taxAmount > 0 && (
-                      <div className="total-row-compact">
-                        <span style={{ color: '#6E6E73' }}>Tax ({invoice.taxRate}%)</span>
-                        <span>{formatCurrency(taxAmount, invoice.currency)}</span>
-                      </div>
-                    )}
-                    <div className="total-row-compact grand">
-                      <span>Grand Total</span>
-                      <span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Amount in Words */}
-                <div className="amount-words">
-                  <div className="amount-words-label">Amount in Words</div>
-                  <div className="amount-words-value">{amountInWords}</div>
-                </div>
-
-                {/* Notes */}
-                {invoice.notes && (
-                  <div className="notes-compact">
-                    <h5>Notes</h5>
-                    <p>{invoice.notes}</p>
-                  </div>
-                )}
-
-                {/* Payment Section */}
-                {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && !isRenderForPdf && (
-                  <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E5E5E5' }}>
-                    <StripeCheckout clientSecret={clientSecret} />
-                  </div>
-                )}
-              </CardContent>
-
-              {!isRenderForPdf && (
-                <CardFooter className="bg-muted/30 p-4 flex-col md:flex-row gap-3 justify-between">
-                  <p className="text-xs text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-                  {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
-                    <Button size="sm" onClick={handlePayNow}>
-                      Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
-                    </Button>
-                  )}
-                  {invoice.status === 'Paid' && <Button size="sm" disabled>Paid</Button>}
-                </CardFooter>
-              )}
-            </Card>
-          ) : (
-            <Card className="max-w-4xl mx-auto w-full invoice-card">
-              <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
-                <div className="flex-1 flex items-center gap-4">
-                  {typeof businessProfile?.invoiceLogoUrl === 'string' && businessProfile.invoiceLogoUrl.length > 0 && (
+        <Card className="max-w-4xl mx-auto w-full invoice-card">
+          <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
+            <div className="flex-1 flex items-center gap-4">
+                {businessProfile?.invoiceLogoUrl && (
                     <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
-                  )}
-                  <div>
+                )}
+                 <div>
                     <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
                     <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-lg">
-                    {currentStatusInfo.icon} {invoice.status}
-                  </Badge>
-                </div>
-              </CardHeader>
+                 </div>
+            </div>
+            <div className="text-right">
+              <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-lg">
+                {currentStatusInfo.icon} {invoice.status}
+              </Badge>
+            </div>
+          </CardHeader>
 
-              <CardContent className="p-6 md:p-8 space-y-8">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">Billed To</h3>
-                    <p className="text-sm">{invoice.toName}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">From</h3>
-                    <p className="text-sm">{invoice.fromName}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
-                  </div>
-                  <div className="space-y-1 text-left md:text-right col-span-2 md:col-span-1">
-                    <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'PPP')}</p>
-                    <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'PPP')}</p>
-                  </div>
-                </div>
+          <CardContent className="p-6 md:p-8 space-y-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+              <div className="space-y-1">
+                <h3 className="font-semibold">Billed To</h3>
+                <p className="text-sm">{invoice.toName}</p>
+                <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
+                <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold">From</h3>
+                <p className="text-sm">{invoice.fromName}</p>
+                <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
+              </div>
+              <div className="space-y-1 text-left md:text-right col-span-2 md:col-span-1">
+                <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'PPP')}</p>
+                <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'PPP')}</p>
+              </div>
+            </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[60%]">Description</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.items.map((item: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{item.description}</TableCell>
-                        <TableCell className="text-center">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.price, invoice.currency)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[60%]">Description</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoice.items.map((item: any, index: number) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell className="text-center">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.price, invoice.currency)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-                <div className="flex justify-end">
-                  <div className="w-full max-w-sm space-y-2">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
-                  </div>
-                </div>
+            <div className="flex justify-end">
+              <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
+                <Separator className="my-2" />
+                <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
+              </div>
+            </div>
 
-                {/* Amount in Words for non-compact mode too */}
-                {foundInCollection === 'invoices' && (
-                  <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-primary">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Amount in Words</p>
-                    <p className="text-sm font-medium italic">{amountInWords}</p>
-                  </div>
-                )}
+            {/* Amount in Words */}
+            {foundInCollection === 'invoices' && (
+              <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-primary">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Amount in Words</p>
+                <p className="text-sm font-medium italic">{amountInWords}</p>
+              </div>
+            )}
 
-                {invoice.notes && (
-                  <div>
-                    <h4 className="font-semibold">Notes</h4>
-                    <p className="text-sm text-muted-foreground">{invoice.notes}</p>
-                  </div>
-                )}
+            {invoice.notes && (
+              <div>
+                <h4 className="font-semibold">Notes</h4>
+                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+              </div>
+            )}
 
-                {/* ---------------- Stripe Payment Form ---------------- */}
-                {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && (
-                  <div className="mt-8">
-                    <StripeCheckout clientSecret={clientSecret} />
-                  </div>
-                )}
-              </CardContent>
+            {/* ---------------- Stripe Payment Form ---------------- */}
+            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && !isRenderForPdf && (
+              <div className="mt-8">
+                <StripeCheckout clientSecret={clientSecret} />
+              </div>
+            )}
+          </CardContent>
 
-              <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
-                <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
-                  <Button size="lg" onClick={handlePayNow}>
-                    Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
-                  </Button>
-                )}
-                {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
-              </CardFooter>
-            </Card>
+          {!isRenderForPdf && (
+            <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
+              <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
+              {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+                <Button size="lg" onClick={handlePayNow}>
+                  Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
+                </Button>
+              )}
+              {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
+            </CardFooter>
           )}
+        </Card>
 
         {/* ---------------- Manual Payment Dialog ---------------- */}
         <Dialog open={isManualPaymentDialogOpen} onOpenChange={setIsManualPaymentDialogOpen}>

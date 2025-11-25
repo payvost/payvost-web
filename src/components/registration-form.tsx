@@ -17,7 +17,7 @@ import { CalendarIcon, Loader2, UploadCloud, Eye, EyeOff, Camera, ChevronsUpDown
 import { Calendar } from '@/components/ui/calendar';
 import { CompactDatePicker } from '@/components/ui/compact-date-picker';
 import { format } from 'date-fns';
-import { signInWithCustomToken, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { signInWithCustomToken, updateProfile } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, addDoc, Timestamp, GeoPoint } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
@@ -1074,7 +1074,20 @@ export function RegistrationForm() {
 
       // 7. Send email verification immediately
       try {
-        await sendEmailVerification(user);
+        const response = await fetch('/api/auth/send-verification-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            displayName: user.displayName || data.firstName || 'User',
+            appName: 'Payvost',
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to send verification email');
+        }
+        
         toast({ 
           title: 'Registration successful!', 
           description: 'Please verify your email and phone number to complete registration.',

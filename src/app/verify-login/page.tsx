@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { sendEmailVerification } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
@@ -93,11 +92,24 @@ export default function VerifyLoginPage() {
   }, [user, router, toast, loading]);
 
   const handleResendVerification = async () => {
-    if (!user) return;
+    if (!user || !user.email) return;
 
     setIsSending(true);
     try {
-      await sendEmailVerification(user);
+      const response = await fetch('/api/auth/send-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          displayName: user.displayName || 'User',
+          appName: 'Payvost',
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send verification email');
+      }
+      
       toast({
         title: 'Verification email sent',
         description: 'Please check your email and click the verification link.',
