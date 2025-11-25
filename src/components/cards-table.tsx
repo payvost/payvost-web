@@ -28,6 +28,8 @@ import { Button } from '@/components/ui/button';
 import type { VirtualCardData, CardStatus } from '@/types/virtual-card';
 import { ListFilter, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 
 
 const statusVariant: { [key in CardStatus]: 'default' | 'secondary' | 'destructive' } = {
@@ -142,13 +144,16 @@ export function CardsTable({ data, onRowClick }: CardsTableProps) {
                     className="pl-10"
                 />
             </div>
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
-                    <ListFilter className="mr-2 h-4 w-4" />
-                    Filter by Status
-                </Button>
-            </DropdownMenuTrigger>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="ml-auto">
+                                    <ListFilter className="mr-2 h-4 w-4" />
+                                    Filter by Status
+                                </Button>
+                            </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 {['active', 'frozen', 'terminated'].map((status) => (
                 <DropdownMenuCheckboxItem
@@ -164,8 +169,14 @@ export function CardsTable({ data, onRowClick }: CardsTableProps) {
                     {status}
                 </DropdownMenuCheckboxItem>
                 ))}
-            </DropdownMenuContent>
-            </DropdownMenu>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Filter cards by status</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         </div>
       <div className="rounded-md border">
         <Table>
@@ -187,18 +198,32 @@ export function CardsTable({ data, onRowClick }: CardsTableProps) {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  onClick={() => onRowClick(row.original)}
-                  className="cursor-pointer"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <ContextMenu key={row.id}>
+                  <ContextMenuTrigger asChild>
+                    <TableRow
+                      data-state={row.getIsSelected() && 'selected'}
+                      onClick={() => onRowClick(row.original)}
+                      className="cursor-pointer"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => onRowClick(row.original)}>
+                      View Details
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => navigator.clipboard.writeText(row.original.last4)}>
+                      Copy Card Number
+                    </ContextMenuItem>
+                    <ContextMenuItem disabled={row.original.status === 'terminated'}>
+                      {row.original.status === 'active' ? 'Freeze Card' : 'Activate Card'}
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             ) : (
               <TableRow>

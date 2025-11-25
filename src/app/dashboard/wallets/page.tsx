@@ -34,6 +34,7 @@ import { WalletsPageSkeleton } from '@/components/skeletons/wallets-page-skeleto
 import { walletService, currencyService, type Account } from '@/services';
 import { getCurrencyMeta, getFlagCode, getCurrencyName } from '@/utils/currency-meta';
 import { useToast } from '@/hooks/use-toast';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -143,6 +144,17 @@ export default function WalletsPage() {
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Wallets</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">My Wallets</h1>
           <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
