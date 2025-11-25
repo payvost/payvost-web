@@ -107,6 +107,7 @@ try {
 
 // Create gateway application
 import { createGateway, registerServiceRoutes, errorHandler } from './gateway/index';
+import { verifyMailgunWebhook } from './gateway/webhookVerification';
 
 const app = createGateway();
 const port = process.env.PORT || 3001;
@@ -373,6 +374,46 @@ app.post('/api/webhooks/reloadly', async (req, res) => {
     res.status(response.status).json(data);
   } catch (error: any) {
     logger.error({ err: error }, 'Webhook service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to webhook service',
+      message: error.message,
+    });
+  }
+});
+
+// Mailgun Webhook Proxy with verification
+app.post('/api/webhooks/mailgun', verifyMailgunWebhook, async (req, res) => {
+  try {
+    // Forward headers (especially signature headers)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Forward Mailgun signature headers if present
+    const signature = req.headers['x-mailgun-signature'];
+    const timestamp = req.headers['x-mailgun-timestamp'];
+    const token = req.headers['x-mailgun-token'];
+    
+    if (signature) headers['x-mailgun-signature'] = signature as string;
+    if (timestamp) headers['x-mailgun-timestamp'] = timestamp as string;
+    if (token) headers['x-mailgun-token'] = token as string;
+
+    // Mailgun may send form-encoded data, so forward as-is
+    const contentType = req.headers['content-type'] || 'application/json';
+    headers['Content-Type'] = contentType;
+
+    const response = await fetch(`${WEBHOOK_SERVICE_URL}/mailgun`, {
+      method: 'POST',
+      headers,
+      body: contentType.includes('application/x-www-form-urlencoded') 
+        ? new URLSearchParams(req.body as any).toString()
+        : JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error: any) {
+    logger.error({ err: error }, 'Mailgun webhook proxy error');
     res.status(500).json({
       error: 'Failed to connect to webhook service',
       message: error.message,

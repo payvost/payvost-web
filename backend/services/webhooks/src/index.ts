@@ -3,6 +3,7 @@ import { createHmac } from 'crypto';
 import admin from 'firebase-admin';
 import cors from 'cors';
 import { prisma } from './prisma';
+import { handleMailgunWebhook } from './mailgun-handler';
 
 const app = express();
 const PORT = process.env.WEBHOOK_SERVICE_PORT || 3008;
@@ -12,6 +13,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 app.use(cors());
 app.use(express.text({ type: 'application/json' })); // Accept raw text for signature verification
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // For Mailgun form-encoded webhooks
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -648,9 +650,14 @@ app.get('/', (_req: Request, res: Response) => {
     endpoints: {
       health: 'GET /health',
       reloadly: 'POST /reloadly',
+      mailgun: 'POST /mailgun',
     },
   });
 });
+
+// Mailgun webhook endpoint
+// Note: Mailgun sends form-encoded data, which is handled by the urlencoded middleware above
+app.post('/mailgun', handleMailgunWebhook);
 
 // Reloadly webhook endpoint
 app.post('/reloadly', async (req: Request, res: Response) => {
@@ -721,5 +728,6 @@ app.listen(PORT, () => {
   console.log(`[Webhook Service] Endpoints:`);
   console.log(`  - GET http://localhost:${PORT}/health`);
   console.log(`  - POST http://localhost:${PORT}/reloadly`);
+  console.log(`  - POST http://localhost:${PORT}/mailgun`);
 });
 

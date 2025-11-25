@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
 import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText, Tv, ChevronDown, CreditCard } from 'lucide-react';
 import { Payvost } from '@/components/Payvost';
 import { Beneficiaries } from '@/components/beneficiaries';
@@ -280,17 +281,49 @@ export default function PaymentsPage() {
         <div className="flex items-center">
           <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
         </div>
-        <Tabs defaultValue="remittances">
-          <TabsList>
-            <TabsTrigger value="remittances"><ArrowRightLeft className="mr-2 h-4 w-4"/>Remittances</TabsTrigger>
-            <TabsTrigger value="bill-payment"><FileText className="mr-2 h-4 w-4"/>Bill Payment</TabsTrigger>
-            <TabsTrigger value="bulk-transfer"><Upload className="mr-2 h-4 w-4"/>Bulk Transfer</TabsTrigger>
-            <TabsTrigger value="scheduled"><Calendar className="mr-2 h-4 w-4"/>Scheduled</TabsTrigger>
-            <TabsTrigger value="split-payment"><Users className="mr-2 h-4 w-4"/>Split Payment</TabsTrigger>
-            <TabsTrigger value="gift-cards"><Gift className="mr-2 h-4 w-4"/>Gift Cards</TabsTrigger>
-          </TabsList>
+        <EnhancedTabs 
+          defaultValue="remittances"
+          tabs={[
+            {
+              value: 'remittances',
+              label: 'Remittances',
+              icon: ArrowRightLeft,
+              tooltip: 'Send money internationally to friends and family'
+            },
+            {
+              value: 'bill-payment',
+              label: 'Bill Payment',
+              icon: FileText,
+              tooltip: 'Pay utility bills and services'
+            },
+            {
+              value: 'bulk-transfer',
+              label: 'Bulk Transfer',
+              icon: Upload,
+              tooltip: 'Send money to multiple recipients at once'
+            },
+            {
+              value: 'scheduled',
+              label: 'Scheduled',
+              icon: Calendar,
+              tooltip: 'View and manage scheduled payments'
+            },
+            {
+              value: 'split-payment',
+              label: 'Split Payment',
+              icon: Users,
+              tooltip: 'Split payments between multiple people'
+            },
+            {
+              value: 'gift-cards',
+              label: 'Gift Cards',
+              icon: Gift,
+              tooltip: 'Purchase and manage gift cards'
+            }
+          ]}
+        >
 
-          <TabsContent value="remittances">
+          <EnhancedTabsContent value="remittances" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div className="lg:col-span-2">
                     <Payvost />
@@ -299,9 +332,9 @@ export default function PaymentsPage() {
                     <Beneficiaries />
                 </div>
             </div>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-          <TabsContent value="bill-payment">
+          <EnhancedTabsContent value="bill-payment" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -405,7 +438,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="bulk-transfer">
+          <EnhancedTabsContent value="bulk-transfer" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Bulk Transfer</CardTitle>
@@ -431,7 +464,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="scheduled">
+          <EnhancedTabsContent value="scheduled" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Scheduled Transfers</CardTitle>
@@ -446,7 +479,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="split-payment">
+          <EnhancedTabsContent value="split-payment" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Split Payment</CardTitle>
@@ -467,7 +500,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="gift-cards">
+          <EnhancedTabsContent value="gift-cards" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Gift Cards</CardTitle>
@@ -503,7 +536,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-        </Tabs>
+        </EnhancedTabs>
       </main>
     </DashboardLayout>
   );

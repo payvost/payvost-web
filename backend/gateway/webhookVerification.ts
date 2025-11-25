@@ -217,6 +217,75 @@ export function verifyWebhookSignature(options: WebhookVerificationOptions) {
 }
 
 /**
+ * Verify webhook signature for Mailgun
+ * Mailgun uses HMAC SHA256 with timestamp and token
+ * Format: signature = HMAC-SHA256(timestamp + token, signing_key)
+ */
+export function verifyMailgunWebhook(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
+  
+  if (!signingKey) {
+    logger.warn('MAILGUN_WEBHOOK_SIGNING_KEY not configured. Webhook verification disabled.');
+    return next();
+  }
+
+  try {
+    // Mailgun sends signature, timestamp, and token
+    // Can be in body (form-encoded) or headers
+    const signature = req.body?.signature || 
+                     (req.body as any)?.['signature']?.signature ||
+                     req.headers['x-mailgun-signature'] as string;
+    const timestamp = req.body?.timestamp || 
+                     (req.body as any)?.['signature']?.timestamp ||
+                     req.headers['x-mailgun-timestamp'] as string;
+    const token = req.body?.token || 
+                 (req.body as any)?.['signature']?.token ||
+                 req.headers['x-mailgun-token'] as string;
+
+    if (!signature || !timestamp || !token) {
+      logger.warn('Missing Mailgun webhook signature, timestamp, or token');
+      return res.status(401).json({ error: 'Missing webhook signature' });
+    }
+
+    // Mailgun signature verification: HMAC-SHA256(timestamp + token, signing_key)
+    const signedString = timestamp + token;
+    const expectedSignature = crypto
+      .createHmac('sha256', signingKey)
+      .update(signedString)
+      .digest('hex');
+
+    // Use constant-time comparison to prevent timing attacks
+    if (!crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    )) {
+      logger.warn({ ip: req.ip }, 'Invalid Mailgun webhook signature');
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    // Verify timestamp to prevent replay attacks (within 15 minutes)
+    const requestTime = parseInt(timestamp, 10);
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeDiff = Math.abs(currentTime - requestTime);
+
+    if (timeDiff > 900) { // 15 minutes
+      logger.warn({ timeDiff }, 'Mailgun webhook timestamp too old');
+      return res.status(401).json({ error: 'Webhook timestamp expired' });
+    }
+
+    logger.info('Mailgun webhook signature verified');
+    next();
+  } catch (error) {
+    logger.error({ err: error }, 'Error verifying Mailgun webhook');
+    return res.status(500).json({ error: 'Webhook verification failed' });
+  }
+}
+
+/**
  * Middleware to capture raw body for webhook verification
  * Must be used before body parsing middleware
  */

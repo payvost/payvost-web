@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, QrCode, Link as LinkIcon, FileText, Repeat, Users, Ticket, Gift, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -377,71 +378,89 @@ export default function RequestPaymentPageContent() {
           <h1 className="text-lg font-semibold md:text-2xl">Request Payment</h1>
         </div>
 
-        <Tabs defaultValue="payment-link" className="w-full" onValueChange={setActiveTab} value={activeTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="payment-link">
-              <LinkIcon className="mr-2 h-4 w-4" />
-              Payment Link
-            </TabsTrigger>
-            <TabsTrigger value="invoice">
-              <FileText className="mr-2 h-4 w-4" />
-              Invoice
-            </TabsTrigger>
-            <TabsTrigger value="recurring">
-              <Repeat className="mr-2 h-4 w-4" />
-              Recurring
-            </TabsTrigger>
-            <TabsTrigger value="split-payment">
-              <Users className="mr-2 h-4 w-4" />
-              Split Payment
-            </TabsTrigger>
-            <TabsTrigger value="event-tickets">
-              <Ticket className="mr-2 h-4 w-4" />
-              Event Tickets
-            </TabsTrigger>
-            <TabsTrigger value="donations">
-              <Gift className="mr-2 h-4 w-4" />
-              Donations
-            </TabsTrigger>
-          </TabsList>
+        <EnhancedTabs 
+          defaultValue="payment-link" 
+          className="w-full" 
+          onValueChange={setActiveTab} 
+          value={activeTab}
+          tabs={[
+            {
+              value: 'payment-link',
+              label: 'Payment Link',
+              icon: LinkIcon,
+              tooltip: 'Create shareable payment links for quick payments'
+            },
+            {
+              value: 'invoice',
+              label: 'Invoice',
+              icon: FileText,
+              tooltip: 'Create and manage professional invoices'
+            },
+            {
+              value: 'recurring',
+              label: 'Recurring',
+              icon: Repeat,
+              tooltip: 'Set up recurring payment requests'
+            },
+            {
+              value: 'split-payment',
+              label: 'Split Payment',
+              icon: Users,
+              tooltip: 'Split payments between multiple recipients'
+            },
+            {
+              value: 'event-tickets',
+              label: 'Event Tickets',
+              icon: Ticket,
+              tooltip: 'Sell tickets for events and manage attendees'
+            },
+            {
+              value: 'donations',
+              label: 'Donations',
+              icon: Gift,
+              tooltip: 'Create donation campaigns and collect contributions'
+            }
+          ]}
+        >
+          <div className="mb-6" />
 
-          <TabsContent value="payment-link">
+          <EnhancedTabsContent value="payment-link" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <PaymentLinkTab />
              </Suspense>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-          <TabsContent value="invoice">
+          <EnhancedTabsContent value="invoice" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 {renderInvoiceContent()}
              </Suspense>
-            </TabsContent>
+            </EnhancedTabsContent>
 
-          <TabsContent value="recurring">
+          <EnhancedTabsContent value="recurring" className="animate-in fade-in-50">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <RecurringTab />
             </Suspense>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-          <TabsContent value="split-payment">
+          <EnhancedTabsContent value="split-payment" className="animate-in fade-in-50">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <SplitPaymentTab />
             </Suspense>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-          <TabsContent value="event-tickets">
+          <EnhancedTabsContent value="event-tickets" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <EventTicketsTab />
             </Suspense>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-          <TabsContent value="donations">
+          <EnhancedTabsContent value="donations" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <DonationsTab />
             </Suspense>
-          </TabsContent>
+          </EnhancedTabsContent>
 
-        </Tabs>
+        </EnhancedTabs>
       </main>
     </DashboardLayout>
   );
