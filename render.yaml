@@ -175,7 +175,7 @@ services:
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd backend/services/email && npm install --include=dev && npm run build
+    buildCommand: cd backend && npm install --production && cd services/email && npm install --include=dev && npm run build
     startCommand: cd backend/services/email && npm start
     envVars:
       - key: EMAIL_SERVICE_PORT

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { applyActionCode, checkActionCode, verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type ActionMode = 'verifyEmail' | 'resetPassword' | 'recoverEmail' | 'unknown';
 
-export default function AuthActionPage() {
+function AuthActionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -247,6 +247,27 @@ export default function AuthActionPage() {
         </Card>
       </main>
     </div>
+  );
+}
+
+export default function AuthActionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-muted/10">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <AuthActionContent />
+    </Suspense>
   );
 }
 
