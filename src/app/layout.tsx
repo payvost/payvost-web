@@ -15,15 +15,110 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://payvost.com';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  
   title: {
-    default: 'Payvost | Fast, Secure Global Remittance',
+    default: 'Payvost | Fast, Secure Global Remittance & Money Transfer',
     template: '%s | Payvost',
   },
-  description: 'Payvost offers fast, secure, and low-cost global money transfers. Send and receive money internationally with competitive exchange rates and track your transfers in real-time.',
+  
+  description: 'Payvost offers fast, secure, and low-cost global money transfers. Send and receive money internationally across 70+ countries with competitive exchange rates. Track your transfers in real-time with enterprise-grade security.',
+  
+  keywords: [
+    'money transfer',
+    'international remittance',
+    'global money transfer',
+    'foreign exchange',
+    'wire transfer',
+    'send money abroad',
+    'cross-border payments',
+    'FX rates',
+    'currency exchange',
+    'remittance services',
+    'online money transfer',
+    'international payments',
+  ],
+  
+  authors: [{ name: 'Payvost' }],
+  creator: 'Payvost',
+  publisher: 'Payvost',
+  
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+    siteName: 'Payvost',
+    title: 'Payvost | Fast, Secure Global Remittance',
+    description: 'Send and receive money internationally across 70+ countries with competitive exchange rates and real-time tracking.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Payvost - Global Money Transfer Platform',
+      },
+    ],
+  },
+  
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Payvost | Fast, Secure Global Remittance',
+    description: 'Send money internationally across 70+ countries with competitive rates and real-time tracking.',
+    images: ['/og-image.jpg'],
+    // creator: '@payvost', // Uncomment and add actual Twitter handle
+    // site: '@payvost',
+  },
+  
+  alternates: {
+    canonical: '/',
+  },
+  
+  verification: {
+    // google: 'your-google-verification-code', // Add from Search Console
+    // yandex: 'your-yandex-verification-code',
+    // yahoo: 'your-yahoo-verification-code',
+  },
+  
+  category: 'Financial Services',
+  
   manifest: '/manifest.json',
+  
   icons: {
-    icon: '/clay-logo.png',
+    icon: [
+      { url: '/clay-logo.png' },
+    ],
+    apple: [
+      { url: '/clay-logo.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Payvost',
+  },
+  
+  formatDetection: {
+    telephone: true,
+    date: true,
+    address: true,
+    email: true,
+    url: true,
   },
 };
 
