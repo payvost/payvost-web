@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Search as SearchIcon, Briefcase, Bell, LifeBuoy, LineChart } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search } from 'lucide-react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -40,6 +40,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { QuickActionsDropdown } from './quick-actions-dropdown';
+import { DashboardSearch } from './dashboard-search';
 
 
 interface DashboardLayoutProps {
@@ -223,23 +224,21 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                        <Sheet>
                         <SheetTrigger asChild>
                           <Button variant="outline" size="icon">
-                            <SearchIcon className="h-4 w-4" />
+                            <Search className="h-4 w-4" />
                           </Button>
                         </SheetTrigger>
                         <SheetContent side="top">
                           <SheetHeader>
                             <SheetTitle>Search</SheetTitle>
                           </SheetHeader>
-                          <div className="relative mt-4">
-                              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input placeholder="Search features, settings..." className="pl-9" />
+                          <div className="mt-4">
+                              <DashboardSearch />
                           </div>
                         </SheetContent>
                       </Sheet>
                     </div>
-                    <div className="relative hidden md:block">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search features, settings..." className="pl-9 bg-muted/50" />
+                    <div className="hidden md:block">
+                        <DashboardSearch />
                     </div>
                   </div>
                 </div>

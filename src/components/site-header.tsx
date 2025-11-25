@@ -198,6 +198,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PublicSearch } from '@/components/public-search';
 
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     const [productsOpen, setProductsOpen] = useState(false);
@@ -266,12 +267,12 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
     
     return (
         <>
-            <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center bg-background/95 border-b rounded-b-md">
+            <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center justify-between bg-background/95 border-b rounded-b-md">
             <Link href="/" className="flex items-center justify-start">
                 <Icons.logo className="h-8" />
             </Link>
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex gap-6 justify-center">
+            <nav className="hidden lg:flex gap-6 justify-center flex-1">
                 <NavigationMenu>
                     <NavigationMenuList>
                         <NavigationMenuItem>
@@ -385,18 +386,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             </nav>
             {/* Desktop Right Actions */}
             <nav className="hidden lg:flex items-center gap-4 justify-end">
-                <Button
-                    variant="outline"
-                    className="relative h-9 w-9 p-0"
-                    onClick={() => setCommandOpen(true)}
-                    title="Search (⌘K)"
-                >
-                    <Search className="h-4 w-4" />
-                    <span className="sr-only">Search</span>
-                    <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                        <span className="text-xs">⌘</span>K
-                    </kbd>
-                </Button>
+                <PublicSearch />
                 <CountrySelector />
                 <ThemeSwitcher />
                 {showLogin && (
@@ -411,16 +401,10 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 )}
             </nav>
             {/* Mobile Hamburger & Sheet */}
-            <nav className="ml-auto flex items-center gap-2 lg:hidden">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={() => setCommandOpen(true)}
-                >
-                    <Search className="h-4 w-4" />
-                    <span className="sr-only">Search</span>
-                </Button>
+            <nav className="flex items-center gap-2 lg:hidden">
+                <div className="w-40 sm:w-48">
+                    <PublicSearch />
+                </div>
                 <ThemeSwitcher />
                 <Sheet>
                     <SheetTrigger asChild>
