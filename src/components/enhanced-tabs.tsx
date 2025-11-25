@@ -45,9 +45,9 @@ export function EnhancedTabs({
   };
 
   const triggerStyles = {
-    default: '',
-    pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full px-4',
-    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent',
+    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200',
+    pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
+    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200',
   };
 
   return (
@@ -64,12 +64,35 @@ export function EnhancedTabs({
               key={tab.value}
               value={tab.value}
               disabled={tab.disabled}
-              className={cn(triggerStyles[variant], "flex items-center gap-2")}
+              className={cn(
+                triggerStyles[variant], 
+                "flex items-center gap-2 relative group",
+                "data-[state=active]:[&_svg]:text-primary-foreground",
+                "data-[state=active]:[&_svg]:scale-110",
+                "[&_svg]:transition-all [&_svg]:duration-200",
+                variant === 'underline' && "data-[state=active]:[&>span>span:last-child]:scale-x-100"
+              )}
             >
-              {Icon && <Icon className="h-4 w-4" />}
-              <span>{tab.label}</span>
+              {Icon && (
+                <Icon className={cn(
+                  "h-4 w-4 transition-all duration-200",
+                  "data-[state=active]:text-primary-foreground"
+                )} />
+              )}
+              <span className="relative">
+                {tab.label}
+                {variant === 'underline' && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary scale-x-0 transition-transform duration-200 origin-center" />
+                )}
+              </span>
               {showCounts && tab.count !== undefined && tab.count > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">
+                <Badge 
+                  variant="secondary" 
+                  className={cn(
+                    "ml-1 text-xs transition-all duration-200",
+                    "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
+                  )}
+                >
                   {tab.count}
                 </Badge>
               )}

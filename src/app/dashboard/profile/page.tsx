@@ -141,6 +141,21 @@ export default function ProfilePage() {
             setZip(data.zip || '');
             setPhone(data.phone || '');
             
+            // Automatically exit edit mode if KYC becomes verified
+            const kycStatus = normalizeKycStatus(data?.kycStatus);
+            if (kycStatus === 'verified') {
+                setIsEditing((prevIsEditing) => {
+                    if (prevIsEditing) {
+                        toast({
+                            title: "Edit Mode Disabled",
+                            description: "Personal information editing is disabled after KYC verification.",
+                            variant: "default"
+                        });
+                    }
+                    return false;
+                });
+            }
+            
             // Check for business profile
             const profile = data.businessProfile;
             if (profile && (profile.status === 'approved' || profile.status === 'Approved')) {
@@ -196,6 +211,19 @@ export default function ProfilePage() {
   
   const handleSaveChanges = async () => {
     if (!user) return;
+    
+    // Prevent saving personal information if KYC is verified
+    const kycStatus = normalizeKycStatus(userData?.kycStatus);
+    if (kycStatus === 'verified') {
+      toast({
+        title: "Cannot Update",
+        description: "Personal information cannot be edited after KYC verification.",
+        variant: "destructive"
+      });
+      setIsEditing(false);
+      return;
+    }
+    
     setIsSaving(true);
     try {
         let photoURL = userData?.photoURL;
@@ -419,9 +447,11 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)}>
-                <Edit className="mr-2 h-4 w-4" /> Edit Profile
-            </Button>
+            currentKycStatus !== 'verified' ? (
+              <Button onClick={() => setIsEditing(true)}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit Profile
+              </Button>
+            ) : null
           ) : (
              <div className="flex gap-2">
                 <Button variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
@@ -442,7 +472,7 @@ export default function ProfilePage() {
                                 <AvatarImage src={previewImage || userData?.photoURL || ''} alt={displayName || 'User'} />
                                 <AvatarFallback>{getInitials(displayName || user?.displayName)}</AvatarFallback>
                             </Avatar>
-                             {isEditing && (
+                             {isEditing && currentKycStatus !== 'verified' && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="outline" size="icon" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">
@@ -462,7 +492,7 @@ export default function ProfilePage() {
                             <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isSaving} />
                         </div>
 
-                        {isEditing ? (
+                        {isEditing && currentKycStatus !== 'verified' ? (
                             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="text-xl font-semibold text-center h-auto border-0 focus-visible:ring-1"/>
                         ) : (
                             <h2 className="text-xl font-semibold">{displayName}</h2>
@@ -722,13 +752,21 @@ export default function ProfilePage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Personal Information</CardTitle>
-                        <CardDescription>Manage your personal and contact details.</CardDescription>
+                        <CardDescription>
+                            Manage your personal and contact details.
+                            {currentKycStatus === 'verified' && (
+                                <span className="block mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    Your personal information is locked after KYC verification.
+                                </span>
+                            )}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label className="text-muted-foreground flex items-center gap-2"><UserIcon className="h-4 w-4"/>Full Name</Label>
-                                {isEditing ? <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isSaving}/> : <p className="font-medium">{displayName || 'N/A'}</p>}
+                                {isEditing && currentKycStatus !== 'verified' ? <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isSaving}/> : <p className="font-medium">{displayName || 'N/A'}</p>}
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-muted-foreground flex items-center gap-2"><Mail className="h-4 w-4"/>Email Address</Label>
@@ -739,7 +777,7 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label className="text-muted-foreground flex items-center gap-2"><Phone className="h-4 w-4"/>Phone Number</Label>
-                                {isEditing ? <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Add phone number" disabled={isSaving}/> : <p className="font-medium">{phone || 'Not provided'}</p>}
+                                {isEditing && currentKycStatus !== 'verified' ? <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Add phone number" disabled={isSaving}/> : <p className="font-medium">{phone || 'Not provided'}</p>}
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-muted-foreground flex items-center gap-2"><Globe className="h-4 w-4"/>Country</Label>
@@ -749,7 +787,7 @@ export default function ProfilePage() {
                          <Separator />
                          <div className="space-y-2">
                              <Label className="text-muted-foreground flex items-center gap-2"><Building2 className="h-4 w-4"/>Address</Label>
-                            {isEditing ? (
+                            {isEditing && currentKycStatus !== 'verified' ? (
                                 <div className="space-y-2">
                                     <Input placeholder="Street Address" value={street} onChange={(e) => setStreet(e.target.value)} disabled={isSaving}/>
                                     <div className="grid grid-cols-3 gap-2">
