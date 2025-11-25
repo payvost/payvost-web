@@ -19,7 +19,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PaymentConfirmationDialog } from '@/components/payment-confirmation-dialog';
 import { reloadlyService, type Biller, type GiftCardProduct, externalTransactionService, walletService } from '@/services';
 import { useToast } from '@/hooks/use-toast';
-import { RapydPaymentForm } from '@/components/rapyd-payment-form';
 
 const billerData: Record<string, any> = {
   NGA: {
@@ -285,7 +284,6 @@ export default function PaymentsPage() {
           <TabsList>
             <TabsTrigger value="remittances"><ArrowRightLeft className="mr-2 h-4 w-4"/>Remittances</TabsTrigger>
             <TabsTrigger value="bill-payment"><FileText className="mr-2 h-4 w-4"/>Bill Payment</TabsTrigger>
-            <TabsTrigger value="rapyd-payment"><CreditCard className="mr-2 h-4 w-4"/>Rapyd Payments</TabsTrigger>
             <TabsTrigger value="bulk-transfer"><Upload className="mr-2 h-4 w-4"/>Bulk Transfer</TabsTrigger>
             <TabsTrigger value="scheduled"><Calendar className="mr-2 h-4 w-4"/>Scheduled</TabsTrigger>
             <TabsTrigger value="split-payment"><Users className="mr-2 h-4 w-4"/>Split Payment</TabsTrigger>
@@ -405,10 +403,6 @@ export default function PaymentsPage() {
                 </PaymentConfirmationDialog>
               </CardFooter>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="rapyd-payment">
-            <RapydPaymentForm />
           </TabsContent>
 
           <TabsContent value="bulk-transfer">
