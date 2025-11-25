@@ -31,12 +31,12 @@ export default function DownloadPage() {
                     For the best performance, security, and features, please download our mobile app. The web version is optimized for desktop use.
                 </p>
 
-                <div className="mt-8 flex flex-wrap justify-center items-center gap-4">
-                    <Link href="#" className="inline-block">
-                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={54} className="h-12 w-auto sm:h-14" />
+                <div className="mt-8 flex justify-between sm:justify-center items-center gap-4 w-full max-w-md mx-auto px-4 sm:px-0">
+                    <Link href="#" className="flex-1 sm:flex-initial">
+                        <Image src="/App Store.png" alt="Download on the App Store" width={160} height={54} className="h-12 w-auto sm:h-14 mx-auto sm:mx-0" />
                     </Link>
-                    <Link href="#" className="inline-block">
-                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={54} className="h-12 w-auto sm:h-14" />
+                    <Link href="#" className="flex-1 sm:flex-initial">
+                        <Image src="/Google Play (2).png" alt="Get it on Google Play" width={160} height={54} className="h-12 w-auto sm:h-14 mx-auto sm:mx-0" />
                     </Link>
                 </div>
 

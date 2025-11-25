@@ -19,13 +19,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Home,
+  HelpCircle,
+  Search,
 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Icons } from '@/components/icons';
 import {
-  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -36,7 +41,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Home } from 'lucide-react';
 
 export const mainNavItems = [
   { href: '/business', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
@@ -219,125 +223,133 @@ export function BusinessSidebar() {
   const renderNav = () => (
     <>
       <SidebarGroup>
-        <SidebarGroupLabel>Main</SidebarGroupLabel>
-        <SidebarMenu>
-          {mainNavItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarMenu>
+            {mainNavItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Financials</SidebarGroupLabel>
-        <SidebarMenu>
-          {financialsItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Financials</SidebarGroupLabel>
+          <SidebarMenu>
+            {financialsItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Bookkeeping</SidebarGroupLabel>
-        <SidebarMenu>
-          {bookkeepingItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Bookkeeping</SidebarGroupLabel>
+          <SidebarMenu>
+            {bookkeepingItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Sales & Commerce</SidebarGroupLabel>
-        <SidebarMenu>
-          {salesCommerceItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Sales & Commerce</SidebarGroupLabel>
+          <SidebarMenu>
+            {salesCommerceItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Customers</SidebarGroupLabel>
-        <SidebarMenu>
-          {customersItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Customers</SidebarGroupLabel>
+          <SidebarMenu>
+            {customersItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>Tools & Settings</SidebarGroupLabel>
-        <SidebarMenu>
-          {toolsItems.map(item => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                <Link href={item.href}>
-                  {item.icon}
-                  {item.label}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        <SidebarGroupContent>
+          <SidebarGroupLabel>Tools & Settings</SidebarGroupLabel>
+          <SidebarMenu>
+            {toolsItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                  <Link href={item.href}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
       </SidebarGroup>
     </>
   );
 
   return (
-    <div className="hidden md:flex fixed inset-y-0 left-0 w-[14rem] z-50 flex-col border-r bg-sidebar text-sidebar-foreground">
-        {/* Business Header Card */}
-        <div className="px-2 py-2 border-b">
-          <Card className="p-2">
-            <BusinessHeaderDropdown />
-          </Card>
-        </div>
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <Card className="p-2">
+          <BusinessHeaderDropdown />
+        </Card>
+      </SidebarHeader>
 
-        {/* Navigation */}
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {renderNav()}
-          </div>
-        </ScrollArea>
+      <SidebarContent>
+        {renderNav()}
+      </SidebarContent>
 
-        {/* Footer */}
-        <div className="mt-auto border-t p-2">
-          <SidebarMenu className="w-full">
-            <div className="flex items-center justify-start">
-              <SidebarMenuItem className="w-full">
-                <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
+      <SidebarFooter>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
                   <Link href="/business/settings">
                     <Settings />
                     <span>Settings</span>
@@ -345,14 +357,25 @@ export function BusinessSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton size="default" className="justify-start gap-2" tooltip="Developer">
-                  <Puzzle />
-                  <span>Developer</span>
+                <SidebarMenuButton asChild>
+                  <Link href="/business/support">
+                    <HelpCircle />
+                    <span>Get Help</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </div>
-          </SidebarMenu>
-        </div>
-      </div>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/business/search">
+                    <Search />
+                    <span>Search</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

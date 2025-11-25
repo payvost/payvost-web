@@ -345,6 +345,7 @@ import { PublicSearch } from '@/components/public-search';
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     const [productsOpen, setProductsOpen] = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
+    const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const router = useRouter();
 
     // Keyboard shortcut for command palette (Cmd+K / Ctrl+K)
@@ -529,9 +530,15 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             </nav>
             {/* Mobile Hamburger & Sheet */}
             <nav className="flex items-center gap-2 lg:hidden">
-                <div className="w-40 sm:w-48">
-                    <PublicSearch />
-                </div>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                >
+                    <Search className="h-5 w-5" />
+                    <span className="sr-only">Search</span>
+                </Button>
                 <ThemeSwitcher />
                 <Sheet>
                     <SheetTrigger asChild>
@@ -653,6 +660,12 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </SheetContent>
                 </Sheet>
             </nav>
+            {/* Mobile Search Bar - Appears below header when search icon is clicked */}
+            {mobileSearchOpen && (
+                <div className="lg:hidden w-full px-4 py-3 border-b bg-background">
+                    <PublicSearch onClose={() => setMobileSearchOpen(false)} />
+                </div>
+            )}
         </header>
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
             <CommandInput placeholder="Type a command or search..." />
