@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, QrCode, Link as LinkIcon, FileText, Repeat, Users, Ticket, Gift, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
+import { EnhancedTabs } from '@/components/enhanced-tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -424,41 +424,41 @@ export default function RequestPaymentPageContent() {
         >
           <div className="mb-6" />
 
-          <EnhancedTabsContent value="payment-link" className="animate-in fade-in-50">
+          <TabsContent value="payment-link" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <PaymentLinkTab />
              </Suspense>
-          </EnhancedTabsContent>
+          </TabsContent>
 
-          <EnhancedTabsContent value="invoice" className="animate-in fade-in-50">
+          <TabsContent value="invoice" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 {renderInvoiceContent()}
              </Suspense>
-            </EnhancedTabsContent>
+            </TabsContent>
 
-          <EnhancedTabsContent value="recurring" className="animate-in fade-in-50">
+          <TabsContent value="recurring" className="animate-in fade-in-50">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <RecurringTab />
             </Suspense>
-          </EnhancedTabsContent>
+          </TabsContent>
 
-          <EnhancedTabsContent value="split-payment" className="animate-in fade-in-50">
+          <TabsContent value="split-payment" className="animate-in fade-in-50">
             <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <SplitPaymentTab />
             </Suspense>
-          </EnhancedTabsContent>
+          </TabsContent>
 
-          <EnhancedTabsContent value="event-tickets" className="animate-in fade-in-50">
+          <TabsContent value="event-tickets" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <EventTicketsTab />
             </Suspense>
-          </EnhancedTabsContent>
+          </TabsContent>
 
-          <EnhancedTabsContent value="donations" className="animate-in fade-in-50">
+          <TabsContent value="donations" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
                 <DonationsTab />
             </Suspense>
-          </EnhancedTabsContent>
+          </TabsContent>
 
         </EnhancedTabs>
       </main>
