@@ -11,7 +11,8 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { FileDown, ListFilter, MoreHorizontal, Search } from 'lucide-react';
+import { FileDown, ListFilter, MoreHorizontal, Search, List, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -46,6 +47,15 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string[]>(['transfer', 'bill', 'giftcard', 'airtime']);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Calculate transaction counts by status
+  const transactionCounts = {
+    all: transactions.length,
+    completed: transactions.filter(tx => tx.status === 'Completed').length,
+    pending: transactions.filter(tx => tx.status === 'Pending').length,
+    failed: transactions.filter(tx => tx.status === 'Failed').length,
+  };
 
   const filterTransactionsByType = (txs: Transaction[]) => {
     return txs.filter(tx => {
@@ -306,14 +316,43 @@ export default function TransactionsPage() {
           <h1 className="text-lg font-semibold md:text-2xl">Transactions</h1>
         </div>
 
-        <Tabs defaultValue="all">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <TabsList className="overflow-x-auto sm:overflow-visible">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="completed">Completed</TabsTrigger>
-                    <TabsTrigger value="pending">Pending</TabsTrigger>
-                    <TabsTrigger value="failed">Failed</TabsTrigger>
-                </TabsList>
+        <EnhancedTabs 
+          defaultValue="all" 
+          value={activeTab}
+          onValueChange={setActiveTab}
+          showCounts={true}
+          tabs={[
+            {
+              value: 'all',
+              label: 'All',
+              icon: List,
+              count: transactionCounts.all,
+              tooltip: 'View all transactions'
+            },
+            {
+              value: 'completed',
+              label: 'Completed',
+              icon: CheckCircle,
+              count: transactionCounts.completed,
+              tooltip: 'View completed transactions'
+            },
+            {
+              value: 'pending',
+              label: 'Pending',
+              icon: Clock,
+              count: transactionCounts.pending,
+              tooltip: 'View pending transactions'
+            },
+            {
+              value: 'failed',
+              label: 'Failed',
+              icon: XCircle,
+              count: transactionCounts.failed,
+              tooltip: 'View failed transactions'
+            }
+          ]}
+        >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <DateRangePicker className="w-full sm:w-auto" />
                     <TooltipProvider>
@@ -413,18 +452,18 @@ export default function TransactionsPage() {
                             />
                         </div>
                     </CardHeader>
-                    <TabsContent value="all">
+                    <EnhancedTabsContent value="all" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions)))}
-                    </TabsContent>
-                    <TabsContent value="completed">
+                    </EnhancedTabsContent>
+                    <EnhancedTabsContent value="completed" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Completed'))))}
-                    </TabsContent>
-                    <TabsContent value="pending">
+                    </EnhancedTabsContent>
+                    <EnhancedTabsContent value="pending" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Pending'))))}
-                    </TabsContent>
-                    <TabsContent value="failed">
+                    </EnhancedTabsContent>
+                    <EnhancedTabsContent value="failed" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Failed'))))}
-                    </TabsContent>
+                    </EnhancedTabsContent>
                      <CardFooter>
                         <div className="text-xs text-muted-foreground">
                             Showing <strong>1-{filterTransactionsBySearch(filterTransactionsByType(transactions)).length}</strong> of <strong>{transactions.length}</strong> transactions
@@ -432,7 +471,7 @@ export default function TransactionsPage() {
                     </CardFooter>
                  </Card>
             </div>
-        </Tabs>
+        </EnhancedTabs>
       </main>
     </DashboardLayout>
   );
