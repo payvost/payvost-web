@@ -47,7 +47,7 @@ import { TwoFactorSettings } from '@/components/two-factor-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { sendEmailVerification, reload } from 'firebase/auth';
+import { reload } from 'firebase/auth';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -97,11 +97,24 @@ export default function SettingsPage() {
   }, [user, authLoading]);
 
   const handleResendEmailVerification = async () => {
-    if (!user) return;
+    if (!user || !user.email) return;
     
     setSendingVerification(true);
     try {
-      await sendEmailVerification(user);
+      const response = await fetch('/api/auth/send-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          displayName: user.displayName || 'User',
+          appName: 'Payvost',
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send verification email');
+      }
+      
       toast({
         title: 'Verification email sent',
         description: 'Please check your email and click the verification link.',
