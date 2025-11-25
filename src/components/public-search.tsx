@@ -65,7 +65,11 @@ function filterItems(query: string): SearchItem[] {
   });
 }
 
-export function PublicSearch() {
+interface PublicSearchProps {
+  onClose?: () => void;
+}
+
+export function PublicSearch({ onClose }: PublicSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const router = useRouter();
@@ -90,6 +94,7 @@ export function PublicSearch() {
     router.push(href);
     setOpen(false);
     setQuery('');
+    onClose?.();
   };
 
   return (
