@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 
 interface TabItem {
   value: string;
@@ -36,8 +36,21 @@ export function EnhancedTabs({
   className,
   orientation = 'horizontal',
   children,
+  value: controlledValue,
+  defaultValue,
+  onValueChange,
   ...props
 }: EnhancedTabsProps) {
+  const [internalValue, setInternalValue] = useState(defaultValue || tabs[0]?.value || '');
+  const activeValue = controlledValue !== undefined ? controlledValue : internalValue;
+
+  const handleValueChange = (newValue: string) => {
+    if (controlledValue === undefined) {
+      setInternalValue(newValue);
+    }
+    onValueChange?.(newValue);
+  };
+
   const variantStyles = {
     default: '',
     pills: 'bg-transparent p-0 gap-2',
@@ -45,20 +58,29 @@ export function EnhancedTabs({
   };
 
   const triggerStyles = {
-    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 relative',
+    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 relative overflow-visible',
     pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
-    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative',
+    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative overflow-visible',
   };
 
   return (
-    <Tabs {...props} orientation={orientation} className={className}>
+    <Tabs 
+      {...props} 
+      orientation={orientation} 
+      className={className}
+      value={activeValue}
+      onValueChange={handleValueChange}
+      defaultValue={defaultValue}
+    >
       <TabsList className={cn(
-        "overflow-x-auto sm:overflow-visible",
+        "overflow-x-auto sm:overflow-visible overflow-y-visible",
         variantStyles[variant],
-        orientation === 'vertical' && 'flex-col h-auto w-auto'
+        orientation === 'vertical' && 'flex-col h-auto w-auto',
+        variant === 'default' && 'pb-1'
       )}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeValue === tab.value;
           const content = (
             <TabsTrigger
               key={tab.value}
@@ -69,9 +91,7 @@ export function EnhancedTabs({
                 "flex items-center gap-2 relative",
                 "data-[state=active]:[&_svg]:text-primary-foreground",
                 "data-[state=active]:[&_svg]:scale-110",
-                "[&_svg]:transition-all [&_svg]:duration-200",
-                variant === 'underline' && "data-[state=active]:[&_.tab-indicator-underline]:scale-x-100",
-                variant === 'default' && "data-[state=active]:[&_.tab-indicator-dot]:scale-100"
+                "[&_svg]:transition-all [&_svg]:duration-200"
               )}
             >
               {Icon && (
@@ -83,10 +103,16 @@ export function EnhancedTabs({
                 {tab.label}
               </span>
               {variant === 'underline' && (
-                <span className="tab-indicator-underline absolute -bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 transition-transform duration-200 origin-center pointer-events-none" />
+                <span className={cn(
+                  "absolute -bottom-0 left-0 right-0 h-0.5 bg-primary transition-all duration-200 origin-center pointer-events-none z-10",
+                  isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                )} />
               )}
               {variant === 'default' && (
-                <span className="tab-indicator-dot absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary scale-0 transition-transform duration-200 pointer-events-none" />
+                <span className={cn(
+                  "absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary transition-all duration-200 pointer-events-none z-10",
+                  isActive ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                )} />
               )}
               {showCounts && tab.count !== undefined && tab.count > 0 && (
                 <Badge 
