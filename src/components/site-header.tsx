@@ -217,23 +217,35 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
     }, []);
 
     const navigationItems = [
-        { title: "Home", href: "/", group: "Navigation" },
-        { title: "Dashboard", href: "/dashboard", group: "Navigation" },
-        { title: "Wallets", href: "/dashboard/wallets", group: "Navigation" },
-        { title: "Transactions", href: "/dashboard/transactions", group: "Navigation" },
-        { title: "Payments", href: "/payments", group: "Products" },
-        { title: "Payouts", href: "/payouts", group: "Products" },
-        { title: "Accounts", href: "/accounts", group: "Products" },
-        { title: "Cards", href: "/cards", group: "Products" },
-        { title: "Invoicing", href: "/invoicing", group: "Products" },
-        { title: "Developer Tools", href: "/developers", group: "Products" },
-        { title: "Escrow", href: "/escrow", group: "Products" },
-        { title: "Analytics & Automation", href: "/analytics", group: "Products" },
-        { title: "Blog", href: "/blog", group: "Resources" },
-        { title: "Help Center", href: "/help", group: "Resources" },
-        { title: "Documentation", href: "/docs", group: "Resources" },
-        { title: "About Us", href: "/about", group: "Company" },
-        { title: "Careers", href: "/careers", group: "Company" },
+        { title: "Home", href: "/", group: "Navigation", icon: "🏠" },
+        { title: "Dashboard", href: "/dashboard", group: "Navigation", icon: "📊" },
+        { title: "Wallets", href: "/dashboard/wallets", group: "Navigation", icon: "💼" },
+        { title: "Transactions", href: "/dashboard/transactions", group: "Navigation", icon: "💳" },
+        { title: "Request Payment", href: "/dashboard/request-payment", group: "Navigation", icon: "💰" },
+        { title: "Disputes", href: "/dashboard/dispute", group: "Navigation", icon: "⚖️" },
+        { title: "Profile", href: "/dashboard/profile", group: "Navigation", icon: "👤" },
+        { title: "Payments", href: "/payments", group: "Products", icon: "💸" },
+        { title: "Payouts", href: "/payouts", group: "Products", icon: "📤" },
+        { title: "Accounts", href: "/accounts", group: "Products", icon: "🏦" },
+        { title: "Cards", href: "/cards", group: "Products", icon: "💳" },
+        { title: "Invoicing", href: "/invoicing", group: "Products", icon: "📄" },
+        { title: "Developer Tools", href: "/developers", group: "Products", icon: "⚙️" },
+        { title: "Escrow", href: "/escrow", group: "Products", icon: "🔒" },
+        { title: "Analytics & Automation", href: "/analytics", group: "Products", icon: "📈" },
+        { title: "FX Rates", href: "/fx-rates", group: "Products", icon: "💱" },
+        { title: "Blog", href: "/blog", group: "Resources", icon: "📝" },
+        { title: "Help Center", href: "/help", group: "Resources", icon: "❓" },
+        { title: "Documentation", href: "/docs", group: "Resources", icon: "📚" },
+        { title: "About Us", href: "/about", group: "Company", icon: "ℹ️" },
+        { title: "Careers", href: "/careers", group: "Company", icon: "💼" },
+    ];
+
+    const actionItems = [
+        { title: "Create Wallet", href: "/dashboard/wallets", action: "create-wallet", group: "Actions" },
+        { title: "Send Money", href: "/dashboard/payments", action: "send", group: "Actions" },
+        { title: "Request Payment", href: "/dashboard/request-payment", action: "request", group: "Actions" },
+        { title: "Create Invoice", href: "/dashboard/request-payment?tab=invoice&create=true", action: "invoice", group: "Actions" },
+        { title: "View Transactions", href: "/dashboard/transactions", action: "transactions", group: "Actions" },
     ];
 
     const groupedItems = navigationItems.reduce((acc, item) => {
@@ -243,6 +255,14 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
         acc[item.group].push(item);
         return acc;
     }, {} as Record<string, typeof navigationItems>);
+
+    const actionGroups = actionItems.reduce((acc, item) => {
+        if (!acc[item.group]) {
+            acc[item.group] = [];
+        }
+        acc[item.group].push(item);
+        return acc;
+    }, {} as Record<string, typeof actionItems>);
     
     return (
         <>
@@ -527,6 +547,23 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             <CommandInput placeholder="Type a command or search..." />
             <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
+                {Object.entries(actionGroups).map(([group, items]) => (
+                    <CommandGroup key={group} heading={group}>
+                        {items.map((item) => (
+                            <CommandItem
+                                key={item.href}
+                                onSelect={() => {
+                                    router.push(item.href);
+                                    setCommandOpen(false);
+                                }}
+                            >
+                                <span className="mr-2">⚡</span>
+                                {item.title}
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                ))}
+                <CommandSeparator />
                 {Object.entries(groupedItems).map(([group, items]) => (
                     <CommandGroup key={group} heading={group}>
                         {items.map((item) => (
@@ -537,19 +574,21 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                     setCommandOpen(false);
                                 }}
                             >
+                                {item.icon && <span className="mr-2">{item.icon}</span>}
                                 {item.title}
                             </CommandItem>
                         ))}
                     </CommandGroup>
                 ))}
                 <CommandSeparator />
-                <CommandGroup heading="Actions">
+                <CommandGroup heading="Account">
                     <CommandItem
                         onSelect={() => {
                             router.push('/register');
                             setCommandOpen(false);
                         }}
                     >
+                        <span className="mr-2">✨</span>
                         Create Account
                     </CommandItem>
                     {showLogin && (
@@ -559,6 +598,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                 setCommandOpen(false);
                             }}
                         >
+                            <span className="mr-2">🔐</span>
                             Login
                         </CommandItem>
                     )}

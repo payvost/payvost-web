@@ -19,6 +19,10 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { externalTransactionService } from '@/services';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 
 interface Transaction {
   id: string;
@@ -178,13 +182,36 @@ export default function TransactionsPage() {
                     </TableRow>
                  ))
             ) : filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
-              <TableRow key={tx.id}>
-                <TableCell>
-                  <div className="font-medium">
-                    {tx.recipientName || tx.recipient}
-                    {getProviderBadge(tx.provider)}
-                  </div>
-                  <div className="text-sm text-muted-foreground hidden md:inline">{tx.type}</div>
+              <ContextMenu key={tx.id}>
+                <ContextMenuTrigger asChild>
+                  <TableRow>
+                    <TableCell>
+                      <HoverCard>
+                        <HoverCardTrigger asChild>
+                          <div className="font-medium cursor-pointer">
+                            {tx.recipientName || tx.recipient}
+                            {getProviderBadge(tx.provider)}
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-80">
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm font-semibold">Transaction Details</span>
+                              <Badge variant={tx.status === 'Completed' ? 'default' : tx.status === 'Pending' ? 'secondary' : 'destructive'}>
+                                {tx.status}
+                              </Badge>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              <div><span className="font-medium">Type:</span> {tx.type}</div>
+                              <div><span className="font-medium">Amount:</span> {tx.amount || `${tx.sendCurrency} ${tx.sendAmount}`}</div>
+                              <div><span className="font-medium">Date:</span> {new Date(tx.date).toLocaleString()}</div>
+                              {tx.provider && <div><span className="font-medium">Provider:</span> {tx.provider}</div>}
+                              {tx.source && <div><span className="font-medium">Source:</span> {tx.source}</div>}
+                            </div>
+                          </div>
+                        </HoverCardContent>
+                      </HoverCard>
+                      <div className="text-sm text-muted-foreground hidden md:inline">{tx.type}</div>
                 </TableCell>
                 <TableCell className="text-right">{tx.sendAmount ? `${tx.sendCurrency} ${tx.sendAmount}` : tx.amount}</TableCell>
                 <TableCell className="hidden text-right sm:table-cell">
@@ -202,28 +229,53 @@ export default function TransactionsPage() {
                 </TableCell>
                 <TableCell className="hidden text-right md:table-cell">{new Date(tx.date).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/transactions/${tx.id}`}>View Details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Download Receipt</DropdownMenuItem>
-                        {tx.source === 'external' && (
-                          <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-                            External: {tx.provider}
-                          </DropdownMenuItem>
-                        )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Toggle menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/dashboard/transactions/${tx.id}`}>View Details</Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>Download Receipt</DropdownMenuItem>
+                                        {tx.source === 'external' && (
+                                            <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                                                External: {tx.provider}
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Transaction actions</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </TableCell>
               </TableRow>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                    <ContextMenuItem onClick={() => navigator.clipboard.writeText(tx.id)}>
+                        Copy Transaction ID
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => navigator.clipboard.writeText(tx.sendAmount || tx.amount || '')}>
+                        Copy Amount
+                    </ContextMenuItem>
+                    <ContextMenuItem disabled={tx.status !== 'Completed'}>
+                        Download Receipt
+                    </ContextMenuItem>
+                    <ContextMenuItem disabled={tx.status !== 'Pending'}>
+                        Cancel Transaction
+                    </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             )) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
@@ -239,6 +291,17 @@ export default function TransactionsPage() {
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Transactions</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex items-center">
           <h1 className="text-lg font-semibold md:text-2xl">Transactions</h1>
         </div>
@@ -253,15 +316,18 @@ export default function TransactionsPage() {
                 </TabsList>
                 <div className="flex flex-wrap items-center gap-2">
                     <DateRangePicker className="w-full sm:w-auto" />
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-1 w-full sm:w-auto">
-                                <ListFilter className="h-3.5 w-3.5" />
-                                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                                Filter
-                                </span>
-                            </Button>
-                        </DropdownMenuTrigger>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-9 gap-1 w-full sm:w-auto">
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                            Filter
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Filter by</DropdownMenuLabel>
                             <DropdownMenuSeparator />
@@ -307,12 +373,27 @@ export default function TransactionsPage() {
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button size="sm" variant="outline" className="h-9 gap-1 w-full sm:w-auto">
-                        <FileDown className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Export
-                        </span>
-                    </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Filter transactions by type</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-9 gap-1 w-full sm:w-auto">
+                                    <FileDown className="h-3.5 w-3.5" />
+                                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                    Export
+                                    </span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Export transactions to CSV</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                      <Button size="sm" className="h-9 gap-1 w-full sm:w-auto">
                         Download Statement
                     </Button>
