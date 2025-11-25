@@ -10,22 +10,36 @@ export const LogoComponent = dynamic(() => import('./logo-component').then(mod =
   loading: (props) => {
     // Only pick safe props and avoid forwarding unknown props (e.g., isLoading, pastDelay) to DOM
     const { style, className } = (props ?? {}) as { style?: CSSProperties; className?: string };
+    
+    // Use consistent aspect ratio to prevent layout shift (average of both logos)
+    // Light: 441/114 ≈ 3.868, Dark: 678/184 ≈ 3.684, use ~3.77 as average
+    const aspectRatio = 3.77;
 
     return (
-      <Image
-        src="/payvost.png"
-        alt="Payvost Logo"
-        width={441}
-        height={114}
-        priority
+      <div 
         className={className}
-        style={{ 
-          width: 'auto', 
-          objectFit: 'contain',
-          maxHeight: '100%',
-          ...(style ?? {}) 
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          width: 'auto',
+          aspectRatio: `${aspectRatio}`,
+          ...(style ?? {}),
         }}
-      />
+      >
+        <Image
+          src="/payvost.png"
+          alt="Payvost Logo"
+          width={441}
+          height={114}
+          priority
+          className="h-full w-auto object-contain"
+          style={{ 
+            height: '100%',
+            width: 'auto',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
     );
   },
 });

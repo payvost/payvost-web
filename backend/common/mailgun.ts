@@ -50,6 +50,7 @@ export interface SendEmailOptions {
   }>;
   tags?: string[];
   variables?: Record<string, any>;
+  template?: string; // Mailgun template name
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -68,15 +69,28 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
       subject: options.subject,
     };
 
-    if (options.html) {
-      messageData.html = options.html;
-    }
+    // Use Mailgun template if provided
+    if (options.template) {
+      messageData.template = options.template;
+      // Template variables are passed as v:variable_name in Mailgun
+      if (options.variables) {
+        Object.entries(options.variables).forEach(([key, value]) => {
+          messageData[`v:${key}`] = String(value);
+        });
+      }
+      // Don't set html/text when using template - Mailgun will use the template
+    } else {
+      // Use HTML/text directly
+      if (options.html) {
+        messageData.html = options.html;
+      }
 
-    if (options.text) {
-      messageData.text = options.text;
-    } else if (options.html) {
-      // Auto-generate text from HTML if not provided
-      messageData.text = options.html.replace(/<[^>]*>/g, '').trim();
+      if (options.text) {
+        messageData.text = options.text;
+      } else if (options.html) {
+        // Auto-generate text from HTML if not provided
+        messageData.text = options.html.replace(/<[^>]*>/g, '').trim();
+      }
     }
 
     if (options.cc) {
