@@ -261,7 +261,7 @@ export default function BusinessOnboardingPage() {
         <div>
           <h1 className="text-3xl font-bold">Business Onboarding Review</h1>
           <p className="text-muted-foreground mt-1">
-            Review and manage business onboarding submissions for Tier 3 upgrade
+            Review and manage business onboarding submissions
           </p>
         </div>
       </div>
