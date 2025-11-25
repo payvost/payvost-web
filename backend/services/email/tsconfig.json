@@ -15,6 +15,6 @@
     "sourceMap": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "../../common/**/*"]
+  "exclude": ["node_modules", "dist"]
 }
 
