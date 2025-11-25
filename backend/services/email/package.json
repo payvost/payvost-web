@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npx tsc ../../common/mailgun.ts --outDir ../../common --module commonjs --target ES2020 --esModuleInterop --skipLibCheck --resolveJsonModule",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
   },

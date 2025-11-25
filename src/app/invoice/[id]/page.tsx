@@ -331,112 +331,133 @@ export default function PublicInvoicePage() {
       `}</style>
     <div className="flex flex-col min-h-screen bg-muted/10">
       <SiteHeader />
-      <main className="flex-1 py-12 px-4">
-        <div className="max-w-4xl mx-auto mb-4 flex justify-end gap-2 no-print">
-          <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
-          <Button variant="outline" onClick={handleDownloadInvoice}><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
-          <Button variant="outline"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+      <main className="flex-1 py-6 sm:py-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto mb-4 sm:mb-6 flex flex-wrap justify-end gap-2 no-print">
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={handlePrint}>
+            <Printer className="mr-2 h-3 w-3 sm:h-4 sm:w-4"/>Print
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={handleDownloadInvoice}>
+            <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4"/>Download PDF
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+            <Share2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4"/>Share
+          </Button>
         </div>
 
-        <Card className="max-w-4xl mx-auto w-full invoice-card">
-          <CardHeader className="flex flex-col md:flex-row justify-between gap-4 bg-muted/50 p-6">
-            <div className="flex-1 flex items-center gap-4">
+        <Card className="max-w-4xl mx-auto w-full invoice-card shadow-lg">
+          <CardHeader className="flex flex-col sm:flex-row justify-between gap-4 bg-muted/50 p-4 sm:p-6">
+            <div className="flex-1 flex items-center gap-3 sm:gap-4">
                 {businessProfile?.invoiceLogoUrl && (
-                    <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={80} height={80} className="rounded-md object-contain" />
+                    <Image src={businessProfile.invoiceLogoUrl} alt="Business Logo" width={60} height={60} className="sm:w-20 sm:h-20 rounded-md object-contain" />
                 )}
                  <div>
-                    <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-                    <p className="text-muted-foreground"># {invoice.invoiceNumber}</p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-primary">INVOICE</h2>
+                    <p className="text-xs sm:text-sm text-muted-foreground"># {invoice.invoiceNumber}</p>
                  </div>
             </div>
-            <div className="text-right">
-              <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-lg">
+            <div className="text-left sm:text-right">
+              <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-sm sm:text-lg w-fit sm:w-auto">
                 {currentStatusInfo.icon} {invoice.status}
               </Badge>
             </div>
           </CardHeader>
 
-          <CardContent className="p-6 md:p-8 space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+          <CardContent className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
               <div className="space-y-1">
-                <h3 className="font-semibold">Billed To</h3>
-                <p className="text-sm">{invoice.toName}</p>
-                <p className="text-sm text-muted-foreground">{invoice.toAddress}</p>
-                <p className="text-sm text-muted-foreground">{invoice.toEmail}</p>
+                <h3 className="font-semibold text-sm sm:text-base">Billed To</h3>
+                <p className="text-xs sm:text-sm">{invoice.toName}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.toAddress}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground break-all">{invoice.toEmail}</p>
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold">From</h3>
-                <p className="text-sm">{invoice.fromName}</p>
-                <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
+                <h3 className="font-semibold text-sm sm:text-base">From</h3>
+                <p className="text-xs sm:text-sm">{invoice.fromName}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.fromAddress}</p>
               </div>
-              <div className="space-y-1 text-left md:text-right col-span-2 md:col-span-1">
-                <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'PPP')}</p>
-                <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'PPP')}</p>
+              <div className="space-y-1 text-left sm:text-left md:text-right col-span-1 sm:col-span-2 md:col-span-1">
+                <p className="text-xs sm:text-sm"><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'PPP')}</p>
+                <p className="text-xs sm:text-sm"><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'PPP')}</p>
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[60%]">Description</TableHead>
-                  <TableHead className="text-center">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoice.items.map((item: any, index: number) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{item.description}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.price, invoice.currency)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {/* Table with borders */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 border-b border-border">
+                      <TableHead className="w-[50%] sm:w-[60%] font-semibold text-xs sm:text-sm">Description</TableHead>
+                      <TableHead className="text-center font-semibold text-xs sm:text-sm">Qty</TableHead>
+                      <TableHead className="text-right font-semibold text-xs sm:text-sm">Price</TableHead>
+                      <TableHead className="text-right font-semibold text-xs sm:text-sm">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoice.items.map((item: any, index: number) => (
+                      <TableRow key={index} className="border-b border-border last:border-b-0">
+                        <TableCell className="font-medium text-xs sm:text-sm py-3 sm:py-4">{item.description}</TableCell>
+                        <TableCell className="text-center text-xs sm:text-sm py-3 sm:py-4">{item.quantity}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm py-3 sm:py-4">{formatCurrency(item.price, invoice.currency)}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm font-semibold py-3 sm:py-4">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
 
             <div className="flex justify-end">
-              <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal, invoice.currency)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span>{formatCurrency(taxAmount, invoice.currency)}</span></div>
+              <div className="w-full sm:w-auto sm:min-w-[280px] max-w-sm space-y-2 border border-border rounded-lg p-4 sm:p-6 bg-muted/30">
+                <div className="flex justify-between text-sm sm:text-base"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{formatCurrency(subtotal, invoice.currency)}</span></div>
+                <div className="flex justify-between text-sm sm:text-base"><span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span><span className="font-medium">{formatCurrency(taxAmount, invoice.currency)}</span></div>
                 <Separator className="my-2" />
-                <div className="flex justify-between font-bold text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
+                <div className="flex justify-between font-bold text-base sm:text-lg"><span>Grand Total</span><span>{formatCurrency(invoice.grandTotal, invoice.currency)}</span></div>
               </div>
             </div>
 
             {/* Amount in Words */}
             {foundInCollection === 'invoices' && (
-              <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-primary">
+              <div className="bg-muted/50 p-3 sm:p-4 rounded-lg border-l-4 border-primary">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Amount in Words</p>
-                <p className="text-sm font-medium italic">{amountInWords}</p>
+                <p className="text-xs sm:text-sm font-medium italic break-words">{amountInWords}</p>
               </div>
             )}
 
             {invoice.notes && (
               <div>
-                <h4 className="font-semibold">Notes</h4>
-                <p className="text-sm text-muted-foreground">{invoice.notes}</p>
+                <h4 className="font-semibold text-sm sm:text-base mb-2">Notes</h4>
+                <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.notes}</p>
               </div>
             )}
 
             {/* ---------------- Stripe Payment Form ---------------- */}
             {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && !isRenderForPdf && (
-              <div className="mt-8">
+              <div className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
                 <StripeCheckout clientSecret={clientSecret} />
               </div>
             )}
           </CardContent>
 
           {!isRenderForPdf && (
-            <CardFooter className="bg-muted/50 p-6 flex-col md:flex-row gap-4 justify-between">
-              <p className="text-sm text-muted-foreground">Pay with Payvost for a secure and seamless experience.</p>
-              {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
-                <Button size="lg" onClick={handlePayNow}>
-                  Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
-                </Button>
-              )}
-              {invoice.status === 'Paid' && <Button size="lg" disabled>Paid</Button>}
+            <CardFooter className="bg-muted/50 p-4 sm:p-6 flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">Pay with Payvost for a secure and seamless experience.</p>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+                  <Button 
+                    size="lg" 
+                    onClick={handlePayNow}
+                    className="w-full sm:w-auto text-sm sm:text-base font-semibold"
+                  >
+                    Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
+                  </Button>
+                )}
+                {invoice.status === 'Paid' && (
+                  <Button size="lg" disabled className="w-full sm:w-auto">
+                    Paid
+                  </Button>
+                )}
+              </div>
             </CardFooter>
           )}
         </Card>
