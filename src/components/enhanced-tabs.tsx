@@ -45,9 +45,9 @@ export function EnhancedTabs({
   };
 
   const triggerStyles = {
-    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200',
+    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 relative',
     pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
-    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200',
+    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative',
   };
 
   return (
@@ -66,25 +66,28 @@ export function EnhancedTabs({
               disabled={tab.disabled}
               className={cn(
                 triggerStyles[variant], 
-                "flex items-center gap-2 relative group",
+                "flex items-center gap-2 relative",
                 "data-[state=active]:[&_svg]:text-primary-foreground",
                 "data-[state=active]:[&_svg]:scale-110",
                 "[&_svg]:transition-all [&_svg]:duration-200",
-                variant === 'underline' && "data-[state=active]:[&>span>span:last-child]:scale-x-100"
+                variant === 'underline' && "data-[state=active]:[&_.tab-indicator-underline]:scale-x-100",
+                variant === 'default' && "data-[state=active]:[&_.tab-indicator-dot]:scale-100"
               )}
             >
               {Icon && (
                 <Icon className={cn(
-                  "h-4 w-4 transition-all duration-200",
-                  "data-[state=active]:text-primary-foreground"
+                  "h-4 w-4 transition-all duration-200 shrink-0"
                 )} />
               )}
               <span className="relative">
                 {tab.label}
-                {variant === 'underline' && (
-                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary scale-x-0 transition-transform duration-200 origin-center" />
-                )}
               </span>
+              {variant === 'underline' && (
+                <span className="tab-indicator-underline absolute -bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 transition-transform duration-200 origin-center pointer-events-none" />
+              )}
+              {variant === 'default' && (
+                <span className="tab-indicator-dot absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary scale-0 transition-transform duration-200 pointer-events-none" />
+              )}
               {showCounts && tab.count !== undefined && tab.count > 0 && (
                 <Badge 
                   variant="secondary" 
