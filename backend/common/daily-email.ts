@@ -312,7 +312,7 @@ export async function processDailyEmails(): Promise<{ processed: number; sent: n
     // Get all users with email addresses
     const users = await prisma.user.findMany({
       where: {
-        email: { not: null },
+        email: { not: '' },
       },
       select: {
         id: true,
