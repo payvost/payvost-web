@@ -1,0 +1,40 @@
+# Robots.txt for Payvost
+# Allows search engines to crawl public pages while blocking private/admin areas
+
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin-dashboard-*/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /verify-login
+Disallow: /verify-registration
+Disallow: /reset-password-sent
+Disallow: /forgot-password
+Disallow: /customer-support-*/
+Disallow: /cms-*/
+Disallow: /hr-*/
+
+# Allow important public pages
+Allow: /about
+Allow: /blog
+Allow: /contact
+Allow: /fx-rates
+Allow: /help
+Allow: /support
+Allow: /terms
+Allow: /privacy
+Allow: /careers
+Allow: /business
+Allow: /track-transfer
+Allow: /press
+Allow: /event
+
+# Sitemap location
+Sitemap: https://payvost.com/sitemap.xml
+
+# Crawl-delay (be respectful to server resources)
+Crawl-delay: 1

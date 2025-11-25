@@ -58,7 +58,7 @@ export function EnhancedTabs({
   };
 
   const triggerStyles = {
-    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 relative overflow-visible',
+    default: 'data-[state=active]:bg-card data-[state=active]:text-card-foreground data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm transition-all duration-200 relative overflow-visible font-medium',
     pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
     underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative overflow-visible',
   };
@@ -75,8 +75,7 @@ export function EnhancedTabs({
       <TabsList className={cn(
         "overflow-x-auto sm:overflow-visible overflow-y-visible",
         variantStyles[variant],
-        orientation === 'vertical' && 'flex-col h-auto w-auto',
-        variant === 'default' && 'pb-1'
+        orientation === 'vertical' && 'flex-col h-auto w-auto'
       )}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -89,7 +88,8 @@ export function EnhancedTabs({
               className={cn(
                 triggerStyles[variant], 
                 "flex items-center gap-2 relative",
-                "data-[state=active]:[&_svg]:text-primary-foreground",
+                variant === 'default' && "data-[state=active]:[&_svg]:text-card-foreground",
+                variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
                 "data-[state=active]:[&_svg]:scale-110",
                 "[&_svg]:transition-all [&_svg]:duration-200"
               )}
@@ -106,12 +106,6 @@ export function EnhancedTabs({
                 <span className={cn(
                   "absolute -bottom-0 left-0 right-0 h-0.5 bg-primary transition-all duration-200 origin-center pointer-events-none z-10",
                   isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
-                )} />
-              )}
-              {variant === 'default' && (
-                <span className={cn(
-                  "absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-primary transition-all duration-200 pointer-events-none z-10",
-                  isActive ? "scale-100 opacity-100" : "scale-0 opacity-0"
                 )} />
               )}
               {showCounts && tab.count !== undefined && tab.count > 0 && (
