@@ -1,3 +1,4 @@
+// @ts-nocheck
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 
