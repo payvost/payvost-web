@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+// @ts-ignore - Common file is compiled separately
 import { sendEmail, isMailgunConfigured } from '../../../common/mailgun';
 
 const app = express();
