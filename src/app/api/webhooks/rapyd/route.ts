@@ -56,8 +56,79 @@ async function handlePaymentCompleted(data: any) {
     const status = data.status || 'COMPLETED';
     const amount = data.amount || data.original_amount;
     const currency = data.currency_code || data.currency;
+    const metadata = data.metadata || {};
 
     console.log(`[Rapyd Webhook] Payment completed: ${paymentId}`);
+
+    // Check if this is an invoice payment
+    if (metadata.invoiceId || metadata.type === 'invoice_payment') {
+      const invoiceId = metadata.invoiceId;
+      
+      if (invoiceId) {
+        try {
+          // Try to find invoice by ID or invoice number
+          const invoice = await prisma.invoice.findFirst({
+            where: {
+              OR: [
+                { id: invoiceId },
+                { invoiceNumber: invoiceId },
+              ],
+            },
+          });
+
+          if (invoice && invoice.status !== 'PAID') {
+            // Update invoice status to PAID
+            await prisma.invoice.update({
+              where: { id: invoice.id },
+              data: {
+                status: 'PAID',
+                paidAt: new Date(),
+              },
+            });
+
+            console.log(`[Rapyd Webhook] Updated invoice ${invoice.id} (${invoice.invoiceNumber}) to PAID`);
+
+            // Also update Firestore if invoice exists there
+            try {
+              const { doc, updateDoc } = await import('firebase/firestore');
+              const { db } = await import('@/lib/firebase');
+              
+              // Try invoices collection
+              const invoiceRef = doc(db, 'invoices', invoiceId);
+              try {
+                await updateDoc(invoiceRef, {
+                  status: 'Paid',
+                  paidAt: new Date(),
+                });
+                console.log(`[Rapyd Webhook] Updated Firestore invoice ${invoiceId} to Paid`);
+              } catch (firestoreError: any) {
+                // Try businessInvoices collection
+                if (firestoreError.code === 'not-found') {
+                  const businessInvoiceRef = doc(db, 'businessInvoices', invoiceId);
+                  try {
+                    await updateDoc(businessInvoiceRef, {
+                      status: 'Paid',
+                      paidAt: new Date(),
+                    });
+                    console.log(`[Rapyd Webhook] Updated Firestore business invoice ${invoiceId} to Paid`);
+                  } catch (businessError) {
+                    console.warn(`[Rapyd Webhook] Invoice ${invoiceId} not found in Firestore`);
+                  }
+                }
+              }
+            } catch (firestoreError) {
+              console.warn('[Rapyd Webhook] Could not update Firestore invoice:', firestoreError);
+            }
+          } else if (invoice) {
+            console.log(`[Rapyd Webhook] Invoice ${invoice.id} already marked as PAID`);
+          } else {
+            console.warn(`[Rapyd Webhook] Invoice ${invoiceId} not found in database`);
+          }
+        } catch (invoiceError) {
+          console.error('[Rapyd Webhook] Error updating invoice:', invoiceError);
+        }
+      }
+    }
 
     // Find transaction by provider transaction ID
     const transaction = await prisma.externalTransaction.findFirst({

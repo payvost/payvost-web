@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { doc, getDoc, DocumentData, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import StripeCheckout from '@/components/StripeCheckout';
+import { RapydInvoiceCheckout } from '@/components/RapydInvoiceCheckout';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -437,13 +438,30 @@ export default function PublicInvoicePage() {
                 <StripeCheckout clientSecret={clientSecret} />
               </div>
             )}
+
+            {/* ---------------- Rapyd Payment Form ---------------- */}
+            {invoice.paymentMethod === 'rapyd' && invoice.status !== 'Paid' && !isRenderForPdf && (
+              <div className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
+                <RapydInvoiceCheckout
+                  invoiceId={id}
+                  amount={invoice.grandTotal}
+                  currency={invoice.currency}
+                  customerEmail={invoice.toEmail}
+                  customerName={invoice.toName}
+                  onPaymentSuccess={() => {
+                    // Refresh invoice status
+                    window.location.reload();
+                  }}
+                />
+              </div>
+            )}
           </CardContent>
 
           {!isRenderForPdf && (
             <CardFooter className="bg-muted/50 p-4 sm:p-6 flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
               <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">Pay with Payvost for a secure and seamless experience.</p>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe') && invoice.status !== 'Paid' && (
+                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe' || invoice.paymentMethod === 'rapyd') && invoice.status !== 'Paid' && (
                   <Button 
                     size="lg" 
                     onClick={handlePayNow}

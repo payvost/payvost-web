@@ -16,7 +16,8 @@ export type InvoiceType =
 export type PaymentMethod = 
   | 'PAYVOST'
   | 'MANUAL'
-  | 'STRIPE';
+  | 'STRIPE'
+  | 'RAPYD';
 
 export interface CreateInvoiceInput {
   invoiceNumber: string;
@@ -46,7 +47,7 @@ export interface CreateInvoiceInput {
   }>;
   taxRate?: number;
   notes?: string;
-  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE';
+  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE' | 'RAPYD';
   manualBankDetails?: {
     bankName: string;
     accountName: string;

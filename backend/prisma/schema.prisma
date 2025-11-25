@@ -621,6 +621,7 @@ enum PaymentMethod {
   PAYVOST
   MANUAL
   STRIPE
+  RAPYD
 }
 
 model Invoice {

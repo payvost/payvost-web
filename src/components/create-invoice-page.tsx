@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2, Banknote, Landmark, Wallet } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2, Banknote, Landmark, Wallet, CreditCard, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -54,7 +54,7 @@ export const invoiceSchema = z.object({
     (val) => (String(val) === '' ? 0 : Number(String(val))),
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
-  paymentMethod: z.enum(['payvost', 'manual']),
+  paymentMethod: z.enum(['payvost', 'manual', 'stripe', 'rapyd']),
   manualBankName: z.string().optional(),
   manualAccountName: z.string().optional(),
   manualAccountNumber: z.string().optional(),
@@ -525,6 +525,16 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                             <RadioGroupItem value="payvost" id="payvost" className="sr-only" />
                                             <div className="flex items-center gap-2 font-semibold"><Wallet className="h-5 w-5"/>Payvost Checkout</div>
                                             <p className="text-sm text-muted-foreground mt-1">Allow client to pay securely via Card, Bank Transfer, or their Payvost Wallet.</p>
+                                        </Label>
+                                        <Label htmlFor="stripe" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'stripe' && 'border-primary')}>
+                                            <RadioGroupItem value="stripe" id="stripe" className="sr-only" />
+                                            <div className="flex items-center gap-2 font-semibold"><CreditCard className="h-5 w-5"/>Stripe</div>
+                                            <p className="text-sm text-muted-foreground mt-1">Accept card payments worldwide with Stripe's secure payment processing.</p>
+                                        </Label>
+                                        <Label htmlFor="rapyd" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'rapyd' && 'border-primary')}>
+                                            <RadioGroupItem value="rapyd" id="rapyd" className="sr-only" />
+                                            <div className="flex items-center gap-2 font-semibold"><Globe className="h-5 w-5"/>Rapyd</div>
+                                            <p className="text-sm text-muted-foreground mt-1">900+ payment methods including cards, bank transfers, mobile money, and local payment methods.</p>
                                         </Label>
                                          <Label htmlFor="manual" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'manual' && 'border-primary')}>
                                             <RadioGroupItem value="manual" id="manual" className="sr-only" />

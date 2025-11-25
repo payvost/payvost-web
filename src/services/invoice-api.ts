@@ -56,7 +56,7 @@ export interface Invoice {
   toInfo: InvoiceToInfo;
   items: InvoiceItem[];
   notes?: string;
-  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE';
+  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE' | 'RAPYD';
   manualBankDetails?: ManualBankDetails;
   isPublic: boolean;
   publicUrl?: string;
@@ -78,7 +78,7 @@ export interface CreateInvoiceInput {
   items: InvoiceItem[];
   taxRate?: number;
   notes?: string;
-  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE';
+  paymentMethod: 'PAYVOST' | 'MANUAL' | 'STRIPE' | 'RAPYD';
   manualBankDetails?: ManualBankDetails;
   status?: 'DRAFT' | 'PENDING';
 }
@@ -93,7 +93,7 @@ export interface UpdateInvoiceInput {
   items?: InvoiceItem[];
   taxRate?: number;
   notes?: string;
-  paymentMethod?: 'PAYVOST' | 'MANUAL' | 'STRIPE';
+  paymentMethod?: 'PAYVOST' | 'MANUAL' | 'STRIPE' | 'RAPYD';
   manualBankDetails?: ManualBankDetails;
 }
 

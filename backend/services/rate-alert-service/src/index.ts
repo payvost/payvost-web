@@ -3,7 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import webpush from 'web-push';
 import axios from 'axios';
 import cors from 'cors';
-import { sendRateAlertEmail as sendEmailViaMailgun, isMailgunConfigured } from '../../../common/mailgun';
+import { sendRateAlertEmail, isMailgunConfigured } from '../../../common/mailgun';
+import { processDailyEmails } from '../../../common/daily-email';
 
 const app = express();
 const PORT = process.env.RATE_ALERT_SERVICE_PORT || 3009;
@@ -54,21 +55,7 @@ async function fetchRates(base = 'USD'): Promise<Record<string, number>> {
   return response.data.rates;
 }
 
-/**
- * Send rate alert email via Mailgun API
- */
-async function sendRateAlertEmail(to: string, subject: string, text: string): Promise<void> {
-  if (!mailgunConfigured) {
-    console.warn('[Rate Alert Service] Cannot send email - Mailgun not configured');
-    return;
-  }
-
-  const result = await sendEmailViaMailgun(to, subject, text);
-  
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to send rate alert email');
-  }
-}
+// sendRateAlertEmail is now imported from mailgun.ts with HTML template support
 
 /**
  * Send rate alert push notification
@@ -141,8 +128,14 @@ export async function runRateAlertMonitor(): Promise<{ processed: number; notifi
             try {
               await sendRateAlertEmail(
                 email,
-                `Your FX rate alert: ${sourceCurrency}/${targetCurrency}`,
-                `Good news! The rate for ${sourceCurrency} to ${targetCurrency} is now ${currentRate}, meeting your target of ${targetRate}.`
+                `🎯 Your FX rate alert: ${sourceCurrency}/${targetCurrency}`,
+                `Good news! The rate for ${sourceCurrency} to ${targetCurrency} is now ${currentRate}, meeting your target of ${targetRate}.`,
+                {
+                  sourceCurrency,
+                  targetCurrency,
+                  currentRate: currentRate.toString(),
+                  targetRate: targetRate.toString(),
+                }
               );
               console.log(`[Rate Alert Service] Email sent to ${email}`);
             } catch (error: any) {
@@ -223,6 +216,7 @@ app.get('/', (_req: Request, res: Response) => {
     endpoints: {
       health: 'GET /health',
       run: 'POST /run',
+      dailyEmail: 'POST /daily-email',
     },
   });
 });
@@ -246,6 +240,25 @@ app.post('/run', async (_req: Request, res: Response) => {
   }
 });
 
+// Daily email endpoint (for cron job - call every hour)
+app.post('/daily-email', async (_req: Request, res: Response) => {
+  try {
+    console.log('[Rate Alert Service] Daily email trigger received');
+    const result = await processDailyEmails();
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error: any) {
+    console.error('[Rate Alert Service] Error processing daily emails:', error);
+    return res.status(500).json({
+      error: 'Failed to process daily emails',
+      message: error.message,
+      details: NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
 // Graceful shutdown
 const shutdown = async () => {
   console.log('[Rate Alert Service] Shutting down gracefully...');
@@ -263,6 +276,7 @@ app.listen(PORT, () => {
   console.log(`[Rate Alert Service] Endpoints:`);
   console.log(`  - GET http://localhost:${PORT}/health`);
   console.log(`  - POST http://localhost:${PORT}/run`);
+  console.log(`  - POST http://localhost:${PORT}/daily-email`);
   
   // Auto-run on startup if configured (for Render Cron Jobs)
   if (process.env.AUTO_RUN_ON_STARTUP === 'true') {

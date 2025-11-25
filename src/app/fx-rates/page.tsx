@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LastUpdatedTime } from '@/components/LastUpdatedTime';
+import { createPushSubscription, subscriptionToJSON } from '@/lib/web-push';
 
 // Currency data with flags and symbols
 const CURRENCIES = [
@@ -95,24 +96,63 @@ export default function FXRatesPage() {
     e.preventDefault();
     setAlertStatus('loading');
     setAlertMessage('');
+    
     try {
+      let pushSubscription = null;
+      
+      // Create push subscription if user opted in
+      if (alertForm.pushOptIn) {
+        try {
+          const subscription = await createPushSubscription();
+          if (subscription) {
+            pushSubscription = subscriptionToJSON(subscription);
+          } else {
+            setAlertStatus('error');
+            setAlertMessage('Failed to enable push notifications. Please check your browser settings.');
+            return;
+          }
+        } catch (error: any) {
+          console.error('Push subscription error:', error);
+          setAlertStatus('error');
+          setAlertMessage(error.message || 'Failed to enable push notifications.');
+          return;
+        }
+      }
+
+      // Prepare request body
+      const requestBody = {
+        sourceCurrency: alertForm.sourceCurrency,
+        targetCurrency: alertForm.targetCurrency,
+        targetRate: alertForm.targetRate,
+        email: alertForm.email || null,
+        pushSubscription: pushSubscription,
+      };
+
       const res = await fetch('/api/rate-alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(alertForm),
+        body: JSON.stringify(requestBody),
       });
+      
       const data = await res.json();
       if (data.success) {
         setAlertStatus('success');
-        setAlertMessage('Alert set! You will be notified when the rate is reached.');
+        const notificationMethods = [];
+        if (alertForm.email) notificationMethods.push('email');
+        if (pushSubscription) notificationMethods.push('push notifications');
+        setAlertMessage(`Alert set! You will be notified via ${notificationMethods.join(' and ')} when the rate is reached.`);
         setAlertForm({ sourceCurrency: baseCurrency, targetCurrency: '', targetRate: '', email: '', pushOptIn: false });
+        setTimeout(() => {
+          setShowRateAlertDialog(false);
+        }, 2000);
       } else {
         setAlertStatus('error');
-        setAlertMessage('Failed to set alert. Please try again.');
+        setAlertMessage(data.error || 'Failed to set alert. Please try again.');
       }
-    } catch {
+    } catch (error: any) {
+      console.error('Alert submission error:', error);
       setAlertStatus('error');
-      setAlertMessage('Network error. Please try again.');
+      setAlertMessage(error.message || 'Network error. Please try again.');
     }
   }
 
