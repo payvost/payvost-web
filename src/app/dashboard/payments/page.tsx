@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
+import { EnhancedTabs } from '@/components/enhanced-tabs';
 import { ArrowRightLeft, Landmark, Upload, Calendar, Users, Gift, Smartphone, Zap, FileText, Tv, ChevronDown, CreditCard } from 'lucide-react';
 import { Payvost } from '@/components/Payvost';
 import { Beneficiaries } from '@/components/beneficiaries';
@@ -323,7 +323,7 @@ export default function PaymentsPage() {
           ]}
         >
 
-          <EnhancedTabsContent value="remittances" className="animate-in fade-in-50">
+          <TabsContent value="remittances" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div className="lg:col-span-2">
                     <Payvost />
@@ -332,9 +332,9 @@ export default function PaymentsPage() {
                     <Beneficiaries />
                 </div>
             </div>
-          </EnhancedTabsContent>
+          </TabsContent>
 
-          <EnhancedTabsContent value="bill-payment" className="animate-in fade-in-50">
+          <TabsContent value="bill-payment" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -438,7 +438,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <EnhancedTabsContent value="bulk-transfer" className="animate-in fade-in-50">
+          <TabsContent value="bulk-transfer" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Bulk Transfer</CardTitle>
@@ -464,7 +464,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <EnhancedTabsContent value="scheduled" className="animate-in fade-in-50">
+          <TabsContent value="scheduled" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Scheduled Transfers</CardTitle>
@@ -479,7 +479,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <EnhancedTabsContent value="split-payment" className="animate-in fade-in-50">
+          <TabsContent value="split-payment" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Split Payment</CardTitle>
@@ -500,7 +500,7 @@ export default function PaymentsPage() {
             </Card>
           </TabsContent>
 
-          <EnhancedTabsContent value="gift-cards" className="animate-in fade-in-50">
+          <TabsContent value="gift-cards" className="animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle>Gift Cards</CardTitle>

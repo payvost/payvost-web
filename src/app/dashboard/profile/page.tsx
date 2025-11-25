@@ -34,7 +34,7 @@ import { CalendarIcon } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
+import { EnhancedTabs } from '@/components/enhanced-tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getFlagCode } from '@/utils/currency-meta';
 import Image from 'next/image';

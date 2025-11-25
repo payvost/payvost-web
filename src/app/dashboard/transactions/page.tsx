@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { FileDown, ListFilter, MoreHorizontal, Search, List, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { EnhancedTabs, TabsContent as EnhancedTabsContent } from '@/components/enhanced-tabs';
+import { EnhancedTabs } from '@/components/enhanced-tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -452,18 +452,18 @@ export default function TransactionsPage() {
                             />
                         </div>
                     </CardHeader>
-                    <EnhancedTabsContent value="all" className="animate-in fade-in-50">
+                    <TabsContent value="all" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions)))}
-                    </EnhancedTabsContent>
-                    <EnhancedTabsContent value="completed" className="animate-in fade-in-50">
+                    </TabsContent>
+                    <TabsContent value="completed" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Completed'))))}
-                    </EnhancedTabsContent>
-                    <EnhancedTabsContent value="pending" className="animate-in fade-in-50">
+                    </TabsContent>
+                    <TabsContent value="pending" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Pending'))))}
-                    </EnhancedTabsContent>
-                    <EnhancedTabsContent value="failed" className="animate-in fade-in-50">
+                    </TabsContent>
+                    <TabsContent value="failed" className="animate-in fade-in-50">
                         {renderTransactionsTable(filterTransactionsBySearch(filterTransactionsByType(transactions.filter(tx => tx.status === 'Failed'))))}
-                    </EnhancedTabsContent>
+                    </TabsContent>
                      <CardFooter>
                         <div className="text-xs text-muted-foreground">
                             Showing <strong>1-{filterTransactionsBySearch(filterTransactionsByType(transactions)).length}</strong> of <strong>{transactions.length}</strong> transactions

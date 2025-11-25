@@ -98,6 +98,5 @@ export function EnhancedTabs({
   );
 }
 
-// Re-export TabsContent from shadcn for consistency
-export { TabsContent } from '@/components/ui/tabs';
+// Note: Use TabsContent from '@/components/ui/tabs' directly when using EnhancedTabs
 
