@@ -10,6 +10,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { cn } from '@/lib/utils';
 import type { VirtualCardData } from '@/types/virtual-card';
 import { DollarSign } from 'lucide-react';
@@ -46,7 +47,7 @@ interface CreateVirtualCardFormProps {
 }
 
 export function CreateVirtualCardForm({ onSubmit, onCancel, isKycVerified }: CreateVirtualCardFormProps) {
-  const { register, handleSubmit, control, formState: { errors } } = useForm<CreateCardFormValues>({
+  const form = useForm<CreateCardFormValues>({
     resolver: zodResolver(createCardSchema),
     defaultValues: {
       cardLabel: '',
@@ -60,128 +61,165 @@ export function CreateVirtualCardForm({ onSubmit, onCancel, isKycVerified }: Cre
     },
   });
 
+  const { handleSubmit, control } = form;
+
   return (
     <Card className="max-w-3xl mx-auto">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="pt-6 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="cardLabel">Card Label</Label>
-            <Input id="cardLabel" {...register('cardLabel')} placeholder="e.g., Online Subscriptions" disabled={!isKycVerified} />
-            {errors.cardLabel && <p className="text-sm text-destructive">{errors.cardLabel.message}</p>}
-          </div>
-
-           <div className="space-y-2">
-            <Label>Card Model</Label>
-             <Controller
-                name="cardModel"
-                control={control}
-                render={({ field }) => (
-                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4" disabled={!isKycVerified}>
-                       <div><RadioGroupItem value="debit" id="debit" className="peer sr-only" /><Label htmlFor="debit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Debit</Label></div>
-                       <div><RadioGroupItem value="credit" id="credit" className="peer sr-only" /><Label htmlFor="credit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Credit</Label></div>
-                    </RadioGroup>
-                )}
+      <Form {...form}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="pt-6 space-y-6">
+            <FormField
+              control={control}
+              name="cardLabel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Card Label</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Online Subscriptions" disabled={!isKycVerified} {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Give your card a name to easily identify it
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
+
+            <FormField
+              control={control}
+              name="cardModel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Card Model</FormLabel>
+                  <FormControl>
+                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4" disabled={!isKycVerified}>
+                      <div><RadioGroupItem value="debit" id="debit" className="peer sr-only" /><Label htmlFor="debit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Debit</Label></div>
+                      <div><RadioGroupItem value="credit" id="credit" className="peer sr-only" /><Label htmlFor="credit" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary">Credit</Label></div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
           <Separator />
 
-          <div className="space-y-2">
-            <Label>Card Network</Label>
-             <Controller
-                name="cardType"
-                control={control}
-                render={({ field }) => (
+            <FormField
+              control={control}
+              name="cardType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Card Network</FormLabel>
+                  <FormControl>
                     <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="grid grid-cols-2 gap-4"
-                        disabled={!isKycVerified}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-2 gap-4"
+                      disabled={!isKycVerified}
                     >
-                       <div>
-                         <RadioGroupItem value="visa" id="visa" className="peer sr-only" />
-                         <Label htmlFor="visa" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                            Visa
-                         </Label>
-                       </div>
-                        <div>
-                         <RadioGroupItem value="mastercard" id="mastercard" className="peer sr-only" />
-                         <Label htmlFor="mastercard" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                           Mastercard
-                         </Label>
-                       </div>
+                      <div>
+                        <RadioGroupItem value="visa" id="visa" className="peer sr-only" />
+                        <Label htmlFor="visa" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                          Visa
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem value="mastercard" id="mastercard" className="peer sr-only" />
+                        <Label htmlFor="mastercard" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                          Mastercard
+                        </Label>
+                      </div>
                     </RadioGroup>
-                )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
           
-           <div className="space-y-2">
-            <Label>Spending Limit</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input id="spendingLimit.amount" type="number" {...register('spendingLimit.amount')} placeholder="500" className="pl-8" disabled={!isKycVerified} />
-                </div>
-                 <Controller
-                    name="spendingLimit.interval"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isKycVerified}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="daily">Per Day</SelectItem>
-                            <SelectItem value="weekly">Per Week</SelectItem>
-                            <SelectItem value="monthly">Per Month</SelectItem>
-                            <SelectItem value="yearly">Per Year</SelectItem>
-                            <SelectItem value="all_time">All Time</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    )}
-                />
-            </div>
-             {errors.spendingLimit?.amount && <p className="text-sm text-destructive">{errors.spendingLimit.amount.message}</p>}
-          </div>
-
-
-          <div className="space-y-2">
-            <Label>Card Theme</Label>
-            <Controller
-                name="theme"
-                control={control}
-                render={({ field }) => (
-                    <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="grid grid-cols-2 md:grid-cols-4 gap-4"
-                        disabled={!isKycVerified}
-                    >
-                         {themes.map(theme => (
-                             <div key={theme.value}>
-                                <RadioGroupItem value={theme.value} className="sr-only" id={`theme-${theme.value}`} />
-                                <Label 
-                                    htmlFor={`theme-${theme.value}`}
-                                    className={cn(
-                                        'h-20 w-full rounded-md cursor-pointer border-2 border-transparent transition-all flex items-center justify-center text-white font-semibold',
-                                        'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                                        field.value === theme.value && 'ring-2 ring-primary',
-                                        theme.className
-                                    )}
-                                >
-                                    {theme.value.charAt(0).toUpperCase() + theme.value.slice(1)}
-                                </Label>
-                            </div>
-                        ))}
-                    </RadioGroup>
-                )}
+            <FormField
+              control={control}
+              name="spendingLimit.amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Spending Limit</FormLabel>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormControl>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input type="number" placeholder="500" className="pl-8" disabled={!isKycVerified} {...field} value={field.value || ''} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                      </div>
+                    </FormControl>
+                    <FormField
+                      control={control}
+                      name="spendingLimit.interval"
+                      render={({ field }) => (
+                        <FormControl>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isKycVerified}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Per Day</SelectItem>
+                              <SelectItem value="weekly">Per Week</SelectItem>
+                              <SelectItem value="monthly">Per Month</SelectItem>
+                              <SelectItem value="yearly">Per Year</SelectItem>
+                              <SelectItem value="all_time">All Time</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
+                  </div>
+                  <FormDescription>
+                    Set a spending limit to control card usage
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
+
+
+            <FormField
+              control={control}
+              name="theme"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Card Theme</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                      disabled={!isKycVerified}
+                    >
+                      {themes.map(theme => (
+                        <div key={theme.value}>
+                          <RadioGroupItem value={theme.value} className="sr-only" id={`theme-${theme.value}`} />
+                          <Label 
+                            htmlFor={`theme-${theme.value}`}
+                            className={cn(
+                              'h-20 w-full rounded-md cursor-pointer border-2 border-transparent transition-all flex items-center justify-center text-white font-semibold',
+                              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                              field.value === theme.value && 'ring-2 ring-primary',
+                              theme.className
+                            )}
+                          >
+                            {theme.value.charAt(0).toUpperCase() + theme.value.slice(1)}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={!isKycVerified}>Create Card</Button>
         </CardFooter>
-      </form>
+        </form>
+      </Form>
     </Card>
   );
 }

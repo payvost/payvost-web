@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ArrowLeft, Gift, Plus, Trash2, Upload, Link as LinkIcon, Image as ImageIcon, Video, Youtube, Loader2, CalendarIcon, FileUp, Check, Users, X, Banknote, Landmark, Wallet } from 'lucide-react';
@@ -111,7 +112,7 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
     const { user } = useAuth();
     const isEditing = !!campaignId;
 
-    const { register, control, handleSubmit, trigger, reset, watch, setValue, formState: { errors } } = useForm<FormValues>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(campaignSchema),
         defaultValues: {
             currency: 'USD',
@@ -120,6 +121,8 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
             visibility: 'public',
         },
     });
+
+    const { register, control, handleSubmit, trigger, reset, watch, setValue, formState: { errors } } = form;
 
      useEffect(() => {
         if (isEditing && campaignId) {
@@ -311,8 +314,9 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
 
     return (
         <Card>
-            <form onSubmit={handleSubmit(onSubmit)}>
-                <CardHeader>
+            <Form {...form}>
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <CardHeader>
                     <div className="flex items-center gap-4 mb-4">
                         {currentStep === 0 ? (
                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={onBack}>
@@ -333,37 +337,84 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                 <CardContent className="space-y-8 min-h-[400px]">
                     {currentStep === 0 && (
                         <div className="space-y-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="title">Campaign Title</Label>
-                                <Input id="title" {...register('title')} placeholder="e.g., Help Us Build a New Playground" />
-                                {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-                            </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">Category</Label>
-                                    <Controller name="category" control={control} render={({ field }) => (<Select onValueChange={field.onChange} defaultValue={field.value}><SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger><SelectContent><SelectItem value="Education">Education</SelectItem><SelectItem value="Health">Health</SelectItem><SelectItem value="Community">Community</SelectItem><SelectItem value="Emergency">Emergency</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent></Select>)} />
-                                    {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="tags">Tags (comma-separated)</Label>
-                                    <Input id="tags" {...register('tags')} placeholder="e.g., education, kids, community" />
-                                </div>
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="description">Story / Description</Label>
-                                <Controller
-                                    name="description"
+                            <FormField
+                                control={control}
+                                name="title"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Campaign Title</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., Help Us Build a New Playground" {...field} />
+                                        </FormControl>
+                                        <FormDescription>
+                                            Choose a clear, compelling title for your campaign
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
                                     control={control}
+                                    name="category"
                                     render={({ field }) => (
-                                        <RichTextEditor
-                                            value={field.value}
-                                            onChange={field.onChange}
-                                            placeholder="Tell people about your cause..."
-                                        />
+                                        <FormItem>
+                                            <FormLabel>Category</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a category..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Education">Education</SelectItem>
+                                                    <SelectItem value="Health">Health</SelectItem>
+                                                    <SelectItem value="Community">Community</SelectItem>
+                                                    <SelectItem value="Emergency">Emergency</SelectItem>
+                                                    <SelectItem value="Other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
                                     )}
                                 />
-                                {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+                                <FormField
+                                    control={control}
+                                    name="tags"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tags (comma-separated)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., education, kids, community" {...field} />
+                                            </FormControl>
+                                            <FormDescription>
+                                                Add tags to help people find your campaign
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
+                            <FormField
+                                control={control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Story / Description</FormLabel>
+                                        <FormControl>
+                                            <RichTextEditor
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                placeholder="Tell people about your cause..."
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            Share your story and explain why this campaign matters
+                                        </FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                     )}
                     
@@ -538,7 +589,8 @@ export function CreateDonationPageForm({ onBack, campaignId }: CreateDonationPag
                          </div>
                     )}
                 </CardFooter>
-            </form>
+                </form>
+            </Form>
         </Card>
     );
 }

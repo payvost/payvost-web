@@ -30,6 +30,7 @@ import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, a
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { externalTransactionService } from '@/services';
 
 
@@ -524,6 +525,17 @@ export default function DashboardPage() {
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <div className="flex-1 space-y-4 p-8 pt-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Overview</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex items-center gap-2">
            {greeting?.icon}
            <h1 className="text-lg font-semibold md:text-2xl">

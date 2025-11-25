@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getAdaptiveNotification } from '@/app/actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 
 type FormValues = {
@@ -102,12 +103,19 @@ export function AdaptiveNotificationTester({ language }: AdaptiveNotificationTes
           </div>
 
           {generatedMessage && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="font-semibold">Generated Notification:</p>
-              <p className="text-muted-foreground">{generatedMessage}</p>
-            </div>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Generated Notification</AlertTitle>
+              <AlertDescription>{generatedMessage}</AlertDescription>
+            </Alert>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
         </CardContent>
         <CardFooter>

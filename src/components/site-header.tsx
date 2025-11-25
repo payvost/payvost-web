@@ -193,15 +193,60 @@ const MobileCountrySelector = () => {
 }
 
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu, ChevronRight, Search } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useState } from 'react';
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     const [productsOpen, setProductsOpen] = useState(false);
+    const [commandOpen, setCommandOpen] = useState(false);
+    const router = useRouter();
+
+    // Keyboard shortcut for command palette (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setCommandOpen((open) => !open);
+            }
+        };
+        document.addEventListener("keydown", down);
+        return () => document.removeEventListener("keydown", down);
+    }, []);
+
+    const navigationItems = [
+        { title: "Home", href: "/", group: "Navigation" },
+        { title: "Dashboard", href: "/dashboard", group: "Navigation" },
+        { title: "Wallets", href: "/dashboard/wallets", group: "Navigation" },
+        { title: "Transactions", href: "/dashboard/transactions", group: "Navigation" },
+        { title: "Payments", href: "/payments", group: "Products" },
+        { title: "Payouts", href: "/payouts", group: "Products" },
+        { title: "Accounts", href: "/accounts", group: "Products" },
+        { title: "Cards", href: "/cards", group: "Products" },
+        { title: "Invoicing", href: "/invoicing", group: "Products" },
+        { title: "Developer Tools", href: "/developers", group: "Products" },
+        { title: "Escrow", href: "/escrow", group: "Products" },
+        { title: "Analytics & Automation", href: "/analytics", group: "Products" },
+        { title: "Blog", href: "/blog", group: "Resources" },
+        { title: "Help Center", href: "/help", group: "Resources" },
+        { title: "Documentation", href: "/docs", group: "Resources" },
+        { title: "About Us", href: "/about", group: "Company" },
+        { title: "Careers", href: "/careers", group: "Company" },
+    ];
+
+    const groupedItems = navigationItems.reduce((acc, item) => {
+        if (!acc[item.group]) {
+            acc[item.group] = [];
+        }
+        acc[item.group].push(item);
+        return acc;
+    }, {} as Record<string, typeof navigationItems>);
     
     return (
-        <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center bg-background/95 border-b rounded-b-md">
+        <>
+            <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 grid grid-cols-[1fr_auto_1fr] items-center bg-background/95 border-b rounded-b-md">
             <Link href="/" className="flex items-center justify-start">
                 <Icons.logo className="h-8" />
             </Link>
@@ -320,6 +365,18 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             </nav>
             {/* Desktop Right Actions */}
             <nav className="hidden lg:flex items-center gap-4 justify-end">
+                <Button
+                    variant="outline"
+                    className="relative h-9 w-9 p-0"
+                    onClick={() => setCommandOpen(true)}
+                    title="Search (⌘K)"
+                >
+                    <Search className="h-4 w-4" />
+                    <span className="sr-only">Search</span>
+                    <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                        <span className="text-xs">⌘</span>K
+                    </kbd>
+                </Button>
                 <CountrySelector />
                 <ThemeSwitcher />
                 {showLogin && (
@@ -335,6 +392,15 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             </nav>
             {/* Mobile Hamburger & Sheet */}
             <nav className="ml-auto flex items-center gap-2 lg:hidden">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setCommandOpen(true)}
+                >
+                    <Search className="h-4 w-4" />
+                    <span className="sr-only">Search</span>
+                </Button>
                 <ThemeSwitcher />
                 <Sheet>
                     <SheetTrigger asChild>
@@ -457,6 +523,49 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                 </Sheet>
             </nav>
         </header>
+        <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+            <CommandInput placeholder="Type a command or search..." />
+            <CommandList>
+                <CommandEmpty>No results found.</CommandEmpty>
+                {Object.entries(groupedItems).map(([group, items]) => (
+                    <CommandGroup key={group} heading={group}>
+                        {items.map((item) => (
+                            <CommandItem
+                                key={item.href}
+                                onSelect={() => {
+                                    router.push(item.href);
+                                    setCommandOpen(false);
+                                }}
+                            >
+                                {item.title}
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                ))}
+                <CommandSeparator />
+                <CommandGroup heading="Actions">
+                    <CommandItem
+                        onSelect={() => {
+                            router.push('/register');
+                            setCommandOpen(false);
+                        }}
+                    >
+                        Create Account
+                    </CommandItem>
+                    {showLogin && (
+                        <CommandItem
+                            onSelect={() => {
+                                router.push('/login');
+                                setCommandOpen(false);
+                            }}
+                        >
+                            Login
+                        </CommandItem>
+                    )}
+                </CommandGroup>
+            </CommandList>
+        </CommandDialog>
+        </>
     )
 }
 
