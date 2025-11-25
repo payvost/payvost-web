@@ -39,6 +39,7 @@ import { ThemeSwitcher } from './theme-switcher';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DashboardSwitcher } from './dashboard-switcher';
+import { QuickActionsDropdown } from './quick-actions-dropdown';
 
 
 interface DashboardLayoutProps {
@@ -243,6 +244,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                   </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <QuickActionsDropdown />
                     {isBusinessApproved && <DashboardSwitcher />}
                     <Button variant="ghost" size="icon" asChild>
                     <Link href="/dashboard/support">
