@@ -91,25 +91,117 @@ export default function BusinessDashboardPage() {
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
             setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-            // Fallback to mock data if API fails
-            setDashboardData({
-                accountBalance: 52345.67,
-                accountCurrency: 'USD',
-                accountName: 'Qwibik Technologies',
-                pendingPayouts: 5230.00,
-                pendingPayoutsCount: 2,
-                openInvoices: 8,
-                openInvoicesAmount: 12800,
-                newCustomers: 24,
-                newCustomersChange: 5,
-                accountBalanceChange: 2100,
-                accountBalanceChangePercent: 4.2,
-                recentTransactions: [
-                    { id: 'txn_1', type: 'Credit', description: 'Invoice #1234 Payment', amount: 2500, date: '2024-08-15', status: 'Completed', invoiceId: 'inv_1234' },
-                    { id: 'txn_2', type: 'Debit', description: 'Payout to Supplier', amount: -1200, date: '2024-08-15', status: 'Completed', transactionId: 'txn_2' },
-                    { id: 'txn_3', type: 'Credit', description: 'Payment Link Received', amount: 300, date: '2024-08-14', status: 'Completed', transactionId: 'txn_3' },
-                ]
-            });
+            
+            // Fallback to Firestore if API fails
+            try {
+                console.warn('API call failed, falling back to Firestore for business dashboard');
+                const { db } = await import('@/lib/firebase');
+                const { doc, getDoc, collection, query, where, getDocs } = await import('firebase/firestore');
+                
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
+                
+                if (!userDoc.exists()) {
+                    throw new Error('User document not found');
+                }
+                
+                const userData = userDoc.data();
+                const businessProfile: any = userData.businessProfile || {};
+                const businessId = businessProfile.id;
+                
+                // Get business invoices from Firestore
+                let openInvoices = 0;
+                let openInvoicesAmount = 0;
+                let pendingPayouts = 0;
+                let pendingPayoutsCount = 0;
+                
+                if (businessId) {
+                    try {
+                        const invoicesQuery = query(
+                            collection(db, 'businessInvoices'),
+                            where('createdBy', '==', user.uid),
+                            where('status', 'in', ['PENDING', 'OVERDUE'])
+                        );
+                        const invoicesSnapshot = await getDocs(invoicesQuery);
+                        
+                        invoicesSnapshot.forEach((invoiceDoc) => {
+                            const invoice = invoiceDoc.data();
+                            openInvoices++;
+                            openInvoicesAmount += parseFloat(invoice.grandTotal?.toString() || '0');
+                        });
+                    } catch (invoiceError) {
+                        console.error('Error fetching invoices from Firestore:', invoiceError);
+                    }
+                }
+                
+                // Get account balance from wallets
+                const wallets = userData.wallets || [];
+                const businessWallet = wallets.find((w: any) => w.type === 'BUSINESS' || w.currency === businessProfile.currency);
+                const accountBalance = parseFloat(businessWallet?.balance?.toString() || '0');
+                const accountCurrency = businessWallet?.currency || businessProfile.currency || 'USD';
+                
+                // Get recent transactions
+                const transactions = userData.transactions || [];
+                const recentTransactions = transactions
+                    .filter((t: any) => t.businessId === businessId || !businessId)
+                    .slice(0, 5)
+                    .map((t: any) => ({
+                        id: t.id || t.transactionId || `txn_${Date.now()}`,
+                        type: t.type || (parseFloat(t.amount) >= 0 ? 'Credit' : 'Debit'),
+                        description: t.description || t.note || 'Transaction',
+                        amount: parseFloat(t.amount || '0'),
+                        date: t.date || t.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                        status: t.status || 'Completed',
+                        invoiceId: t.invoiceId,
+                        transactionId: t.transactionId,
+                    }));
+                
+                setDashboardData({
+                    accountBalance,
+                    accountCurrency,
+                    accountName: businessProfile.name || 'Business Account',
+                    pendingPayouts,
+                    pendingPayoutsCount,
+                    openInvoices,
+                    openInvoicesAmount,
+                    newCustomers: 0,
+                    newCustomersChange: 0,
+                    accountBalanceChange: 0,
+                    accountBalanceChangePercent: 0,
+                    recentTransactions,
+                });
+                
+                console.log('Successfully loaded dashboard data from Firestore fallback');
+                } catch (firestoreError) {
+                console.error('Firestore fallback also failed, using empty data:', firestoreError);
+                // Final fallback to minimal data - try to get business profile name from user doc
+                let accountName = 'Business Account';
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        accountName = userData.businessProfile?.name || 'Business Account';
+                    }
+                } catch (e) {
+                    // Ignore errors in final fallback
+                }
+                
+                setDashboardData({
+                    accountBalance: 0,
+                    accountCurrency: 'USD',
+                    accountName,
+                    pendingPayouts: 0,
+                    pendingPayoutsCount: 0,
+                    openInvoices: 0,
+                    openInvoicesAmount: 0,
+                    newCustomers: 0,
+                    newCustomersChange: 0,
+                    accountBalanceChange: 0,
+                    accountBalanceChangePercent: 0,
+                    recentTransactions: [],
+                });
+            }
         } finally {
             setLoadingData(false);
             setRefreshing(false);

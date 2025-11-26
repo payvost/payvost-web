@@ -341,11 +341,60 @@ export class InvoiceAPI {
 
   /**
    * Mark invoice as paid
+   * Falls back to Firestore if API fails
    */
   static async markAsPaid(id: string): Promise<Invoice> {
-    return apiRequest<Invoice>(`/api/invoices/${id}/mark-paid`, {
-      method: 'POST',
-    });
+    try {
+      return await apiRequest<Invoice>(`/api/invoices/${id}/mark-paid`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.warn('API call failed, falling back to Firestore for invoice update:', error);
+      
+      // Fallback to Firestore
+      try {
+        const { db } = await import('@/lib/firebase');
+        const { doc, updateDoc, getDoc } = await import('firebase/firestore');
+        
+        // Try to find invoice in 'invoices' collection
+        let invoiceRef = doc(db, 'invoices', id);
+        let invoiceDoc = await getDoc(invoiceRef);
+        
+        // If not found, try 'businessInvoices' collection
+        if (!invoiceDoc.exists()) {
+          invoiceRef = doc(db, 'businessInvoices', id);
+          invoiceDoc = await getDoc(invoiceRef);
+        }
+        
+        if (!invoiceDoc.exists()) {
+          throw new Error(`Invoice not found: ${id}`);
+        }
+
+        const invoiceData = invoiceDoc.data();
+        
+        // Update invoice status to PAID
+        await updateDoc(invoiceRef, {
+          status: 'PAID',
+          paidAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Return updated invoice
+        const updatedInvoice: Invoice = {
+          ...invoiceData,
+          id: invoiceDoc.id,
+          status: 'PAID',
+          paidAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as Invoice;
+
+        console.log('Successfully updated invoice in Firestore fallback:', id);
+        return updatedInvoice;
+      } catch (firestoreError) {
+        console.error('Firestore fallback also failed:', firestoreError);
+        throw error; // Throw original error if Firestore also fails
+      }
+    }
   }
 
   /**
