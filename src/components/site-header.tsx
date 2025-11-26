@@ -378,7 +378,7 @@ const MobileCountrySelector = () => {
 }
 
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
-import { Menu, ChevronRight, Search } from 'lucide-react';
+import { Menu, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import { useState, useEffect } from 'react';
@@ -388,7 +388,6 @@ import { PublicSearch } from '@/components/public-search';
 export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeaderProps) {
     const [productsOpen, setProductsOpen] = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
-    const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const router = useRouter();
 
     // Keyboard shortcut for command palette (Cmd+K / Ctrl+K)
@@ -573,15 +572,6 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             </nav>
             {/* Mobile Hamburger & Sheet */}
             <nav className="flex items-center gap-2 lg:hidden">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8"
-                    onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                >
-                    <Search className="h-5 w-5" />
-                    <span className="sr-only">Search</span>
-                </Button>
                 <ThemeSwitcher />
                 <Sheet>
                     <SheetTrigger asChild>
@@ -614,6 +604,11 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                                         </Button>
                                     )}
                                 </div>
+                            </div>
+                            
+                            {/* Mobile Search */}
+                            <div className="px-4 pt-4 pb-3 border-b">
+                                <PublicSearch />
                             </div>
                             
                             {/* Navigation Links */}
@@ -703,12 +698,6 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
                     </SheetContent>
                 </Sheet>
             </nav>
-            {/* Mobile Search Bar - Appears below header when search icon is clicked */}
-            {mobileSearchOpen && (
-                <div className="lg:hidden w-full px-4 py-3 border-b bg-background">
-                    <PublicSearch onClose={() => setMobileSearchOpen(false)} />
-                </div>
-            )}
         </header>
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
             <CommandInput placeholder="Type a command or search..." />
