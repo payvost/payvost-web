@@ -17,91 +17,121 @@ type ProductCategory = 'personal' | 'business';
 
 const personalProducts: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
     {
-        title: "Personal Payments",
+        title: "Payments",
         href: "/payments",
-        description: "Send and receive money instantly with friends and family worldwide.",
+        description: "Supports local and cross-border payments with +150 countries.",
         icon: <CreditCard className="h-5 w-5" />
     },
     {
-        title: "Personal Accounts",
-        href: "/accounts/personal",
-        description: "Multi-currency personal accounts with instant transfers and savings.",
-        icon: <Wallet className="h-5 w-5" />
+        title: "Bill Payments",
+        href: "/bill-payments",
+        description: "Pay bills across multiple countries from one place, no switching.",
+        icon: <FileText className="h-5 w-5" />
     },
     {
-        title: "Personal Cards",
-        href: "/cards/personal",
-        description: "Virtual and physical cards for everyday spending with real-time controls.",
+        title: "Cards",
+        href: "/cards",
+        description: "Create and Get Virtual or physical Card, and one-time disposable Virtual debit cards",
         icon: <CreditCard className="h-5 w-5" />
     },
     {
-        title: "Money Transfer",
-        href: "/transfer",
-        description: "Send money abroad at the best exchange rates with low fees.",
-        icon: <DollarSign className="h-5 w-5" />
-    },
-    {
-        title: "Savings",
-        href: "/savings",
-        description: "Earn interest on your money with flexible savings options.",
+        title: "Wallet",
+        href: "/wallet",
+        description: "Create up to 15+ wallets by currencies and manage your fx assets in one place.",
         icon: <Wallet className="h-5 w-5" />
     },
     {
-        title: "FX Rates",
-        href: "/fx-rates",
-        description: "Check live exchange rates and get the best deals on currency conversion.",
+        title: "Invoicing",
+        href: "/invoicing",
+        description: "Create, send and accept payment with our invoicing infrastructure.",
+        icon: <FileText className="h-5 w-5" />
+    },
+    {
+        title: "Split Payments",
+        href: "/split-payments",
+        description: "Split payments between friends and family at a go.",
+        icon: <Users className="h-5 w-5" />
+    },
+    {
+        title: "Donations",
+        href: "/donations",
+        description: "Raise funding for a cause with ease and share with the world.",
         icon: <DollarSign className="h-5 w-5" />
+    },
+    {
+        title: "Recurring Payments",
+        href: "/recurring-payments",
+        description: "Set your Recurring payments and let payvost handle continous remittances.",
+        icon: <CreditCard className="h-5 w-5" />
+    },
+    {
+        title: "Events",
+        href: "/events",
+        description: "Collect payments easily for that event you want to organize and manage you tickets from one place.",
+        icon: <FileText className="h-5 w-5" />
+    },
+    {
+        title: "Escrow (New)",
+        href: "/escrow",
+        description: "Explore our integrated escrow infrastructure to safeguard your payments.",
+        icon: <ShieldCheck className="h-5 w-5" />
     },
 ];
 
 const businessProducts: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
     {
-        title: "Business Payments",
+        title: "Advance Payments",
         href: "/payments",
-        description: "Accept and send money globally with robust reconciliation and low fees.",
+        description: "High level multilateral infrastructure for payments of all kinds.",
         icon: <CreditCard className="h-5 w-5" />
-    },
-    {
-        title: "Payouts",
-        href: "/payouts",
-        description: "Fast international settlements to bank accounts and cards.",
-        icon: <DollarSign className="h-5 w-5" />
     },
     {
         title: "Business Accounts",
         href: "/accounts",
-        description: "Business and multi-currency accounts with local details in major markets.",
+        description: "Manage and segregate business accounts and sub-accounts for tracking expenses.",
         icon: <Wallet className="h-5 w-5" />
     },
     {
-        title: "Business Cards",
-        href: "/cards",
-        description: "Issue physical and virtual cards with spend controls and reporting.",
-        icon: <CreditCard className="h-5 w-5" />
-    },
-    {
-        title: "Invoicing",
+        title: "Business Invoicing",
         href: "/invoicing",
-        description: "Create, send and track invoices — built for businesses at scale.",
+        description: "Create business automated and customized invoices with access to more template libraries on the go.",
         icon: <FileText className="h-5 w-5" />
     },
     {
-        title: "Developer Tools",
-        href: "/developers",
-        description: "APIs, SDKs, and sandbox environments for deep integrations.",
-        icon: <Code className="h-5 w-5" />
+        title: "Send Quotations",
+        href: "/quotations",
+        description: "With our quote builder, you can land leads and convert to invoice upon payments.",
+        icon: <FileText className="h-5 w-5" />
     },
     {
-        title: "Escrow",
-        href: "/escrow",
-        description: "Secure funds in transit for marketplaces and high-value deals.",
-        icon: <ShieldCheck className="h-5 w-5" />
+        title: "Track Card spending",
+        href: "/cards",
+        description: "Create virtual cards for diffrent business purposes, monitor and set spending limits on the go.",
+        icon: <CreditCard className="h-5 w-5" />
     },
     {
-        title: "Analytics & Automation",
-        href: "/analytics",
-        description: "Insights, reporting and automation to optimize cashflow.",
+        title: "Team Management",
+        href: "/team-management",
+        description: "Assign roles to team members based on what matters to them, set permission levels at each role.",
+        icon: <Users className="h-5 w-5" />
+    },
+    {
+        title: "Accounting Automation",
+        href: "/accounting",
+        description: "Automate your bookkeeping process with our advanced ledger engine.",
         icon: <BarChart className="h-5 w-5" />
+    },
+    {
+        title: "Inventory",
+        href: "/inventory",
+        description: "Mange your inventory, customers, orders,  and refunds on the go.",
+        icon: <BarChart className="h-5 w-5" />
+    },
+    {
+        title: "Developer Integration",
+        href: "/developers",
+        description: "Integrate Payvost with popular integrating partners like Shopify, WordPress,, Xerox, etc.",
+        icon: <Code className="h-5 w-5" />
     },
 ];
 
@@ -233,7 +263,7 @@ const ProductsDropdownContent = () => {
                         
                         <div 
                             key={selectedCategory}
-                            className="grid gap-4 md:grid-cols-2 animate-in fade-in-0 duration-300"
+                            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-0 duration-300"
                         >
                             {currentProducts.map((product) => (
                                 <NavigationMenuLink key={product.title} asChild>

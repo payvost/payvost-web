@@ -88,16 +88,19 @@ export default function VerifyBusinessPage() {
 
     loadUserData();
 
-    // Check if business onboarding data exists in localStorage
+    // Check if business onboarding data exists in localStorage (client-side only)
     if (typeof window !== 'undefined') {
       const businessOnboardingData = localStorage.getItem('businessOnboardingData');
       if (!businessOnboardingData) {
-        toast({ 
-          title: 'No business information found', 
-          description: 'Please complete the business onboarding form first.', 
-          variant: 'destructive' 
-        });
-        router.push('/dashboard/get-started/onboarding/business');
+        // Only redirect if we're on the client side and not during build
+        if (typeof window !== 'undefined') {
+          toast({ 
+            title: 'No business information found', 
+            description: 'Please complete the business onboarding form first.', 
+            variant: 'destructive' 
+          });
+          router.push('/dashboard/get-started/onboarding/business');
+        }
       } else {
         try {
           const businessData = JSON.parse(businessOnboardingData);
@@ -111,31 +114,49 @@ export default function VerifyBusinessPage() {
     }
   }, [user, authLoading, router, toast]);
 
-  // Get document requirements based on tier and country
-  const requirements = useMemo(() => {
-    const businessOnboardingDataStr = localStorage.getItem('businessOnboardingData');
-    let businessType: string | undefined;
-    
-    if (businessOnboardingDataStr) {
-      try {
-        const businessData = JSON.parse(businessOnboardingDataStr);
-        businessType = businessData.type;
-      } catch (e) {
-        console.error('Error parsing business data:', e);
+  // Get business type from localStorage (client-side only)
+  const [businessType, setBusinessType] = useState<string | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
+
+  // Mark component as mounted (client-side only)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Load business type from localStorage after mount
+  useEffect(() => {
+    if (mounted && typeof window !== 'undefined') {
+      const businessOnboardingDataStr = localStorage.getItem('businessOnboardingData');
+      if (businessOnboardingDataStr) {
+        try {
+          const businessData = JSON.parse(businessOnboardingDataStr);
+          setBusinessType(businessData.type);
+        } catch (e) {
+          console.error('Error parsing business data:', e);
+        }
       }
     }
+  }, [mounted]);
 
+  // Get document requirements based on tier and country
+  const requirements = useMemo(() => {
+    // Only calculate requirements if mounted (client-side)
+    if (!mounted) {
+      return [];
+    }
     return getBusinessDocumentRequirements(businessTier, countryCode, businessType);
-  }, [businessTier, countryCode]);
+  }, [businessTier, countryCode, businessType, mounted]);
 
-  // Initialize files state based on requirements
+  // Initialize files state based on requirements (only after mount)
   useEffect(() => {
-    const initialFiles: Record<string, File | null> = {};
-    requirements.forEach(req => {
-      initialFiles[req.key] = null;
-    });
-    setFiles(initialFiles);
-  }, [requirements]);
+    if (mounted && requirements.length > 0) {
+      const initialFiles: Record<string, File | null> = {};
+      requirements.forEach(req => {
+        initialFiles[req.key] = null;
+      });
+      setFiles(initialFiles);
+    }
+  }, [requirements, mounted]);
 
   const handleFileChange = (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -144,7 +165,7 @@ export default function VerifyBusinessPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
+    if (!user || typeof window === 'undefined') {
       toast({ title: 'Not Authenticated', description: 'Authentication is required to submit.', variant: 'destructive' });
       return;
     }
@@ -160,8 +181,8 @@ export default function VerifyBusinessPage() {
 
     try {
       const submissionId = `${user.uid}_${Date.now()}`;
-      const businessOnboardingId = localStorage.getItem('businessOnboardingId');
-      const businessOnboardingDataStr = localStorage.getItem('businessOnboardingData');
+      const businessOnboardingId = typeof window !== 'undefined' ? localStorage.getItem('businessOnboardingId') : null;
+      const businessOnboardingDataStr = typeof window !== 'undefined' ? localStorage.getItem('businessOnboardingData') : null;
       
       // Upload files
       const uploadedDocs: BusinessDocument[] = [];
@@ -270,9 +291,11 @@ export default function VerifyBusinessPage() {
         }
       }
 
-      // Clear localStorage after successful save
-      localStorage.removeItem('businessOnboardingData');
-      localStorage.removeItem('businessOnboardingId');
+      // Clear localStorage after successful save (client-side only)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('businessOnboardingData');
+        localStorage.removeItem('businessOnboardingId');
+      }
     } catch (error) {
       console.error('KYC submission error:', error);
       toast({ title: 'Submission Failed', description: 'An error occurred. Please try again.', variant: 'destructive' });
