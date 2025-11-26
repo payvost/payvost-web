@@ -30,24 +30,24 @@ export default function BusinessSettingsPage() {
 
             <Tabs defaultValue="profile" className="w-full">
                 <TabsList className="mb-6 h-auto w-full justify-start overflow-x-auto">
-                    <TabsTrigger value="profile" className="flex items-center gap-2 py-2 px-4">
-                        <Briefcase className="h-4 w-4"/>
+                    <TabsTrigger value="profile" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
+                        <Briefcase className="h-3.5 w-3.5"/>
                         <span>Profile</span>
                     </TabsTrigger>
-                    <TabsTrigger value="financial" className="flex items-center gap-2 py-2 px-4">
-                        <DollarSign className="h-4 w-4"/>
+                    <TabsTrigger value="financial" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
+                        <DollarSign className="h-3.5 w-3.5"/>
                         <span>Financials</span>
                     </TabsTrigger>
-                    <TabsTrigger value="team" className="flex items-center gap-2 py-2 px-4">
-                        <Users className="h-4 w-4"/>
+                    <TabsTrigger value="team" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
+                        <Users className="h-3.5 w-3.5"/>
                         <span>Team</span>
                     </TabsTrigger>
-                    <TabsTrigger value="security" className="flex items-center gap-2 py-2 px-4">
-                        <Shield className="h-4 w-4"/>
+                    <TabsTrigger value="security" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
+                        <Shield className="h-3.5 w-3.5"/>
                         <span>Security</span>
                     </TabsTrigger>
-                    <TabsTrigger value="invoicing" className="flex items-center gap-2 py-2 px-4">
-                        <FileText className="h-4 w-4"/>
+                    <TabsTrigger value="invoicing" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
+                        <FileText className="h-3.5 w-3.5"/>
                         <span>Invoicing</span>
                     </TabsTrigger>
                 </TabsList>
