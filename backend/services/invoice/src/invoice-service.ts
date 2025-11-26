@@ -194,7 +194,18 @@ export class InvoiceService {
 
     // If not in Prisma, check Firestore businessInvoices collection
     try {
+      // Check if Firebase Admin is initialized
+      if (!admin.apps.length) {
+        console.error('Firebase Admin not initialized');
+        throw new Error('Firebase Admin SDK not initialized');
+      }
+
       const db = admin.firestore();
+      if (!db) {
+        console.error('Firestore database not available');
+        throw new Error('Firestore database not available');
+      }
+
       let firestoreInvoice: admin.firestore.DocumentSnapshot | null = null;
 
       // Try by document ID first
@@ -285,7 +296,9 @@ export class InvoiceService {
     } catch (error) {
       console.error('Error fetching invoice from Firestore:', error);
       console.error('Error details:', error instanceof Error ? error.stack : String(error));
-      // Continue to return null if Firestore query fails
+      console.error('Invoice ID/Number:', idOrNumber);
+      // Re-throw the error so the route handler can catch it and return proper error
+      throw error;
     }
 
     return null;

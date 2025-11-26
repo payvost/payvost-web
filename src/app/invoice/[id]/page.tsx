@@ -60,35 +60,116 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        // Use backend API endpoint instead of direct Firestore reads
-        // This bypasses Firestore security rules and avoids composite index issues
-        const response = await fetch(`/api/invoices/public/${id}`, {
-          method: 'GET',
-          cache: 'no-store',
-        });
+        // Try backend API endpoint first
+        let response: Response;
+        let invoiceData: any;
+        let useFallback = false;
 
-        if (!response.ok) {
-          let errorMessage = `Failed to fetch invoice: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (e) {
-            // If response is not JSON, use status text
+        try {
+          response = await fetch(`/api/invoices/public/${id}`, {
+            method: 'GET',
+            cache: 'no-store',
+          });
+
+          if (!response.ok) {
+            // If it's a 503 (service unavailable) or 500, try fallback
+            if (response.status === 503 || response.status === 500) {
+              console.warn('Backend API unavailable, trying fallback...');
+              useFallback = true;
+            } else if (response.status === 404) {
+              setFetchError("Invoice not found");
+              setInvoice(null);
+              return;
+            } else {
+              let errorMessage = `Failed to fetch invoice: ${response.statusText}`;
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+              } catch (e) {
+                // If response is not JSON, use status text
+              }
+              setFetchError(errorMessage);
+              setInvoice(null);
+              return;
+            }
+          } else {
+            invoiceData = await response.json();
           }
-          
-          if (response.status === 404) {
-            setFetchError("Invoice not found");
+        } catch (apiError) {
+          console.warn('Backend API error, trying fallback:', apiError);
+          useFallback = true;
+        }
+
+        // Fallback: Use direct Firestore reads if backend fails
+        if (useFallback) {
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            
+            // Try businessInvoices collection first
+            let docRef = doc(db, 'businessInvoices', id);
+            let docSnap = await getDoc(docRef);
+
+            // If not found, try regular invoices collection
+            if (!docSnap.exists()) {
+              docRef = doc(db, 'invoices', id);
+              docSnap = await getDoc(docRef);
+            }
+
+            if (!docSnap.exists()) {
+              setFetchError("Invoice not found");
+              setInvoice(null);
+              return;
+            }
+
+            const data = docSnap.data();
+            const isDraft = data?.status === 'Draft';
+            if (isDraft) {
+              setFetchError("Invoice is not public");
+              setInvoice(null);
+              return;
+            }
+
+            // Convert to expected format
+            invoiceData = {
+              id: docSnap.id,
+              ...data,
+              // Ensure dates are properly formatted (convert to ISO strings for consistency)
+              issueDate: data?.issueDate?.toDate ? data.issueDate.toDate().toISOString() : 
+                        (data?.issueDate instanceof Date ? data.issueDate.toISOString() : data?.issueDate),
+              dueDate: data?.dueDate?.toDate ? data.dueDate.toDate().toISOString() : 
+                      (data?.dueDate instanceof Date ? data.dueDate.toISOString() : data?.dueDate),
+              createdAt: data?.createdAt?.toDate ? data.createdAt.toDate().toISOString() : 
+                        (data?.createdAt instanceof Date ? data.createdAt.toISOString() : data?.createdAt),
+              updatedAt: data?.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : 
+                        (data?.updatedAt instanceof Date ? data.updatedAt.toISOString() : data?.updatedAt),
+            };
+
+            // Try to fetch business profile if businessId exists (for fallback)
+            if (invoiceData.businessId) {
+              try {
+                const { query, collection, where, getDocs } = await import('firebase/firestore');
+                const { db } = await import('@/lib/firebase');
+                const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
+                const bizSnap = await getDocs(bizQuery);
+                if (!bizSnap.empty) {
+                  setBusinessProfile(bizSnap.docs[0].data().businessProfile);
+                }
+              } catch (profileError) {
+                console.warn('Could not fetch business profile in fallback:', profileError);
+                // Continue without business profile
+              }
+            }
+          } catch (fallbackError: any) {
+            console.error('Fallback also failed:', fallbackError);
+            setFetchError(fallbackError?.code === 'permission-denied' 
+              ? "Permission denied. Please ensure the invoice is public."
+              : "Failed to load invoice. Please try again later.");
             setInvoice(null);
             return;
           }
-          
-          setFetchError(errorMessage);
-          setInvoice(null);
-          return;
         }
 
-        const invoiceData = await response.json();
-        
         if (!invoiceData || !invoiceData.id) {
           setFetchError("Invalid invoice data received");
           setInvoice(null);

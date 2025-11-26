@@ -115,11 +115,34 @@ router.get('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: R
 router.get('/public/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const invoice = await invoiceService.getPublicInvoice(id);
+    console.log(`[Public Invoice] Fetching invoice: ${id}`);
+    
+    let invoice;
+    try {
+      invoice = await invoiceService.getPublicInvoice(id);
+    } catch (serviceError: any) {
+      console.error('[Public Invoice] Service error:', serviceError);
+      console.error('[Public Invoice] Service error stack:', serviceError?.stack);
+      
+      // If it's a Firebase initialization error, return a more helpful message
+      if (serviceError?.message?.includes('not initialized') || 
+          serviceError?.message?.includes('not available')) {
+        return res.status(503).json({ 
+          error: 'Service temporarily unavailable',
+          details: 'Database service is not properly configured'
+        });
+      }
+      
+      // Re-throw to be caught by outer catch
+      throw serviceError;
+    }
     
     if (!invoice) {
+      console.log(`[Public Invoice] Invoice not found: ${id}`);
       return res.status(404).json({ error: 'Invoice not found or not public' });
     }
+    
+    console.log(`[Public Invoice] Invoice found: ${id}, type: ${invoice.invoiceType}`);
 
     // Try to fetch business profile if businessId exists
     let businessProfile = null;
