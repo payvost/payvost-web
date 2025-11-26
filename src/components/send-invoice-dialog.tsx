@@ -74,13 +74,15 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
         }
       } catch (error: any) {
         console.error('Error fetching invoice:', error);
-        toast({
-          title: 'Error',
-          description: error?.code === 'permission-denied' 
-            ? 'Permission denied. Please ensure you have access to this invoice.'
-            : 'Failed to load invoice. Please try again.',
-          variant: 'destructive',
-        });
+        // Don't show error toast if it's a permission issue - the invoice might just be processing
+        // The user will see it in the list view once it's ready
+        if (error?.code !== 'permission-denied') {
+          toast({
+            title: 'Error',
+            description: 'Failed to load invoice. Please try again.',
+            variant: 'destructive',
+          });
+        }
       } finally {
         setLoading(false);
       }

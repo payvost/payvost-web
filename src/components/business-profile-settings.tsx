@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import type { BusinessProfile } from '@/types/business-settings';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, orderBy, getDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Skeleton } from './ui/skeleton';
@@ -26,8 +26,14 @@ const businessTypeMap: { [key: string]: string } = {
 
 const documentTypeMap: { [key: string]: string } = {
     'incorporation': 'Certificate of Incorporation',
+    'certificate-of-incorporation': 'Certificate of Incorporation',
     'address_proof': 'Proof of Address',
+    'proof-of-address': 'Proof of Address',
     'owner_id': "Owner's ID",
+    'owner-id': "Owner's ID",
+    'business-license': 'Business License',
+    'tax-certificate': 'Tax Certificate',
+    'bank-statement': 'Bank Statement',
 };
 
 function InfoField({ label, value, icon }: { label: string; value: string | undefined | null; icon?: React.ReactNode }) {
@@ -42,11 +48,25 @@ function InfoField({ label, value, icon }: { label: string; value: string | unde
     );
 }
 
+interface BusinessDocument {
+    key?: string;
+    type?: string;
+    name: string;
+    url: string;
+    status?: 'submitted' | 'approved' | 'rejected' | 'pending';
+    uploadedAt?: any;
+    submittedAt?: any;
+    approvedAt?: any;
+    rejectedAt?: any;
+    rejectionReason?: string;
+}
+
 export function BusinessProfileSettings() {
     const { user, loading: authLoading } = useAuth();
     const [loadingData, setLoadingData] = useState(true);
     const [profile, setProfile] = useState<BusinessProfile | null>(null);
-    const [kycDocuments, setKycDocuments] = useState<any[]>([]);
+    const [businessDocuments, setBusinessDocuments] = useState<BusinessDocument[]>([]);
+    const [verificationStatus, setVerificationStatus] = useState<string>('not_submitted');
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isSavingLogo, setIsSavingLogo] = useState(false);
@@ -55,8 +75,11 @@ export function BusinessProfileSettings() {
     const getKycStatusBadge = (status?: string) => {
         switch (status?.toLowerCase()) {
             case 'verified':
+            case 'approved':
                 return <Badge variant="default" className="bg-green-500 hover:bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1" />Verified</Badge>;
             case 'pending':
+            case 'submitted':
+            case 'in_review':
                 return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
             case 'rejected':
                 return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
@@ -65,21 +88,211 @@ export function BusinessProfileSettings() {
         }
     };
 
+    const getDocumentStatusBadge = (status?: string) => {
+        switch (status?.toLowerCase()) {
+            case 'approved':
+                return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white"><CheckCircle2 className="w-3 h-3 mr-1" />Approved</Badge>;
+            case 'pending':
+            case 'submitted':
+                return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+            case 'rejected':
+                return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+            default:
+                return null;
+        }
+    };
+
+    const formatDate = (dateValue: any): string => {
+        if (!dateValue) return '';
+        
+        try {
+            // Handle Firestore Timestamp
+            if (dateValue && typeof dateValue.toDate === 'function') {
+                return dateValue.toDate().toLocaleDateString();
+            }
+            // Handle regular Date object
+            if (dateValue instanceof Date) {
+                return dateValue.toLocaleDateString();
+            }
+            // Handle timestamp number
+            if (typeof dateValue === 'number') {
+                return new Date(dateValue).toLocaleDateString();
+            }
+            // Handle ISO string
+            if (typeof dateValue === 'string') {
+                return new Date(dateValue).toLocaleDateString();
+            }
+            // Handle Firestore Timestamp with seconds/nanoseconds
+            if (dateValue.seconds) {
+                return new Date(dateValue.seconds * 1000).toLocaleDateString();
+            }
+            return '';
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return '';
+        }
+    };
+
+    // Fetch business profile and documents
     useEffect(() => {
         if (!user) return;
         setLoadingData(true);
-        const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-            if (doc.exists()) {
-                const userData = doc.data();
+        
+        const fetchBusinessData = async () => {
+            try {
+                // Fetch user document with business profile
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const businessProfile = userData.businessProfile || {};
+                    setProfile(businessProfile);
+                    
+                    // Get verification status from businessProfile or user's kycStatus
+                    const kycStatus = businessProfile.kycStatus || userData.kycStatus || 'not_submitted';
+                    setVerificationStatus(kycStatus);
+                    
+                    // Load logo from businessProfile or invoiceLogoUrl
+                    if (businessProfile.logoUrl || businessProfile.invoiceLogoUrl) {
+                        setLogoPreview(businessProfile.logoUrl || businessProfile.invoiceLogoUrl);
+                    }
+                }
+
+                // Fetch business onboarding documents
+                const businessOnboardingQuery = query(
+                    collection(db, 'business_onboarding'),
+                    where('userId', '==', user.uid),
+                    orderBy('submittedAt', 'desc')
+                );
+                const businessOnboardingSnapshot = await getDocs(businessOnboardingQuery);
+                
+                const allDocuments: BusinessDocument[] = [];
+                
+                if (!businessOnboardingSnapshot.empty) {
+                    businessOnboardingSnapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        const status = data.status || 'submitted';
+                        
+                        // Update verification status from business onboarding if available
+                        if (status === 'approved' && verificationStatus !== 'verified') {
+                            setVerificationStatus('verified');
+                        } else if (status === 'submitted' && verificationStatus === 'not_submitted') {
+                            setVerificationStatus('pending');
+                        }
+                        
+                        // Extract documents from business onboarding
+                        if (data.documents && Array.isArray(data.documents)) {
+                            data.documents.forEach((doc: any) => {
+                                allDocuments.push({
+                                    key: doc.key || doc.type,
+                                    type: doc.type || doc.key,
+                                    name: doc.name || 'Document',
+                                    url: doc.url,
+                                    status: doc.status || status,
+                                    uploadedAt: doc.uploadedAt || data.submittedAt,
+                                    submittedAt: data.submittedAt,
+                                    approvedAt: data.approvedAt,
+                                    rejectedAt: data.rejectedAt,
+                                    rejectionReason: doc.rejectionReason || data.rejectionReason,
+                                });
+                            });
+                        }
+                    });
+                }
+
+                // Fetch KYC submissions documents
+                const kycSubmissionsQuery = query(
+                    collection(db, 'kyc_submissions'),
+                    where('userId', '==', user.uid),
+                    orderBy('createdAt', 'desc')
+                );
+                const kycSubmissionsSnapshot = await getDocs(kycSubmissionsQuery);
+                
+                if (!kycSubmissionsSnapshot.empty) {
+                    kycSubmissionsSnapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        const submissionStatus = data.status || 'submitted';
+                        
+                        // Update verification status from KYC submission
+                        if (submissionStatus === 'approved' && verificationStatus !== 'verified') {
+                            setVerificationStatus('verified');
+                        } else if (submissionStatus === 'submitted' && verificationStatus === 'not_submitted') {
+                            setVerificationStatus('pending');
+                        }
+                        
+                        // Extract documents from KYC submission
+                        if (data.documents && Array.isArray(data.documents)) {
+                            data.documents.forEach((doc: any) => {
+                                // Avoid duplicates
+                                const existingDoc = allDocuments.find(d => d.url === doc.url);
+                                if (!existingDoc) {
+                                    allDocuments.push({
+                                        key: doc.key || doc.type,
+                                        type: doc.type || doc.key,
+                                        name: doc.name || 'Document',
+                                        url: doc.url,
+                                        status: doc.status || submissionStatus,
+                                        uploadedAt: doc.uploadedAt || data.createdAt,
+                                        submittedAt: data.createdAt,
+                                        approvedAt: data.decidedAt,
+                                        rejectedAt: data.rejectedAt,
+                                        rejectionReason: doc.rejectionReason || data.rejectionReason,
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // Also check user document for kycDocuments array (legacy)
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const legacyKycDocuments = userData.kycDocuments || [];
+                    legacyKycDocuments.forEach((doc: any) => {
+                        const existingDoc = allDocuments.find(d => d.url === doc.url);
+                        if (!existingDoc) {
+                            allDocuments.push({
+                                key: doc.key || doc.type,
+                                type: doc.type || doc.key,
+                                name: doc.name || 'Document',
+                                url: doc.url,
+                                status: doc.status || 'submitted',
+                                uploadedAt: doc.uploadedAt,
+                            });
+                        }
+                    });
+                }
+
+                setBusinessDocuments(allDocuments);
+            } catch (error) {
+                console.error('Error fetching business data:', error);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to load business data. Please refresh the page.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setLoadingData(false);
+            }
+        };
+
+        fetchBusinessData();
+
+        // Set up real-time listener for user document updates
+        const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
                 const businessProfile = userData.businessProfile || {};
                 setProfile(businessProfile);
-                setKycDocuments(userData.kycDocuments || []);
-                 if (businessProfile.logoUrl) {
-                    setLogoPreview(businessProfile.logoUrl);
+                
+                const kycStatus = businessProfile.kycStatus || userData.kycStatus || 'not_submitted';
+                setVerificationStatus(kycStatus);
+                
+                if (businessProfile.logoUrl || businessProfile.invoiceLogoUrl) {
+                    setLogoPreview(businessProfile.logoUrl || businessProfile.invoiceLogoUrl);
                 }
             }
-            setLoadingData(false);
         });
+
         return () => unsub();
     }, [user]);
 
@@ -104,16 +317,24 @@ export function BusinessProfileSettings() {
 
         setIsSavingLogo(true);
         try {
-            const storageRef = ref(storage, `business_logos/${user.uid}/${logoFile.name}`);
+            // Upload to business_logos (for general use)
+            const storageRef = ref(storage, `business_logos/${user.uid}/${Date.now()}_${logoFile.name}`);
             await uploadBytes(storageRef, logoFile);
             const downloadURL = await getDownloadURL(storageRef);
 
+            // Also upload to invoice_logos (for invoices)
+            const invoiceLogoRef = ref(storage, `invoice_logos/${user.uid}/${Date.now()}_${logoFile.name}`);
+            await uploadBytes(invoiceLogoRef, logoFile);
+            const invoiceLogoURL = await getDownloadURL(invoiceLogoRef);
+
             const userDocRef = doc(db, 'users', user.uid);
             await updateDoc(userDocRef, {
-                'businessProfile.logoUrl': downloadURL
+                'businessProfile.logoUrl': downloadURL,
+                'businessProfile.invoiceLogoUrl': invoiceLogoURL
             });
             
-            setProfile(prev => prev ? { ...prev, logoUrl: downloadURL } : null);
+            setProfile(prev => prev ? { ...prev, logoUrl: downloadURL, invoiceLogoUrl: invoiceLogoURL } : null);
+            setLogoPreview(downloadURL);
 
             toast({ title: 'Logo Updated', description: 'Your new business logo has been saved.' });
         } catch (error) {
@@ -131,17 +352,15 @@ export function BusinessProfileSettings() {
     return (
         <div className="space-y-6">
             {/* KYC Status Alert */}
-            {profile && (
-                <Alert className={profile.kycStatus === 'verified' ? 'border-green-500/50 bg-green-500/10' : profile.kycStatus === 'pending' ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-red-500/50 bg-red-500/10'}>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="flex items-center justify-between">
-                        <span className="font-semibold">Verification Status: {getKycStatusBadge(profile.kycStatus)}</span>
-                        {profile.kycStatus === 'pending' && (
-                            <span className="text-sm text-muted-foreground">Your documents are under review</span>
-                        )}
-                    </AlertDescription>
-                </Alert>
-            )}
+            <Alert className={verificationStatus === 'verified' || verificationStatus === 'approved' ? 'border-green-500/50 bg-green-500/10' : verificationStatus === 'pending' || verificationStatus === 'submitted' || verificationStatus === 'in_review' ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-red-500/50 bg-red-500/10'}>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                    <span className="font-semibold">Verification Status: {getKycStatusBadge(verificationStatus)}</span>
+                    {(verificationStatus === 'pending' || verificationStatus === 'submitted' || verificationStatus === 'in_review') && (
+                        <span className="text-sm text-muted-foreground">Your documents are under review</span>
+                    )}
+                </AlertDescription>
+            </Alert>
 
             <Card>
                 <CardHeader>
@@ -236,53 +455,65 @@ export function BusinessProfileSettings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className={`p-4 border rounded-lg flex items-center justify-between ${
-                        profile?.kycStatus === 'verified' ? 'bg-green-500/10 border-green-500/20' : 
-                        profile?.kycStatus === 'pending' ? 'bg-yellow-500/10 border-yellow-500/20' : 
+                        verificationStatus === 'verified' || verificationStatus === 'approved' ? 'bg-green-500/10 border-green-500/20' : 
+                        verificationStatus === 'pending' || verificationStatus === 'submitted' || verificationStatus === 'in_review' ? 'bg-yellow-500/10 border-yellow-500/20' : 
                         'bg-red-500/10 border-red-500/20'
                     }`}>
                         <div className="flex items-center gap-3">
-                            {profile?.kycStatus === 'verified' ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : 
-                             profile?.kycStatus === 'pending' ? <Clock className="h-5 w-5 text-yellow-600" /> :
+                            {verificationStatus === 'verified' || verificationStatus === 'approved' ? <CheckCircle2 className="h-5 w-5 text-green-600" /> : 
+                             verificationStatus === 'pending' || verificationStatus === 'submitted' || verificationStatus === 'in_review' ? <Clock className="h-5 w-5 text-yellow-600" /> :
                              <XCircle className="h-5 w-5 text-red-600" />}
                             <div>
                                 <p className="font-semibold text-base">Verification Status</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {profile?.kycStatus === 'verified' ? 'Your business is fully verified and compliant' :
-                                     profile?.kycStatus === 'pending' ? 'Your documents are being reviewed by our compliance team' :
+                                    {verificationStatus === 'verified' || verificationStatus === 'approved' ? 'Your business is fully verified and compliant' :
+                                     verificationStatus === 'pending' || verificationStatus === 'submitted' || verificationStatus === 'in_review' ? 'Your documents are being reviewed by our compliance team' :
                                      'Please resubmit your verification documents'}
                                 </p>
                             </div>
                         </div>
-                        {getKycStatusBadge(profile?.kycStatus)}
+                        {getKycStatusBadge(verificationStatus)}
                     </div>
                      <div className="space-y-3">
                         <h4 className="font-semibold text-base">Uploaded Documents</h4>
-                        {kycDocuments.length > 0 ? (
+                        {businessDocuments.length > 0 ? (
                             <div className="space-y-2">
-                                {kycDocuments.map((doc, index) => (
-                                     <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-primary/10 rounded-lg">
-                                                <FileText className="h-4 w-4 text-primary" />
+                                {businessDocuments.map((doc, index) => {
+                                    const docType = doc.key || doc.type || 'document';
+                                    const docName = documentTypeMap[docType] || docType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    const uploadDate = doc.uploadedAt || doc.submittedAt;
+                                    
+                                    return (
+                                        <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                                                    <FileText className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="font-semibold text-sm truncate">{docName}</p>
+                                                        {doc.status && getDocumentStatusBadge(doc.status)}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground truncate">{doc.name || 'Document'}</p>
+                                                    {uploadDate && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {formatDate(uploadDate) ? `Uploaded: ${formatDate(uploadDate)}` : ''}
+                                                        </p>
+                                                    )}
+                                                    {doc.rejectionReason && (
+                                                        <p className="text-xs text-red-600 mt-1">Reason: {doc.rejectionReason}</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-semibold text-sm">{documentTypeMap[doc.type] || doc.type}</p>
-                                                <p className="text-xs text-muted-foreground">{doc.name || 'Document'}</p>
-                                                {doc.uploadedAt && (
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
-                                                    </p>
-                                                )}
-                                            </div>
+                                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                                <Button variant="outline" size="sm" className="gap-2">
+                                                    <ExternalLink className="h-3 w-3" />
+                                                    View
+                                                </Button>
+                                            </a>
                                         </div>
-                                        <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                          <Button variant="outline" size="sm" className="gap-2">
-                                            <ExternalLink className="h-3 w-3" />
-                                            View
-                                          </Button>
-                                        </a>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-8 border-2 border-dashed rounded-lg text-center">

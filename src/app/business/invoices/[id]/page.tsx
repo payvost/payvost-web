@@ -71,8 +71,15 @@ export default function BusinessInvoiceDetailsPage() {
                 } else {
                     setInvoice(null);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching invoice:", error);
+                if (error?.code === 'permission-denied') {
+                    toast({
+                        title: "Permission Denied",
+                        description: "You don't have permission to view this invoice. Please ensure your account is verified and you're the creator of this invoice.",
+                        variant: "destructive"
+                    });
+                }
                 setInvoice(null);
             } finally {
                 setLoading(false);
