@@ -212,41 +212,41 @@ interface SiteHeaderProps {
     showRegister?: boolean;
 }
 
-// Products Dropdown Component with Personal/Business hover submenus
+// Products Dropdown Component with Personal/Business tabs
 const ProductsDropdownContent = () => {
-    const [hoveredCategory, setHoveredCategory] = React.useState<ProductCategory>('personal');
+    const [selectedCategory, setSelectedCategory] = React.useState<ProductCategory>('personal');
     
     const categories = [
-        { id: 'personal' as ProductCategory, label: 'Personal', icon: <User className="h-4 w-4" />, products: personalProducts },
-        { id: 'business' as ProductCategory, label: 'Business', icon: <Building2 className="h-4 w-4" />, products: businessProducts },
+        { id: 'personal' as ProductCategory, label: 'Personal', icon: <User className="h-4 w-4" /> },
+        { id: 'business' as ProductCategory, label: 'Business', icon: <Building2 className="h-4 w-4" /> },
     ];
 
-    const activeCategory = categories.find(cat => cat.id === hoveredCategory) || categories[0];
+    const currentProducts = selectedCategory === 'personal' ? personalProducts : businessProducts;
 
     return (
-        <div className="w-full max-w-[700px] min-h-[300px]">
-            <div className="flex relative min-h-[300px]">
-                {/* Left Sidebar - Compact Category Navigation */}
-                <div className="w-[180px] border-r border-border bg-muted/30 flex-shrink-0 min-h-[300px]">
-                    <div className="p-3">
-                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="w-screen max-w-[900px]">
+            <div className="flex min-h-[500px] max-h-[600px]">
+                {/* Left Sidebar - Category Navigation */}
+                <div className="w-[240px] border-r border-border bg-muted/30 flex-shrink-0">
+                    <div className="p-4">
+                        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                             Category
                         </div>
-                        <nav className="space-y-0.5">
+                        <nav className="space-y-1">
                             {categories.map((category) => (
                                 <button
                                     key={category.id}
+                                    onClick={() => setSelectedCategory(category.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-all duration-200 text-sm",
-                                        hoveredCategory === category.id
+                                        "w-full flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-all duration-200",
+                                        selectedCategory === category.id
                                             ? "bg-primary text-primary-foreground shadow-sm"
                                             : "text-foreground hover:bg-accent hover:text-accent-foreground"
                                     )}
-                                    onMouseEnter={() => setHoveredCategory(category.id)}
                                 >
                                     <div className={cn(
                                         "transition-colors",
-                                        hoveredCategory === category.id ? "text-primary-foreground" : "text-muted-foreground"
+                                        selectedCategory === category.id ? "text-primary-foreground" : "text-muted-foreground"
                                     )}>
                                         {category.icon}
                                     </div>
@@ -256,27 +256,41 @@ const ProductsDropdownContent = () => {
                         </nav>
                     </div>
                 </div>
-                
-                {/* Main Content Area - Products Grid */}
-                <div className="flex-1 p-4">
-                    <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto">
-                        {activeCategory.products.map((product) => (
-                            <NavigationMenuLink key={product.title} asChild>
-                                <Link
-                                    href={product.href}
-                                    className="group flex flex-col gap-2 rounded-lg p-3 transition-all duration-200 hover:bg-accent border border-transparent hover:border-border"
-                                >
-                                    <div className="flex items-start gap-3">
+
+                {/* Right Content - Products Grid */}
+                <div className="flex-1 overflow-y-auto overscroll-contain">
+                    <div className="p-6">
+                        <div className="mb-6 transition-all duration-300">
+                            <h3 className="text-lg font-semibold text-foreground transition-colors">
+                                {selectedCategory === 'personal' ? 'Personal' : 'Business'} Products
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {selectedCategory === 'personal' 
+                                    ? 'Financial tools designed for individuals' 
+                                    : 'Complete payment solutions for your business'}
+                            </p>
+                        </div>
+                        
+                        <div 
+                            key={selectedCategory}
+                            className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-0 duration-300"
+                        >
+                            {currentProducts.map((product) => (
+                                <NavigationMenuLink key={product.title} asChild>
+                                    <Link
+                                        href={product.href}
+                                        className="group relative flex flex-row items-start gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all duration-200 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"
+                                    >
                                         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-all duration-200 group-hover:bg-primary/20">
                                             {product.icon}
                                         </div>
                                         <div className="flex-1 min-w-0 space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <div className="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
+                                                <div className="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary truncate">
                                                     {product.title}
                                                 </div>
                                                 {product.isNew && (
-                                                    <Badge variant="default" className="h-3.5 px-1.5 text-[9px] font-semibold flex-shrink-0">
+                                                    <Badge variant="default" className="h-4 px-1.5 text-[10px] font-semibold flex-shrink-0">
                                                         New
                                                     </Badge>
                                                 )}
@@ -285,10 +299,13 @@ const ProductsDropdownContent = () => {
                                                 {product.description}
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            </NavigationMenuLink>
-                        ))}
+                                        <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex-shrink-0">
+                                            <ArrowRight className="h-3 w-3 text-primary" />
+                                        </div>
+                                    </Link>
+                                </NavigationMenuLink>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -541,7 +558,6 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             <nav className="hidden lg:flex items-center gap-4 justify-end">
                 <PublicSearch />
                 <CountrySelector />
-                <div className="w-8" />
                 <ThemeSwitcher />
                 {showLogin && (
                     <Button variant="ghost" className="text-sm font-medium" asChild>
