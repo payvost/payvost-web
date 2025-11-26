@@ -935,7 +935,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* App Store Buttons */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-4">
+                  <div className="flex flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4 pt-4">
                     <Link 
                       href="#" 
                       className="inline-block transform transition-transform hover:scale-105 active:scale-95"

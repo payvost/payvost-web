@@ -3,9 +3,12 @@
  * 
  * Service for managing user wallets and accounts.
  * Connects to the backend wallet service API.
+ * Falls back to Firestore if API fails.
  */
 
 import { apiClient, ApiError } from './apiClient';
+import { db, auth } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 /**
  * Account/Wallet types
@@ -45,6 +48,7 @@ export interface WithdrawDto {
 class WalletService {
   /**
    * Get all accounts for the authenticated user
+   * Falls back to Firestore if API fails
    */
   async getAccounts(): Promise<Account[]> {
     try {
@@ -53,10 +57,45 @@ class WalletService {
       );
       return response.accounts;
     } catch (error) {
-      if (error instanceof ApiError) {
-        throw new Error(`Failed to fetch accounts: ${error.message}`);
+      console.warn('API call failed, falling back to Firestore for wallets:', error);
+      
+      // Fallback to Firestore
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error('User not authenticated');
+        }
+
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+          return [];
+        }
+
+        const userData = userDoc.data();
+        const firestoreWallets = userData.wallets || [];
+
+        // Convert Firestore wallet format to Account format
+        const accounts: Account[] = firestoreWallets.map((wallet: any, index: number) => ({
+          id: wallet.id || `firestore-${index}`,
+          userId: currentUser.uid,
+          currency: wallet.currency || 'USD',
+          balance: parseFloat(wallet.balance?.toString() || '0'),
+          type: (wallet.type || 'PERSONAL') as 'PERSONAL' | 'BUSINESS',
+          createdAt: wallet.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updatedAt: wallet.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        }));
+
+        console.log('Successfully fetched accounts from Firestore fallback:', accounts.length);
+        return accounts;
+      } catch (firestoreError) {
+        console.error('Firestore fallback also failed:', firestoreError);
+        if (error instanceof ApiError) {
+          throw new Error(`Failed to fetch accounts: ${error.message}`);
+        }
+        throw error;
       }
-      throw error;
     }
   }
 
