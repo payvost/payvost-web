@@ -212,100 +212,91 @@ interface SiteHeaderProps {
     showRegister?: boolean;
 }
 
-// Products Dropdown Component with Personal/Business tabs
+// Products Dropdown Component with Personal/Business hover submenus
 const ProductsDropdownContent = () => {
-    const [selectedCategory, setSelectedCategory] = React.useState<ProductCategory>('personal');
+    const [hoveredCategory, setHoveredCategory] = React.useState<ProductCategory | null>(null);
     
     const categories = [
-        { id: 'personal' as ProductCategory, label: 'Personal', icon: <User className="h-4 w-4" /> },
-        { id: 'business' as ProductCategory, label: 'Business', icon: <Building2 className="h-4 w-4" /> },
+        { id: 'personal' as ProductCategory, label: 'Personal', icon: <User className="h-4 w-4" />, products: personalProducts },
+        { id: 'business' as ProductCategory, label: 'Business', icon: <Building2 className="h-4 w-4" />, products: businessProducts },
     ];
 
-    const currentProducts = selectedCategory === 'personal' ? personalProducts : businessProducts;
-
     return (
-        <div className="w-screen max-w-[900px]">
-            <div className="flex min-h-[500px] max-h-[600px]">
-                {/* Left Sidebar - Category Navigation */}
-                <div className="w-[240px] border-r border-border bg-muted/30 flex-shrink-0">
-                    <div className="p-4">
-                        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="w-screen max-w-[700px]">
+            <div className="flex relative">
+                {/* Left Sidebar - Compact Category Navigation */}
+                <div className="w-[180px] border-r border-border bg-muted/30 flex-shrink-0">
+                    <div className="p-3">
+                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Category
                         </div>
-                        <nav className="space-y-1">
+                        <nav className="space-y-0.5">
                             {categories.map((category) => (
-                                <button
+                                <div
                                     key={category.id}
-                                    onClick={() => setSelectedCategory(category.id)}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 rounded-lg px-4 py-3 text-left transition-all duration-200",
-                                        selectedCategory === category.id
-                                            ? "bg-primary text-primary-foreground shadow-sm"
-                                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
-                                    )}
+                                    className="relative"
+                                    onMouseEnter={() => setHoveredCategory(category.id)}
+                                    onMouseLeave={() => setHoveredCategory(null)}
                                 >
-                                    <div className={cn(
-                                        "transition-colors",
-                                        selectedCategory === category.id ? "text-primary-foreground" : "text-muted-foreground"
-                                    )}>
-                                        {category.icon}
-                                    </div>
-                                    <span className="font-medium">{category.label}</span>
-                                </button>
+                                    <button
+                                        className={cn(
+                                            "w-full flex items-center gap-2 rounded-md px-3 py-2 text-left transition-all duration-200 text-sm",
+                                            hoveredCategory === category.id
+                                                ? "bg-primary text-primary-foreground shadow-sm"
+                                                : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "transition-colors",
+                                            hoveredCategory === category.id ? "text-primary-foreground" : "text-muted-foreground"
+                                        )}>
+                                            {category.icon}
+                                        </div>
+                                        <span className="font-medium">{category.label}</span>
+                                    </button>
+                                    
+                                    {/* Hover Submenu */}
+                                    {hoveredCategory === category.id && (
+                                        <div 
+                                            className="absolute left-full top-0 ml-1 w-[500px] bg-popover border border-border rounded-lg shadow-lg p-4 z-50 animate-in fade-in-0 slide-in-from-left-2 duration-200"
+                                            onMouseEnter={() => setHoveredCategory(category.id)}
+                                            onMouseLeave={() => setHoveredCategory(null)}
+                                        >
+                                            <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                                                {category.products.map((product) => (
+                                                    <NavigationMenuLink key={product.title} asChild>
+                                                        <Link
+                                                            href={product.href}
+                                                            className="group flex flex-row items-start gap-3 rounded-lg p-2.5 transition-all duration-200 hover:bg-accent"
+                                                        >
+                                                            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-all duration-200 group-hover:bg-primary/20">
+                                                                {product.icon}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 space-y-0.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary truncate">
+                                                                        {product.title}
+                                                                    </div>
+                                                                    {product.isNew && (
+                                                                        <Badge variant="default" className="h-3.5 px-1.5 text-[9px] font-semibold flex-shrink-0">
+                                                                            New
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[10px] leading-snug text-muted-foreground line-clamp-1">
+                                                                    {product.description}
+                                                                </div>
+                                                            </div>
+                                                            <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
+                                                        </Link>
+                                                    </NavigationMenuLink>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             ))}
                         </nav>
-                    </div>
-                </div>
-
-                {/* Right Content - Products Grid */}
-                <div className="flex-1 overflow-y-auto overscroll-contain">
-                    <div className="p-6">
-                        <div className="mb-6 transition-all duration-300">
-                            <h3 className="text-lg font-semibold text-foreground transition-colors">
-                                {selectedCategory === 'personal' ? 'Personal' : 'Business'} Products
-                            </h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {selectedCategory === 'personal' 
-                                    ? 'Financial tools designed for individuals' 
-                                    : 'Complete payment solutions for your business'}
-                            </p>
-                        </div>
-                        
-                        <div 
-                            key={selectedCategory}
-                            className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-0 duration-300"
-                        >
-                            {currentProducts.map((product) => (
-                                <NavigationMenuLink key={product.title} asChild>
-                                    <Link
-                                        href={product.href}
-                                        className="group relative flex flex-row items-start gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all duration-200 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"
-                                    >
-                                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-all duration-200 group-hover:bg-primary/20">
-                                            {product.icon}
-                                        </div>
-                                        <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary truncate">
-                                                    {product.title}
-                                                </div>
-                                                {product.isNew && (
-                                                    <Badge variant="default" className="h-4 px-1.5 text-[10px] font-semibold flex-shrink-0">
-                                                        New
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <div className="text-[10px] leading-snug text-muted-foreground line-clamp-2">
-                                                {product.description}
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex-shrink-0">
-                                            <ArrowRight className="h-3 w-3 text-primary" />
-                                        </div>
-                                    </Link>
-                                </NavigationMenuLink>
-                            ))}
-                        </div>
                     </div>
                 </div>
             </div>

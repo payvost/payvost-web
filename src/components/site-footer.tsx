@@ -395,29 +395,10 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
 
         {/* Bottom Bar */}
         <div className="pt-8 sm:pt-10 border-t border-border/50">
-          <div className="flex flex-col gap-8">
-            {/* Social Links */}
-            <div className="flex items-center justify-center gap-4">
-              {socialLinks.map(({ href, icon: Icon, ariaLabel, color }) => (
-                <Link
-                  key={ariaLabel}
-                  href={href}
-                  rel="nofollow noopener noreferrer"
-                  target="_blank"
-                  className={cn(
-                    "h-10 w-10 rounded-lg bg-background border border-border flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 text-muted-foreground",
-                    color
-                  )}
-                  aria-label={ariaLabel}
-                >
-                  <Icon className="h-5 w-5" />
-                </Link>
-              ))}
-            </div>
-
-            {/* Disclaimer & Copyright */}
-            <div className="space-y-4 text-center">
-              <div className="text-xs sm:text-sm text-muted-foreground space-y-2 max-w-4xl mx-auto leading-relaxed">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start lg:items-start">
+            {/* Disclaimer & Copyright - Left aligned, full width */}
+            <div className="flex-1 space-y-4 text-left w-full">
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-2 leading-relaxed">
                 <p>
                   Payvost Technologies Limited is a financial technology company incorporated in United States with company number RN-98403465.
                 </p>
@@ -444,6 +425,25 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
                   Built with you in mind.
                 </p>
               </div>
+            </div>
+
+            {/* Social Links - Right aligned */}
+            <div className="flex items-center gap-4 lg:shrink-0">
+              {socialLinks.map(({ href, icon: Icon, ariaLabel, color }) => (
+                <Link
+                  key={ariaLabel}
+                  href={href}
+                  rel="nofollow noopener noreferrer"
+                  target="_blank"
+                  className={cn(
+                    "h-10 w-10 rounded-lg bg-background border border-border flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 text-muted-foreground",
+                    color
+                  )}
+                  aria-label={ariaLabel}
+                >
+                  <Icon className="h-5 w-5" />
+                </Link>
+              ))}
             </div>
           </div>
         </div>
