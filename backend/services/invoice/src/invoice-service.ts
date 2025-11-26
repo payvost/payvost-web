@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import admin from 'firebase-admin';
 
 // Define enum types locally to avoid Prisma import issues during build
 export type InvoiceStatus = 
@@ -168,9 +169,10 @@ export class InvoiceService {
 
   /**
    * Get public invoice (for public pages)
+   * Checks both Prisma (PostgreSQL) and Firestore (businessInvoices collection)
    */
   async getPublicInvoice(idOrNumber: string) {
-    // Try by ID first
+    // Try Prisma first (for migrated invoices)
     let invoice = await this.prisma.invoice.findUnique({
       where: { id: idOrNumber },
     });
@@ -182,11 +184,90 @@ export class InvoiceService {
       });
     }
 
-    if (!invoice || !invoice.isPublic) {
-      return null;
+    // If found in Prisma, check if public
+    if (invoice) {
+      if (!invoice.isPublic) {
+        return null;
+      }
+      return invoice;
     }
 
-    return invoice;
+    // If not in Prisma, check Firestore businessInvoices collection
+    try {
+      const db = admin.firestore();
+      let firestoreInvoice: admin.firestore.DocumentSnapshot | null = null;
+
+      // Try by document ID first
+      const docRef = db.collection('businessInvoices').doc(idOrNumber);
+      firestoreInvoice = await docRef.get();
+
+      // If not found, try querying by invoiceNumber
+      if (!firestoreInvoice.exists) {
+        const querySnapshot = await db.collection('businessInvoices')
+          .where('invoiceNumber', '==', idOrNumber)
+          .limit(1)
+          .get();
+        
+        if (!querySnapshot.empty) {
+          firestoreInvoice = querySnapshot.docs[0];
+        }
+      }
+
+      if (firestoreInvoice && firestoreInvoice.exists) {
+        const data = firestoreInvoice.data();
+        
+        // Check if invoice is public (not a draft)
+        const isDraft = data?.status === 'Draft';
+        if (isDraft) {
+          return null;
+        }
+
+        // Convert Firestore data to match Prisma format
+        return {
+          id: firestoreInvoice.id,
+          invoiceNumber: data?.invoiceNumber || '',
+          invoiceType: 'BUSINESS' as const,
+          userId: data?.createdBy || '',
+          businessId: data?.businessId || null,
+          createdBy: data?.createdBy || '',
+          issueDate: data?.issueDate?.toDate ? data.issueDate.toDate() : new Date(data?.issueDate),
+          dueDate: data?.dueDate?.toDate ? data.dueDate.toDate() : new Date(data?.dueDate),
+          status: (data?.status?.toUpperCase() || 'PENDING') as any,
+          currency: data?.currency || 'USD',
+          grandTotal: new Decimal(data?.grandTotal || 0),
+          taxRate: new Decimal(data?.taxRate || 0),
+          fromInfo: {
+            name: data?.fromName || '',
+            address: data?.fromAddress || '',
+            email: data?.fromEmail || '',
+          },
+          toInfo: {
+            name: data?.toName || '',
+            address: data?.toAddress || '',
+            email: data?.toEmail || '',
+          },
+          items: data?.items || [],
+          paymentMethod: (data?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+          manualBankDetails: data?.paymentMethod === 'manual' ? {
+            bankName: data?.manualBankName || '',
+            accountName: data?.manualAccountName || '',
+            accountNumber: data?.manualAccountNumber || '',
+            otherDetails: data?.manualOtherDetails || '',
+          } : null,
+          notes: data?.notes || null,
+          isPublic: data?.isPublic !== false,
+          publicUrl: data?.publicUrl || null,
+          pdfUrl: data?.pdfUrl || null,
+          createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+          updatedAt: data?.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching invoice from Firestore:', error);
+      // Continue to return null if Firestore query fails
+    }
+
+    return null;
   }
 
   /**

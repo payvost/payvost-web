@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { InvoiceService } from './src/invoice-service';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { prisma } from '../../common/prisma';
+import admin from '../../firebase';
 
 const router = Router();
 const invoiceService = new InvoiceService(prisma);
@@ -109,6 +110,7 @@ router.get('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: R
 /**
  * GET /invoices/public/:id
  * Get public invoice (no auth required)
+ * Returns invoice data with business profile if available
  */
 router.get('/public/:id', async (req: Request, res: Response) => {
   try {
@@ -119,7 +121,33 @@ router.get('/public/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Invoice not found or not public' });
     }
 
-    res.json(invoice);
+    // Try to fetch business profile if businessId exists
+    let businessProfile = null;
+    if (invoice.businessId) {
+      try {
+        const db = admin.firestore();
+        
+        // Query users collection for business profile
+        const usersSnapshot = await db.collection('users')
+          .where('businessProfile.id', '==', invoice.businessId)
+          .limit(1)
+          .get();
+        
+        if (!usersSnapshot.empty) {
+          const userData = usersSnapshot.docs[0].data();
+          businessProfile = userData.businessProfile || null;
+        }
+      } catch (profileError) {
+        console.warn('Could not fetch business profile:', profileError);
+        // Continue without business profile
+      }
+    }
+
+    // Return invoice with business profile if available
+    res.json({
+      ...invoice,
+      businessProfile,
+    });
   } catch (error: any) {
     console.error('Error getting public invoice:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
