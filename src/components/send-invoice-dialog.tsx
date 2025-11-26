@@ -15,9 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Download, FileImage, Loader2, Send, QrCode, Share2, Printer } from 'lucide-react';
 import type { InvoiceFormValues } from './create-invoice-page';
-import { useAuth } from '@/hooks/use-auth';
-import { doc, onSnapshot, getDoc, DocumentData } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { DocumentData } from 'firebase/firestore';
 import { QRCodeDialog } from './qr-code-dialog';
 
 interface SendInvoiceDialogProps {
@@ -41,36 +39,60 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
     }
 
     setLoading(true);
-    let unsubscribe: (() => void) | null = null;
 
     const fetchInvoice = async (retryCount = 0) => {
       const maxRetries = 3;
       const retryDelay = 1000; // 1 second
       
       try {
-        // For business invoices, try businessInvoices collection first
-        let docRef = doc(db, 'businessInvoices', invoiceId);
-        let docSnap = await getDoc(docRef);
+        // Use backend API endpoint instead of direct Firestore reads
+        // This bypasses Firestore security rules and avoids permission issues
+        const response = await fetch(`/api/invoices/public/${invoiceId}`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
 
-        // If not found, try regular invoices collection
-        if (!docSnap.exists()) {
-          docRef = doc(db, 'invoices', invoiceId);
-          docSnap = await getDoc(docRef);
+        if (!response.ok) {
+          if (response.status === 404) {
+            // If invoice not found and we have retries left, retry (might be timing issue)
+            if (retryCount < maxRetries) {
+              setTimeout(() => {
+                fetchInvoice(retryCount + 1);
+              }, retryDelay);
+              return;
+            }
+            
+            setLoading(false);
+            toast({
+              title: 'Invoice not found',
+              description: 'The invoice may still be processing. Please refresh the page in a moment.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          
+          // For other errors, try to parse error message
+          let errorMessage = 'Failed to load invoice';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // If response is not JSON, use status text
+          }
+          
+          setLoading(false);
+          toast({
+            title: 'Error',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+          return;
         }
 
-        if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() };
-          setInvoiceData(data);
-          setLoading(false);
-          
-          // Set up real-time listener for updates
-          unsubscribe = onSnapshot(docRef, (snapshot) => {
-            if (snapshot.exists()) {
-              setInvoiceData({ id: snapshot.id, ...snapshot.data() });
-            }
-          });
-        } else {
-          // If document doesn't exist yet and we have retries left, retry
+        const invoiceData = await response.json();
+        
+        if (!invoiceData || !invoiceData.id) {
+          // If invalid data and we have retries left, retry
           if (retryCount < maxRetries) {
             setTimeout(() => {
               fetchInvoice(retryCount + 1);
@@ -80,16 +102,34 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
           
           setLoading(false);
           toast({
-            title: 'Invoice not found',
-            description: 'The invoice may still be processing. Please refresh the page in a moment.',
+            title: 'Error',
+            description: 'Invalid invoice data received',
             variant: 'destructive',
           });
+          return;
         }
+
+        // Convert backend format to frontend format
+        const convertedData: DocumentData = {
+          id: invoiceData.id,
+          invoiceNumber: invoiceData.invoiceNumber || '',
+          status: invoiceData.status || 'Pending',
+          publicUrl: invoiceData.publicUrl || `${window.location.origin}/invoice/${invoiceData.id}`,
+          grandTotal: typeof invoiceData.grandTotal === 'object' 
+            ? parseFloat(invoiceData.grandTotal.toString()) 
+            : invoiceData.grandTotal,
+          currency: invoiceData.currency || 'USD',
+          // Include other fields that might be needed
+          ...invoiceData,
+        };
+
+        setInvoiceData(convertedData);
+        setLoading(false);
       } catch (error: any) {
         console.error('Error fetching invoice:', error);
         
-        // If permission denied and we have retries left, retry (might be timing issue)
-        if (error?.code === 'permission-denied' && retryCount < maxRetries) {
+        // If error and we have retries left, retry
+        if (retryCount < maxRetries) {
           setTimeout(() => {
             fetchInvoice(retryCount + 1);
           }, retryDelay);
@@ -97,24 +137,15 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
         }
         
         setLoading(false);
-        
-        // Don't show error toast if it's a permission issue after retries - the invoice exists in list
-        if (error?.code !== 'permission-denied') {
-          toast({
-            title: 'Error',
-            description: 'Failed to load invoice. Please try again.',
-            variant: 'destructive',
-          });
-        }
+        toast({
+          title: 'Error',
+          description: 'Failed to load invoice. Please try again.',
+          variant: 'destructive',
+        });
       }
     };
 
     fetchInvoice();
-
-    // Cleanup function
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, [isOpen, invoiceId, toast]);
 
   const copyLink = () => {
