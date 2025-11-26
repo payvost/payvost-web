@@ -156,13 +156,14 @@ export function BusinessSidebar() {
 
   const businessStatusBadge = getBusinessStatusBadge(businessStatus);
 
-  const BusinessHeaderDropdown = ({ className }: { className?: string }) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className={cn("w-full text-left", className)}>
-          <div className="flex flex-col gap-2">
-            {/* BU and Business Name */}
-            <div className="flex items-center gap-2.5">
+  const BusinessHeaderDropdown = ({ className }: { className?: string }) => {
+    const isVerified = businessStatus.toLowerCase() === 'approved';
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className={cn("w-full text-left h-16 flex items-center", className)}>
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
               {businessLogo ? (
                 <img src={businessLogo} alt={businessName} className="h-8 w-8 shrink-0 rounded object-cover" />
               ) : (
@@ -175,23 +176,17 @@ export function BusinessSidebar() {
                   <span className="text-sm font-medium text-sidebar-foreground truncate">
                     {businessName}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/50" />
+                  {isVerified ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+                  ) : (
+                    <div className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground" />
+                  )}
                 </div>
               </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-sidebar-foreground/50" />
             </div>
-            
-            {/* Business Status and Health Score */}
-            <div className="flex items-center justify-between gap-2">
-              <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-normal", businessStatusBadge.color)}>
-                {businessStatusBadge.label}
-              </div>
-              <div className={cn("rounded px-1.5 py-0.5 text-[10px] font-normal", healthStatus.color)}>
-                {healthStatus.label}
-              </div>
-            </div>
-          </div>
-        </button>
-      </DropdownMenuTrigger>
+          </button>
+        </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[calc(14rem-1rem)]">
         <DropdownMenuItem asChild>
           <Link href="/business/settings" className="flex items-center gap-2">
@@ -218,7 +213,8 @@ export function BusinessSidebar() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+    );
+  };
 
   const renderNav = () => (
     <>
@@ -334,10 +330,10 @@ export function BusinessSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <Card className="p-2">
+      <SidebarHeader className="h-16 p-0 border-b">
+        <div className="h-full px-2 flex items-center">
           <BusinessHeaderDropdown />
-        </Card>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
