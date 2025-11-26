@@ -542,17 +542,24 @@ export function getBusinessDocumentRequirements(
     };
   });
 
-  // Add country-specific additional documents
+  // Track existing keys to prevent duplicates
+  const existingKeys = new Set(requirements.map(r => r.key));
+
+  // Add country-specific additional documents (only if not already present)
   if (countryReq?.additionalDocuments) {
     countryReq.additionalDocuments.forEach(doc => {
-      requirements.push({
-        key: doc.type,
-        label: doc.label,
-        description: doc.description,
-        required: doc.required,
-        acceptedFormats: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
-        maxSizeMB: 10,
-      });
+      // Only add if this document type doesn't already exist
+      if (!existingKeys.has(doc.type)) {
+        requirements.push({
+          key: doc.type,
+          label: doc.label,
+          description: doc.description,
+          required: doc.required,
+          acceptedFormats: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+          maxSizeMB: 10,
+        });
+        existingKeys.add(doc.type);
+      }
     });
   }
 

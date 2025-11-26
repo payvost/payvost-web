@@ -189,12 +189,20 @@ export default function VerifyBusinessPage() {
       for (const req of requirements) {
         const f = files[req.key];
         if (!f) continue;
-        const storageRef = ref(storage, `business_kyc/${user.uid}/${submissionId}/${req.key}/${f.name}`);
+        
+        // Sanitize file name to avoid issues with special characters
+        const sanitizedFileName = f.name
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+          .replace(/\s+/g, '_')
+          .toLowerCase();
+        
+        // Use kyc_submissions path which has proper Firebase Storage rules
+        const storageRef = ref(storage, `kyc_submissions/${user.uid}/${submissionId}/${req.key}/${sanitizedFileName}`);
         await uploadBytes(storageRef, f);
         const url = await getDownloadURL(storageRef);
         uploadedDocs.push({ 
           key: req.key, 
-          name: f.name, 
+          name: f.name, // Keep original name for display
           url, 
           status: 'submitted', 
           contentType: f.type, 
