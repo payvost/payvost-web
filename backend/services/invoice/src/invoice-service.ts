@@ -432,31 +432,110 @@ export class InvoiceService {
 
   /**
    * Mark invoice as paid
+   * Handles both Prisma (PostgreSQL) and Firestore business invoices
    */
   async markAsPaid(id: string, userId: string) {
-    // Verify ownership first
+    // Try Prisma first
     const existing = await this.prisma.invoice.findUnique({
       where: { id },
     });
 
-    if (!existing) {
-      throw new Error('Invoice not found');
+    if (existing) {
+      // Verify ownership
+      if (existing.userId !== userId && existing.createdBy !== userId) {
+        throw new Error('Unauthorized');
+      }
+
+      const invoice = await this.prisma.invoice.update({
+        where: { id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      return invoice;
     }
 
-    if (existing.userId !== userId && existing.createdBy !== userId) {
-      throw new Error('Unauthorized');
+    // If not in Prisma, check Firestore businessInvoices collection
+    try {
+      if (!admin.apps.length) {
+        throw new Error('Firebase Admin SDK not initialized');
+      }
+
+      const db = admin.firestore();
+      const docRef = db.collection('businessInvoices').doc(id);
+      const firestoreInvoice = await docRef.get();
+
+      if (!firestoreInvoice.exists) {
+        throw new Error('Invoice not found');
+      }
+
+      const data = firestoreInvoice.data();
+      if (!data) {
+        throw new Error('Invoice data not found');
+      }
+
+      // Verify ownership
+      if (data.createdBy !== userId) {
+        throw new Error('Unauthorized');
+      }
+
+      // Update in Firestore
+      await docRef.update({
+        status: 'Paid',
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Return updated data in Prisma format for consistency
+      const updatedDoc = await docRef.get();
+      const updatedData = updatedDoc.data();
+      
+      return {
+        id: updatedDoc.id,
+        invoiceNumber: updatedData?.invoiceNumber || '',
+        invoiceType: 'BUSINESS' as const,
+        userId: updatedData?.createdBy || '',
+        businessId: updatedData?.businessId || null,
+        createdBy: updatedData?.createdBy || '',
+        issueDate: updatedData?.issueDate?.toDate ? updatedData.issueDate.toDate() : new Date(updatedData?.issueDate),
+        dueDate: updatedData?.dueDate?.toDate ? updatedData.dueDate.toDate() : new Date(updatedData?.dueDate),
+        status: 'PAID' as any,
+        currency: updatedData?.currency || 'USD',
+        grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
+        taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
+        fromInfo: {
+          name: updatedData?.fromName || '',
+          address: updatedData?.fromAddress || '',
+          email: updatedData?.fromEmail || '',
+        },
+        toInfo: {
+          name: updatedData?.toName || '',
+          address: updatedData?.toAddress || '',
+          email: updatedData?.toEmail || '',
+        },
+        items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+        paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+        manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+          bankName: updatedData?.manualBankName || '',
+          accountName: updatedData?.manualAccountName || '',
+          accountNumber: updatedData?.manualAccountNumber || '',
+          otherDetails: updatedData?.manualOtherDetails || '',
+        } : null,
+        notes: updatedData?.notes || null,
+        isPublic: updatedData?.isPublic !== false,
+        publicUrl: updatedData?.publicUrl || null,
+        pdfUrl: updatedData?.pdfUrl || null,
+        paidAt: updatedData?.paidAt?.toDate ? updatedData.paidAt.toDate() : new Date(),
+        createdAt: updatedData?.createdAt?.toDate ? updatedData.createdAt.toDate() : new Date(),
+        updatedAt: updatedData?.updatedAt?.toDate ? updatedData.updatedAt.toDate() : new Date(),
+      };
+    } catch (error) {
+      console.error('Error marking Firestore invoice as paid:', error);
+      throw error;
     }
-
-    const invoice = await this.prisma.invoice.update({
-      where: { id },
-      data: {
-        status: 'PAID',
-        paidAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    return invoice;
   }
 
   /**

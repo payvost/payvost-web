@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign, Edit, Trash2, Send, Copy, Eye, CheckCircle, Loader2, Receipt } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -98,17 +98,41 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
     
     const handleMarkAsPaid = async (invoiceId: string) => {
         try {
-            const docRef = doc(db, 'businessInvoices', invoiceId);
-            await updateDoc(docRef, { 
-                status: 'Paid',
-                paidAt: serverTimestamp(),
+            // Use backend API endpoint instead of direct Firestore update
+            // This ensures proper authorization and handles both Prisma and Firestore invoices
+            const response = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                cache: 'no-store',
             });
+
+            if (!response.ok) {
+                let errorMessage = 'Failed to update invoice status';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    // If response is not JSON, use status text
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
+            // Update local state optimistically
             setInvoices(invoices.map(inv => 
                 inv.id === invoiceId ? { ...inv, status: 'Paid', paidAt: new Date() } : inv
             ));
+            
             toast({ title: 'Success', description: 'Invoice marked as paid.' });
         } catch (error: any) {
-            toast({ title: 'Error', description: error.message || 'Failed to update invoice status.', variant: 'destructive' });
+            console.error('Error marking invoice as paid:', error);
+            toast({ 
+                title: 'Error', 
+                description: error.message || 'Failed to update invoice status.', 
+                variant: 'destructive' 
+            });
         }
     };
     
