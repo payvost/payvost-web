@@ -261,13 +261,44 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
     }
 
     const invoice = await invoiceService.markAsPaid(id, userId);
-    res.json(invoice);
+    
+    // Serialize response (convert Decimal to numbers, dates to ISO strings)
+    const serializedInvoice = {
+      ...invoice,
+      grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
+        ? parseFloat(invoice.grandTotal.toString())
+        : invoice.grandTotal,
+      taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
+        ? parseFloat(invoice.taxRate.toString())
+        : invoice.taxRate || 0,
+      issueDate: invoice.issueDate instanceof Date
+        ? invoice.issueDate.toISOString()
+        : invoice.issueDate,
+      dueDate: invoice.dueDate instanceof Date
+        ? invoice.dueDate.toISOString()
+        : invoice.dueDate,
+      paidAt: invoice.paidAt instanceof Date
+        ? invoice.paidAt.toISOString()
+        : invoice.paidAt,
+      createdAt: invoice.createdAt instanceof Date
+        ? invoice.createdAt.toISOString()
+        : invoice.createdAt,
+      updatedAt: invoice.updatedAt instanceof Date
+        ? invoice.updatedAt.toISOString()
+        : invoice.updatedAt,
+    };
+    
+    res.json(serializedInvoice);
   } catch (error: any) {
     console.error('Error marking invoice as paid:', error);
+    console.error('Error stack:', error.stack);
     if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
       return res.status(404).json({ error: error.message });
     }
-    res.status(400).json({ error: error.message || 'Failed to mark as paid' });
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
