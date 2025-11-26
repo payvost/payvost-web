@@ -275,7 +275,7 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
                   <Input
                     type="email"
                     placeholder="Enter your email"
-                    className="flex-1 h-12 bg-background border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="flex-1 h-10 sm:h-12 bg-background border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
@@ -284,7 +284,7 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
                   />
                   <Button 
                     type="submit" 
-                    className="h-12 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all hover:shadow-lg hover:shadow-primary/20" 
+                    className="h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all hover:shadow-lg hover:shadow-primary/20" 
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
