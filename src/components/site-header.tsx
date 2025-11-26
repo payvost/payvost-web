@@ -554,6 +554,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
             <nav className="hidden lg:flex items-center gap-4 justify-end">
                 <PublicSearch />
                 <CountrySelector />
+                <div className="w-8" />
                 <ThemeSwitcher />
                 {showLogin && (
                     <Button variant="ghost" className="text-sm font-medium" asChild>
