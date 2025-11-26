@@ -43,21 +43,25 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
     setLoading(true);
     let unsubscribe: (() => void) | null = null;
 
-    const fetchInvoice = async () => {
+    const fetchInvoice = async (retryCount = 0) => {
+      const maxRetries = 3;
+      const retryDelay = 1000; // 1 second
+      
       try {
-        // Try invoices collection first
-        let docRef = doc(db, 'invoices', invoiceId);
+        // For business invoices, try businessInvoices collection first
+        let docRef = doc(db, 'businessInvoices', invoiceId);
         let docSnap = await getDoc(docRef);
 
-        // If not found, try businessInvoices collection
+        // If not found, try regular invoices collection
         if (!docSnap.exists()) {
-          docRef = doc(db, 'businessInvoices', invoiceId);
+          docRef = doc(db, 'invoices', invoiceId);
           docSnap = await getDoc(docRef);
         }
 
         if (docSnap.exists()) {
           const data = { id: docSnap.id, ...docSnap.data() };
           setInvoiceData(data);
+          setLoading(false);
           
           // Set up real-time listener for updates
           unsubscribe = onSnapshot(docRef, (snapshot) => {
@@ -66,16 +70,35 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
             }
           });
         } else {
+          // If document doesn't exist yet and we have retries left, retry
+          if (retryCount < maxRetries) {
+            setTimeout(() => {
+              fetchInvoice(retryCount + 1);
+            }, retryDelay);
+            return;
+          }
+          
+          setLoading(false);
           toast({
-            title: 'Error',
-            description: 'Invoice not found.',
+            title: 'Invoice not found',
+            description: 'The invoice may still be processing. Please refresh the page in a moment.',
             variant: 'destructive',
           });
         }
       } catch (error: any) {
         console.error('Error fetching invoice:', error);
-        // Don't show error toast if it's a permission issue - the invoice might just be processing
-        // The user will see it in the list view once it's ready
+        
+        // If permission denied and we have retries left, retry (might be timing issue)
+        if (error?.code === 'permission-denied' && retryCount < maxRetries) {
+          setTimeout(() => {
+            fetchInvoice(retryCount + 1);
+          }, retryDelay);
+          return;
+        }
+        
+        setLoading(false);
+        
+        // Don't show error toast if it's a permission issue after retries - the invoice exists in list
         if (error?.code !== 'permission-denied') {
           toast({
             title: 'Error',
@@ -83,8 +106,6 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
             variant: 'destructive',
           });
         }
-      } finally {
-        setLoading(false);
       }
     };
 
