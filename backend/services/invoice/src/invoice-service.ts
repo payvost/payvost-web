@@ -216,11 +216,31 @@ export class InvoiceService {
       if (firestoreInvoice && firestoreInvoice.exists) {
         const data = firestoreInvoice.data();
         
+        if (!data) {
+          console.warn('Firestore invoice document exists but has no data');
+          return null;
+        }
+        
         // Check if invoice is public (not a draft)
         const isDraft = data?.status === 'Draft';
         if (isDraft) {
           return null;
         }
+
+        // Helper to safely convert Firestore Timestamp to Date
+        const toDate = (timestamp: any): Date => {
+          if (!timestamp) return new Date();
+          if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+          }
+          if (timestamp instanceof Date) {
+            return timestamp;
+          }
+          if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+            return new Date(timestamp);
+          }
+          return new Date();
+        };
 
         // Convert Firestore data to match Prisma format
         return {
@@ -230,12 +250,12 @@ export class InvoiceService {
           userId: data?.createdBy || '',
           businessId: data?.businessId || null,
           createdBy: data?.createdBy || '',
-          issueDate: data?.issueDate?.toDate ? data.issueDate.toDate() : new Date(data?.issueDate),
-          dueDate: data?.dueDate?.toDate ? data.dueDate.toDate() : new Date(data?.dueDate),
+          issueDate: toDate(data?.issueDate),
+          dueDate: toDate(data?.dueDate),
           status: (data?.status?.toUpperCase() || 'PENDING') as any,
           currency: data?.currency || 'USD',
-          grandTotal: new Decimal(data?.grandTotal || 0),
-          taxRate: new Decimal(data?.taxRate || 0),
+          grandTotal: new Decimal(Number(data?.grandTotal || 0)),
+          taxRate: new Decimal(Number(data?.taxRate || 0)),
           fromInfo: {
             name: data?.fromName || '',
             address: data?.fromAddress || '',
@@ -246,7 +266,7 @@ export class InvoiceService {
             address: data?.toAddress || '',
             email: data?.toEmail || '',
           },
-          items: data?.items || [],
+          items: Array.isArray(data?.items) ? data.items : [],
           paymentMethod: (data?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
           manualBankDetails: data?.paymentMethod === 'manual' ? {
             bankName: data?.manualBankName || '',
@@ -258,12 +278,13 @@ export class InvoiceService {
           isPublic: data?.isPublic !== false,
           publicUrl: data?.publicUrl || null,
           pdfUrl: data?.pdfUrl || null,
-          createdAt: data?.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-          updatedAt: data?.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+          createdAt: toDate(data?.createdAt),
+          updatedAt: toDate(data?.updatedAt),
         };
       }
     } catch (error) {
       console.error('Error fetching invoice from Firestore:', error);
+      console.error('Error details:', error instanceof Error ? error.stack : String(error));
       // Continue to return null if Firestore query fails
     }
 

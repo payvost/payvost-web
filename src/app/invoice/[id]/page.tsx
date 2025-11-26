@@ -68,15 +68,32 @@ export default function PublicInvoicePage() {
         });
 
         if (!response.ok) {
+          let errorMessage = `Failed to fetch invoice: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            // If response is not JSON, use status text
+          }
+          
           if (response.status === 404) {
             setFetchError("Invoice not found");
             setInvoice(null);
             return;
           }
-          throw new Error(`Failed to fetch invoice: ${response.statusText}`);
+          
+          setFetchError(errorMessage);
+          setInvoice(null);
+          return;
         }
 
         const invoiceData = await response.json();
+        
+        if (!invoiceData || !invoiceData.id) {
+          setFetchError("Invalid invoice data received");
+          setInvoice(null);
+          return;
+        }
         
         // Convert backend format to frontend format
         // Handle both Prisma format and Firestore format
