@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2, Banknote, Landmark, Wallet, CreditCard, Globe } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -23,8 +23,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { collection, doc, addDoc, updateDoc, serverTimestamp, Timestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Separator } from './ui/separator';
 
 const invoiceItemSchema = z.object({
   description: z.string().min(1, 'Description is required'),
@@ -54,19 +52,7 @@ export const invoiceSchema = z.object({
     (val) => (String(val) === '' ? 0 : Number(String(val))),
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
-  paymentMethod: z.enum(['payvost', 'manual', 'stripe', 'rapyd']),
-  manualBankName: z.string().optional(),
-  manualAccountName: z.string().optional(),
-  manualAccountNumber: z.string().optional(),
-  manualOtherDetails: z.string().optional(),
-}).refine(data => {
-    if (data.paymentMethod === 'manual') {
-        return !!data.manualBankName && !!data.manualAccountName && !!data.manualAccountNumber;
-    }
-    return true;
-}, {
-    message: "Bank Name, Account Name, and Account Number are required for manual bank transfers.",
-    path: ["manualBankName"], // You can associate the error with one of the fields
+  paymentMethod: z.string().optional(),
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -125,7 +111,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             notes: 'Thank you for your business. Please pay within 30 days.',
             taxRate: 0,
             currency: 'USD',
-            paymentMethod: 'payvost',
+            paymentMethod: 'rapyd',
             invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
         },
     });
@@ -149,11 +135,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                         items: invoice.items,
                         notes: invoice.notes || '',
                         taxRate: invoice.taxRate || 0,
-                        paymentMethod: invoice.paymentMethod?.toLowerCase() || 'payvost',
-                        manualBankName: invoice.manualBankName || '',
-                        manualAccountName: invoice.manualAccountName || '',
-                        manualAccountNumber: invoice.manualAccountNumber || '',
-                        manualOtherDetails: invoice.manualOtherDetails || '',
+                        paymentMethod: invoice.paymentMethod?.toLowerCase() || 'rapyd',
                     });
                 }
             });
@@ -198,7 +180,6 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
     const watchedItems = watch('items');
     const watchedTaxRate = watch('taxRate') || 0;
     const selectedCurrency = watch('currency');
-    const paymentMethod = watch('paymentMethod');
     
     const subtotal = watchedItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = subtotal * (watchedTaxRate / 100);
@@ -233,12 +214,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             status,
             updatedAt: serverTimestamp(),
             isPublic: status !== 'Draft',
-            ...(data.paymentMethod === 'manual' && data.manualBankName ? {
-                manualBankName: data.manualBankName,
-                manualAccountName: data.manualAccountName || '',
-                manualAccountNumber: data.manualAccountNumber || '',
-                manualOtherDetails: data.manualOtherDetails,
-            } : {}),
+            paymentMethod: data.paymentMethod || 'rapyd',
         };
 
         if (savedInvoiceId) {
@@ -512,50 +488,6 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                             </div>
                         </div>
 
-                         <Separator />
-
-                        <div className="space-y-4">
-                            <Label className="font-semibold">Payment Method</Label>
-                            <Controller
-                                name="paymentMethod"
-                                control={control}
-                                render={({ field }) => (
-                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <Label htmlFor="payvost" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'payvost' && 'border-primary')}>
-                                            <RadioGroupItem value="payvost" id="payvost" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold"><Wallet className="h-5 w-5"/>Payvost Checkout</div>
-                                            <p className="text-sm text-muted-foreground mt-1">Allow client to pay securely via Card, Bank Transfer, or their Payvost Wallet.</p>
-                                        </Label>
-                                        <Label htmlFor="stripe" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'stripe' && 'border-primary')}>
-                                            <RadioGroupItem value="stripe" id="stripe" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold"><CreditCard className="h-5 w-5"/>Stripe</div>
-                                            <p className="text-sm text-muted-foreground mt-1">Accept card payments worldwide with Stripe's secure payment processing.</p>
-                                        </Label>
-                                        <Label htmlFor="rapyd" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'rapyd' && 'border-primary')}>
-                                            <RadioGroupItem value="rapyd" id="rapyd" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold"><Globe className="h-5 w-5"/>Rapyd</div>
-                                            <p className="text-sm text-muted-foreground mt-1">900+ payment methods including cards, bank transfers, mobile money, and local payment methods.</p>
-                                        </Label>
-                                         <Label htmlFor="manual" className={cn("flex flex-col items-start rounded-md border-2 p-4 cursor-pointer", field.value === 'manual' && 'border-primary')}>
-                                            <RadioGroupItem value="manual" id="manual" className="sr-only" />
-                                            <div className="flex items-center gap-2 font-semibold"><Landmark className="h-5 w-5"/>Manual Bank Transfer</div>
-                                            <p className="text-sm text-muted-foreground mt-1">Provide your bank details for the client to transfer money to.</p>
-                                        </Label>
-                                    </RadioGroup>
-                                )}
-                            />
-                            {paymentMethod === 'manual' && (
-                                <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="space-y-2"><Label>Bank Name</Label><Input {...register('manualBankName')} placeholder="e.g., Chase Bank" /></div>
-                                        <div className="space-y-2"><Label>Account Holder Name</Label><Input {...register('manualAccountName')} placeholder="e.g., John Doe" /></div>
-                                    </div>
-                                    <div className="space-y-2"><Label>Account Number</Label><Input {...register('manualAccountNumber')} placeholder="e.g., 1234567890" /></div>
-                                    <div className="space-y-2"><Label>Other Details (Optional)</Label><Textarea {...register('manualOtherDetails')} placeholder="e.g., SWIFT/BIC, Routing Number, IBAN" /></div>
-                                     {errors.manualBankName && <p className="text-sm text-destructive">{errors.manualBankName.message}</p>}
-                                </div>
-                            )}
-                        </div>
 
                     </CardContent>
                     <CardFooter className="justify-end gap-2">

@@ -143,14 +143,38 @@ router.get('/public/:id', async (req: Request, res: Response) => {
       }
     }
 
-    // Return invoice with business profile if available
-    res.json({
+    // Convert Prisma Decimal objects to numbers and dates to ISO strings for JSON serialization
+    const serializedInvoice = {
       ...invoice,
+      grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
+        ? parseFloat(invoice.grandTotal.toString())
+        : invoice.grandTotal,
+      taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
+        ? parseFloat(invoice.taxRate.toString())
+        : invoice.taxRate || 0,
+      issueDate: invoice.issueDate instanceof Date
+        ? invoice.issueDate.toISOString()
+        : invoice.issueDate,
+      dueDate: invoice.dueDate instanceof Date
+        ? invoice.dueDate.toISOString()
+        : invoice.dueDate,
+      createdAt: invoice.createdAt instanceof Date
+        ? invoice.createdAt.toISOString()
+        : invoice.createdAt,
+      updatedAt: invoice.updatedAt instanceof Date
+        ? invoice.updatedAt.toISOString()
+        : invoice.updatedAt,
       businessProfile,
-    });
+    };
+
+    res.json(serializedInvoice);
   } catch (error: any) {
     console.error('Error getting public invoice:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
