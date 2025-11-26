@@ -8,6 +8,7 @@ import { Icons } from "@/components/icons";
 import { Globe, Wallet, BarChart, Landmark, ChevronDown, CreditCard, FileText, Code, Users, ShieldCheck, DollarSign, User, Building2, ArrowRight } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { countries, Country } from "@/lib/countries";
@@ -15,123 +16,132 @@ import { ThemeSwitcher } from './theme-switcher';
 
 type ProductCategory = 'personal' | 'business';
 
-const personalProducts: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
+type Product = { 
+    title: string; 
+    href: string; 
+    description: string; 
+    icon: React.ReactNode;
+    isNew?: boolean;
+};
+
+const personalProducts: Product[] = [
     {
         title: "Payments",
         href: "/payments",
         description: "Supports local and cross-border payments with +150 countries.",
-        icon: <CreditCard className="h-5 w-5" />
+        icon: <CreditCard className="h-3.5 w-3.5" />
     },
     {
         title: "Bill Payments",
         href: "/bill-payments",
         description: "Pay bills across multiple countries from one place, no switching.",
-        icon: <FileText className="h-5 w-5" />
+        icon: <FileText className="h-3.5 w-3.5" />
     },
     {
         title: "Cards",
         href: "/cards",
         description: "Create and Get Virtual or physical Card, and one-time disposable Virtual debit cards",
-        icon: <CreditCard className="h-5 w-5" />
+        icon: <CreditCard className="h-3.5 w-3.5" />
     },
     {
         title: "Wallet",
         href: "/wallet",
         description: "Create up to 15+ wallets by currencies and manage your fx assets in one place.",
-        icon: <Wallet className="h-5 w-5" />
+        icon: <Wallet className="h-3.5 w-3.5" />
     },
     {
         title: "Invoicing",
         href: "/invoicing",
         description: "Create, send and accept payment with our invoicing infrastructure.",
-        icon: <FileText className="h-5 w-5" />
+        icon: <FileText className="h-3.5 w-3.5" />
     },
     {
         title: "Split Payments",
         href: "/split-payments",
         description: "Split payments between friends and family at a go.",
-        icon: <Users className="h-5 w-5" />
+        icon: <Users className="h-3.5 w-3.5" />
     },
     {
         title: "Donations",
         href: "/donations",
         description: "Raise funding for a cause with ease and share with the world.",
-        icon: <DollarSign className="h-5 w-5" />
+        icon: <DollarSign className="h-3.5 w-3.5" />
     },
     {
         title: "Recurring Payments",
         href: "/recurring-payments",
         description: "Set your Recurring payments and let payvost handle continous remittances.",
-        icon: <CreditCard className="h-5 w-5" />
+        icon: <CreditCard className="h-3.5 w-3.5" />
     },
     {
         title: "Events",
         href: "/events",
         description: "Collect payments easily for that event you want to organize and manage you tickets from one place.",
-        icon: <FileText className="h-5 w-5" />
+        icon: <FileText className="h-3.5 w-3.5" />
     },
     {
-        title: "Escrow (New)",
+        title: "Escrow",
         href: "/escrow",
         description: "Explore our integrated escrow infrastructure to safeguard your payments.",
-        icon: <ShieldCheck className="h-5 w-5" />
+        icon: <ShieldCheck className="h-3.5 w-3.5" />,
+        isNew: true
     },
 ];
 
-const businessProducts: { title: string; href: string; description: string; icon: React.ReactNode }[] = [
+const businessProducts: Product[] = [
     {
         title: "Advance Payments",
         href: "/payments",
         description: "High level multilateral infrastructure for payments of all kinds.",
-        icon: <CreditCard className="h-5 w-5" />
+        icon: <CreditCard className="h-3.5 w-3.5" />
     },
     {
         title: "Business Accounts",
         href: "/accounts",
         description: "Manage and segregate business accounts and sub-accounts for tracking expenses.",
-        icon: <Wallet className="h-5 w-5" />
+        icon: <Wallet className="h-3.5 w-3.5" />
     },
     {
         title: "Business Invoicing",
         href: "/invoicing",
         description: "Create business automated and customized invoices with access to more template libraries on the go.",
-        icon: <FileText className="h-5 w-5" />
+        icon: <FileText className="h-3.5 w-3.5" />
     },
     {
         title: "Send Quotations",
         href: "/quotations",
         description: "With our quote builder, you can land leads and convert to invoice upon payments.",
-        icon: <FileText className="h-5 w-5" />
+        icon: <FileText className="h-3.5 w-3.5" />
     },
     {
         title: "Track Card spending",
         href: "/cards",
         description: "Create virtual cards for diffrent business purposes, monitor and set spending limits on the go.",
-        icon: <CreditCard className="h-5 w-5" />
+        icon: <CreditCard className="h-3.5 w-3.5" />
     },
     {
         title: "Team Management",
         href: "/team-management",
         description: "Assign roles to team members based on what matters to them, set permission levels at each role.",
-        icon: <Users className="h-5 w-5" />
+        icon: <Users className="h-3.5 w-3.5" />
     },
     {
         title: "Accounting Automation",
         href: "/accounting",
         description: "Automate your bookkeeping process with our advanced ledger engine.",
-        icon: <BarChart className="h-5 w-5" />
+        icon: <BarChart className="h-3.5 w-3.5" />
     },
     {
         title: "Inventory",
         href: "/inventory",
         description: "Mange your inventory, customers, orders,  and refunds on the go.",
-        icon: <BarChart className="h-5 w-5" />
+        icon: <BarChart className="h-3.5 w-3.5" />
     },
     {
         title: "Developer Integration",
         href: "/developers",
         description: "Integrate Payvost with popular integrating partners like Shopify, WordPress,, Xerox, etc.",
-        icon: <Code className="h-5 w-5" />
+        icon: <Code className="h-3.5 w-3.5" />
     },
 ];
 
@@ -263,31 +273,34 @@ const ProductsDropdownContent = () => {
                         
                         <div 
                             key={selectedCategory}
-                            className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-0 duration-300"
+                            className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in-0 duration-300"
                         >
                             {currentProducts.map((product) => (
                                 <NavigationMenuLink key={product.title} asChild>
                                     <Link
                                         href={product.href}
-                                        className="group relative flex flex-col gap-3 rounded-xl border border-border/50 bg-card p-5 transition-all duration-200 hover:border-primary/50 hover:bg-accent/50 hover:shadow-lg hover:shadow-primary/5"
+                                        className="group relative flex flex-row items-start gap-3 rounded-lg border border-border/50 bg-card p-3 transition-all duration-200 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"
                                     >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20">
-                                                <div className="transition-transform duration-200 group-hover:scale-110">
-                                                    {product.icon}
-                                                </div>
-                                            </div>
+                                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-all duration-200 group-hover:bg-primary/20">
+                                            {product.icon}
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <div className="text-base font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
-                                                {product.title}
+                                        <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-xs font-semibold leading-tight text-foreground transition-colors group-hover:text-primary truncate">
+                                                    {product.title}
+                                                </div>
+                                                {product.isNew && (
+                                                    <Badge variant="default" className="h-4 px-1.5 text-[10px] font-semibold flex-shrink-0">
+                                                        New
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            <div className="text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                                            <div className="text-[10px] leading-snug text-muted-foreground line-clamp-2">
                                                 {product.description}
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-4 right-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                            <ArrowRight className="h-4 w-4 text-primary" />
+                                        <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex-shrink-0">
+                                            <ArrowRight className="h-3 w-3 text-primary" />
                                         </div>
                                     </Link>
                                 </NavigationMenuLink>
