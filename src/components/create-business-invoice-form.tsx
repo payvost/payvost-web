@@ -269,6 +269,11 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         try {
             const finalInvoiceId = await saveInvoice('Pending');
             setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
+            
+            // Small delay to ensure invoice is fully committed to Firestore
+            // before trying to fetch it via API
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             setShowSendDialog(true);
         } catch (error: any) {
             console.error("Error sending invoice:", error);
