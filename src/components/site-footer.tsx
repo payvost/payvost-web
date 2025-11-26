@@ -427,8 +427,8 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
               </div>
             </div>
 
-            {/* Social Links - Right aligned */}
-            <div className="flex items-center gap-4 lg:shrink-0">
+            {/* Social Links - Centered on mobile, right aligned on desktop */}
+            <div className="flex items-center justify-center lg:justify-end gap-4 lg:shrink-0 w-full lg:w-auto">
               {socialLinks.map(({ href, icon: Icon, ariaLabel, color }) => (
                 <Link
                   key={ariaLabel}
