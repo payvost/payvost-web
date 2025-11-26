@@ -303,27 +303,6 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
               </form>
             </div>
 
-            {/* Social Links - Desktop only in this section, mobile shows at bottom */}
-            <div className="hidden lg:block space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Follow Us</h3>
-              <div className="flex items-center gap-3">
-                {socialLinks.map(({ href, icon: Icon, ariaLabel, color }) => (
-                  <Link
-                    key={ariaLabel}
-                    href={href}
-                    rel="nofollow noopener noreferrer"
-                    target="_blank"
-                    className={cn(
-                      "h-10 w-10 rounded-lg bg-background border border-border flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-md text-muted-foreground",
-                      color
-                    )}
-                    aria-label={ariaLabel}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Link>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Links Grid - Mobile: Accordion, Tablet: 2 columns, Desktop: 4 columns */}
@@ -416,26 +395,9 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
 
         {/* Bottom Bar */}
         <div className="pt-8 sm:pt-10 border-t border-border/50">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-            {/* Copyright */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                &copy; {new Date().getFullYear()} Payvost Inc. All rights reserved.
-              </p>
-              <span className="hidden sm:inline text-muted-foreground/50">•</span>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <Link href="/privacy" className="hover:text-primary transition-colors">
-                  Privacy
-                </Link>
-                <span className="text-muted-foreground/50">•</span>
-                <Link href="/terms" className="hover:text-primary transition-colors">
-                  Terms
-                </Link>
-              </div>
-            </div>
-
-            {/* Social Links - Mobile & Tablet */}
-            <div className="flex lg:hidden items-center gap-3">
+          <div className="flex flex-col gap-8">
+            {/* Social Links */}
+            <div className="flex items-center justify-center gap-4">
               {socialLinks.map(({ href, icon: Icon, ariaLabel, color }) => (
                 <Link
                   key={ariaLabel}
@@ -453,15 +415,35 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
               ))}
             </div>
 
-            {/* Trust Badges (Optional - add your certifications here) */}
-            <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground">
-              {/* Add trust badges/icons here if you have them */}
-              <span className="px-3 py-1 rounded-md bg-background border border-border">
-                🔒 Secured
-              </span>
-              <span className="px-3 py-1 rounded-md bg-background border border-border">
-                ✓ Verified
-              </span>
+            {/* Disclaimer & Copyright */}
+            <div className="space-y-4 text-center">
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-2 max-w-4xl mx-auto leading-relaxed">
+                <p>
+                  Payvost Technologies Limited is a financial technology company incorporated in United States with company number RN-98403465.
+                </p>
+                <p>
+                  Our registered office is at 651N Broad Street, Delaware US.
+                </p>
+                <p>
+                  Certain financial and payment services on Payvost are provided by Rapyd Financial Network (Europe) Limited ("Rapyd"),
+                  authorised and regulated by the Financial Conduct Authority (FCA) under the Electronic Money Regulations 2011
+                  (Firm Reference Number 900769).
+                </p>
+                <p>
+                  By using Payvost's services, you are signing up for services from Rapyd via Payvost's platform.
+                </p>
+                <p>
+                  Payvost does not directly provide electronic money services.
+                </p>
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+                <p>
+                  © {new Date().getFullYear()} Payvost Technologies Limited. All rights reserved.
+                </p>
+                <p className="text-muted-foreground/80">
+                  Built with you in mind.
+                </p>
+              </div>
             </div>
           </div>
         </div>
