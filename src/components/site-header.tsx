@@ -222,10 +222,10 @@ const ProductsDropdownContent = () => {
     ];
 
     return (
-        <div className="w-screen max-w-[700px]">
-            <div className="flex relative">
+        <div className="w-full max-w-[700px] min-h-[300px]">
+            <div className="flex relative min-h-[300px]">
                 {/* Left Sidebar - Compact Category Navigation */}
-                <div className="w-[180px] border-r border-border bg-muted/30 flex-shrink-0">
+                <div className="w-[180px] border-r border-border bg-muted/30 flex-shrink-0 min-h-[300px]">
                     <div className="p-3">
                         <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Category
@@ -258,9 +258,14 @@ const ProductsDropdownContent = () => {
                                     {/* Hover Submenu */}
                                     {hoveredCategory === category.id && (
                                         <div 
-                                            className="absolute left-full top-0 ml-1 w-[500px] bg-popover border border-border rounded-lg shadow-lg p-4 z-50 animate-in fade-in-0 slide-in-from-left-2 duration-200"
+                                            className="absolute left-full top-0 ml-1 w-[500px] bg-popover border border-border rounded-lg shadow-lg p-4 z-[100] animate-in fade-in-0 slide-in-from-left-2 duration-200"
                                             onMouseEnter={() => setHoveredCategory(category.id)}
                                             onMouseLeave={() => setHoveredCategory(null)}
+                                            style={{ 
+                                                position: 'absolute',
+                                                left: '100%',
+                                                top: 0
+                                            }}
                                         >
                                             <div className="space-y-1 max-h-[500px] overflow-y-auto">
                                                 {category.products.map((product) => (
