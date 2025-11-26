@@ -648,11 +648,11 @@ export default function LandingPage() {
                       </div>
                     </Card>
                     <Card className="border-2 border-border bg-background/70 p-4 sm:p-5">
-                      <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3">
                         <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-primary/10 text-primary flex-shrink-0">
                           <PhoneCall className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
-                        <div>
+                        <div className="text-center sm:text-left">
                           <p className="text-xs sm:text-sm font-semibold text-foreground">Dedicated onboarding</p>
                           <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">Enterprise teams receive a success manager from day one</p>
                         </div>
