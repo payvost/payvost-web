@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { doc, getDoc, DocumentData, query, collection, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { DocumentData } from 'firebase/firestore';
 import StripeCheckout from '@/components/StripeCheckout';
 import { RapydInvoiceCheckout } from '@/components/RapydInvoiceCheckout';
 import { SiteHeader } from '@/components/site-header';
@@ -61,84 +60,89 @@ export default function PublicInvoicePage() {
     const fetchInvoice = async () => {
       setLoading(true);
       try {
-        let isBusinessInvoice = false;
-        // Try the invoices collection first
-        let docRef = doc(db, "invoices", id);
-        let docSnap = await getDoc(docRef);
-        console.log('[invoice] checked collection: invoices, exists:', docSnap.exists());
+        // Use backend API endpoint instead of direct Firestore reads
+        // This bypasses Firestore security rules and avoids composite index issues
+        const response = await fetch(`/api/invoices/public/${id}`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
 
-        // If not found in `invoices`, try the business invoices collection
-        if (!docSnap.exists()) {
-          docRef = doc(db, "businessInvoices", id);
-          docSnap = await getDoc(docRef);
-          isBusinessInvoice = true;
-          console.log('[invoice] checked collection: businessInvoices, exists:', docSnap.exists());
+        if (!response.ok) {
+          if (response.status === 404) {
+            setFetchError("Invoice not found");
+            setInvoice(null);
+            return;
+          }
+          throw new Error(`Failed to fetch invoice: ${response.statusText}`);
         }
 
-        if (docSnap.exists()) {
-          const invoiceData = docSnap.data();
-          
-          // For regular invoices, check isPublic. 
-          // For business invoices, rules allow read: if true, but we should still respect Draft status
-          const isPublic = invoiceData.isPublic !== false; // Default to true if not set
-          const isDraft = invoiceData.status === 'Draft';
-          // Business invoices are publicly readable per rules, but don't show drafts publicly
-          // Regular invoices must have isPublic === true
-          const canView = isBusinessInvoice 
-            ? !isDraft  // Business invoices: show if not draft
-            : isPublic; // Regular invoices: show if public
-          
-          if (canView) {
-            setInvoice(invoiceData);
-            setFoundInCollection(isBusinessInvoice ? 'businessInvoices' : 'invoices');
+        const invoiceData = await response.json();
+        
+        // Convert backend format to frontend format
+        // Handle both Prisma format and Firestore format
+        const convertedInvoice = {
+          ...invoiceData,
+          // Convert Decimal to number for grandTotal and taxRate
+          grandTotal: typeof invoiceData.grandTotal === 'object' 
+            ? parseFloat(invoiceData.grandTotal.toString()) 
+            : invoiceData.grandTotal,
+          taxRate: typeof invoiceData.taxRate === 'object'
+            ? parseFloat(invoiceData.taxRate.toString())
+            : invoiceData.taxRate || 0,
+          // Convert dates if they're strings
+          issueDate: invoiceData.issueDate instanceof Date 
+            ? invoiceData.issueDate 
+            : new Date(invoiceData.issueDate),
+          dueDate: invoiceData.dueDate instanceof Date
+            ? invoiceData.dueDate
+            : new Date(invoiceData.dueDate),
+          // Ensure items array exists
+          items: invoiceData.items || [],
+          // Convert fromInfo/toInfo if they're objects
+          fromName: invoiceData.fromInfo?.name || invoiceData.fromName || '',
+          fromAddress: invoiceData.fromInfo?.address || invoiceData.fromAddress || '',
+          toName: invoiceData.toInfo?.name || invoiceData.toName || '',
+          toAddress: invoiceData.toInfo?.address || invoiceData.toAddress || '',
+          toEmail: invoiceData.toInfo?.email || invoiceData.toEmail || '',
+          // Handle payment method
+          paymentMethod: invoiceData.paymentMethod?.toLowerCase() || 'payvost',
+          // Handle manual bank details
+          manualBankName: invoiceData.manualBankDetails?.bankName || invoiceData.manualBankName || '',
+          manualAccountName: invoiceData.manualBankDetails?.accountName || invoiceData.manualAccountName || '',
+          manualAccountNumber: invoiceData.manualBankDetails?.accountNumber || invoiceData.manualAccountNumber || '',
+          manualOtherDetails: invoiceData.manualBankDetails?.otherDetails || invoiceData.manualOtherDetails || '',
+        };
 
-            // Fetch associated business profile (if there is a businessId)
-            if (invoiceData.businessId) {
-              try {
-                const bizQuery = query(collection(db, 'users'), where('businessProfile.id', '==', invoiceData.businessId));
-                const bizSnap = await getDocs(bizQuery);
-                if (!bizSnap.empty) {
-                  setBusinessProfile(bizSnap.docs[0].data().businessProfile);
-                }
-              } catch (profileError) {
-                console.warn('Could not fetch business profile:', profileError);
-                // Continue without business profile
-              }
-            }
+        // Set business profile if available (backend includes it)
+        if (invoiceData.businessProfile) {
+          setBusinessProfile(invoiceData.businessProfile);
+        }
 
-            // If online payment (stripe), fetch Stripe clientSecret
-            if (invoiceData.paymentMethod === 'stripe') {
-              try {
-                const res = await fetch(`${apiBase}/create-payment-intent`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    invoiceId: id,
-                    amount: invoiceData.grandTotal * 100, // convert to cents
-                    currency: invoiceData.currency.toLowerCase()
-                  })
-                });
-                const data = await res.json();
-                setClientSecret(data.clientSecret);
-              } catch (paymentError) {
-                console.warn('Could not fetch payment intent:', paymentError);
-                // Continue without payment intent
-              }
-            }
-          } else {
-            setInvoice(null);
-            console.log("Invoice is not public.");
-            setFetchError("Invoice is not public");
+        setInvoice(convertedInvoice);
+        setFoundInCollection(invoiceData.businessId ? 'businessInvoices' : 'invoices');
+
+        // If online payment (stripe), fetch Stripe clientSecret
+        if (convertedInvoice.paymentMethod === 'stripe') {
+          try {
+            const res = await fetch(`${apiBase}/create-payment-intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoiceId: id,
+                amount: convertedInvoice.grandTotal * 100, // convert to cents
+                currency: convertedInvoice.currency.toLowerCase()
+              })
+            });
+            const data = await res.json();
+            setClientSecret(data.clientSecret);
+          } catch (paymentError) {
+            console.warn('Could not fetch payment intent:', paymentError);
+            // Continue without payment intent
           }
-        } else {
-          setInvoice(null);
-          console.log("Invoice not found.");
-          setFetchError("Invoice not found");
         }
       } catch (error: any) {
         console.error("Error fetching invoice:", error);
-        const code = (error as any)?.code || (error as any)?.message || String(error);
-        setFetchError(String(code));
+        setFetchError(error?.message || String(error));
         setInvoice(null);
       } finally {
         setLoading(false);

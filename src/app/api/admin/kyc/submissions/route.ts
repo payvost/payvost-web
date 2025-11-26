@@ -35,8 +35,45 @@ export async function GET(request: NextRequest) {
       query = query.where('status', '==', status);
     }
 
-    // Execute query
-    const snapshot = await query.orderBy('createdAt', 'desc').limit(limit).get();
+    // Execute query - handle missing index gracefully
+    let snapshot;
+    try {
+      snapshot = await query.orderBy('createdAt', 'desc').limit(limit).get();
+    } catch (queryError: any) {
+      // If orderBy fails (e.g., missing index), try without orderBy and sort in memory
+      const errorMessage = queryError?.message || String(queryError);
+      console.warn('Query with orderBy failed, trying without orderBy:', errorMessage);
+      
+      // Check if it's an index error
+      if (errorMessage.includes('index') || errorMessage.includes('indexes')) {
+        console.error('Missing Firestore index. Please deploy indexes using: firebase deploy --only firestore:indexes');
+      }
+      
+      try {
+        // Get all documents without ordering
+        const unorderedSnapshot = await query.limit(limit * 2).get(); // Get more to account for no limit
+        
+        // Sort in memory
+        const sortedDocs = unorderedSnapshot.docs
+          .map(doc => ({ doc, data: doc.data() }))
+          .sort((a, b) => {
+            const getTime = (data: any) => {
+              if (data.createdAt?.toDate) return data.createdAt.toDate().getTime();
+              if (data.createdAt?._seconds) return data.createdAt._seconds * 1000;
+              return 0;
+            };
+            return getTime(b.data) - getTime(a.data);
+          })
+          .slice(0, limit)
+          .map(item => item.doc);
+        
+        // Create a snapshot-like object
+        snapshot = { docs: sortedDocs } as FirebaseFirestore.QuerySnapshot;
+      } catch (fallbackError: any) {
+        console.error('Fallback query also failed:', fallbackError.message);
+        throw new Error(`Failed to query KYC submissions. Original error: ${errorMessage}. Fallback error: ${fallbackError.message}`);
+      }
+    }
 
     // Get storage bucket (with error handling)
     let bucket: any = null;
