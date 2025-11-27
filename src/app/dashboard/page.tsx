@@ -99,7 +99,7 @@ interface MonthlyData {
     expense: number;
 }
 
-export default function DashboardPage() {
+export default function DashboardPage(): JSX.Element {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
@@ -117,13 +117,13 @@ export default function DashboardPage() {
   const [disputes, setDisputes] = useState<DocumentData[]>([]);
   const [loadingDisputes, setLoadingDisputes] = useState(true);
   const [externalTxStats, setExternalTxStats] = useState({ total: 0, completed: 0, pending: 0, failed: 0, totalAmount: 0 });
-    const [needsPin, setNeedsPin] = useState(false);
-    const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [needsPin, setNeedsPin] = useState(false);
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   
   const firstName = user?.displayName?.split(' ')[0] || "User";
   const [filter, setFilter] = useState('Last 30 Days');
 
-    const processTransactionsForSpending = (transactions: any[]) => {
+  const processTransactionsForSpending = (transactions: any[]) => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
