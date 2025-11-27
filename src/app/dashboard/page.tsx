@@ -101,6 +101,7 @@ interface MonthlyData {
 export default function DashboardPage() {
   const [language, setLanguage] = useState<LanguagePreference>('en');
   const { user, loading: authLoading } = useAuth();
+  const LayoutComponent = DashboardLayout;
   const [wallets, setWallets] = useState<any[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [isKycVerified, setIsKycVerified] = useState(false);
@@ -546,14 +547,14 @@ export default function DashboardPage() {
   // Show comprehensive loading skeleton to prevent flash of incorrect data
   if (isLoading) {
     return (
-      <DashboardLayout language={language} setLanguage={setLanguage}>
+      <LayoutComponent language={language} setLanguage={setLanguage}>
         <DashboardLoadingSkeleton />
-      </DashboardLayout>
+      </LayoutComponent>
     );
   }
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <LayoutComponent language={language} setLanguage={setLanguage}>
       <ErrorBoundary>
         <div className="flex-1 space-y-4 p-8 pt-6">
         <Breadcrumb>
@@ -870,6 +871,7 @@ export default function DashboardPage() {
             </div>
         </div>
       </div>
-    </DashboardLayout>
+    </ErrorBoundary>
+    </LayoutComponent>
   );
 }
