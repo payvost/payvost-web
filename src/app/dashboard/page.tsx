@@ -26,6 +26,7 @@ import { DashboardLoadingSkeleton, WalletCardSkeleton } from '@/components/skele
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
 import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, type DocumentSnapshot, type QuerySnapshot, type FirestoreError } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
@@ -44,12 +45,47 @@ const defaultSpendingData = [
     { category: 'Bill Payments', amount: 0, total: 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
 ];
 
-const kpiCards = [
-    { title: "Total Volume", value: 12500, change: "+15.2% vs last month", icon: <LineChart className="h-4 w-4 text-muted-foreground" />, currency: 'USD' },
-    { title: "Successful Payouts", value: 420, change: "+35 vs last month", icon: <CheckCircle className="h-4 w-4 text-muted-foreground" /> },
-    { title: "Active Customers", value: 87, change: "+5 new this month", icon: <Users className="h-4 w-4 text-muted-foreground" /> },
-    { title: "Pending Invoices", value: 4, change: "$12,500 outstanding", icon: <FileText className="h-4 w-4 text-muted-foreground" /> },
-];
+// KPI cards will be populated dynamically from user stats
+const getKpiCards = (stats: { total: number; completed: number; pending: number; failed: number; totalAmount: number }, invoices: any[], wallets: any[]) => {
+  const totalVolume = stats.totalAmount || 0;
+  const successfulPayouts = stats.completed || 0;
+  const pendingInvoices = invoices.filter((inv: any) => inv.status === 'PENDING' || inv.status === 'OVERDUE').length;
+  const pendingInvoicesAmount = invoices
+    .filter((inv: any) => inv.status === 'PENDING' || inv.status === 'OVERDUE')
+    .reduce((sum: number, inv: any) => sum + (parseFloat(inv.totalAmount || inv.amount || '0')), 0);
+  
+  return [
+    { 
+      title: "Total Volume", 
+      value: totalVolume, 
+      change: `${stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : 0}% success rate`, 
+      icon: <LineChart className="h-4 w-4 text-muted-foreground" />, 
+      currency: 'USD',
+      format: 'currency'
+    },
+    { 
+      title: "Successful Payouts", 
+      value: successfulPayouts, 
+      change: `${stats.pending > 0 ? `${stats.pending} pending` : 'All completed'}`, 
+      icon: <CheckCircle className="h-4 w-4 text-muted-foreground" />,
+      format: 'number'
+    },
+    { 
+      title: "Total Transactions", 
+      value: stats.total || 0, 
+      change: `${stats.failed > 0 ? `${stats.failed} failed` : 'All successful'}`, 
+      icon: <Users className="h-4 w-4 text-muted-foreground" />,
+      format: 'number'
+    },
+    { 
+      title: "Pending Invoices", 
+      value: pendingInvoices, 
+      change: pendingInvoicesAmount > 0 ? `$${pendingInvoicesAmount.toLocaleString()} outstanding` : 'None pending', 
+      icon: <FileText className="h-4 w-4 text-muted-foreground" />,
+      format: 'number'
+    },
+  ];
+};
 
 
 interface GreetingState {
@@ -524,7 +560,8 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
-      <div className="flex-1 space-y-4 p-8 pt-6">
+      <ErrorBoundary>
+        <div className="flex-1 space-y-4 p-8 pt-6">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

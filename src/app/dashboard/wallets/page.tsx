@@ -35,6 +35,8 @@ import { walletService, currencyService, type Account } from '@/services';
 import { getCurrencyMeta, getFlagCode, getCurrencyName } from '@/utils/currency-meta';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { EmptyState } from '@/components/empty-state';
+import { Wallet } from 'lucide-react';
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -44,6 +46,7 @@ export default function WalletsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [rates, setRates] = useState<Record<string, number>>({});
+  const [createWalletDialogOpen, setCreateWalletDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch wallets from backend
@@ -179,15 +182,37 @@ export default function WalletsPage() {
         </div>
 
         {wallets.length === 0 ? (
-            <Card>
-                <CardContent className="h-96 flex flex-col items-center justify-center text-center">
-                    <h3 className="text-2xl font-bold tracking-tight">You haven't created any wallets yet.</h3>
-                    <p className="text-sm text-muted-foreground mt-2 mb-6">Click the button below to add your first currency wallet.</p>
-                    <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
-                        <Button disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/>Create Your First Wallet</Button>
-                    </CreateWalletDialog>
-                </CardContent>
-            </Card>
+            <>
+                <EmptyState
+                    icon={<Wallet className="h-16 w-16" />}
+                    title="Start Your Global Journey"
+                    description="Create your first currency wallet to send, receive, and manage money across borders instantly. Multi-currency support, instant transfers, and bank-level security."
+                    action={
+                        isKycVerified
+                            ? {
+                                label: "Create Your First Wallet",
+                                onClick: () => setCreateWalletDialogOpen(true),
+                            }
+                            : undefined
+                    }
+                    secondaryAction={
+                        !isKycVerified
+                            ? {
+                                label: "Complete KYC First",
+                                onClick: () => window.location.href = '/dashboard/get-started',
+                                variant: 'outline',
+                            }
+                            : undefined
+                    }
+                    size="lg"
+                />
+                <CreateWalletDialog 
+                    onWalletCreated={handleWalletCreated} 
+                    disabled={!isKycVerified}
+                    open={createWalletDialogOpen}
+                    onOpenChange={setCreateWalletDialogOpen}
+                />
+            </>
         ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="lg:col-span-1 space-y-6">
@@ -298,9 +323,17 @@ export default function WalletsPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="text-center text-muted-foreground py-16">
-                                <p>No Recent Activity Yet</p>
-                            </div>
+                            <EmptyState
+                                icon={<ArrowRightLeft className="h-8 w-8" />}
+                                title="No recent activity"
+                                description="Your recent transactions will appear here once you start using your wallets."
+                                action={{
+                                    label: "View All Transactions",
+                                    onClick: () => window.location.href = '/dashboard/transactions',
+                                }}
+                                showCard={false}
+                                size="sm"
+                            />
                         )}
                     </CardContent>
                     <CardFooter>

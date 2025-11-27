@@ -6,6 +6,9 @@ import path from 'path';
 import { logger, requestLogger, logError } from '../common/logger';
 import { errorTrackerHandler, errorTrackerErrorHandler } from '../common/error-tracker';
 import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
+import { performanceMiddleware, getPerformanceStats } from '../common/performance-monitor';
+import { apmMiddleware } from '../common/apm-setup';
+import { performanceMiddleware, getPerformanceStats } from '../common/performance-monitor';
 
 // Domain-specific error classes
 export class AuthenticationError extends Error {
@@ -181,6 +184,12 @@ export function createGateway() {
   // Request logging (with correlation IDs)
   app.use(requestLogger);
 
+  // APM monitoring (if enabled)
+  app.use(apmMiddleware);
+
+  // Performance monitoring
+  app.use(performanceMiddleware);
+
   // Rate limiting
   app.use(generalLimiter);
 
@@ -193,14 +202,33 @@ export function createGateway() {
     });
   });
 
-  // Root endpoint
+  // Root endpoint with API version info
   app.get('/', (req, res) => {
     res.status(200).json({
       name: 'Payvost API Gateway',
       version: '1.0.0',
       status: 'running',
+      apiVersions: ['v1'],
+      documentation: '/api/v1/docs',
+      endpoints: {
+        health: '/health',
+        api: '/api/v1',
+      },
     });
   });
+
+  // API version info endpoint
+  app.get('/api/versions', (req, res) => {
+    res.status(200).json({
+      currentVersion: 'v1',
+      supportedVersions: ['v1'],
+      defaultVersion: 'v1',
+      deprecationPolicy: 'https://docs.payvost.com/api/versioning',
+    });
+  });
+
+  // Performance metrics endpoint (admin only)
+  app.get('/api/admin/performance', getPerformanceStats);
 
   // Error tracker error handler (must be before other error handlers)
   app.use(errorTrackerErrorHandler());

@@ -1,154 +1,191 @@
-# Backend Tests
+# Backend Test Suite
 
-Integration and unit tests for the Payvost backend services.
+## Overview
+
+Comprehensive test suite for Payvost backend services, covering:
+- Security features (authentication, validation, rate limiting)
+- Transaction processing
+- Webhook security
+- API endpoints
+- Business logic
+- E2E payment flows
+
+## Running Tests
+
+### Install Dependencies
+```bash
+cd backend
+npm install
+npm install --save-dev vitest @vitest/ui
+```
+
+### Run All Tests
+```bash
+npm test
+```
+
+### Run Specific Test File
+```bash
+npm test -- security.test.ts
+npm test -- e2e/payment-flow.test.ts
+```
+
+### Run Tests in Watch Mode
+```bash
+npm test:watch
+```
+
+### Run Tests with Coverage
+```bash
+npm test:coverage
+```
 
 ## Test Structure
 
 ```
 backend/tests/
-├── transaction-manager.test.ts  # Transfer execution tests
-├── fee-engine.test.ts           # Fee calculation tests
-├── wallet-api.test.ts           # Wallet service API tests
-├── transaction-api.test.ts      # Transaction service API tests
-└── README.md                    # This file
+├── security.test.ts              # Security features (validation, auth)
+├── webhook-security.test.ts      # Webhook signature verification
+├── transaction-manager.test.ts   # Transaction processing
+├── fee-engine.test.ts            # Fee calculation
+├── fraud-detection.test.ts       # Fraud detection logic
+├── e2e/
+│   └── payment-flow.test.ts      # End-to-end payment flows
+└── README.md                     # This file
 ```
 
-## Running Tests
-
-### All Tests
-```bash
-cd backend
-npm test
-```
-
-### Specific Test File
-```bash
-npm test -- transaction-manager.test.ts
-```
-
-### Watch Mode
-```bash
-npm test -- --watch
-```
-
-## Test Coverage
-
-### Transaction Manager Tests
-- ✅ Simple transfer execution
-- ✅ Idempotency key handling
-- ✅ Insufficient balance validation
-- ✅ Currency mismatch validation
-- ✅ Daily/monthly transfer limits
-
-### Fee Engine Tests
-- ✅ Fixed fee calculation
-- ✅ Percentage fee calculation
-- ✅ Multi-currency support
-- ✅ Tier-based discounts
-- ✅ Multiple fee rules application
-
-### Wallet API Tests
-- Account creation (requires KYC)
-- Account listing
-- Balance inquiries
-- Ledger entry retrieval
-- Multi-currency accounts
-
-### Transaction API Tests
-- Transfer execution with authentication
-- Transaction history
-- Fee calculation endpoint
-- Idempotency validation
-- KYC requirement enforcement
-
-## Test Database
-
-Tests use a separate test database to avoid affecting production/development data.
-
-Set the `DATABASE_URL` environment variable for tests:
-```bash
-export DATABASE_URL="postgresql://user:password@localhost:5432/payvost_test"
-```
-
-## Prerequisites
-
-Install test dependencies:
-```bash
-npm install --save-dev jest @types/jest ts-jest supertest @types/supertest
-```
-
-## Writing New Tests
+## Test Categories
 
 ### Unit Tests
 Test individual functions and classes in isolation:
-```typescript
-import { MyService } from '../services/my-service';
-
-describe('MyService', () => {
-  test('should do something', () => {
-    const service = new MyService();
-    expect(service.doSomething()).toBe(expected);
-  });
-});
-```
+- Input validation schemas
+- Business logic functions
+- Utility functions
+- Security utilities
 
 ### Integration Tests
 Test API endpoints with real database:
+- Authentication flows
+- Transaction processing
+- Webhook handling
+- Service interactions
+
+### E2E Tests
+Test complete user journeys:
+- Full payment flow (AML → Fraud → Transfer → Audit)
+- Idempotency enforcement
+- Error handling scenarios
+
+### Security Tests
+Test security features:
+- Rate limiting
+- Input validation
+- Authentication middleware
+- Webhook signature verification
+- Idempotency enforcement
+
+## Writing New Tests
+
+### Example: Testing an API Endpoint
+
 ```typescript
+import { describe, test, expect } from 'vitest';
 import request from 'supertest';
 import app from '../index';
 
-describe('API Tests', () => {
-  test('GET /api/wallet/accounts', async () => {
+describe('Transaction API', () => {
+  test('POST /api/v1/transaction/transfer requires authentication', async () => {
     const response = await request(app)
-      .get('/api/wallet/accounts')
-      .set('Authorization', 'Bearer ' + testToken);
+      .post('/api/v1/transaction/transfer')
+      .send({
+        fromAccountId: 'test-id',
+        toAccountId: 'test-id-2',
+        amount: 100,
+        currency: 'USD',
+        idempotencyKey: 'test-key',
+      });
     
-    expect(response.status).toBe(200);
-    expect(response.body.accounts).toBeDefined();
+    expect(response.status).toBe(401);
   });
 });
 ```
 
+### Example: Testing Validation
+
+```typescript
+import { validateRequestBody, transactionSchemas } from '../common/validation-schemas';
+
+test('should reject invalid amount', () => {
+  const invalidData = {
+    fromAccountId: 'valid-uuid',
+    toAccountId: 'valid-uuid-2',
+    amount: -100, // Invalid: negative
+    currency: 'USD',
+    idempotencyKey: 'test-key',
+  };
+  
+  expect(() => validateRequestBody(transactionSchemas.createTransfer, invalidData)).toThrow();
+});
+```
+
+### Example: E2E Test
+
+```typescript
+describe('E2E Payment Flow', () => {
+  test('should complete full transfer flow', async () => {
+    // 1. Check AML compliance
+    const amlCheck = await complianceManager.checkAMLCompliance({...});
+    
+    // 2. Check fraud risk
+    const fraudCheck = await complianceManager.checkFraudRisk({...});
+    
+    // 3. Execute transfer
+    const transfer = await transactionManager.executeTransfer({...});
+    
+    // 4. Verify results
+    expect(transfer.status).toBe('COMPLETED');
+  });
+});
+```
+
+## Test Database
+
+Tests use a separate test database. Set the `TEST_DATABASE_URL` environment variable:
+
+```bash
+export TEST_DATABASE_URL="postgresql://user:password@localhost:5432/payvost_test"
+```
+
+## Best Practices
+
+1. **Isolation**: Each test should be independent
+2. **Cleanup**: Always clean up test data in `afterAll` hooks
+3. **Mocking**: Mock external services (payment providers, email, etc.)
+4. **Coverage**: Aim for >80% code coverage
+5. **Naming**: Use descriptive test names that explain what is being tested
+6. **E2E Tests**: Test complete user journeys, not just individual functions
+
 ## CI/CD Integration
 
-Tests should be run automatically on:
+Tests run automatically on:
 - Pull requests
 - Commits to main branch
 - Before deployment
 
-Example GitHub Actions workflow:
-```yaml
-name: Backend Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: npm install
-      - name: Run tests
-        run: npm test
-```
+See `.github/workflows/ci.yml` for CI configuration.
 
-## Test Data
+## Test Coverage Goals
 
-Test data is created in `beforeAll` hooks and cleaned up in `afterAll` hooks to ensure test isolation.
-
-### Best Practices
-- Always clean up test data after tests
-- Use unique identifiers for test data
-- Don't rely on execution order
-- Test both success and error cases
-- Mock external services
-- Use factories for test data creation
+- **Unit Tests**: >80% coverage
+- **Integration Tests**: All critical endpoints
+- **E2E Tests**: Main user flows
+- **Security Tests**: All security features
 
 ## Debugging Tests
 
 Run tests with debugging:
 ```bash
-node --inspect-brk node_modules/.bin/jest --runInBand
+node --inspect-brk node_modules/.bin/vitest --runInBand
 ```
 
 Then attach your debugger to the Node process.

@@ -22,8 +22,10 @@ export class TransactionManager {
     currency: string;
     description?: string;
     idempotencyKey?: string;
+    userId?: string;
+    auditContext?: AuditLogContext;
   }): Promise<any> {
-    const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = params;
+    const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey, userId, auditContext } = params;
 
     // Generate deterministic idempotency key if not provided
     const finalIdempotencyKey = idempotencyKey || this.generateIdempotencyKey(params);
@@ -160,6 +162,20 @@ export class TransactionManager {
           },
         ],
       });
+
+      // Log audit trail
+      if (userId && auditContext) {
+        await logFinancialTransaction(
+          AuditAction.TRANSFER_COMPLETED,
+          transfer.id,
+          fromAccountId,
+          userId,
+          amount.toString(),
+          currency,
+          description || 'Transfer',
+          auditContext
+        );
+      }
 
       return transfer;
     });

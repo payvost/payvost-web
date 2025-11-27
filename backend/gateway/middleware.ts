@@ -26,45 +26,9 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware to verify Firebase ID tokens
+ * Uses standardized authentication from auth-middleware
  */
-export async function verifyFirebaseToken(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AuthenticationError('Missing or invalid authorization header');
-    }
-
-    const token = authHeader.substring(7);
-    
-    // Verify Firebase token
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    
-    // Fetch user data from Firestore
-    const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      role: userData?.role || 'user',
-      kycStatus: userData?.kycStatus || 'pending',
-    };
-
-    next();
-  } catch (error: any) {
-    if (error.code === 'auth/id-token-expired') {
-      return next(new AuthenticationError('Token expired'));
-    }
-    if (error.code === 'auth/argument-error') {
-      return next(new AuthenticationError('Invalid token format'));
-    }
-    next(new AuthenticationError('Authentication failed'));
-  }
-}
+export { verifyFirebaseToken, requireRole, requireAdmin, requireKYC, optionalAuth } from './auth-middleware';
 
 /**
  * Middleware to verify JWT tokens (alternative to Firebase)

@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { SecureStorage } from '../../utils/security';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/user';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api/v1/user';
 
 export const register = async (email: string, password: string, name?: string) => {
   return axios.post(`${API_URL}/register`, { email, password, name });
@@ -10,9 +11,14 @@ export const login = async (email: string, password: string) => {
   return axios.post(`${API_URL}/login`, { email, password });
 };
 
-export const getProfile = async (token: string) => {
+export const getProfile = async (token?: string) => {
+  const authToken = token || await SecureStorage.getToken('auth_token');
+  if (!authToken) {
+    throw new Error('Not authenticated');
+  }
+  
   return axios.get(`${API_URL}/profile`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${authToken}` },
   });
 };
 
