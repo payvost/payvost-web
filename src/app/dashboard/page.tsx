@@ -356,22 +356,26 @@ export default function DashboardPage() {
   
   const handleWalletCreated = () => {
     // Real-time listener will update the state automatically
-  }
+  };
 
-        // Prevent flash of incorrect data by waiting for all data to load
-        const isLoading = authLoading || loadingWallets || loadingDisputes;
+  // Prevent flash of incorrect data by waiting for all data to load
+  const isLoading = authLoading || loadingWallets || loadingDisputes;
   const hasWallets = wallets.length > 0;
   const showCreateWalletCTA = wallets.length < 4;
+  const disputesRequiringResponse = disputes.filter(d => d.status === 'Needs response').length;
+  const amountUnderReview = disputes
+    .filter(d => ['Needs response', 'Under review'].includes(d.status))
+    .reduce((sum, d) => sum + d.amount, 0);
 
   const renderWalletCards = () => {
     if (isLoading) {
-                return (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
-                                 {Array.from({ length: 2 }).map((_, i) => (
-                                        <WalletCardSkeleton key={i} />
-                                    ))}
-                        </div>
-                )
+      return (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:hidden">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <WalletCardSkeleton key={i} />
+          ))}
+        </div>
+      );
     }
 
     if (!hasWallets) {
@@ -448,7 +452,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-        )
+        );
     }
 
     const cards = wallets.map(wallet => (
@@ -539,17 +543,12 @@ export default function DashboardPage() {
                     </CreateWalletDialog>
                 </CardContent>
             </Card>
-        )
+        );
     }
     return cards;
   }
 
-  const disputesRequiringResponse = disputes.filter(d => d.status === 'Needs response').length;
-  const amountUnderReview = disputes
-    .filter(d => ['Needs response', 'Under review'].includes(d.status))
-    .reduce((sum, d) => sum + d.amount, 0);
-  
-  // Show comprehensive loading skeleton to prevent flash of incorrect state
+  // Show comprehensive loading skeleton to prevent flash of incorrect data
   if (isLoading) {
     return (
       <DashboardLayout language={language} setLanguage={setLanguage}>
