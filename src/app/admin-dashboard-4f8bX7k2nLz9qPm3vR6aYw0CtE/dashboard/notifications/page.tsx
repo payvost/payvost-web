@@ -527,8 +527,21 @@ export default function AdminNotificationCenterPage() {
                   <SelectContent>
                     <SelectItem value="custom">Custom Message</SelectItem>
                     <SelectItem value="transaction_success">Transaction Success</SelectItem>
-                    <SelectItem value="kyc_verified">KYC Verified</SelectItem>
+                    <SelectItem value="transaction_failed">Transaction Failed</SelectItem>
                     <SelectItem value="bill_payment_success">Bill Payment Success</SelectItem>
+                    <SelectItem value="bill_payment_failed">Bill Payment Failed</SelectItem>
+                    <SelectItem value="gift_card_delivered">Gift Card Delivered</SelectItem>
+                    <SelectItem value="airtime_topup_success">Airtime Top-up Success</SelectItem>
+                    <SelectItem value="kyc_verified">KYC Verified</SelectItem>
+                    <SelectItem value="kyc_rejected">KYC Rejected</SelectItem>
+                    <SelectItem value="account_welcome">Account Welcome</SelectItem>
+                    <SelectItem value="password_reset">Password Reset</SelectItem>
+                    <SelectItem value="login_alert">Login Alert</SelectItem>
+                    <SelectItem value="withdrawal_request">Withdrawal Request</SelectItem>
+                    <SelectItem value="deposit_received">Deposit Received</SelectItem>
+                    <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
+                    <SelectItem value="invoice_reminder">Invoice Reminder</SelectItem>
+                    <SelectItem value="invoice_paid">Invoice Paid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

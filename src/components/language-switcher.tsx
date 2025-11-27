@@ -8,11 +8,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Globe } from 'lucide-react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 
 interface LanguageSwitcherProps {
-  selectedLanguage: GenerateNotificationInput['languagePreference'];
-  setLanguage: Dispatch<SetStateAction<GenerateNotificationInput['languagePreference']>>;
+  selectedLanguage: LanguagePreference;
+  setLanguage: Dispatch<SetStateAction<LanguagePreference>>;
 }
 
 export function LanguageSwitcher({ selectedLanguage, setLanguage }: LanguageSwitcherProps) {
