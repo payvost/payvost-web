@@ -98,7 +98,7 @@ interface MonthlyData {
     expense: number;
 }
 
-export default function DashboardPage(): JSX.Element {
+export default function DashboardPage() {
   const [language, setLanguage] = useState<LanguagePreference>('en');
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
