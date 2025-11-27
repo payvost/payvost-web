@@ -55,9 +55,9 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
             <SidebarProvider className="block min-h-screen w-full">
                 <div className="min-h-screen w-full bg-background">
                     <BusinessSidebar />
-                     <div className="flex flex-col sm:pl-14 md:pl-[14rem] min-h-screen">
-                        <BusinessHeader />
-                         <main className="flex-1 px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
+                    <BusinessHeader />
+                     <div className="sm:pl-14 md:pl-[14rem]">
+                         <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
                         <div className="flex items-center justify-between space-y-2 mb-6">
                             <Skeleton className="h-10 w-64" />
                         </div>
@@ -95,9 +95,9 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
         <SidebarProvider className="block min-h-screen w-full">
             <div className="min-h-screen w-full bg-background">
                 <BusinessSidebar />
-                <div className="flex flex-col sm:pl-14 md:pl-[14rem] min-h-screen">
-                    <BusinessHeader />
-                    <main className="flex-1 px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
+                <BusinessHeader />
+                <div className="sm:pl-14 md:pl-[14rem]">
+                    <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
                         {children}
                     </main>
                 </div>
