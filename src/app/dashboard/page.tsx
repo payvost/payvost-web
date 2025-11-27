@@ -548,15 +548,15 @@ export default function DashboardPage() {
   const amountUnderReview = disputes
     .filter(d => ['Needs response', 'Under review'].includes(d.status))
     .reduce((sum, d) => sum + d.amount, 0);
-    // Show comprehensive loading skeleton to prevent flash of incorrect state
-    if (isLoading) {
-        return (
-            <DashboardLayout language={language} setLanguage={setLanguage}>
-                <DashboardLoadingSkeleton />
-            </DashboardLayout>
-        );
-    }
-
+  
+  // Show comprehensive loading skeleton to prevent flash of incorrect state
+  if (isLoading) {
+    return (
+      <DashboardLayout language={language} setLanguage={setLanguage}>
+        <DashboardLoadingSkeleton />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
