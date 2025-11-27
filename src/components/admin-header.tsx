@@ -1,9 +1,9 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Search,
   PanelLeft,
@@ -50,10 +50,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { Icons } from './icons';
 import { ScrollArea } from './ui/scroll-area';
 import { ThemeSwitcher } from './theme-switcher';
+import { AdminSearchDialog } from './admin-search-dialog';
 
 export function AdminHeader() {
     const { user } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchDialogOpen, setSearchDialogOpen] = useState(false);
 
     const isActive = (href: string) => {
         if (href === '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard') {
@@ -169,19 +173,26 @@ export function AdminHeader() {
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1">
-             <form>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search users, transactions, settings..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
-                />
-              </div>
-            </form>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search users, transactions, settings... (Press / to focus)"
+                className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3 cursor-pointer"
+                onClick={() => setSearchDialogOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    setSearchDialogOpen(true);
+                  }
+                }}
+                readOnly
+              />
+            </div>
           </div>
           <ThemeSwitcher />
           <UserNav user={user}/>
+          <AdminSearchDialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen} />
         </header>
     )
 }

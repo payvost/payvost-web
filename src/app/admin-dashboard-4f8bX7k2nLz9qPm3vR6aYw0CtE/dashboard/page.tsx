@@ -8,10 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { ChevronDown, Globe, Landmark, TrendingUp, LineChart, Loader2 } from 'lucide-react';
-import { AdminWorldMap } from '@/components/admin-world-map';
-import { AdminCurrencyPieChart } from '@/components/admin-currency-pie-chart';
-import { AdminTransactionOverviewChart } from '@/components/admin-transaction-overview-chart';
 import { Skeleton } from '@/components/ui/skeleton';
+import dynamic from 'next/dynamic';
+
+const AdminWorldMap = dynamic(() => import('@/components/admin-world-map').then(mod => ({ default: mod.AdminWorldMap })), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[400px] w-full" />,
+});
+
+const AdminCurrencyPieChart = dynamic(() => import('@/components/admin-currency-pie-chart').then(mod => ({ default: mod.AdminCurrencyPieChart })), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full" />,
+});
+
+const AdminTransactionOverviewChart = dynamic(() => import('@/components/admin-transaction-overview-chart').then(mod => ({ default: mod.AdminTransactionOverviewChart })), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[300px] w-full" />,
+});
 import axios from 'axios';
 import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';

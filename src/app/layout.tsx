@@ -9,13 +9,14 @@ import { UnifiedConsentBanner } from '@/components/unified-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import PWARegister from '../components/pwa-register';
+import { StructuredData } from '@/components/structured-data';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://payvost.com';
+import { siteUrl } from '@/lib/constants';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -143,6 +144,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
     <Providers>
+      <StructuredData />
       {children}
       
       <PWARegister />

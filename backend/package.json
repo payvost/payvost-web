@@ -9,7 +9,10 @@
     "prestart": "npm run prisma:generate && npm run prisma:copy || true",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only index.ts",
-    "dev:server": "ts-node-dev --respawn --transpile-only index.ts"
+    "dev:server": "ts-node-dev --respawn --transpile-only index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -48,6 +51,7 @@
     "socket.io": "^4.8.1",
     "stripe": "^14.21.0",
     "twilio": "^5.10.5",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
   }
 }

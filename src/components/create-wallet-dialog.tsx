@@ -16,9 +16,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { walletService } from '@/services';
 
 interface CreateWalletDialogProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onWalletCreated: () => void;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const createWalletSchema = z.object({
@@ -38,10 +40,12 @@ const availableCurrencies = [
   { currency: 'GHS', name: 'Ghanaian Cedi', flag: 'gh' },
 ];
 
-export function CreateWalletDialog({ children, onWalletCreated, disabled = false }: CreateWalletDialogProps) {
+export function CreateWalletDialog({ children, onWalletCreated, disabled = false, open: controlledOpen, onOpenChange }: CreateWalletDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [creationStatus, setCreationStatus] = useState<'form' | 'submitting' | 'success'>('form');
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
@@ -176,7 +180,7 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild disabled={disabled}>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild disabled={disabled}>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
        {renderContent()}
       </DialogContent>

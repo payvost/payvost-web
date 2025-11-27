@@ -3,6 +3,9 @@ import { TransactionManager } from '../core-banking/src/transaction-manager';
 import { FeeEngine } from '../core-banking/src/fee-engine';
 import { verifyFirebaseToken, requireKYC, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
+import { transactionLimiter } from '../../gateway/rateLimiter';
+import { validateRequest, transactionSchemas } from '../../common/validation-schemas';
+import { logFinancialTransaction, AuditAction } from '../../common/audit-logger';
 import Decimal from 'decimal.js';
 import { prisma } from '../../common/prisma';
 
@@ -13,20 +16,17 @@ const feeEngine = new FeeEngine(prisma);
 /**
  * POST /api/transaction/transfer
  * Execute a transfer between accounts
+ * REQUIRES: idempotencyKey to prevent duplicate transactions
  */
-router.post('/transfer', verifyFirebaseToken, requireKYC, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/transfer', 
+  verifyFirebaseToken, 
+  requireKYC, 
+  transactionLimiter,
+  validateRequest(transactionSchemas.createTransfer),
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.uid;
     const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = req.body;
-
-    // Validation
-    if (!fromAccountId || !toAccountId || !amount || !currency) {
-      throw new ValidationError('fromAccountId, toAccountId, amount, and currency are required');
-    }
-
-    if (amount <= 0) {
-      throw new ValidationError('Amount must be greater than 0');
-    }
 
     // Verify the from account belongs to the authenticated user
     const fromAccount = await prisma.account.findFirst({
@@ -37,6 +37,24 @@ router.post('/transfer', verifyFirebaseToken, requireKYC, async (req: Authentica
       return res.status(404).json({ error: 'Source account not found or unauthorized' });
     }
 
+    // Log transfer initiation
+    await logFinancialTransaction(
+      AuditAction.TRANSFER_INITIATED,
+      'pending',
+      fromAccountId,
+      userId!,
+      amount.toString(),
+      currency,
+      description || 'Transfer',
+      {
+        userId,
+        accountId: fromAccountId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        correlationId: req.headers['x-correlation-id'] as string,
+      }
+    );
+
     // Execute the transfer
     const transfer = await transactionManager.executeTransfer({
       fromAccountId,
@@ -45,6 +63,15 @@ router.post('/transfer', verifyFirebaseToken, requireKYC, async (req: Authentica
       currency,
       description,
       idempotencyKey,
+      userId,
+      auditContext: {
+        userId,
+        accountId: fromAccountId,
+        transactionId: 'pending',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+        correlationId: req.headers['x-correlation-id'] as string,
+      },
     });
 
     res.status(201).json({ transfer });
@@ -186,13 +213,12 @@ router.get('/transfers/:id', verifyFirebaseToken, async (req: AuthenticatedReque
  * POST /api/transaction/calculate-fees
  * Calculate fees for a potential transfer
  */
-router.post('/calculate-fees', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/calculate-fees', 
+  verifyFirebaseToken,
+  validateRequest(transactionSchemas.calculateFees),
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { amount, currency, transactionType, fromCountry, toCountry, userTier } = req.body;
-
-    if (!amount || !currency || !transactionType) {
-      throw new ValidationError('amount, currency, and transactionType are required');
-    }
 
     const feeCalculation = await feeEngine.calculateFees({
       amount: new Decimal(amount),

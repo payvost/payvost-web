@@ -2,15 +2,37 @@ import { Request, Response } from 'express';
 import { PaymentProviderRegistry } from '../providers/registry';
 import { PaymentMethod, Currency, PaymentRequestDTO, PaymentIntent } from '../interfaces';
 import { determineOptimalProvider } from '../utils/routing';
-import { validateAmount, validateCurrency } from '../validators';
+import { validateAmount, validateCurrency, validateIdempotencyKey } from '../validators';
+import { AuthenticatedRequest } from '../../../gateway/middleware';
+import { ValidationError } from '../../../gateway/index';
 
 // Temporary in-memory persistence until a Prisma model is introduced
 // Shape: paymentId -> { intent, provider }
 const paymentStore: Map<string, { intent: PaymentIntent; provider: string }> = new Map();
 
-export async function createPaymentIntent(req: Request, res: Response) {
+export async function createPaymentIntent(req: AuthenticatedRequest, res: Response) {
   try {
     const paymentRequest: PaymentRequestDTO = req.body;
+    
+    // Validate idempotency key is required
+    if (!paymentRequest.idempotencyKey) {
+      throw new ValidationError('idempotencyKey is required for payment operations');
+    }
+    
+    // Validate idempotency key format
+    await validateIdempotencyKey(paymentRequest.idempotencyKey);
+    
+    // Check if payment with this idempotency key already exists
+    const existingPayment = paymentStore.get(paymentRequest.idempotencyKey);
+    if (existingPayment) {
+      return res.json({
+        paymentId: existingPayment.intent.id,
+        clientSecret: existingPayment.intent.clientSecret,
+        provider: existingPayment.provider,
+        requiredFields: PaymentProviderRegistry.get(existingPayment.provider)?.getRequiredFields() || [],
+        message: 'Payment intent already exists (idempotent)'
+      });
+    }
     
     // Validate request
     validateAmount(paymentRequest.amount);
@@ -19,11 +41,11 @@ export async function createPaymentIntent(req: Request, res: Response) {
     // Determine optimal payment provider based on amount, currency, region, etc.
     const provider = await determineOptimalProvider(paymentRequest);
     
-  // Create payment intent with chosen provider
-  const intent = await provider.createPaymentIntent(paymentRequest);
+    // Create payment intent with chosen provider
+    const intent = await provider.createPaymentIntent(paymentRequest);
     
-  // Store payment intent (temporary in-memory storage)
-  await savePaymentIntentToDB(intent, provider.name);
+    // Store payment intent with idempotency key as key
+    await savePaymentIntentToDB(intent, provider.name, paymentRequest.idempotencyKey);
     
     res.json({
       paymentId: intent.id,
@@ -34,7 +56,8 @@ export async function createPaymentIntent(req: Request, res: Response) {
   } catch (error: unknown) {
     console.error('Payment intent creation failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    res.status(400).json({ error: errorMessage });
+    const statusCode = error instanceof ValidationError ? 400 : 500;
+    res.status(statusCode).json({ error: errorMessage });
   }
 }
 
@@ -63,7 +86,9 @@ async function getPaymentFromDB(paymentId: string): Promise<{ intent: PaymentInt
   return record;
 }
 
-async function savePaymentIntentToDB(intent: PaymentIntent, provider: string): Promise<void> {
+async function savePaymentIntentToDB(intent: PaymentIntent, provider: string, idempotencyKey: string): Promise<void> {
+  // Store by both payment ID and idempotency key for lookup
   paymentStore.set(intent.id, { intent, provider });
+  paymentStore.set(idempotencyKey, { intent, provider });
 }
 

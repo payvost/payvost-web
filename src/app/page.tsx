@@ -12,10 +12,15 @@ import { ArrowRight, Sparkles, ShieldCheck, Code2, BarChart3, Zap, Lock, Globe, 
 import React, { useRef, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { LiveRateChecker } from "@/components/live-rate-checker";
 import Image from "next/image";
 import placeholderImageData from '@/app/lib/placeholder-images.json';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import dynamic from 'next/dynamic';
+
+const LiveRateChecker = dynamic(() => import('@/components/live-rate-checker').then(mod => ({ default: mod.LiveRateChecker })), {
+  ssr: false,
+  loading: () => <div className="h-[400px] w-full bg-muted animate-pulse rounded-lg" />,
+});
 
 
 const popularCountries = [
@@ -30,12 +35,14 @@ const popularCountries = [
   { name: 'South Africa', currency: 'Rand (ZAR)', flag: 'SA.png', hint: 'Cape Town' },
 ];
 
+// Testimonials data - Replace with real testimonials from your database
+// For now, using initials-based avatars instead of placeholder images
 const testimonials = [
   {
     name: "Sarah Johnson",
     role: "CEO",
     company: "Innovate Inc.",
-    image: { src: "https://picsum.photos/seed/t1/100/100", hint: "woman portrait" },
+    initials: "SJ",
     rating: 5,
     quote: "Payvost is a game-changer. The speed and low fees are unmatched. Highly recommended for anyone sending money abroad.",
   },
@@ -43,7 +50,7 @@ const testimonials = [
     name: "Michael Chen",
     role: "Freelancer",
     company: "Chen Designs",
-    image: { src: "https://picsum.photos/seed/t2/100/100", hint: "man smiling" },
+    initials: "MC",
     rating: 5,
     quote: "As a freelancer working with international clients, Payvost has simplified my life. Getting paid is now fast and hassle-free.",
   },
@@ -51,7 +58,7 @@ const testimonials = [
     name: "David Rodriguez",
     role: "CTO",
     company: "Tech Solutions",
-    image: { src: "https://picsum.photos/seed/t3/100/100", hint: "person portrait" },
+    initials: "DR",
     rating: 4,
     quote: "The API is well-documented and easy to integrate. We were able to get up and running in just a couple of days. Solid platform.",
   },
@@ -59,7 +66,7 @@ const testimonials = [
     name: "Emily White",
     role: "E-commerce Owner",
     company: "The Shop",
-    image: { src: "https://picsum.photos/seed/t4/100/100", hint: "woman in cafe" },
+    initials: "EW",
     rating: 5,
     quote: "I love the multi-currency wallet feature. It makes managing payments from different countries so much easier.",
   },
@@ -501,8 +508,7 @@ export default function LandingPage() {
               </blockquote>
               <div className="flex flex-col xs:flex-row xs:items-center gap-4 xs:gap-5 text-center xs:text-left w-full">
                 <Avatar className="mx-auto xs:mx-0 h-16 w-16 flex-shrink-0" >
-                  <AvatarImage src={testimonials[0].image.src} alt={testimonials[0].name} />
-                  <AvatarFallback>{testimonials[0].name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{testimonials[0].initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-center xs:items-start gap-1">
                   <p className="text-base sm:text-lg font-semibold text-foreground break-words">{testimonials[0].name}</p>
@@ -535,8 +541,7 @@ export default function LandingPage() {
                     <div className="flex flex-col rounded-2xl border border-border/30 bg-muted/40 p-4 sm:p-6 transition duration-300 hover:border-primary/40 hover:bg-muted/60 min-h-[180px]">
                       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 w-full">
                         <Avatar className="h-12 w-12 flex-shrink-0 mx-auto sm:mx-0">
-                          <AvatarImage src={testimonial.image.src} alt={testimonial.name} />
-                          <AvatarFallback>{testimonial.name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback>{testimonial.initials}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-center sm:items-start gap-1 w-full">
                           <p className="text-sm font-semibold text-foreground break-words">{testimonial.name}</p>

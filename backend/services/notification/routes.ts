@@ -11,6 +11,7 @@ import {
 import { sendSMS, initTwilio } from './twilio';
 import { logger } from '../../common/logger';
 import { sendEmail, isMailgunConfigured } from '../../common/mailgun';
+import admin from 'firebase-admin';
 
 const router = Router();
 
@@ -285,7 +286,7 @@ router.post('/preferences', verifyFirebaseToken, async (req: AuthenticatedReques
       throw new ValidationError('User ID is required');
     }
 
-    // Store preferences (would typically use Firestore or database)
+    // Store preferences in Firestore
     const preferences = {
       userId,
       email: email !== undefined ? email : true,
@@ -293,11 +294,23 @@ router.post('/preferences', verifyFirebaseToken, async (req: AuthenticatedReques
       sms: sms !== undefined ? sms : false,
       transactionAlerts: transactionAlerts !== undefined ? transactionAlerts : true,
       marketingEmails: marketingEmails !== undefined ? marketingEmails : false,
-      updatedAt: new Date().toISOString(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // TODO: Save to database
-    logger.info({ userId, preferences }, 'Updated notification preferences');
+    // Save to Firestore
+    try {
+      await admin.firestore()
+        .collection('users')
+        .doc(userId)
+        .collection('notificationPreferences')
+        .doc('settings')
+        .set(preferences, { merge: true });
+      
+      logger.info({ userId, preferences }, 'Updated notification preferences');
+    } catch (dbError: any) {
+      logger.error({ err: dbError, userId }, 'Failed to save notification preferences to database');
+      // Continue anyway - preferences are still returned to user
+    }
 
     res.status(200).json({
       success: true,

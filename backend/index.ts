@@ -6,6 +6,10 @@ import { config } from 'dotenv';
 import path from 'path';
 config({ path: path.resolve(__dirname, '.env') });
 
+// Validate environment variables before proceeding
+import { validateEnvironmentOrExit } from './common/env-validation';
+validateEnvironmentOrExit();
+
 import { createRequire } from 'module';
 import './firebase';
 
@@ -112,61 +116,67 @@ import { verifyMailgunWebhook } from './gateway/webhookVerification';
 const app = createGateway();
 const port = process.env.PORT || 3001;
 
-// Register service routes
+// API Versioning middleware (must be before route registration)
+import { extractApiVersion } from './gateway/api-versioning';
+app.use('/api', extractApiVersion);
+
+// Register service routes with versioning support
+import { registerVersionedRoutes } from './gateway/api-versioning';
+
 try {
   if (userRoutes) {
-    registerServiceRoutes(app, 'User Service', '/api/user', userRoutes);
+    registerVersionedRoutes(app, 'User Service', '/api/user', userRoutes, ['v1']);
   }
   
   if (walletRoutes) {
-    registerServiceRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes);
+    registerVersionedRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes, ['v1']);
   }
   
   if (transactionRoutes) {
-    registerServiceRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes);
+    registerVersionedRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes, ['v1']);
   }
   
   if (fraudRoutes) {
-    registerServiceRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes);
+    registerVersionedRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes, ['v1']);
   }
   
   if (notificationRoutes) {
-    registerServiceRoutes(app, 'Notification Service', '/api/notification', notificationRoutes);
+    registerVersionedRoutes(app, 'Notification Service', '/api/notification', notificationRoutes, ['v1']);
   }
   
   if (currencyRoutes) {
-    registerServiceRoutes(app, 'Currency Service', '/api/currency', currencyRoutes);
+    registerVersionedRoutes(app, 'Currency Service', '/api/currency', currencyRoutes, ['v1']);
   }
   
   if (paymentRoutes) {
-    registerServiceRoutes(app, 'Payment Service', '/api/payment', paymentRoutes);
+    registerVersionedRoutes(app, 'Payment Service', '/api/payment', paymentRoutes, ['v1']);
   }
   
   if (escrowRoutes) {
-    registerServiceRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes);
+    registerVersionedRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes, ['v1']);
   }
   
   if (errorTrackerRoutes) {
-    registerServiceRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes);
+    registerVersionedRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes, ['v1']);
   }
   
   if (invoiceRoutes) {
-    registerServiceRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes);
+    registerVersionedRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes, ['v1']);
   }
   
   if (businessRoutes) {
-    registerServiceRoutes(app, 'Business Service', '/api/business', businessRoutes);
+    registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes, ['v1']);
   }
   
   if (contentRoutes) {
-    registerServiceRoutes(app, 'Content Service', '/api/content', contentRoutes);
+    registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
   }
   
   if (supportRoutes) {
-    registerServiceRoutes(app, 'Support Service', '/api/support', supportRoutes);
+    registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
   }
   
-  logger.info('All service routes registered');
+  logger.info('All service routes registered with versioning support');
 } catch (err) {
   logger.error({ err }, 'Failed to register service routes');
   process.exit(1);

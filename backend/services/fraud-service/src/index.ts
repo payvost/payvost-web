@@ -20,14 +20,15 @@ const prisma = new PrismaClient({
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || process.env.FRAUD_SERVICE_API_KEY;
 
 function verifyInternalAuth(req: Request, res: Response, next: () => void) {
-  // Skip auth in development
-  if (NODE_ENV === 'development' && !INTERNAL_API_KEY) {
-    return next();
+  // Always require authentication, even in development
+  if (!INTERNAL_API_KEY) {
+    console.error('INTERNAL_API_KEY or FRAUD_SERVICE_API_KEY must be set');
+    return res.status(500).json({ error: 'Internal service authentication not configured' });
   }
 
   const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
   
-  if (!INTERNAL_API_KEY || apiKey !== INTERNAL_API_KEY) {
+  if (!apiKey || apiKey !== INTERNAL_API_KEY) {
     return res.status(401).json({ error: 'Unauthorized - Invalid API key' });
   }
   

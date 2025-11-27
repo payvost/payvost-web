@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { ErrorBoundary } from '@/components/error-boundary';
 import {
   SidebarProvider,
   Sidebar,
@@ -257,7 +258,9 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     <UserNav user={user} />
                 </div>
             </header>
-            {children}
+            <ErrorBoundary>
+                {children}
+            </ErrorBoundary>
         </SidebarInset>
         </TooltipProvider>
       </SidebarProvider>

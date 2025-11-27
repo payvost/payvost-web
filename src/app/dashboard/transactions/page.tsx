@@ -18,12 +18,16 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { externalTransactionService } from '@/services';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { EmptyState } from '@/components/empty-state';
+import { Receipt, ArrowRightLeft, Send } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Transaction {
   id: string;
@@ -41,6 +45,7 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
+  const router = useRouter();
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -288,8 +293,26 @@ export default function TransactionsPage() {
               </ContextMenu>
             )) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No transactions found.
+                <TableCell colSpan={5} className="h-96 p-0">
+                  <EmptyState
+                    icon={<Receipt className="h-12 w-12" />}
+                    title={searchQuery || filterType.length < 4 ? "No transactions found" : "No transactions yet"}
+                    description={
+                      searchQuery || filterType.length < 4
+                        ? "Try adjusting your search or filters to find what you're looking for."
+                        : "Your transaction history will appear here once you start sending or receiving money."
+                    }
+                    action={
+                      !searchQuery && filterType.length === 4
+                        ? {
+                            label: "Send Money",
+                            onClick: () => router.push('/dashboard/payments'),
+                          }
+                        : undefined
+                    }
+                    showCard={false}
+                    size="md"
+                  />
                 </TableCell>
               </TableRow>
             )}

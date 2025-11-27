@@ -1,7 +1,11 @@
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SecureStorage } from '../utils/security';
+import { getProfile } from '../utils/api/user';
+import { getWallets, type Wallet as WalletType } from '../utils/api/wallet';
+import { getTransactions, type Transaction as TransactionType } from '../utils/api/transactions';
 
 const PRIMARY_COLOR = '#16a34a';
 const SECONDARY_COLOR = '#e9f5ee';
@@ -9,18 +13,34 @@ const TEXT_COLOR = '#1a1a1a';
 const MUTED_TEXT_COLOR = '#6c757d';
 const BACKGROUND_COLOR = '#f8f9fa';
 
-const walletBalances = [
-  { currency: 'USD', balance: '$1,250.75', flag: '🇺🇸' },
-  { currency: 'NGN', balance: '₦1,850,000.00', flag: '🇳🇬' },
-  { currency: 'GBP', balance: '£850.00', flag: '🇬🇧' },
-];
+interface WalletDisplay {
+  currency: string;
+  balance: number;
+  flag?: string;
+}
 
-const recentTransactions = [
-  { id: 'txn_01', recipient: 'John Doe', amount: '-$250.00', status: 'Completed', type: 'Transfer' },
-  { id: 'txn_02', recipient: 'MTN Airtime', amount: '-$10.00', status: 'Completed', type: 'Bill Payment' },
-  { id: 'txn_03', recipient: 'Adebayo Adekunle', amount: '-$50.00', status: 'Failed', type: 'Transfer' },
-  { id: 'txn_04', recipient: 'Received from Jane', amount: '+$500.00', status: 'Completed', type: 'Deposit' },
-];
+interface TransactionDisplay {
+  id: string;
+  recipient: string;
+  amount: string;
+  status: string;
+  type: string;
+}
+
+const getCurrencyFlag = (currency: string): string => {
+  const flags: Record<string, string> = {
+    USD: '🇺🇸',
+    NGN: '🇳🇬',
+    GBP: '🇬🇧',
+    EUR: '🇪🇺',
+    GHS: '🇬🇭',
+    KES: '🇰🇪',
+    ZAR: '🇿🇦',
+    CAD: '🇨🇦',
+    AUD: '🇦🇺',
+  };
+  return flags[currency] || '💳';
+};
 
 const QuickActionButton = ({ icon, label }: { icon: any; label: string }) => (
     <TouchableOpacity style={styles.quickAction}>
@@ -31,7 +51,7 @@ const QuickActionButton = ({ icon, label }: { icon: any; label: string }) => (
     </TouchableOpacity>
 );
 
-const TransactionItem = ({ item }: { item: typeof recentTransactions[0] }) => {
+const TransactionItem = ({ item }: { item: TransactionDisplay }) => {
     const isDebit = item.amount.startsWith('-');
     return (
         <View style={styles.transactionItem}>
@@ -57,12 +77,154 @@ const TransactionItem = ({ item }: { item: typeof recentTransactions[0] }) => {
 };
 
 export default function DashboardScreen() {
+  const [userName, setUserName] = useState<string>('User');
+  const [wallets, setWallets] = useState<WalletDisplay[]>([]);
+  const [transactions, setTransactions] = useState<TransactionDisplay[]>([]);
+  const [totalBalance, setTotalBalance] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      const token = await SecureStorage.getToken('auth_token');
+      if (!token) {
+        setError('Please login to view your dashboard');
+        setLoading(false);
+        return;
+      }
+
+      // Load user profile
+      try {
+        const profileResponse = await getProfile(token);
+        const profileData = profileResponse.data;
+        if (profileData?.name || profileData?.displayName) {
+          setUserName(profileData.name || profileData.displayName || 'User');
+        }
+      } catch (profileError) {
+        console.warn('Failed to load user profile:', profileError);
+        // Continue with other data even if profile fails
+      }
+
+      // Load wallets
+      try {
+        const walletsData = await getWallets();
+        const walletDisplays: WalletDisplay[] = walletsData.map((wallet: WalletType) => ({
+          currency: wallet.currency,
+          balance: parseFloat(wallet.balance.toString()),
+          flag: getCurrencyFlag(wallet.currency),
+        }));
+
+        setWallets(walletDisplays);
+
+        // Calculate total balance (convert to USD for display - simplified)
+        const total = walletDisplays.reduce((sum, wallet) => {
+          // Simple conversion - in production, use actual FX rates
+          if (wallet.currency === 'USD') return sum + wallet.balance;
+          if (wallet.currency === 'NGN') return sum + wallet.balance / 1450; // Approximate rate
+          if (wallet.currency === 'GBP') return sum + wallet.balance * 1.27; // Approximate rate
+          return sum + wallet.balance; // Fallback
+        }, 0);
+        setTotalBalance(total);
+      } catch (walletError: any) {
+        console.error('Failed to load wallets:', walletError);
+        setWallets([]);
+        setTotalBalance(0);
+        // Don't set error here - allow partial data to show
+      }
+
+      // Load recent transactions
+      try {
+        const transactionsData = await getTransactions(5, 0);
+        const transactionDisplays: TransactionDisplay[] = transactionsData.map((tx: TransactionType) => {
+          const isDebit = tx.type === 'TRANSFER' || tx.type === 'PAYMENT' || tx.type === 'WITHDRAWAL';
+          const amount = isDebit ? -tx.amount : tx.amount;
+          const formattedAmount = formatCurrency(Math.abs(amount), tx.currency);
+          
+          return {
+            id: tx.id,
+            recipient: tx.description || (isDebit ? 'Sent' : 'Received'),
+            amount: `${isDebit ? '-' : '+'}${formattedAmount}`,
+            status: tx.status === 'COMPLETED' ? 'Completed' : tx.status,
+            type: tx.type === 'TRANSFER' ? 'Transfer' : tx.type,
+          };
+        });
+        setTransactions(transactionDisplays);
+      } catch (transactionError: any) {
+        console.error('Failed to load transactions:', transactionError);
+        setTransactions([]);
+        // Don't set error here - allow partial data to show
+      }
+
+      setError(null);
+    } catch (err: any) {
+      console.error('Error loading dashboard:', err);
+      setError(err.message || 'Failed to load dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData();
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.centerContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Good morning,</Text>
-          <Text style={styles.userName}>Alice</Text>
+          <Text style={styles.greeting}>{getGreeting()},</Text>
+          <Text style={styles.userName}>{userName}</Text>
         </View>
         <TouchableOpacity>
             <Ionicons name="notifications-outline" size={26} color={TEXT_COLOR} />
@@ -71,12 +233,20 @@ export default function DashboardScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Total Balance</Text>
-        <Text style={styles.totalBalance}>$4,350.50</Text>
-        <View style={styles.walletPreview}>
-          {walletBalances.map(wallet => (
-            <Text key={wallet.currency} style={styles.walletBalanceText}>{wallet.flag} {wallet.balance}</Text>
-          ))}
-        </View>
+        <Text style={styles.totalBalance}>
+          {totalBalance > 0 ? formatCurrency(totalBalance, 'USD') : '$0.00'}
+        </Text>
+        {wallets.length > 0 ? (
+          <View style={styles.walletPreview}>
+            {wallets.slice(0, 3).map((wallet, index) => (
+              <Text key={`${wallet.currency}-${index}`} style={styles.walletBalanceText}>
+                {wallet.flag || getCurrencyFlag(wallet.currency)} {formatCurrency(wallet.balance, wallet.currency)}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyText}>No wallets yet. Create your first wallet to get started.</Text>
+        )}
       </View>
 
         <View style={styles.quickActionsContainer}>
@@ -88,16 +258,25 @@ export default function DashboardScreen() {
 
         <View style={styles.transactionsHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-                <Text style={styles.viewAll}>View All</Text>
-            </TouchableOpacity>
+            {transactions.length > 0 && (
+              <TouchableOpacity>
+                  <Text style={styles.viewAll}>View All</Text>
+              </TouchableOpacity>
+            )}
         </View>
-        <FlatList
-            data={recentTransactions}
-            renderItem={TransactionItem}
-            keyExtractor={item => item.id}
-            scrollEnabled={false}
-        />
+        {transactions.length > 0 ? (
+          <FlatList
+              data={transactions}
+              renderItem={({ item }) => <TransactionItem item={item} />}
+              keyExtractor={item => item.id}
+              scrollEnabled={false}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="receipt-outline" size={48} color={MUTED_TEXT_COLOR} />
+            <Text style={styles.emptyText}>No recent transactions</Text>
+          </View>
+        )}
     </ScrollView>
   );
 }
@@ -228,5 +407,42 @@ const styles = StyleSheet.create({
   },
   transactionStatus: {
     fontSize: 12,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: MUTED_TEXT_COLOR,
+    fontSize: 14,
+  },
+  errorText: {
+    marginTop: 12,
+    color: '#ef4444',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: PRIMARY_COLOR,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    color: MUTED_TEXT_COLOR,
+    fontSize: 14,
   },
 });

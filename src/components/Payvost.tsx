@@ -27,11 +27,13 @@ import { PaymentConfirmationDialog } from './payment-confirmation-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { walletService, transactionService, currencyService, type Account, type UserProfile } from '@/services';
+import { walletService, transactionService, currencyService, userService, type Account, type UserProfile } from '@/services';
 import { TransferPageSkeleton } from '@/components/skeletons/transfer-page-skeleton';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 interface FeeBreakdown {
   feeAmount: string;
@@ -55,6 +57,8 @@ export function Payvost() {
   const [receiveCurrency, setReceiveCurrency] = useState('NGN');
   const [recipientGets, setRecipientGets] = useState('0.00');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<string | undefined>(undefined);
+  const [userCountry, setUserCountry] = useState<string>('US');
+  const [recipientCountry, setRecipientCountry] = useState<string>('NG');
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
   const [rateTrend, setRateTrend] = useState<'up' | 'down' | 'neutral'>('neutral');
@@ -84,8 +88,31 @@ export function Payvost() {
       try {
         const accounts = await walletService.getAccounts();
         setWallets(accounts);
-        // TODO: Fetch beneficiaries from backend when endpoint is available
-        // For now, beneficiaries still come from Firebase
+        // Fetch beneficiaries from Firestore
+        if (user) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setBeneficiaries(userData.beneficiaries || []);
+              
+              // Get user country from profile
+              if (userData.countryCode) {
+                setUserCountry(userData.countryCode);
+              } else if (userData.country) {
+                // Map country name to code if needed
+                const countryMap: Record<string, string> = {
+                  'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
+                  'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
+                  'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
+                };
+                setUserCountry(countryMap[userData.country] || 'US');
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching beneficiaries:', error);
+          }
+        }
         if (accounts.length > 0 && !fromWallet) {
           setFromWallet(accounts[0].currency);
         }
@@ -203,8 +230,8 @@ export function Payvost() {
             amount,
             currency: fromWallet,
             transactionType: 'REMITTANCE',
-            fromCountry: 'US', // TODO: Get from user profile
-            toCountry: 'NG', // TODO: Get from recipient country
+            fromCountry: userCountry || 'US', // Get from user profile
+            toCountry: recipientCountry || 'NG', // Get from recipient country
           }),
         });
 
@@ -262,11 +289,67 @@ export function Payvost() {
           throw new Error('Selected wallet not found');
         }
 
-        // TODO: Implement Payment ID transfer via backend
-        // For now, this is a placeholder
+        // Get recipient's account in the same currency
+        let recipientAccountId: string | undefined;
+        
+        try {
+          // Try to get recipient's account via API
+          const response = await fetch(`/api/user/accounts?userId=${paymentIdRecipient.uid}&currency=${fromWallet}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const recipientAccounts = data.accounts || [];
+            const recipientAccount = recipientAccounts.find((acc: Account) => acc.currency === fromWallet);
+            recipientAccountId = recipientAccount?.id;
+          }
+        } catch (apiError) {
+          console.warn('Failed to get recipient account via API, trying Firestore fallback:', apiError);
+        }
+
+        // Fallback: Check Firestore for recipient's wallet
+        if (!recipientAccountId) {
+          const { db } = await import('@/lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          
+          const recipientDoc = await getDoc(doc(db, 'users', paymentIdRecipient.uid));
+          if (recipientDoc.exists()) {
+            const recipientData = recipientDoc.data();
+            const recipientWallets = recipientData.wallets || [];
+            const recipientWallet = recipientWallets.find((w: any) => w.currency === fromWallet);
+            
+            if (recipientWallet && recipientWallet.id) {
+              recipientAccountId = recipientWallet.id;
+            }
+          }
+        }
+
+        if (!recipientAccountId) {
+          throw new Error(`Recipient does not have a ${fromWallet} wallet. Please ask them to create one first.`);
+        }
+
+        // Perform the transfer
+        const transfer = await transactionService.create({
+          fromAccountId: selectedAccount.id,
+          toAccountId: recipientAccountId,
+          amount: parseFloat(paymentIdAmount),
+          currency: fromWallet,
+          type: 'TRANSFER',
+          description: paymentIdNote || `Transfer to ${paymentIdRecipient.fullName || paymentIdRecipient.username}`,
+          metadata: {
+            recipientUid: paymentIdRecipient.uid,
+            recipientUsername: paymentIdRecipient.username,
+            recipientEmail: paymentIdRecipient.email,
+            transferType: 'payment_id',
+          },
+        });
+
         toast({
-          title: 'Transfer Initiated!',
-          description: `Sending ${paymentIdAmount} ${fromWallet} to ${paymentIdRecipient.fullName || paymentIdRecipient.username}`,
+          title: 'Transfer Successful!',
+          description: `Sent ${paymentIdAmount} ${fromWallet} to ${paymentIdRecipient.fullName || paymentIdRecipient.username}`,
         });
 
         // Reset form
@@ -442,7 +525,7 @@ export function Payvost() {
                   <Skeleton className="h-10 w-full" />
                 ) : (
                   <Select value={fromWallet} onValueChange={setFromWallet} disabled={!isKycVerified}>
-                    <SelectTrigger id="from-wallet-user">
+                    <SelectTrigger id="from-wallet-user" aria-label="Select source wallet">
                       <SelectValue placeholder="Select a wallet" />
                     </SelectTrigger>
                     <SelectContent>
@@ -485,7 +568,20 @@ export function Payvost() {
 
             {/* SendToUserForm Component */}
             <SendToUserForm
-              onRecipientChange={setPaymentIdRecipient}
+              onRecipientChange={(recipient) => {
+                setPaymentIdRecipient(recipient);
+                // Update recipient country when payment ID recipient is selected
+                if (recipient?.countryCode) {
+                  setRecipientCountry(recipient.countryCode);
+                } else if (recipient?.country) {
+                  const countryMap: Record<string, string> = {
+                    'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
+                    'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
+                    'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
+                  };
+                  setRecipientCountry(countryMap[recipient.country] || 'NG');
+                }
+              }}
               onAmountChange={setPaymentIdAmount}
               onNoteChange={setPaymentIdNote}
               disabled={!isKycVerified}
@@ -560,10 +656,24 @@ export function Payvost() {
               <Label htmlFor="recipient">Recipient</Label>
               <Select
                 value={selectedBeneficiary}
-                onValueChange={setSelectedBeneficiary}
+                onValueChange={(value) => {
+                  setSelectedBeneficiary(value);
+                  // Update recipient country based on selected beneficiary
+                  const beneficiary = beneficiaries.find((b) => b.id === value);
+                  if (beneficiary?.countryCode) {
+                    setRecipientCountry(beneficiary.countryCode);
+                  } else if (beneficiary?.country) {
+                    const countryMap: Record<string, string> = {
+                      'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
+                      'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
+                      'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
+                    };
+                    setRecipientCountry(countryMap[beneficiary.country] || 'NG');
+                  }
+                }}
                 disabled={!isKycVerified}
               >
-                <SelectTrigger id="recipient">
+                <SelectTrigger id="recipient" aria-label="Select beneficiary">
                   <SelectValue placeholder={beneficiaries.length > 0 ? "Select a saved recipient" : "No saved recipients"} />
                 </SelectTrigger>
                 <SelectContent>

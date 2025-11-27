@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
+import admin from 'firebase-admin';
 
 // Define enum types locally to avoid Prisma import issues during build
 export type ContentType = 
@@ -315,8 +316,39 @@ export class ContentService {
     const isCoAuthor = existing.coAuthors.includes(userId);
     
     if (!isAuthor && !isCoAuthor) {
-      // TODO: Check if user has editor/admin role
-      throw new Error('Unauthorized: You do not have permission to edit this content');
+      // Check if user has editor/admin role
+      try {
+        // Check in Prisma User table first
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true },
+        });
+        
+        const hasEditorRole = user?.role === 'admin' || 
+                             user?.role === 'super_admin' || 
+                             user?.role === 'editor' ||
+                             user?.role === 'content_editor';
+        
+        if (!hasEditorRole) {
+          // Also check Firestore for role (for backward compatibility)
+          const firestoreUser = await admin.firestore().collection('users').doc(userId).get();
+          const firestoreRole = firestoreUser.data()?.role;
+          const hasFirestoreEditorRole = firestoreRole === 'admin' || 
+                                        firestoreRole === 'super_admin' || 
+                                        firestoreRole === 'editor' ||
+                                        firestoreRole === 'content_editor';
+          
+          if (!hasFirestoreEditorRole) {
+            throw new Error('Unauthorized: You do not have permission to edit this content');
+          }
+        }
+      } catch (error: any) {
+        if (error.message.includes('Unauthorized')) {
+          throw error;
+        }
+        // If role check fails, deny access
+        throw new Error('Unauthorized: You do not have permission to edit this content');
+      }
     }
 
     // If slug is being updated, ensure it's unique

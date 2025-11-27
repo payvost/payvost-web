@@ -13,6 +13,7 @@ import { ENV_VARIABLES } from '@/config/integration-partners';
 /**
  * Verify Rapyd webhook signature
  * Rapyd uses HMAC-SHA256 with salt, timestamp, and body
+ * Includes timestamp validation to prevent replay attacks
  */
 function verifyRapydSignature(
   body: string,
@@ -21,17 +22,40 @@ function verifyRapydSignature(
   timestamp: string | null
 ): boolean {
   if (!signature || !salt || !timestamp || !ENV_VARIABLES.RAPYD_SECRET_KEY) {
+    console.error('[Rapyd Webhook] Missing required signature components');
     return false;
   }
 
   try {
+    // Validate timestamp to prevent replay attacks (5 minute window)
+    const timestampNum = parseInt(timestamp, 10);
+    if (isNaN(timestampNum)) {
+      console.error('[Rapyd Webhook] Invalid timestamp format');
+      return false;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const timestampAge = Math.abs(now - timestampNum);
+    const MAX_TIMESTAMP_AGE = 300; // 5 minutes
+
+    if (timestampAge > MAX_TIMESTAMP_AGE) {
+      console.error(`[Rapyd Webhook] Timestamp too old: ${timestampAge}s ago (max: ${MAX_TIMESTAMP_AGE}s)`);
+      return false;
+    }
+
+    // Validate salt format (should be alphanumeric)
+    if (!/^[a-zA-Z0-9]+$/.test(salt)) {
+      console.error('[Rapyd Webhook] Invalid salt format');
+      return false;
+    }
+
     // Rapyd signature format: HMAC-SHA256(salt + timestamp + body)
     const toSign = `${salt}${timestamp}${body}`;
     const expectedSignature = createHmac('sha256', ENV_VARIABLES.RAPYD_SECRET_KEY)
       .update(toSign)
       .digest('hex');
 
-    // Constant-time comparison
+    // Constant-time comparison to prevent timing attacks
     if (signature.length !== expectedSignature.length) {
       return false;
     }
@@ -40,6 +64,11 @@ function verifyRapydSignature(
     for (let i = 0; i < signature.length; i++) {
       result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
     }
+    
+    if (result !== 0) {
+      console.error('[Rapyd Webhook] Signature mismatch');
+    }
+    
     return result === 0;
   } catch (error) {
     console.error('[Rapyd Webhook] Signature verification error:', error);
