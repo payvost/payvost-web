@@ -24,6 +24,7 @@ import { getAdaptiveNotification } from '@/app/actions';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 
 type FormValues = {
   messageType: string;
@@ -31,7 +32,7 @@ type FormValues = {
 }
 
 interface AdaptiveNotificationTesterProps {
-  language: GenerateNotificationInput['languagePreference'];
+  language: LanguagePreference;
 }
 
 export function AdaptiveNotificationTester({ language }: AdaptiveNotificationTesterProps) {

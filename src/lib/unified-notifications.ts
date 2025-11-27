@@ -68,6 +68,7 @@ async function sendTopicNotification(params: {
 }
 
 import type { EmailTemplate } from '@/services/notificationService';
+import { getAllValidTemplates, isValidTemplate } from '@/lib/email-template-mapper';
 
 export interface NotificationPayload {
   userId: string;
@@ -133,13 +134,13 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
     if (userData.email && userData.preferences?.email !== false) {
       try {
         // Use a valid template or skip email if template is invalid
-        const validTemplate = emailTemplate && ['transaction_success', 'transaction_failed', 'bill_payment_success', 'bill_payment_failed', 'gift_card_delivered', 'airtime_topup_success', 'kyc_verified', 'account_welcome', 'password_reset', 'login_alert', 'withdrawal_request', 'deposit_received'].includes(emailTemplate);
+        const validTemplate = emailTemplate && isValidTemplate(emailTemplate);
         
         if (validTemplate) {
           const emailResult = await notificationService.sendEmail({
             to: userData.email,
             subject: title,
-            template: emailTemplate as any,
+            template: emailTemplate,
             variables: {
               name: userData.fullName || userData.displayName || 'User',
               message: body,
@@ -269,6 +270,10 @@ export async function notifyKYCRejected(userId: string, reason: string) {
       reason,
     },
     clickAction: '/dashboard/settings',
+    emailTemplate: 'kyc_rejected',
+    emailVariables: {
+      reason,
+    },
   });
 }
 
@@ -333,6 +338,13 @@ export async function notifyDeposit(
       source,
     },
     clickAction: '/dashboard/wallet',
+    emailTemplate: 'deposit_received',
+    emailVariables: {
+      amount: amount.toString(),
+      currency,
+      paymentMethod: source,
+      date: new Date().toLocaleString(),
+    },
   });
 }
 
@@ -358,6 +370,126 @@ export async function notifyWithdrawal(
       status,
     },
     clickAction: '/dashboard/wallet',
+    emailTemplate: 'withdrawal_request',
+    emailVariables: {
+      amount: amount.toString(),
+      currency,
+      date: new Date().toLocaleString(),
+    },
+  });
+}
+
+/**
+ * Invoice notification convenience functions
+ */
+
+export async function notifyInvoiceGenerated(
+  userId: string,
+  invoiceNumber: string,
+  amount: number,
+  currency: string,
+  dueDate: Date | string,
+  businessName?: string,
+  downloadLink?: string
+) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'New Invoice Generated',
+    body: `Invoice #${invoiceNumber} for ${amount} ${currency} has been generated`,
+    type: 'payment',
+    data: {
+      type: 'invoice',
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+    },
+    clickAction: '/dashboard/invoices',
+    emailTemplate: 'invoice_generated',
+    emailVariables: {
+      invoice_number: invoiceNumber,
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+      due_date: typeof dueDate === 'string' ? dueDate : dueDate.toLocaleDateString(),
+      dueDate: typeof dueDate === 'string' ? dueDate : dueDate.toLocaleDateString(),
+      business_name: businessName || 'Payvost',
+      businessName: businessName || 'Payvost',
+      download_link: downloadLink || '',
+      downloadLink: downloadLink || '',
+    },
+  });
+}
+
+export async function notifyInvoiceReminder(
+  userId: string,
+  invoiceNumber: string,
+  amount: number,
+  currency: string,
+  dueDate: Date | string,
+  businessName?: string,
+  downloadLink?: string
+) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Invoice Payment Reminder',
+    body: `Reminder: Invoice #${invoiceNumber} for ${amount} ${currency} is due soon`,
+    type: 'payment',
+    data: {
+      type: 'invoice_reminder',
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+    },
+    clickAction: '/dashboard/invoices',
+    emailTemplate: 'invoice_reminder',
+    emailVariables: {
+      invoice_number: invoiceNumber,
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+      due_date: typeof dueDate === 'string' ? dueDate : dueDate.toLocaleDateString(),
+      dueDate: typeof dueDate === 'string' ? dueDate : dueDate.toLocaleDateString(),
+      business_name: businessName || 'Payvost',
+      businessName: businessName || 'Payvost',
+      download_link: downloadLink || '',
+      downloadLink: downloadLink || '',
+    },
+  });
+}
+
+export async function notifyInvoicePaid(
+  userId: string,
+  invoiceNumber: string,
+  amount: number,
+  currency: string,
+  businessName?: string,
+  downloadLink?: string
+) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Invoice Paid Successfully',
+    body: `Invoice #${invoiceNumber} for ${amount} ${currency} has been paid`,
+    type: 'payment',
+    data: {
+      type: 'invoice_paid',
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+    },
+    clickAction: '/dashboard/invoices',
+    emailTemplate: 'invoice_paid',
+    emailVariables: {
+      invoice_number: invoiceNumber,
+      invoiceNumber,
+      amount: amount.toString(),
+      currency,
+      payment_date: new Date().toLocaleDateString(),
+      paymentDate: new Date().toLocaleDateString(),
+      business_name: businessName || 'Payvost',
+      businessName: businessName || 'Payvost',
+      download_link: downloadLink || '',
+      downloadLink: downloadLink || '',
+    },
   });
 }
 

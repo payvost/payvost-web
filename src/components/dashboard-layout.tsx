@@ -23,7 +23,7 @@ import {
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
 import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search } from 'lucide-react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
 import { Button } from './ui/button';
@@ -46,8 +46,8 @@ import { DashboardSearch } from './dashboard-search';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
-  language: GenerateNotificationInput['languagePreference'];
-  setLanguage: Dispatch<SetStateAction<GenerateNotificationInput['languagePreference']>>;
+  language: LanguagePreference;
+  setLanguage: Dispatch<SetStateAction<LanguagePreference>>;
 }
 
 export function DashboardLayout({ children, language, setLanguage }: DashboardLayoutProps) {

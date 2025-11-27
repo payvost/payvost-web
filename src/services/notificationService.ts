@@ -22,11 +22,15 @@ export type EmailTemplate =
   | 'gift_card_delivered'
   | 'airtime_topup_success'
   | 'kyc_verified'
+  | 'kyc_rejected'
   | 'account_welcome'
   | 'password_reset'
   | 'login_alert'
   | 'withdrawal_request'
-  | 'deposit_received';
+  | 'deposit_received'
+  | 'invoice_generated'
+  | 'invoice_reminder'
+  | 'invoice_paid';
 
 // SMS notification interface
 export interface SMSNotification {
@@ -256,6 +260,74 @@ class NotificationService {
             <p><strong>Date:</strong> ${vars.date}</p>
           </div>
           <p>Your funds are now available in your wallet.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      kyc_rejected: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #ef4444;">KYC Verification Update</h2>
+          <p>Hello ${vars.name},</p>
+          <p>We've reviewed your identity verification documents, and unfortunately, we need additional information.</p>
+          <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            ${vars.reason ? `<p><strong>Reason:</strong> ${vars.reason}</p>` : ''}
+            ${vars.next_steps ? `<p><strong>Next Steps:</strong> ${vars.next_steps}</p>` : ''}
+          </div>
+          <p>Please log in to your account to review the requirements and resubmit your documents.</p>
+          <p>If you have any questions, please contact our support team.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      invoice_generated: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">New Invoice</h2>
+          <p>Hello ${vars.name},</p>
+          <p>A new invoice has been generated for you.</p>
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Invoice Number:</strong> ${vars.invoice_number || vars.invoiceNumber || 'N/A'}</p>
+            <p><strong>Amount:</strong> ${vars.currency || 'USD'} ${vars.amount}</p>
+            <p><strong>Due Date:</strong> ${vars.due_date || vars.dueDate || 'N/A'}</p>
+            <p><strong>Business:</strong> ${vars.business_name || vars.businessName || 'Payvost'}</p>
+          </div>
+          ${vars.download_link || vars.downloadLink ? `<div style="text-align: center; margin: 30px 0;">
+            <a href="${vars.download_link || vars.downloadLink}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Download Invoice</a>
+          </div>` : ''}
+          <p>Please make payment by the due date to avoid any late fees.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      invoice_reminder: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f59e0b;">Invoice Payment Reminder</h2>
+          <p>Hello ${vars.name},</p>
+          <p>This is a friendly reminder that you have an outstanding invoice.</p>
+          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p><strong>Invoice Number:</strong> ${vars.invoice_number || vars.invoiceNumber || 'N/A'}</p>
+            <p><strong>Amount:</strong> ${vars.currency || 'USD'} ${vars.amount}</p>
+            <p><strong>Due Date:</strong> ${vars.due_date || vars.dueDate || 'N/A'}</p>
+            <p><strong>Business:</strong> ${vars.business_name || vars.businessName || 'Payvost'}</p>
+          </div>
+          ${vars.download_link || vars.downloadLink ? `<div style="text-align: center; margin: 30px 0;">
+            <a href="${vars.download_link || vars.downloadLink}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Invoice</a>
+          </div>` : ''}
+          <p>Please make payment as soon as possible to avoid any late fees.</p>
+          <p>Best regards,<br>Payvost Team</p>
+        </div>
+      `,
+      invoice_paid: (vars) => `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10b981;">Invoice Paid ✓</h2>
+          <p>Hello ${vars.name},</p>
+          <p>Thank you! Your invoice payment has been received and processed.</p>
+          <div style="background: #ecfdf5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+            <p><strong>Invoice Number:</strong> ${vars.invoice_number || vars.invoiceNumber || 'N/A'}</p>
+            <p><strong>Amount Paid:</strong> ${vars.currency || 'USD'} ${vars.amount}</p>
+            <p><strong>Payment Date:</strong> ${vars.payment_date || vars.paymentDate || new Date().toLocaleDateString()}</p>
+            <p><strong>Business:</strong> ${vars.business_name || vars.businessName || 'Payvost'}</p>
+          </div>
+          ${vars.download_link || vars.downloadLink ? `<div style="text-align: center; margin: 30px 0;">
+            <a href="${vars.download_link || vars.downloadLink}" style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Download Receipt</a>
+          </div>` : ''}
+          <p>Your payment has been successfully processed. Thank you for your business!</p>
           <p>Best regards,<br>Payvost Team</p>
         </div>
       `,

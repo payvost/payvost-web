@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 import type { Dispatch, SetStateAction } from 'react';
 
 export function WalletsPageSkeleton({ 
   language, 
   setLanguage 
 }: { 
-  language: GenerateNotificationInput['languagePreference']; 
-  setLanguage: Dispatch<SetStateAction<GenerateNotificationInput['languagePreference']>>;
+  language: LanguagePreference; 
+  setLanguage: Dispatch<SetStateAction<LanguagePreference>>;
 }) {
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>

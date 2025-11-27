@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -301,7 +301,7 @@ function PaymentLinkTab() {
 }
 
 export default function RequestPaymentPageContent() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const [language, setLanguage] = useState<LanguagePreference>('en');
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'payment-link';
   const create = searchParams.get('create');

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
+import type { LanguagePreference } from '@/types/language';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Payvost } from '@/components/Payvost';
 import { RecentTransactions } from '@/components/recent-transactions';
@@ -100,7 +100,7 @@ interface MonthlyData {
 }
 
 export default function DashboardPage(): JSX.Element {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+  const [language, setLanguage] = useState<LanguagePreference>('en');
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<any[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);
