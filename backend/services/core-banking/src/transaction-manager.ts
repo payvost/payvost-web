@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import crypto from 'crypto';
 import Decimal from 'decimal.js';
+import { AuditLogContext, logFinancialTransaction, AuditAction } from '../../../common/audit-logger';
 
 // Use Decimal from decimal.js - Prisma accepts Decimal instances in v6
 const PrismaDecimal = Decimal;
@@ -172,6 +173,7 @@ export class TransactionManager {
           userId,
           amount.toString(),
           currency,
+          description || `Transfer to ${toAccountId}`,
           description || 'Transfer',
           auditContext
         );

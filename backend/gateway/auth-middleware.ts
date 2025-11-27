@@ -183,6 +183,3 @@ export async function optionalAuth(
   next();
 }
 
-// Re-export types and functions for backward compatibility
-export { AuthenticatedRequest };
-

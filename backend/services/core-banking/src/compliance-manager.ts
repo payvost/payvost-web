@@ -332,7 +332,7 @@ export class ComplianceManager {
       let score = 0;
       
       // Check for device with many failed transactions
-      const failedCount = deviceTransactions.filter(t => t.status === 'FAILED').length;
+      const failedCount = deviceTransactions.filter((t: any) => t.status === 'FAILED').length;
       if (failedCount > 5) {
         score += 30; // High failure rate is suspicious
       }
