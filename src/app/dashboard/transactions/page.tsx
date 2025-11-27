@@ -27,7 +27,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { EmptyState } from '@/components/empty-state';
 import { Receipt, ArrowRightLeft, Send } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface Transaction {
   id: string;
