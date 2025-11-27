@@ -362,10 +362,6 @@ export default function DashboardPage() {
   const isLoading = authLoading || loadingWallets || loadingDisputes;
   const hasWallets = wallets.length > 0;
   const showCreateWalletCTA = wallets.length < 4;
-  const disputesRequiringResponse = disputes.filter(d => d.status === 'Needs response').length;
-  const amountUnderReview = disputes
-    .filter(d => ['Needs response', 'Under review'].includes(d.status))
-    .reduce((sum, d) => sum + d.amount, 0);
 
   const renderWalletCards = () => {
     if (isLoading) {
@@ -861,8 +857,8 @@ export default function DashboardPage() {
                             </div>
                         ) : (
                             <>
-                                <p><strong className="text-lg">{disputesRequiringResponse}</strong> cases require your response.</p>
-                                <p className="text-sm text-muted-foreground">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amountUnderReview)} is currently under review.</p>
+                                <p><strong className="text-lg">{disputes.filter(d => d.status === 'Needs response').length}</strong> cases require your response.</p>
+                                <p className="text-sm text-muted-foreground">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(disputes.filter(d => ['Needs response', 'Under review'].includes(d.status)).reduce((sum, d) => sum + d.amount, 0))} is currently under review.</p>
                             </>
                         )}
                     </CardContent>
