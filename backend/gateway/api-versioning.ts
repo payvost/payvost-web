@@ -24,7 +24,7 @@ export function extractApiVersion(req: VersionedRequest, res: Response, next: Ne
     req.apiVersion = `v${versionMatch[1]}`;
     // Remove version from path for route matching
     req.url = req.url.replace(`/v${versionMatch[1]}`, '');
-    req.path = req.path.replace(`/v${versionMatch[1]}`, '');
+    // Note: req.path is read-only, but req.url modification should be sufficient for routing
   } else if (path.startsWith('/api/')) {
     // Default to v1 for unversioned routes
     req.apiVersion = 'v1';

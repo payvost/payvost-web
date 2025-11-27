@@ -8,7 +8,6 @@ import { errorTrackerHandler, errorTrackerErrorHandler } from '../common/error-t
 import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
 import { performanceMiddleware, getPerformanceStats } from '../common/performance-monitor';
 import { apmMiddleware } from '../common/apm-setup';
-import { performanceMiddleware, getPerformanceStats } from '../common/performance-monitor';
 
 // Domain-specific error classes
 export class AuthenticationError extends Error {

@@ -57,9 +57,11 @@ class APMManager {
   private async initNewRelic() {
     try {
       // Dynamic import to avoid requiring newrelic as dependency
-      const newrelic = await import('newrelic');
-      this.newrelic = newrelic.default || newrelic;
-      logger.info('New Relic APM initialized');
+      const newrelic = await import('newrelic' as any).catch(() => null);
+      if (newrelic) {
+        this.newrelic = (newrelic as any).default || newrelic;
+        logger.info('New Relic APM initialized');
+      }
     } catch (error) {
       logger.warn('New Relic not installed. Install with: npm install newrelic');
       this.config.enabled = false;
@@ -69,13 +71,15 @@ class APMManager {
   private async initDatadog() {
     try {
       // Dynamic import
-      const tracer = await import('dd-trace');
-      tracer.init({
-        service: this.config.appName,
-        env: process.env.NODE_ENV || 'development',
-      });
-      this.datadog = tracer;
-      logger.info('Datadog APM initialized');
+      const tracer = await import('dd-trace' as any).catch(() => null);
+      if (tracer) {
+        (tracer as any).init({
+          service: this.config.appName,
+          env: process.env.NODE_ENV || 'development',
+        });
+        this.datadog = tracer;
+        logger.info('Datadog APM initialized');
+      }
     } catch (error) {
       logger.warn('Datadog tracer not installed. Install with: npm install dd-trace');
       this.config.enabled = false;

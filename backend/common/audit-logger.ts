@@ -186,7 +186,7 @@ export async function logBalanceChange(
     severity: AuditSeverity.HIGH,
     userId,
     accountId,
-    description: `Balance changed: ${balanceBefore} → ${balanceAfter} ${currency} (${amount > 0 ? '+' : ''}${amount})`,
+    description: `Balance changed: ${balanceBefore} → ${balanceAfter} ${currency} (${parseFloat(amount) > 0 ? '+' : ''}${amount})`,
     context,
     metadata: {
       amount,

@@ -3,7 +3,7 @@ import { PaymentProviderRegistry } from '../providers/registry';
 import { PaymentMethod, Currency, PaymentRequestDTO, PaymentIntent } from '../interfaces';
 import { determineOptimalProvider } from '../utils/routing';
 import { validateAmount, validateCurrency, validateIdempotencyKey } from '../validators';
-import { AuthenticatedRequest } from '../../../gateway/middleware';
+import { AuthenticatedRequest } from '../../../gateway/auth-middleware';
 import { ValidationError } from '../../../gateway/index';
 
 // Temporary in-memory persistence until a Prisma model is introduced
