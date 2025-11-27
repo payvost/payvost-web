@@ -174,7 +174,6 @@ export class TransactionManager {
           amount.toString(),
           currency,
           description || `Transfer to ${toAccountId}`,
-          description || 'Transfer',
           auditContext
         );
       }
