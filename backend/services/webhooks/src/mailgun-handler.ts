@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+// @ts-ignore - Common file is compiled separately
 import { logger } from '../../../common/logger';
 import { prisma } from './prisma';
 
