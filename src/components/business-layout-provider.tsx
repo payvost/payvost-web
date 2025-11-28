@@ -56,8 +56,8 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
                 <div className="min-h-screen w-full bg-background">
                     <BusinessSidebar />
                     <BusinessHeader />
-                     <div className="sm:pl-14 md:pl-[14rem]">
-                         <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
+                     <div className="sm:pl-14 md:pl-[14rem]" style={{ marginTop: 0, paddingTop: 0 }}>
+                         <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16" style={{ marginTop: 0 }}>
                         <div className="flex items-center justify-between space-y-2 mb-6">
                             <Skeleton className="h-10 w-64" />
                         </div>
@@ -96,8 +96,8 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
             <div className="min-h-screen w-full bg-background">
                 <BusinessSidebar />
                 <BusinessHeader />
-                <div className="sm:pl-14 md:pl-[14rem]">
-                    <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16">
+                <div className="sm:pl-14 md:pl-[14rem]" style={{ marginTop: 0, paddingTop: 0 }}>
+                    <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16" style={{ marginTop: 0 }}>
                         {children}
                     </main>
                 </div>

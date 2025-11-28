@@ -3,7 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import webpush from 'web-push';
 import axios from 'axios';
 import cors from 'cors';
+// @ts-ignore - Common files are compiled separately
 import { sendRateAlertEmail, isMailgunConfigured } from '../../../common/mailgun';
+// @ts-ignore - Common files are compiled separately
 import { processDailyEmails } from '../../../common/daily-email';
 
 const app = express();
