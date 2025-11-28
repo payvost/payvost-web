@@ -4,16 +4,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, LineChart, Users, FileText, Clock, AlertTriangle, CheckCircle, XCircle, TrendingUp, TrendingDown, Plus, Receipt, DollarSign, Inbox, RefreshCw, ExternalLink } from 'lucide-react';
+import { ArrowRight, LineChart, Users, FileText, Clock, AlertTriangle, CheckCircle, XCircle, TrendingUp, TrendingDown, Receipt, DollarSign, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { BusinessTransactionChart } from '@/components/business-transaction-chart';
-import { ActivityLog } from '@/components/activity-log';
 import { useAuth } from '@/hooks/use-auth';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
-import type { DateRange } from 'react-day-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
@@ -59,7 +55,6 @@ export default function BusinessDashboardPage() {
     const [loadingData, setLoadingData] = useState(true);
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchDashboardData = useCallback(async () => {
@@ -72,15 +67,7 @@ export default function BusinessDashboardPage() {
             setLoadingData(true);
             setError(null);
             
-            const params = new URLSearchParams();
-            if (dateRange?.from) {
-                params.append('startDate', dateRange.from.toISOString());
-            }
-            if (dateRange?.to) {
-                params.append('endDate', dateRange.to.toISOString());
-            }
-
-            const response = await fetch(`/api/business/dashboard?${params.toString()}`);
+            const response = await fetch('/api/business/dashboard');
             
             if (!response.ok) {
                 throw new Error('Failed to fetch dashboard data');
@@ -206,7 +193,7 @@ export default function BusinessDashboardPage() {
             setLoadingData(false);
             setRefreshing(false);
         }
-    }, [user, authLoading, dateRange]);
+    }, [user, authLoading]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -278,7 +265,6 @@ export default function BusinessDashboardPage() {
     const quickActions = [
         { label: 'Create Invoice', icon: <Receipt className="h-4 w-4" />, href: '/business/invoices/new', variant: 'default' as const },
         { label: 'New Payout', icon: <DollarSign className="h-4 w-4" />, href: '/business/payouts/new', variant: 'outline' as const },
-        { label: 'Payment Link', icon: <Inbox className="h-4 w-4" />, href: '/business/payment-links/new', variant: 'outline' as const },
     ];
 
     return (
@@ -288,21 +274,14 @@ export default function BusinessDashboardPage() {
                     <h2 className="text-3xl font-bold tracking-tight">Business Dashboard</h2>
                     <p className="text-muted-foreground">A high-level view of your business's performance.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <DateRangePicker 
-                        date={dateRange}
-                        onDateChange={setDateRange}
-                        className="w-full sm:w-auto"
-                    />
-                    <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={handleRefresh}
-                        disabled={refreshing || loadingData}
-                    >
-                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                    </Button>
-                </div>
+                <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={refreshing || loadingData}
+                >
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                </Button>
             </div>
 
             {error && (
@@ -366,241 +345,77 @@ export default function BusinessDashboardPage() {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Transaction Volume</CardTitle>
-                                <CardDescription>
-                                    {dateRange?.from && dateRange?.to 
-                                        ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                                        : 'Last 7 days'
-                                    }
-                                </CardDescription>
-                            </div>
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/business/analytics">
-                                    View Analytics
-                                    <ExternalLink className="h-3 w-3 ml-2" />
-                                </Link>
+            <Card className="mt-6">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Recent Transactions</CardTitle>
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/business/transactions">
+                            View All
+                            <ArrowRight className="h-3 w-3 ml-2" />
+                        </Link>
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {loadingData ? (
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <Skeleton key={i} className="h-12 w-full" />
+                            ))}
+                        </div>
+                    ) : recentTransactions.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No recent transactions</p>
+                            <Button variant="outline" size="sm" className="mt-4" asChild>
+                                <Link href="/business/transactions">View All Transactions</Link>
                             </Button>
-                        </CardHeader>
-                        <CardContent className="pl-2">
-                            {loadingData ? (
-                                <Skeleton className="h-[250px] w-full" />
-                            ) : (
-                                <BusinessTransactionChart data={dashboardData?.chartData} />
-                            )}
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>Recent Transactions</CardTitle>
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/business/transactions">
-                                    View All
-                                    <ArrowRight className="h-3 w-3 ml-2" />
-                                </Link>
-                            </Button>
-                        </CardHeader>
-                        <CardContent>
-                            {loadingData ? (
-                                <div className="space-y-3">
-                                    {[1, 2, 3].map(i => (
-                                        <Skeleton key={i} className="h-12 w-full" />
-                                    ))}
-                                </div>
-                            ) : recentTransactions.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                    <p>No recent transactions</p>
-                                    <Button variant="outline" size="sm" className="mt-4" asChild>
-                                        <Link href="/business/transactions">View All Transactions</Link>
-                                    </Button>
-                                </div>
-                            ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Description</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Amount</TableHead>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {recentTransactions.slice(0, 5).map(tx => {
+                                    const status = statusConfig[tx.status] || statusConfig.Pending;
+                                    const href = tx.invoiceId 
+                                        ? `/business/invoices/${tx.invoiceId}`
+                                        : tx.transactionId 
+                                            ? `/business/transactions/${tx.transactionId}`
+                                            : '/business/transactions';
+                                    return (
+                                        <TableRow 
+                                            key={tx.id} 
+                                            className="cursor-pointer hover:bg-muted/50"
+                                            onClick={() => window.location.href = href}
+                                        >
+                                            <TableCell className="font-medium">{tx.description}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'}>
+                                                    {tx.type}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center text-sm" style={{color: status.color}}>
+                                                    {status.icon} <span>{tx.status}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono">
+                                                {formatCurrency(tx.amount, dashboardData?.accountCurrency || 'USD')}
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {recentTransactions.map(tx => {
-                                            const status = statusConfig[tx.status] || statusConfig.Pending;
-                                            const href = tx.invoiceId 
-                                                ? `/business/invoices/${tx.invoiceId}`
-                                                : tx.transactionId 
-                                                    ? `/business/transactions/${tx.transactionId}`
-                                                    : '/business/transactions';
-                                            return (
-                                                <TableRow 
-                                                    key={tx.id} 
-                                                    className="cursor-pointer hover:bg-muted/50"
-                                                    onClick={() => window.location.href = href}
-                                                >
-                                                    <TableCell className="font-medium">{tx.description}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'}>
-                                                            {tx.type}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center text-sm" style={{color: status.color}}>
-                                                            {status.icon} <span>{tx.status}</span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-mono">
-                                                        {formatCurrency(tx.amount, dashboardData?.accountCurrency || 'USD')}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="lg:col-span-1">
-                    <ActivityLog />
-                </div>
-            </div>
-
-            {/* Additional Insights Section */}
-            {dashboardData && !loadingData && (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Payment Collection Rate</CardTitle>
-                            <CardDescription>Invoices paid vs outstanding</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Collection Rate</span>
-                                    <span className="text-lg font-semibold">
-                                        {dashboardData.openInvoices > 0 
-                                            ? `${Math.round(((dashboardData.openInvoicesAmount - dashboardData.pendingPayouts) / dashboardData.openInvoicesAmount) * 100)}%`
-                                            : '100%'
-                                        }
-                                    </span>
-                                </div>
-                                <div className="w-full bg-muted rounded-full h-2">
-                                    <div 
-                                        className="bg-primary h-2 rounded-full transition-all"
-                                        style={{ 
-                                            width: `${dashboardData.openInvoices > 0 
-                                                ? Math.min(100, Math.round(((dashboardData.openInvoicesAmount - dashboardData.pendingPayouts) / dashboardData.openInvoicesAmount) * 100))
-                                                : 100
-                                            }%` 
-                                        }}
-                                    />
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    {dashboardData.openInvoices} invoices pending payment
-                                </p>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button variant="ghost" size="sm" className="w-full" asChild>
-                                <Link href="/business/invoices">
-                                    Manage Invoices
-                                    <ArrowRight className="h-3 w-3 ml-2" />
-                                </Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Cash Flow Status</CardTitle>
-                            <CardDescription>Current liquidity position</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Available Balance</span>
-                                    <span className="text-lg font-semibold">
-                                        {formatCurrency(dashboardData.accountBalance, dashboardData.accountCurrency)}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Pending Payouts</span>
-                                    <span className="text-sm font-medium text-yellow-600">
-                                        {formatCurrency(dashboardData.pendingPayouts, dashboardData.accountCurrency)}
-                                    </span>
-                                </div>
-                                <div className="pt-2 border-t">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium">Net Available</span>
-                                        <span className="text-base font-bold text-green-600">
-                                            {formatCurrency(
-                                                dashboardData.accountBalance - dashboardData.pendingPayouts,
-                                                dashboardData.accountCurrency
-                                            )}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button variant="ghost" size="sm" className="w-full" asChild>
-                                <Link href="/business/payouts">
-                                    View Payouts
-                                    <ArrowRight className="h-3 w-3 ml-2" />
-                                </Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Customer Growth</CardTitle>
-                            <CardDescription>New customer acquisition</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">New This Week</span>
-                                    <div className="flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4 text-green-600" />
-                                        <span className="text-lg font-semibold">
-                                            +{dashboardData.newCustomersChange}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Total Customers</span>
-                                    <span className="text-lg font-semibold">
-                                        {dashboardData.newCustomers}
-                                    </span>
-                                </div>
-                                <div className="pt-2">
-                                    <p className="text-xs text-muted-foreground">
-                                        {dashboardData.newCustomersChange > 0 
-                                            ? `Growing at ${Math.round((dashboardData.newCustomersChange / dashboardData.newCustomers) * 100)}% weekly`
-                                            : 'No new customers this week'
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button variant="ghost" size="sm" className="w-full" asChild>
-                                <Link href="/business/customers">
-                                    View Customers
-                                    <ArrowRight className="h-3 w-3 ml-2" />
-                                </Link>
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                </div>
-            )}
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
         </>
     )
 }

@@ -2,8 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, DollarSign, FileText, UserPlus, Activity } from 'lucide-react';
+import { DollarSign, FileText, UserPlus, Activity } from 'lucide-react';
 import Link from 'next/link';
 import type { ActivityLog as ActivityLogType, ActivityStatus } from '@/types/activity-log';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,14 +42,8 @@ export function ActivityLog({ logs, loading = false }: ActivityLogProps) {
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
-                <Button variant="ghost" size="sm" asChild>
-                    <Link href="/business/activity">
-                        View All
-                        <ArrowRight className="h-3 w-3 ml-2" />
-                    </Link>
-                </Button>
             </CardHeader>
             <CardContent>
                 {loading ? (
