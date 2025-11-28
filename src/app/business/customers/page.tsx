@@ -45,17 +45,20 @@ export default function BusinessCustomersPage() {
         }
     }, [user, authLoading]);
 
-    const filteredCustomers = customers.filter(customer => {
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            return (
-                customer.name?.toLowerCase().includes(query) ||
-                customer.email?.toLowerCase().includes(query) ||
-                customer.phone?.toLowerCase().includes(query)
-            );
-        }
-        return true;
-    });
+    const filteredCustomers = Array.isArray(customers) 
+        ? customers.filter(customer => {
+            if (!customer) return false;
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                return (
+                    customer?.name?.toLowerCase().includes(query) ||
+                    customer?.email?.toLowerCase().includes(query) ||
+                    customer?.phone?.toLowerCase().includes(query)
+                );
+            }
+            return true;
+        })
+        : [];
 
     return (
         <>
@@ -120,35 +123,35 @@ export default function BusinessCustomersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredCustomers.map((customer) => (
-                                    <TableRow key={customer.id}>
-                                        <TableCell className="font-medium">{customer.name}</TableCell>
+                                {(filteredCustomers || []).map((customer) => (
+                                    <TableRow key={customer?.id || Math.random()}>
+                                        <TableCell className="font-medium">{customer?.name || 'N/A'}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <Mail className="h-4 w-4 text-muted-foreground" />
-                                                {customer.email}
+                                                {customer?.email || 'N/A'}
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <Phone className="h-4 w-4 text-muted-foreground" />
-                                                {customer.phone || 'N/A'}
+                                                {customer?.phone || 'N/A'}
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             {new Intl.NumberFormat('en-US', {
                                                 style: 'currency',
-                                                currency: customer.currency || 'USD',
-                                            }).format(customer.totalSpent || 0)}
+                                                currency: customer?.currency || 'USD',
+                                            }).format(customer?.totalSpent || 0)}
                                         </TableCell>
                                         <TableCell>
-                                            {customer.lastPurchase
+                                            {customer?.lastPurchase
                                                 ? new Date(customer.lastPurchase).toLocaleDateString()
                                                 : 'Never'}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={customer.status === 'active' ? 'default' : 'secondary'}>
-                                                {customer.status || 'active'}
+                                            <Badge variant={customer?.status === 'active' ? 'default' : 'secondary'}>
+                                                {customer?.status || 'active'}
                                             </Badge>
                                         </TableCell>
                                     </TableRow>

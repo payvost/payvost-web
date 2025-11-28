@@ -16,10 +16,7 @@ import { usePathname } from 'next/navigation';
 import { 
   mainNavItems, 
   financialsItems, 
-  bookkeepingItems, 
-  salesCommerceItems, 
-  customersItems, 
-  toolsItems 
+  customersItems
 } from './business-sidebar';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -85,57 +82,9 @@ export function BusinessHeader() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Bookkeeping</SidebarGroupLabel>
-          <SidebarMenu>
-            {bookkeepingItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Sales & Commerce</SidebarGroupLabel>
-          <SidebarMenu>
-            {salesCommerceItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
           <SidebarGroupLabel>Customers</SidebarGroupLabel>
           <SidebarMenu>
             {customersItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools & Settings</SidebarGroupLabel>
-          <SidebarMenu>
-            {toolsItems.map(item => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isActive(item.href)}>
                   <Link href={item.href}>
