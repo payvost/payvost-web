@@ -300,5 +300,26 @@ service cloud.firestore {
       // ✅ Prevent deletion (maintain audit trail)
       allow delete: if false;
     }
+
+    // 📄 Legal Documents (Terms & Privacy Policy)
+    match /legalDocuments/{docId} {
+      // ✅ Public can read published versions
+      allow read: if resource.data.status == 'published' || isAdmin();
+      
+      // ✅ Admins can list all versions
+      allow list: if isAdmin() || true; // Public can list, but only published will be returned in queries
+      
+      // ✅ Only admins can create/update legal documents
+      allow create: if isAdmin() 
+                    && request.resource.data.keys().hasAll(['type', 'content', 'status', 'versionNumber'])
+                    && request.resource.data.type in ['terms', 'privacy']
+                    && request.resource.data.status in ['draft', 'published', 'archived'];
+      
+      allow update: if isAdmin() 
+                    && request.resource.data.status in ['draft', 'published', 'archived'];
+      
+      // ✅ Prevent deletion (maintain version history)
+      allow delete: if false;
+    }
   }
 }
