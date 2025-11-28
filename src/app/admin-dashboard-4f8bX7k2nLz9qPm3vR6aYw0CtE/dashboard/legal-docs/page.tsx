@@ -2,15 +2,16 @@
 'use client';
 
 import * as React from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, FileText, PlusCircle, Save, History, GitCompareArrows } from 'lucide-react';
+import { MoreHorizontal, FileText, Save, History, GitCompareArrows } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { LegalDocumentEditor } from '@/components/legal-document-editor';
 
 const termsVersions = [
     { version: 'v2.1', status: 'Published', date: '2024-08-01', editor: 'Admin User' },
@@ -26,6 +27,8 @@ const privacyVersions = [
 
 export default function LegalDocsPage() {
     const { toast } = useToast();
+    const [termsContent, setTermsContent] = useState('<h1>Terms of Service</h1><p>This is the current content of the Terms of Service. By using our service, you agree to these terms...</p>');
+    const [privacyContent, setPrivacyContent] = useState('<h1>Privacy Policy</h1><p>This is the current content of the Privacy Policy. We are committed to protecting your privacy...</p>');
 
     const handlePublish = (docName: string) => {
         toast({
@@ -34,7 +37,14 @@ export default function LegalDocsPage() {
         })
     }
 
-    const renderDocumentManager = (docName: string, versions: typeof termsVersions, content: string) => (
+    const handleSaveDraft = (docName: string) => {
+        toast({
+            title: "Draft Saved",
+            description: `Your changes to ${docName} have been saved as a draft.`
+        })
+    }
+
+    const renderDocumentManager = (docName: string, versions: typeof termsVersions, content: string, setContent: (content: string) => void) => (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2">
                 <Card>
@@ -43,10 +53,14 @@ export default function LegalDocsPage() {
                         <CardDescription>Current version: {versions[0].version}. Make changes below to create a new version.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Textarea defaultValue={content} rows={25} />
+                        <LegalDocumentEditor
+                            value={content}
+                            onChange={setContent}
+                            placeholder={`Start editing your ${docName}...`}
+                        />
                     </CardContent>
                     <CardFooter className="justify-end gap-2">
-                        <Button variant="outline">Save as Draft</Button>
+                        <Button variant="outline" onClick={() => handleSaveDraft(docName)}>Save as Draft</Button>
                         <Button onClick={() => handlePublish(docName)}><Save className="mr-2 h-4 w-4"/>Publish New Version</Button>
                     </CardFooter>
                 </Card>
@@ -115,14 +129,16 @@ export default function LegalDocsPage() {
                     {renderDocumentManager(
                         'Terms of Service', 
                         termsVersions, 
-                        'This is the current content of the Terms of Service. By using our service, you agree to these terms...'
+                        termsContent,
+                        setTermsContent
                     )}
                 </TabsContent>
                  <TabsContent value="privacy" className="mt-6">
                     {renderDocumentManager(
                         'Privacy Policy', 
                         privacyVersions, 
-                        'This is the current content of the Privacy Policy. We are committed to protecting your privacy...'
+                        privacyContent,
+                        setPrivacyContent
                     )}
                 </TabsContent>
             </Tabs>

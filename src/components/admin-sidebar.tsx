@@ -135,6 +135,7 @@ export function AdminSidebar() {
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/platform-config', icon: <Cog />, label: 'Platform Configuration' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/team-management', icon: <Users />, label: 'Team & Permissions' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/security', icon: <Shield />, label: 'System Settings' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/legal-docs', icon: <FileText />, label: 'Legal Documents' },
         ]
       }
     ];
