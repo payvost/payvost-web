@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -52,11 +53,35 @@ const billerData: Record<string, any> = {
   }
 };
 
+const VALID_TABS = ['remittances', 'bill-payment', 'bulk-transfer', 'scheduled', 'split-payment', 'gift-cards'] as const;
 
 export default function PaymentsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Tab state management
+  const tabFromUrl = searchParams.get('tab');
+  const initialTab = tabFromUrl && VALID_TABS.includes(tabFromUrl as any) ? tabFromUrl : 'remittances';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.push(`/dashboard/payments?${params.toString()}`, { scroll: false });
+  };
+  
+  // Sync with URL on mount or when URL changes
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl as any) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, activeTab]);
   
   // Bill payment state
   const [billCountry, setBillCountry] = useState('NGA'); // Default to Nigeria, can be dynamic
@@ -282,7 +307,8 @@ export default function PaymentsPage() {
           <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
         </div>
         <EnhancedTabs 
-          defaultValue="remittances"
+          value={activeTab}
+          onValueChange={handleTabChange}
           tabs={[
             {
               value: 'remittances',
