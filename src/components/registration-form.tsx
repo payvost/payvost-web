@@ -1072,8 +1072,12 @@ export function RegistrationForm() {
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });
 
-      // 7. Send email verification immediately
+      // 7. Send email verification (with small delay to allow Firebase Auth propagation)
+      // The API route has retry logic, but a small delay here helps ensure the user is ready
       try {
+        // Wait a moment for Firebase Auth to fully propagate the new user
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const response = await fetch('/api/auth/send-verification-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1085,7 +1089,8 @@ export function RegistrationForm() {
         });
         
         if (!response.ok) {
-          throw new Error('Failed to send verification email');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to send verification email');
         }
         
         toast({ 
