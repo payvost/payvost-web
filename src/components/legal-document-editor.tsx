@@ -62,7 +62,7 @@ export function LegalDocumentEditor({ value, onChange, placeholder, className }:
   const formats = [
     'header', 'font', 'size',
     'bold', 'italic', 'underline', 'strike', 'blockquote',
-    'list', 'bullet', 'indent',
+    'list', 'indent',
     'script',
     'color', 'background',
     'align',
