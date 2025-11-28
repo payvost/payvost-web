@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { BusinessSidebar } from '@/components/business-sidebar';
 import { BusinessHeader } from '@/components/business-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,38 +55,38 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
                 <div className="min-h-screen w-full bg-background">
                     <BusinessSidebar />
                     <BusinessHeader />
-                     <div className="sm:pl-14 md:pl-[14rem]" style={{ marginTop: 0, paddingTop: 0 }}>
-                         <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16" style={{ marginTop: 0 }}>
-                        <div className="flex items-center justify-between space-y-2 mb-6">
-                            <Skeleton className="h-10 w-64" />
-                        </div>
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                            {[...Array(4)].map((_, i) => (
-                               <Card key={i}>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <Skeleton className="h-5 w-3/4" />
-                                        <Skeleton className="h-6 w-6" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Skeleton className="h-8 w-1/2 mb-1" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                            <div className="lg:col-span-2 space-y-6">
-                                 <Skeleton className="h-80 w-full" />
-                                 <Skeleton className="h-64 w-full" />
+                    <div className="sm:pl-14 md:pl-[14rem]">
+                        <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4" style={{ paddingTop: '64px', marginTop: 0 }}>
+                            <div className="flex items-center justify-between space-y-2 mb-6">
+                                <Skeleton className="h-10 w-64" />
                             </div>
-                            <div className="lg:col-span-1">
-                                 <Skeleton className="h-96 w-full" />
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                {[...Array(4)].map((_, i) => (
+                                   <Card key={i}>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <Skeleton className="h-5 w-3/4" />
+                                            <Skeleton className="h-6 w-6" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Skeleton className="h-8 w-1/2 mb-1" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                ))}
                             </div>
-                        </div>
-                    </main>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <Skeleton className="h-80 w-full" />
+                                    <Skeleton className="h-64 w-full" />
+                                </div>
+                                <div className="lg:col-span-1">
+                                    <Skeleton className="h-96 w-full" />
+                                </div>
+                            </div>
+                        </main>
+                    </div>
                 </div>
-            </div>
-        </SidebarProvider>
+            </SidebarProvider>
         );
     }
 
@@ -96,8 +95,15 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
             <div className="min-h-screen w-full bg-background">
                 <BusinessSidebar />
                 <BusinessHeader />
-                <div className="sm:pl-14 md:pl-[14rem]" style={{ marginTop: 0, paddingTop: 0 }}>
-                    <main className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4 pt-16" style={{ marginTop: 0 }}>
+                <div className="sm:pl-14 md:pl-[14rem]">
+                    <main 
+                        className="px-4 pb-4 sm:px-6 md:px-6 md:pb-6 space-y-4" 
+                        style={{ 
+                            paddingTop: '64px', 
+                            marginTop: 0,
+                            marginBottom: 0
+                        }}
+                    >
                         {children}
                     </main>
                 </div>

@@ -152,29 +152,46 @@ export function createGateway() {
     );
   }
 
-  app.use(cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, Postman, etc.) in development only
-      if (!origin && process.env.NODE_ENV !== 'production') {
-        return callback(null, true);
-      }
-      
-      // In production, require origin
-      if (!origin) {
-        return callback(new Error('CORS: Origin header required'));
-      }
+  // CORS configuration with conditional origin checking
+  app.use((req, res, next) => {
+    // Health check and monitoring endpoints that don't require strict CORS
+    const noCorsPaths = ['/health', '/'];
+    const isHealthCheck = noCorsPaths.includes(req.path);
+    const isSimpleRequest = ['GET', 'HEAD'].includes(req.method);
 
-      // Check if origin is allowed
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: Origin ${origin} not allowed`));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
-    credentials: true,
-  }));
+    // Create CORS middleware with access to request context
+    const corsMiddleware = cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.) in development only
+        if (!origin && process.env.NODE_ENV !== 'production') {
+          return callback(null, true);
+        }
+        
+        // Allow requests without origin for health checks and simple GET/HEAD requests
+        // (used by load balancers, monitoring tools, etc.)
+        if (!origin && (isHealthCheck || isSimpleRequest)) {
+          return callback(null, true);
+        }
+        
+        // In production, require origin for API routes
+        if (!origin) {
+          return callback(new Error('CORS: Origin header required'));
+        }
+
+        // Check if origin is allowed
+        if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS: Origin ${origin} not allowed`));
+        }
+      },
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
+      credentials: true,
+    });
+
+    return corsMiddleware(req, res, next);
+  });
 
   // Body parsing
   app.use(express.json({ limit: '10mb' }));
