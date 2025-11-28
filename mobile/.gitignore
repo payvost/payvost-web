@@ -37,3 +37,8 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Firebase configuration files (sensitive)
+google-services.json
+google-services.json.bak
+GoogleService-Info.plist
