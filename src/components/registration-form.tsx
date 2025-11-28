@@ -1072,37 +1072,25 @@ export function RegistrationForm() {
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });
 
-      // 7. Send email verification (with small delay to allow Firebase Auth propagation)
-      // The API route has retry logic, but a small delay here helps ensure the user is ready
+      // 7. Send email verification using Firebase's built-in method
       try {
         // Wait a moment for Firebase Auth to fully propagate the new user
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const response = await fetch('/api/auth/send-verification-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            displayName: user.displayName || data.firstName || 'User',
-            appName: 'Payvost',
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to send verification email');
-        }
+        // Use Firebase's built-in sendEmailVerification method
+        const { sendEmailVerification } = await import('firebase/auth');
+        await sendEmailVerification(user);
         
         toast({ 
           title: 'Registration successful!', 
-          description: 'Please verify your email and phone number to complete registration.',
+          description: 'Please verify your email and phone number to complete registration. A verification email has been sent.',
           duration: 5000,
         });
       } catch (emailError: unknown) {
         // Don't block registration if email fails, but log it
         console.error('Failed to send verification email:', emailError);
         toast({ 
-          title: 'Registration successful', 
+          title: 'Registration successful',
           description: 'We\'ll send a verification email shortly. You can also request a new one from your profile.',
           variant: 'default',
         });
@@ -1723,7 +1711,7 @@ export function RegistrationForm() {
               />
               <Label htmlFor="agreeTerms">
                 I agree to the{' '}
-                <Link href="/terms" className="underline hover:text-primary" target="_blank">
+                <Link href="/terms-and-conditions" className="underline hover:text-primary" target="_blank">
                   terms and conditions
                 </Link>
               </Label>

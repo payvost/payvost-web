@@ -104,8 +104,8 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
       { href: "/security", label: "Security" },
     ],
     policies: [
-      { href: "/privacy", label: "Privacy Policy" },
-      { href: "/terms", label: "Terms & Conditions" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
+      { href: "/terms-and-conditions", label: "Terms & Conditions" },
     ],
   };
 
