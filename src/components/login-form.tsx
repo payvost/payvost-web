@@ -101,23 +101,39 @@ export function LoginForm() {
             resolver = error.resolver;
           } else {
             // Fallback: use getMultiFactorResolver (for Firebase v9+)
-            // Only try this if the error looks like it might have resolver info
+            // Ensure we're passing the original Firebase error object
             try {
-              // Check if error has the necessary structure for getMultiFactorResolver
-              if (error && typeof error === 'object' && 'code' in error) {
+              // Verify the error is a proper Firebase error with the correct code
+              if (error && 
+                  typeof error === 'object' && 
+                  error.code === 'auth/multi-factor-auth-required' &&
+                  (error.name === 'FirebaseError' || error.constructor?.name === 'FirebaseError')) {
+                // Pass the original error object directly to getMultiFactorResolver
                 resolver = getMultiFactorResolver(auth, error);
               } else {
-                throw new Error('Error object does not have expected structure');
+                // If error structure is wrong, log it and throw helpful message
+                console.error('Error object does not match expected FirebaseError structure:', {
+                  hasCode: 'code' in error,
+                  code: error?.code,
+                  hasName: 'name' in error,
+                  name: error?.name,
+                  constructorName: error?.constructor?.name,
+                  errorType: typeof error,
+                });
+                throw new Error('Error object does not have expected FirebaseError structure');
               }
             } catch (resolverError: any) {
               console.error('Failed to get MFA resolver:', resolverError);
               console.error('Original error structure:', {
                 code: error?.code,
                 message: error?.message,
+                name: error?.name,
+                constructorName: error?.constructor?.name,
                 hasResolver: !!error?.resolver,
                 errorType: typeof error,
                 errorKeys: error ? Object.keys(error) : [],
-                errorString: JSON.stringify(error, null, 2).substring(0, 500),
+                isFirebaseError: error?.name === 'FirebaseError' || error?.constructor?.name === 'FirebaseError',
+                errorString: JSON.stringify(error, Object.getOwnPropertyNames(error), 2).substring(0, 500),
               });
               // If both methods fail, show helpful error asking user to disable MFA
               setIsLoading(false);
@@ -131,6 +147,7 @@ export function LoginForm() {
           // Check if resolver exists and has hints
           if (!resolver) {
             console.error('MFA resolver is missing from error:', error);
+            setIsLoading(false);
             throw { 
               code: 'auth/multi-factor-auth-required', 
               message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
