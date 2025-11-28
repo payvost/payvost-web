@@ -37,47 +37,105 @@ export async function GET(request: Request) {
 
     if (allVersions) {
       // Get all versions for a document type
-      const snapshot = await db.collection('legalDocuments')
-        .where('type', '==', docType)
-        .orderBy('versionNumber', 'desc')
-        .get();
+      try {
+        const snapshot = await db.collection('legalDocuments')
+          .where('type', '==', docType)
+          .orderBy('versionNumber', 'desc')
+          .get();
 
-      const versions = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
-          createdAt: data?.createdAt?.toDate?.()?.toISOString(),
-        };
-      });
+        const versions = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
+            createdAt: data?.createdAt?.toDate?.()?.toISOString(),
+          };
+        });
 
-      return NextResponse.json({ versions });
+        return NextResponse.json({ versions });
+      } catch (indexError: any) {
+        // If index doesn't exist, try without orderBy
+        if (indexError.code === 9 || indexError.message?.includes('index')) {
+          console.warn('Index not found, fetching without orderBy:', indexError);
+          const snapshot = await db.collection('legalDocuments')
+            .where('type', '==', docType)
+            .get();
+
+          const versions = snapshot.docs
+            .map((doc) => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
+                createdAt: data?.createdAt?.toDate?.()?.toISOString(),
+              };
+            })
+            .sort((a, b) => (b.versionNumber || 0) - (a.versionNumber || 0));
+
+          return NextResponse.json({ versions });
+        }
+        throw indexError;
+      }
     }
 
     // Get current published version
-    const snapshot = await db.collection('legalDocuments')
-      .where('type', '==', docType)
-      .where('status', '==', 'published')
-      .orderBy('versionNumber', 'desc')
-      .limit(1)
-      .get();
+    try {
+      const snapshot = await db.collection('legalDocuments')
+        .where('type', '==', docType)
+        .where('status', '==', 'published')
+        .orderBy('versionNumber', 'desc')
+        .limit(1)
+        .get();
 
-    if (snapshot.empty) {
-      return NextResponse.json(
-        { error: 'No published version found' },
-        { status: 404 }
-      );
+      if (snapshot.empty) {
+        return NextResponse.json(
+          { error: 'No published version found' },
+          { status: 404 }
+        );
+      }
+
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      return NextResponse.json({
+        ...data,
+        id: doc.id,
+        publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
+        createdAt: data?.createdAt?.toDate?.()?.toISOString(),
+      });
+    } catch (indexError: any) {
+      // If index doesn't exist, try without orderBy
+      if (indexError.code === 9 || indexError.message?.includes('index')) {
+        console.warn('Index not found, fetching without orderBy:', indexError);
+        const snapshot = await db.collection('legalDocuments')
+          .where('type', '==', docType)
+          .where('status', '==', 'published')
+          .get();
+
+        if (snapshot.empty) {
+          return NextResponse.json(
+            { error: 'No published version found' },
+            { status: 404 }
+          );
+        }
+
+        // Sort manually
+        const docs = snapshot.docs
+          .map((doc) => ({ doc, data: doc.data() }))
+          .sort((a, b) => (b.data.versionNumber || 0) - (a.data.versionNumber || 0));
+
+        const doc = docs[0].doc;
+        const data = docs[0].data;
+        return NextResponse.json({
+          ...data,
+          id: doc.id,
+          publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
+          createdAt: data?.createdAt?.toDate?.()?.toISOString(),
+        });
+      }
+      throw indexError;
     }
-
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    return NextResponse.json({
-      ...data,
-      id: doc.id,
-      publishedAt: data?.publishedAt?.toDate?.()?.toISOString(),
-      createdAt: data?.createdAt?.toDate?.()?.toISOString(),
-    });
   } catch (error: any) {
     console.error('Error fetching legal document:', error);
     return NextResponse.json(
@@ -108,16 +166,35 @@ export async function POST(request: Request) {
     }
 
     // Get the latest version number
-    const latestSnapshot = await db.collection('legalDocuments')
-      .where('type', '==', type)
-      .orderBy('versionNumber', 'desc')
-      .limit(1)
-      .get();
-
     let versionNumber = 1;
-    if (!latestSnapshot.empty) {
-      const latestVersion = latestSnapshot.docs[0].data().versionNumber;
-      versionNumber = latestVersion + 1;
+    try {
+      const latestSnapshot = await db.collection('legalDocuments')
+        .where('type', '==', type)
+        .orderBy('versionNumber', 'desc')
+        .limit(1)
+        .get();
+
+      if (!latestSnapshot.empty) {
+        const latestVersion = latestSnapshot.docs[0].data().versionNumber;
+        versionNumber = latestVersion + 1;
+      }
+    } catch (indexError: any) {
+      // If index doesn't exist, fetch all and sort manually
+      if (indexError.code === 9 || indexError.message?.includes('index')) {
+        console.warn('Index not found, fetching all to determine version:', indexError);
+        const allSnapshot = await db.collection('legalDocuments')
+          .where('type', '==', type)
+          .get();
+
+        if (!allSnapshot.empty) {
+          const versions = allSnapshot.docs
+            .map((doc) => doc.data().versionNumber || 0)
+            .sort((a, b) => b - a);
+          versionNumber = versions[0] + 1;
+        }
+      } else {
+        throw indexError;
+      }
     }
 
     // If publishing, archive previous published version
@@ -188,16 +265,35 @@ export async function PUT(request: Request) {
 
     if (action === 'rollback') {
       // Rollback: Create a new published version with the old content
-      const latestSnapshot = await db.collection('legalDocuments')
-        .where('type', '==', versionData?.type)
-        .orderBy('versionNumber', 'desc')
-        .limit(1)
-        .get();
-
       let versionNumber = 1;
-      if (!latestSnapshot.empty) {
-        const latestVersion = latestSnapshot.docs[0].data().versionNumber;
-        versionNumber = latestVersion + 1;
+      try {
+        const latestSnapshot = await db.collection('legalDocuments')
+          .where('type', '==', versionData?.type)
+          .orderBy('versionNumber', 'desc')
+          .limit(1)
+          .get();
+
+        if (!latestSnapshot.empty) {
+          const latestVersion = latestSnapshot.docs[0].data().versionNumber;
+          versionNumber = latestVersion + 1;
+        }
+      } catch (indexError: any) {
+        // If index doesn't exist, fetch all and sort manually
+        if (indexError.code === 9 || indexError.message?.includes('index')) {
+          console.warn('Index not found, fetching all to determine version:', indexError);
+          const allSnapshot = await db.collection('legalDocuments')
+            .where('type', '==', versionData?.type)
+            .get();
+
+          if (!allSnapshot.empty) {
+            const versions = allSnapshot.docs
+              .map((doc) => doc.data().versionNumber || 0)
+              .sort((a, b) => b - a);
+            versionNumber = versions[0] + 1;
+          }
+        } else {
+          throw indexError;
+        }
       }
 
       // Archive current published version
