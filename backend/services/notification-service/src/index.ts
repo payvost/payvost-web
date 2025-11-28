@@ -7,7 +7,7 @@ const PORT = process.env.NOTIFICATION_SERVICE_PORT || 3005;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Service URLs
-const EMAIL_SERVICE_URL = process.env.EMAIL_SERVICE_URL || 'http://localhost:3006';
+const EMAIL_SERVICE_URL = process.env.EMAIL_SERVICE_URL || 'https://payvost-email-service-3vnx.onrender.com';
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || '';
 
 // Middleware

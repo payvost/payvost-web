@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // Proxy to admin-stats service (Render/Railway)
     const adminStatsServiceUrl = process.env.ADMIN_STATS_SERVICE_URL || 
                                  process.env.NEXT_PUBLIC_ADMIN_STATS_SERVICE_URL || 
-                                 'http://localhost:3007';
+                                 'https://payvost-admin-stat-service-83kh.onrender.com';
 
     const queryParams = new URLSearchParams();
     if (startDate) queryParams.set('startDate', startDate);

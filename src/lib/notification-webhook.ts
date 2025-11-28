@@ -8,7 +8,7 @@
 const NOTIFICATION_SERVICE_URL =
   process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
   process.env.NOTIFICATION_SERVICE_URL ||
-  'https://payvost-notification-service.onrender.com';
+  'https://payvost-notification-service-xrk6.onrender.com';
 
 /**
  * Send login notification
