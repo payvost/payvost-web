@@ -6,19 +6,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Users,
-  LineChart,
   Settings,
   DollarSign,
-  Activity,
   Receipt,
-  Puzzle,
-  BookOpen,
   ChevronDown,
   Plus,
   Building2,
   CheckCircle2,
-  AlertCircle,
-  Clock,
   Home,
   HelpCircle,
   Search,
@@ -44,54 +38,22 @@ import { db } from '@/lib/firebase';
 
 export const mainNavItems = [
   { href: '/business', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
-  { href: '/business/analytics', icon: <LineChart strokeWidth={2.5} />, label: 'Revenue Summary' },
-  { href: '/business/health-score', icon: <Activity strokeWidth={2.5} />, label: 'Health Score' },
-  { href: '/business/activity', icon: <Activity strokeWidth={2.5} />, label: 'Activity Feed' },
 ];
 
 export const financialsItems = [
   { href: '/business/transactions', icon: <DollarSign strokeWidth={2.5} />, label: 'Transactions' },
   { href: '/business/invoices', icon: <Receipt strokeWidth={2.5} />, label: 'Invoices' },
   { href: '/business/payouts', icon: <DollarSign strokeWidth={2.5} />, label: 'Payouts' },
-  { href: '/business/quote-builder', icon: <Receipt strokeWidth={2.5} />, label: 'Quote Builder' },
-  { href: '/business/refunds', icon: <DollarSign strokeWidth={2.5} />, label: 'Refunds' },
-  { href: '/business/payment-links', icon: <Receipt strokeWidth={2.5} />, label: 'Payment Links' },
-];
-
-export const bookkeepingItems = [
-  { href: '/business/general-ledger', icon: <BookOpen strokeWidth={2.5} />, label: 'General Ledger' },
-  { href: '/business/expenses', icon: <Receipt strokeWidth={2.5} />, label: 'Expenses & Bills' },
-  { href: '/business/accounting-automation', icon: <Activity strokeWidth={2.5} />, label: 'Accounting Automation' },
-  { href: '/business/financial-reports', icon: <LineChart strokeWidth={2.5} />, label: 'Financial Reports' },
-  { href: '/business/tax-compliance', icon: <Receipt strokeWidth={2.5} />, label: 'Tax & Compliance' },
-];
-
-export const salesCommerceItems = [
-  { href: '/business/orders', icon: <Receipt strokeWidth={2.5} />, label: 'Orders' },
-  { href: '/business/subscriptions', icon: <Receipt strokeWidth={2.5} />, label: 'Subscriptions' },
-  { href: '/business/inventory', icon: <Receipt strokeWidth={2.5} />, label: 'Inventory' },
-  { href: '/business/product-catalog', icon: <Receipt strokeWidth={2.5} />, label: 'Product Catalog' },
-  { href: '/business/pricing-plans', icon: <DollarSign strokeWidth={2.5} />, label: 'Pricing Plans' },
-  { href: '/business/promotions', icon: <Receipt strokeWidth={2.5} />, label: 'Promotions & Discounts' },
-  { href: '/business/affiliates', icon: <Users strokeWidth={2.5} />, label: 'Affiliate Programs' },
-  { href: '/business/marketplace', icon: <Receipt strokeWidth={2.5} />, label: 'Marketplace' },
-  { href: '/business/pos-terminal', icon: <Receipt strokeWidth={2.5} />, label: 'Virtual POS' },
 ];
 
 export const customersItems = [
   { href: '/business/customers', icon: <Users strokeWidth={2.5} />, label: 'Customers' },
 ];
 
-export const toolsItems = [
-  { href: '/business/integrations', icon: <Puzzle strokeWidth={2.5} />, label: 'Integrations' },
-  { href: '/business/support', icon: <Puzzle strokeWidth={2.5} />, label: 'Support' },
-];
-
 export function BusinessSidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [businessProfile, setBusinessProfile] = useState<any>(null);
-  const [healthScore, setHealthScore] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -104,22 +66,6 @@ export function BusinessSidebar() {
     return () => unsub();
   }, [user]);
 
-  useEffect(() => {
-    // Fetch health score
-    const fetchHealthScore = async () => {
-      try {
-        const response = await fetch('/api/business/health-score');
-        if (response.ok) {
-          const data = await response.json();
-          setHealthScore(data.overallScore || null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch health score:', error);
-      }
-    };
-    fetchHealthScore();
-  }, []);
-
   const isActive = (href: string) => {
     if (href === '/business') {
         return pathname === href;
@@ -127,18 +73,9 @@ export function BusinessSidebar() {
     return pathname.startsWith(href);
   };
 
-  const getHealthStatus = (score: number | null) => {
-    if (score === null) return { label: 'Not Available', color: 'bg-muted text-muted-foreground', icon: Clock };
-    if (score >= 80) return { label: 'Excellent', color: 'bg-green-500/10 text-green-700 dark:text-green-400', icon: CheckCircle2 };
-    if (score >= 60) return { label: 'Good', color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400', icon: AlertCircle };
-    return { label: 'Needs Attention', color: 'bg-red-500/10 text-red-700 dark:text-red-400', icon: AlertCircle };
-  };
-
   const businessName = businessProfile?.legalName || businessProfile?.name || 'Business';
   const businessLogo = businessProfile?.logoUrl;
   const businessStatus = businessProfile?.status || 'pending';
-  const healthStatus = getHealthStatus(healthScore);
-  const HealthIcon = healthStatus.icon;
 
   const getBusinessStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -192,12 +129,6 @@ export function BusinessSidebar() {
           <Link href="/business/settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span>Business Settings</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/business/health-score" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            <span>Health Score</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -256,63 +187,9 @@ export function BusinessSidebar() {
 
       <SidebarGroup>
         <SidebarGroupContent>
-          <SidebarGroupLabel>Bookkeeping</SidebarGroupLabel>
-          <SidebarMenu>
-            {bookkeepingItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarGroupLabel>Sales & Commerce</SidebarGroupLabel>
-          <SidebarMenu>
-            {salesCommerceItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupContent>
           <SidebarGroupLabel>Customers</SidebarGroupLabel>
           <SidebarMenu>
             {customersItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarGroupLabel>Tools & Settings</SidebarGroupLabel>
-          <SidebarMenu>
-            {toolsItems.map(item => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isActive(item.href)}>
                   <Link href={item.href}>
