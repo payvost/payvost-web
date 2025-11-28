@@ -92,8 +92,26 @@ export function LoginForm() {
         userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
       } catch (error: any) {
         // If MFA is required, extract resolver and show dialog
-        if (error.code === 'auth/multi-factor-auth-required') {
+        if (error?.code === 'auth/multi-factor-auth-required') {
           const resolver = error.resolver;
+          
+          // Check if resolver exists and has hints
+          if (!resolver) {
+            console.error('MFA resolver is missing from error:', error);
+            throw { 
+              code: 'auth/multi-factor-auth-required', 
+              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
+            };
+          }
+          
+          if (!resolver.hints || !Array.isArray(resolver.hints)) {
+            console.error('MFA resolver hints are missing or invalid:', resolver);
+            throw { 
+              code: 'auth/multi-factor-auth-required', 
+              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
+            };
+          }
+          
           const hints = resolver.hints;
           
           if (hints.length === 0) {
@@ -127,6 +145,10 @@ export function LoginForm() {
               }
               
               // Use resolver's session for SMS verification during sign-in
+              if (!resolver.session) {
+                throw new Error('MFA resolver session is missing');
+              }
+              
               const phoneAuthProvider = new PhoneAuthProvider(auth);
               const phoneInfoOptions = {
                 phoneNumber,
@@ -178,10 +200,13 @@ export function LoginForm() {
       
       router.push('/dashboard');
     } catch (error: any) {
+      // Log error details for debugging
       console.error('❌ Login error details:', {
-        code: error.code,
-        message: error.message,
-        error: error
+        code: error?.code,
+        message: error?.message,
+        error: error,
+        hasResolver: !!error?.resolver,
+        resolverType: error?.resolver ? typeof error.resolver : 'none'
       });
       
       let errorMessage = "An unknown error occurred.";
@@ -224,6 +249,10 @@ export function LoginForm() {
       
       if (mfaMethod === 'totp') {
         // Get the TOTP hint
+        if (!mfaResolver.hints || !Array.isArray(mfaResolver.hints)) {
+          throw new Error('MFA resolver hints are missing or invalid');
+        }
+        
         const hints = mfaResolver.hints;
         const totpHint = hints.find(h => h.factorId === TotpMultiFactorGenerator.FACTOR_ID);
         
