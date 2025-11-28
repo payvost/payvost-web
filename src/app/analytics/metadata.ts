@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Analytics & Automation | Business Intelligence - Payvost',
+  title: 'Analytics & Automation | Business Intelligence',
   description: 'Make data-driven decisions with comprehensive analytics, automated workflows, and powerful reporting tools. Real-time dashboards, revenue insights, and custom reports for modern businesses.',
   keywords: [
     'payment analytics',

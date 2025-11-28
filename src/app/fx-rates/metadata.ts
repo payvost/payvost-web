@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Live FX Rates | Real-Time Foreign Exchange Rates - Payvost',
+  title: 'Live FX Rates | Real-Time Foreign Exchange Rates',
   description: 'Monitor live foreign exchange rates across 13+ currencies. Get real-time FX market data, convert currencies instantly, and set rate alerts for international money transfers.',
   keywords: [
     'fx rates',

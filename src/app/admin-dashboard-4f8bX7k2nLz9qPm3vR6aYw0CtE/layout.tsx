@@ -3,9 +3,21 @@
 import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 
-export const metadata = {
-  title: 'Payvost - Admin Panel',
-  description: 'Management dashboard for Payvost.',
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Admin Panel',
+    template: '%s',
+  },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export default async function AdminLayout({

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Developer Tools & APIs | Payment Integration - Payvost',
+  title: 'Developer Tools & APIs | Payment Integration',
   description: 'Integrate Payvost payment infrastructure into your application. Powerful APIs, comprehensive documentation, SDKs, webhooks, and developer-friendly tools. Get started in minutes.',
   keywords: [
     'payment API',

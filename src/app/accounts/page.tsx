@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AccountsPageClient } from './accounts-client';
 
 export const metadata: Metadata = {
-  title: 'Multi-Currency Accounts | Global Banking - Payvost',
+  title: 'Multi-Currency Accounts | Global Banking',
   description: 'Open accounts in multiple currencies, manage your global finances, and send money worldwide. Personal and business accounts with multi-currency support, instant transfers, and bank-level security.',
   keywords: [
     'multi-currency account',

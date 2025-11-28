@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PayoutsPageClient } from './payouts-client';
 
 export const metadata: Metadata = {
-  title: 'International Payouts | Fast Global Money Transfers - Payvost',
+  title: 'International Payouts | Fast Global Money Transfers',
   description: 'Send money to bank accounts, mobile wallets, and cash pickup locations worldwide. Automated payroll, vendor payments, and marketplace payouts. Built for businesses that need reliable, scalable payout infrastructure.',
   keywords: [
     'international payouts',

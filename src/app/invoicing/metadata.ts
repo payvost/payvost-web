@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Professional Invoicing | Invoice Management - Payvost',
+  title: 'Professional Invoicing | Invoice Management',
   description: 'Create, send, and track professional invoices. Get paid faster with automated reminders, multiple payment options, and comprehensive invoice management tools for your business.',
   keywords: [
     'invoice',

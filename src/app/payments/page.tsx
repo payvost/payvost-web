@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PaymentsPageClient } from './payments-client';
 
 export const metadata: Metadata = {
-  title: 'Global Payments | Send Money Worldwide - Payvost',
+  title: 'Global Payments | Send Money Worldwide',
   description: 'Send and receive money to over 150 countries with competitive exchange rates. Fast, secure international payments with real-time tracking. Support for cards, bank transfers, mobile money, and digital wallets.',
   keywords: [
     'international payments',

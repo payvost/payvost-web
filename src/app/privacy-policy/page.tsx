@@ -55,14 +55,16 @@ export default function PrivacyPolicyPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6 text-center">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">Privacy Policy</h1>
-            <p className="max-w-[700px] mx-auto text-muted-foreground md:text-xl mt-4">
-              Your privacy is important to us. This policy explains what information we collect and how we use it.
-            </p>
-            {lastUpdated && (
-              <p className="text-xs text-muted-foreground mt-2">Last updated: {lastUpdated}</p>
-            )}
+          <div className="container px-4 md:px-6">
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">Privacy Policy</h1>
+              <p className="max-w-[700px] mx-auto text-muted-foreground md:text-xl mt-4">
+                Your privacy is important to us. This policy explains what information we collect and how we use it.
+              </p>
+              {lastUpdated && (
+                <p className="text-xs text-muted-foreground mt-2">Last updated: {lastUpdated}</p>
+              )}
+            </div>
           </div>
         </section>
 

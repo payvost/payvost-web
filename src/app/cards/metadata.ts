@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Virtual & Physical Cards | Debit Cards - Payvost',
+  title: 'Virtual & Physical Cards | Debit Cards',
   description: 'Create instant virtual cards for online purchases or order physical debit cards. Full spending control with real-time notifications, multi-currency support, and bank-level security.',
   keywords: [
     'virtual card',
