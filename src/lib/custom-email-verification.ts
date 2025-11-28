@@ -29,7 +29,21 @@ export async function sendCustomVerificationEmail({
       handleCodeInApp: true,
     };
 
-    const link = await adminAuth.generateEmailVerificationLink(email, actionCodeSettings);
+    let link: string;
+    try {
+      link = await adminAuth.generateEmailVerificationLink(email, actionCodeSettings);
+    } catch (linkError: any) {
+      console.error('Error generating email verification link:', {
+        email,
+        error: linkError.message,
+        code: linkError.code,
+      });
+      // Provide more specific error message
+      if (linkError.code === 'auth/user-not-found') {
+        throw new Error(`User with email ${email} not found in Firebase Auth. The user may need a moment to propagate.`);
+      }
+      throw new Error(`Failed to generate verification link: ${linkError.message || linkError.code || 'Unknown error'}`);
+    }
 
     // Custom email template matching your requirements
     const emailSubject = `Verify your email for ${appName}`;
@@ -81,24 +95,51 @@ Your ${appName} team
     `;
 
     // Send email using Mailgun
-    const result = await sendEmail({
-      to: email,
-      subject: emailSubject,
-      html: emailHtml,
-      text: emailText,
-      from: `noreply@payvost.com`,
-      replyTo: `noreply@payvost.com`,
-      tags: ['email-verification'],
-    });
+    let result;
+    try {
+      result = await sendEmail({
+        to: email,
+        subject: emailSubject,
+        html: emailHtml,
+        text: emailText,
+        from: `noreply@payvost.com`,
+        replyTo: `noreply@payvost.com`,
+        tags: ['email-verification'],
+      });
+    } catch (emailError: any) {
+      console.error('Error calling Mailgun sendEmail:', {
+        email,
+        error: emailError.message,
+      });
+      throw new Error(`Failed to send email via Mailgun: ${emailError.message || 'Unknown error'}`);
+    }
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to send verification email');
+      console.error('Mailgun returned error:', {
+        email,
+        error: result.error,
+      });
+      throw new Error(result.error || 'Failed to send verification email via Mailgun');
     }
+
+    console.log('✅ Verification email sent successfully:', {
+      email,
+      messageId: result.messageId,
+    });
 
     return { success: true, messageId: result.messageId, link };
   } catch (error: any) {
-    console.error('Error sending custom verification email:', error);
-    throw new Error(`Failed to send verification email: ${error.message}`);
+    console.error('Error sending custom verification email:', {
+      email,
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    // Re-throw with original error message if it's already formatted
+    if (error.message && error.message.includes('Failed to')) {
+      throw error;
+    }
+    throw new Error(`Failed to send verification email: ${error.message || 'Unknown error'}`);
   }
 }
 
