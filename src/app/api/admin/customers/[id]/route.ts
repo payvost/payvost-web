@@ -150,6 +150,14 @@ export async function GET(
       }
     }
     
+    // Also check directly on the user document (data) for idType and idNumber
+    if (!kycIdType && data.idType) {
+      kycIdType = String(data.idType);
+    }
+    if (!kycIdNumber && data.idNumber) {
+      kycIdNumber = String(data.idNumber);
+    }
+    
     // Extract SSN and other additional fields from tier1 additionalFields
     let ssn: string | null = null;
     let ssnLast4: string | null = null;

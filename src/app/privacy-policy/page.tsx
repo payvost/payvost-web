@@ -66,40 +66,45 @@ export default function PrivacyPolicyPage() {
           </div>
         </section>
 
-        <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 lg:py-20">
+        <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 lg:py-20 max-w-7xl">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto">
-              {/* Table of Contents - Centered above content */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-12">
+              {/* Sidebar Navigation */}
               {tocItems.length > 0 && (
-                <div className="mb-12 p-6 bg-muted rounded-lg">
-                  <h2 className="text-xl font-bold mb-4 text-center">Table of Contents</h2>
-                  <ul className="space-y-2 flex flex-col items-center">
-                    {tocItems.map((item, index) => (
-                      <li key={index} className="text-center">
-                        <Link 
-                          href={`#${item.id}`} 
-                          className="text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          {item.text}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <aside className="lg:col-span-1">
+                  <div className="sticky top-24 space-y-4">
+                    <h2 className="text-xl font-bold">Table of Contents</h2>
+                    <ul className="space-y-2">
+                      {tocItems.map((item, index) => (
+                        <li key={index}>
+                          <Link 
+                            href={`#${item.id}`} 
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                            style={{ marginLeft: `${(item.level - 1) * 0.5}rem` }}
+                          >
+                            {item.text}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </aside>
               )}
 
-              {/* Main Content - Centered */}
-              <div className="prose prose-lg dark:prose-invert max-w-none mx-auto">
-                {content ? (
-                  <div dangerouslySetInnerHTML={{ __html: content }} />
-                ) : (
-                  <p className="text-muted-foreground text-center">Privacy policy content is being updated. Please check back soon.</p>
-                )}
-              </div>
+              {/* Main Content */}
+              <main className={tocItems.length > 0 ? "lg:col-span-3" : "lg:col-span-4"}>
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  {content ? (
+                    <div dangerouslySetInnerHTML={{ __html: content }} />
+                  ) : (
+                    <p className="text-muted-foreground">Privacy policy content is being updated. Please check back soon.</p>
+                  )}
+                </div>
+              </main>
             </div>
           )}
         </div>

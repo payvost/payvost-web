@@ -593,6 +593,58 @@ export default function CustomerDetailsPage() {
         }
         return value;
     };
+    
+    // Helper to get ID Type with fallbacks
+    const getCustomerIdType = (): string | null => {
+        // Try direct fields first
+        if (customer.kycIdType) return customer.kycIdType;
+        
+        // Try from kycProfile.tiers.tier1.additionalFields
+        if (customer.kycProfile?.tiers?.tier1?.additionalFields) {
+            const fields = customer.kycProfile.tiers.tier1.additionalFields;
+            const idTypeFields = ['idType', 'governmentIdType', 'documentType', 'idDocumentType'];
+            for (const field of idTypeFields) {
+                if (fields[field]) return String(fields[field]);
+            }
+        }
+        
+        // Try from kycProfile.tiers.tier2.additionalFields
+        if (customer.kycProfile?.tiers?.tier2?.additionalFields) {
+            const fields = customer.kycProfile.tiers.tier2.additionalFields;
+            const idTypeFields = ['idType', 'governmentIdType', 'documentType', 'idDocumentType'];
+            for (const field of idTypeFields) {
+                if (fields[field]) return String(fields[field]);
+            }
+        }
+        
+        return null;
+    };
+    
+    // Helper to get ID Number with fallbacks
+    const getCustomerIdNumber = (): string | null => {
+        // Try direct fields first
+        if (customer.kycIdNumber) return customer.kycIdNumber;
+        
+        // Try from kycProfile.tiers.tier1.additionalFields
+        if (customer.kycProfile?.tiers?.tier1?.additionalFields) {
+            const fields = customer.kycProfile.tiers.tier1.additionalFields;
+            const idNumberFields = ['idNumber', 'governmentIdNumber', 'documentNumber', 'idDocumentNumber'];
+            for (const field of idNumberFields) {
+                if (fields[field]) return String(fields[field]);
+            }
+        }
+        
+        // Try from kycProfile.tiers.tier2.additionalFields
+        if (customer.kycProfile?.tiers?.tier2?.additionalFields) {
+            const fields = customer.kycProfile.tiers.tier2.additionalFields;
+            const idNumberFields = ['idNumber', 'governmentIdNumber', 'documentNumber', 'idDocumentNumber'];
+            for (const field of idNumberFields) {
+                if (fields[field]) return String(fields[field]);
+            }
+        }
+        
+        return null;
+    };
 
     return (
         <>
@@ -636,8 +688,8 @@ export default function CustomerDetailsPage() {
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Globe className="h-4 w-4" /> Country</p><p className="font-medium pl-5">{customer.country || <span className="text-muted-foreground">Not set</span>}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4" /> Joined</p><p className="font-medium pl-5">{formatDate(customer.joinedDate) || <span className="text-muted-foreground">Not available</span>}</p></div>
                                                         <div><p className="text-muted-foreground flex items-center gap-1"><Shield className="h-4 w-4" /> KYC Level</p><p className="font-medium pl-5">{getActualKycLevel() || <span className="text-muted-foreground">Not set</span>}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Type</p><p className="font-medium pl-5">{customer.kycIdType || <span className="text-muted-foreground">Not provided</span>}</p></div>
-                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Number</p><p className="font-medium pl-5 font-mono">{customer.kycIdNumber || <span className="text-muted-foreground">Not provided</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Type</p><p className="font-medium pl-5">{getCustomerIdType() || <span className="text-muted-foreground">Not provided</span>}</p></div>
+                                                        <div><p className="text-muted-foreground flex items-center gap-1"><IdCard className="h-4 w-4"/> ID Number</p><p className="font-medium pl-5 font-mono">{getCustomerIdNumber() || <span className="text-muted-foreground">Not provided</span>}</p></div>
                                                         {customer.bvn && (
                                                             <div><p className="text-muted-foreground flex items-center gap-1"><KeyRound className="h-4 w-4"/> BVN</p><p className="font-medium pl-5 font-mono">{formatSensitiveValue(customer.bvn, 'bvn')}</p></div>
                                                         )}
@@ -683,6 +735,166 @@ export default function CustomerDetailsPage() {
                                                         )}
                                                     </CardContent>
                                                 
+                    </Card>
+
+                    {/* Customer KYC Card - Registration KYC Information */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <ShieldCheck className="h-5 w-5" />
+                                Customer KYC
+                            </CardTitle>
+                            <CardDescription>KYC information collected during registration</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-muted-foreground mb-1">KYC Status</p>
+                                    <Badge 
+                                        variant={
+                                            customer.kycStatus === 'verified' || customer.kycStatus === 'tier1_verified' ? 'default' :
+                                            customer.kycStatus === 'pending' || customer.kycStatus === 'tier1_pending_review' ? 'secondary' :
+                                            customer.kycStatus === 'rejected' || customer.kycStatus === 'restricted' ? 'destructive' :
+                                            'outline'
+                                        }
+                                    >
+                                        {customer.kycStatus || 'unverified'}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground mb-1">KYC Tier</p>
+                                    <p className="font-medium">{customer.kycTier ? customer.kycTier.toUpperCase() : 'Not set'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-muted-foreground mb-1">KYC Level</p>
+                                    <p className="font-medium">{getActualKycLevel() || 'Not set'}</p>
+                                </div>
+                                {customer.kycProfile?.countryIso && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Country</p>
+                                        <p className="font-medium">{customer.kycProfile.countryName || customer.kycProfile.countryIso}</p>
+                                    </div>
+                                )}
+                                {getCustomerIdType() && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">ID Type</p>
+                                        <p className="font-medium capitalize">{getCustomerIdType()?.replace(/_/g, ' ')}</p>
+                                    </div>
+                                )}
+                                {getCustomerIdNumber() && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">ID Number</p>
+                                        <p className="font-medium font-mono">{getCustomerIdNumber()}</p>
+                                    </div>
+                                )}
+                                {customer.bvn && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">BVN (Bank Verification Number)</p>
+                                        <p className="font-medium font-mono">{formatSensitiveValue(customer.bvn, 'bvn')}</p>
+                                    </div>
+                                )}
+                                {(customer.ssn || customer.ssnLast4) && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">SSN (Social Security Number)</p>
+                                        <p className="font-medium font-mono">{formatSensitiveValue(customer.ssn || customer.ssnLast4, 'ssn')}</p>
+                                    </div>
+                                )}
+                                {customer.dateOfBirth && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Date of Birth</p>
+                                        <p className="font-medium">
+                                            {(() => {
+                                                try {
+                                                    const dob = toDate(customer.dateOfBirth);
+                                                    return dob ? dob.toLocaleDateString() : 'N/A';
+                                                } catch {
+                                                    return 'N/A';
+                                                }
+                                            })()}
+                                        </p>
+                                    </div>
+                                )}
+                                {customer.kycProfile?.tiers?.tier1?.status && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Tier 1 Status</p>
+                                        <Badge 
+                                            variant={
+                                                customer.kycProfile.tiers.tier1.status === 'approved' ? 'default' :
+                                                customer.kycProfile.tiers.tier1.status === 'rejected' ? 'destructive' :
+                                                customer.kycProfile.tiers.tier1.status === 'submitted' || customer.kycProfile.tiers.tier1.status === 'pending_review' ? 'secondary' :
+                                                'outline'
+                                            }
+                                        >
+                                            {customer.kycProfile.tiers.tier1.status}
+                                        </Badge>
+                                    </div>
+                                )}
+                                {customer.kycProfile?.tiers?.tier1?.submittedAt && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground mb-1">Submitted At</p>
+                                        <p className="font-medium">
+                                            {(() => {
+                                                try {
+                                                    const submittedAt = customer.kycProfile?.tiers?.tier1?.submittedAt;
+                                                    if (!submittedAt) return 'N/A';
+                                                    const date = toDate(submittedAt);
+                                                    return date ? date.toLocaleString() : 'N/A';
+                                                } catch {
+                                                    return 'N/A';
+                                                }
+                                            })()}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Additional Fields from Tier1 */}
+                            {customer.kycProfile?.tiers?.tier1?.additionalFields && Object.keys(customer.kycProfile.tiers.tier1.additionalFields).length > 0 && (
+                                <>
+                                    <Separator />
+                                    <div>
+                                        <p className="text-sm font-medium mb-2">Additional Information</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {Object.entries(customer.kycProfile.tiers.tier1.additionalFields).map(([key, value]) => {
+                                                // Skip fields we've already displayed explicitly
+                                                const skipKeys = ['bvn', 'ssn', 'ssnLast4', 'idType', 'idNumber', 'governmentIdType', 'governmentIdNumber', 'documentType', 'documentNumber', 'dateOfBirth'];
+                                                const normalizedKey = key.toLowerCase();
+                                                const shouldSkip = skipKeys.some(skipKey => normalizedKey.includes(skipKey.toLowerCase()));
+                                                
+                                                if (shouldSkip || !value) return null;
+                                                
+                                                return (
+                                                    <div key={key}>
+                                                        <p className="text-xs text-muted-foreground mb-1">
+                                                            {key.split(/(?=[A-Z])/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                        </p>
+                                                        <p className="text-sm font-medium">{String(value)}</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            
+                            {/* Tier 1 Requirements */}
+                            {customer.kycProfile?.tiers?.tier1?.requirements && customer.kycProfile.tiers.tier1.requirements.length > 0 && (
+                                <>
+                                    <Separator />
+                                    <div>
+                                        <p className="text-sm font-medium mb-2">Requirements Met</p>
+                                        <ul className="text-sm space-y-1 text-muted-foreground">
+                                            {customer.kycProfile.tiers.tier1.requirements.map((req: string, idx: number) => (
+                                                <li key={idx} className="flex items-center gap-2">
+                                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                    {req}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
                     </Card>
 
                     {/* Business KYC Card */}
