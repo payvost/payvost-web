@@ -44,7 +44,7 @@ export function CookieConsentBanner() {
                         <h3 className="font-semibold">We Use Cookies</h3>
                         <p className="text-sm text-muted-foreground mt-1">
                             We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies.
-                            Read our <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
+                            Read our <Link href="/privacy-policy" className="underline hover:text-primary">Privacy Policy</Link>.
                         </p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">

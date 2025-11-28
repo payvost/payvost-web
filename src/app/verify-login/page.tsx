@@ -96,19 +96,19 @@ export default function VerifyLoginPage() {
 
     setIsSending(true);
     try {
-      const response = await fetch('/api/auth/send-verification-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email,
-          displayName: user.displayName || 'User',
-          appName: 'Payvost',
-        }),
-      });
+      // Use Firebase's built-in sendEmailVerification method
+      const { sendEmailVerification } = await import('firebase/auth');
+      const { auth } = await import('@/lib/firebase');
       
-      if (!response.ok) {
-        throw new Error('Failed to send verification email');
+      // Reload user to get latest auth state
+      await user.reload();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        throw new Error('User not found');
       }
+      
+      await sendEmailVerification(currentUser);
       
       toast({
         title: 'Verification email sent',

@@ -136,13 +136,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Legal Pages
     {
-      url: `${baseUrl}/terms`,
+      url: `${baseUrl}/terms-and-conditions`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
-      url: `${baseUrl}/privacy`,
+      url: `${baseUrl}/privacy-policy`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.6,

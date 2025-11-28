@@ -61,9 +61,11 @@ export const ProtectRoute = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Don't require email verification for login - users can access dashboard
-      // Email verification is only required during registration flow
-      // If user wants to verify email later, they can do it from settings
+      // Require email verification to access dashboard
+      if (!user.emailVerified) {
+        router.push('/verify-email');
+        return;
+      }
     }, [user, loading, router, pathname]);
   
     // Show loading if checking auth

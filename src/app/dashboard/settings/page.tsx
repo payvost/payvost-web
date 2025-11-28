@@ -101,19 +101,19 @@ export default function SettingsPage() {
     
     setSendingVerification(true);
     try {
-      const response = await fetch('/api/auth/send-verification-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email,
-          displayName: user.displayName || 'User',
-          appName: 'Payvost',
-        }),
-      });
+      // Use Firebase's built-in sendEmailVerification method
+      const { sendEmailVerification } = await import('firebase/auth');
+      const { auth } = await import('@/lib/firebase');
       
-      if (!response.ok) {
-        throw new Error('Failed to send verification email');
+      // Reload user to get latest auth state
+      await user.reload();
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        throw new Error('User not found');
       }
+      
+      await sendEmailVerification(currentUser);
       
       toast({
         title: 'Verification email sent',
@@ -469,8 +469,8 @@ export default function SettingsPage() {
                 <CardTitle>Support & Legal</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/terms"><FileText className="mr-2 h-4 w-4" /> Terms & Conditions</Link></Button>
-                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/privacy"><ShieldCheck className="mr-2 h-4 w-4" /> Privacy Policy</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/terms-and-conditions"><FileText className="mr-2 h-4 w-4" /> Terms & Conditions</Link></Button>
+                <Button asChild variant="ghost" className="w-full justify-start"><Link href="/privacy-policy"><ShieldCheck className="mr-2 h-4 w-4" /> Privacy Policy</Link></Button>
                 <Button asChild variant="ghost" className="w-full justify-start"><Link href="/dashboard/contact"><MessageCircleQuestion className="mr-2 h-4 w-4" /> FAQs</Link></Button>
                 <Button asChild variant="ghost" className="w-full justify-start"><Link href="/dashboard/support"><LifeBuoy className="mr-2 h-4 w-4" /> Contact Support</Link></Button>
               </CardContent>

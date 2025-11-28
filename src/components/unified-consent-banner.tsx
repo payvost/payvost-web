@@ -97,7 +97,7 @@ export function UnifiedConsentBanner() {
                   <h4 className="font-semibold">Cookies</h4>
                   <p className="text-sm text-muted-foreground mt-1">
                     We use cookies to enhance your browsing experience and analyze our traffic.
-                    Read our <Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
+                    Read our <Link href="/privacy-policy" className="underline hover:text-primary">Privacy Policy</Link>.
                   </p>
                 </div>
               </div>
