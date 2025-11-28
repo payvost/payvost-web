@@ -211,7 +211,7 @@ services:
       - key: NOTIFICATION_SERVICE_PORT
         value: 3005
       - key: EMAIL_SERVICE_URL
-        value: https://payvost-email-service.onrender.com
+        value: https://payvost-email-service-3vnx.onrender.com
       - key: INTERNAL_API_KEY
         sync: false  # Optional: API key for internal service communication
       - key: NODE_ENV

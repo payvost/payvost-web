@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, admin } from '@/lib/firebase-admin';
+import { sendLoginNotification } from '@/lib/notification-webhook';
 
 /**
  * POST /api/auth/track-login
@@ -61,8 +62,12 @@ export async function POST(request: NextRequest) {
 
     const deviceInfo = getDeviceInfo(userAgent);
 
-    // Update user document in Firestore
+    // Get user data for notification
     const userRef = adminDb.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
+
+    // Update user document in Firestore
     const now = new Date();
 
     // Update last login fields
@@ -85,6 +90,21 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       // Login history is optional, continue if it fails
       console.log('Could not update login history:', err);
+    }
+
+    // Send login notification (non-blocking)
+    if (userData?.email) {
+      sendLoginNotification({
+        email: userData.email,
+        name: userData.fullName || userData.displayName || 'User',
+        deviceInfo: deviceInfo,
+        location: 'Unknown', // You can enhance this with geolocation if needed
+        timestamp: now,
+        ipAddress: ip,
+      }).catch((error) => {
+        // Non-critical error, log but don't fail the request
+        console.error('Failed to send login notification:', error);
+      });
     }
 
     console.log(`✅ Login tracked for user: ${uid} from IP: ${ip} on device: ${deviceInfo}`);

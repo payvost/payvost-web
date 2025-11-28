@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate PDF using Render service (offloads CPU from Vercel)
-    const pdfServiceUrl = process.env.PDF_SERVICE_URL || 'https://payvost-pdf-generator.onrender.com';
+    const pdfServiceUrl = process.env.PDF_SERVICE_URL || 'https://payvost-pdf-generator-45c7.onrender.com';
     console.log(`[PDF Generation] Generating PDF via Render service for invoice: ${invoiceId}`);
     
     let pdfBuffer: Buffer;
