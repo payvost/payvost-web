@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, type MultiFactorResolver } from 'firebase/auth';
+import { signInWithEmailAndPassword, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, getMultiFactorResolver, type MultiFactorResolver } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -93,7 +93,18 @@ export function LoginForm() {
       } catch (error: any) {
         // If MFA is required, extract resolver and show dialog
         if (error?.code === 'auth/multi-factor-auth-required') {
-          const resolver = error.resolver;
+          // Use getMultiFactorResolver to extract resolver from error
+          let resolver: MultiFactorResolver;
+          try {
+            resolver = getMultiFactorResolver(auth, error);
+          } catch (resolverError: any) {
+            console.error('Failed to get MFA resolver:', resolverError);
+            console.error('Original error:', error);
+            throw { 
+              code: 'auth/multi-factor-auth-required', 
+              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
+            };
+          }
           
           // Check if resolver exists and has hints
           if (!resolver) {
