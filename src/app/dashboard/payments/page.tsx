@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -55,7 +55,7 @@ const billerData: Record<string, any> = {
 
 const VALID_TABS = ['remittances', 'bill-payment', 'bulk-transfer', 'scheduled', 'split-payment', 'gift-cards'] as const;
 
-export default function PaymentsPage() {
+function PaymentsPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const { toast } = useToast();
@@ -565,5 +565,24 @@ export default function PaymentsPage() {
         </EnhancedTabs>
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout language="en" setLanguage={() => {}}>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <div className="flex items-center">
+            <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
+          </div>
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+      </DashboardLayout>
+    }>
+      <PaymentsPageContent />
+    </Suspense>
   );
 }
