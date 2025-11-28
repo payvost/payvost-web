@@ -104,9 +104,9 @@ export function AdminSidebar() {
         group: 'Compliance & Risk',
         items: [
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <ShieldAlert />, label: 'Compliance Dashboard' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/risk-assessment', icon: <BarChart3 />, label: 'Risk Assessment' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/sanctions-screening', icon: <AlertCircle />, label: 'Sanctions Screening' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/fraud-analysis', icon: <ShieldAlert />, label: 'Fraud Detection & Analysis' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/compliance-risk', icon: <BarChart3 />, label: 'Risk Assessment' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/reporting', icon: <FileBarChart2 />, label: 'Regulatory Reporting' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/audit-trails', icon: <FileCheck />, label: 'Audit Trails' },
         ]
