@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuBadge,
   SidebarInset,
   SidebarFooter,
   SidebarGroup,
@@ -168,15 +169,11 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     {collectPaymentItems.map(item => (
                         <SidebarMenuItem key={item.href}>
                             <SidebarMenuButton asChild isActive={isActive(item.href)} disabled={item.comingSoon}>
-                                <Link href={item.href} className="flex justify-between items-center w-full">
-                                    <div className="flex items-center gap-2">
-                                        {item.icon}
-                                        {item.label}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      {item.isNew && <Badge variant="default" className="text-xs">New</Badge>}
-                                      {item.comingSoon && <Badge variant="secondary" className="text-xs">Soon</Badge>}
-                                    </div>
+                                <Link href={item.href}>
+                                    {item.icon}
+                                    {item.label}
+                                    {item.isNew && <SidebarMenuBadge>New</SidebarMenuBadge>}
+                                    {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
