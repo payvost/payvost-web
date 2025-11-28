@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Careers | Join Our Team - Payvost',
+  title: 'Careers | Join Our Team',
   description: 'Join the Payvost team and help shape the future of global money transfers. Explore open positions, learn about our culture, and discover opportunities to grow your career.',
   keywords: [
     'payvost careers',

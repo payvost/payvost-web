@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   
   title: {
     default: 'Payvost | Fast, Secure Global Remittance & Money Transfer',
-    template: '%s | Payvost',
+    template: '%s - Payvost',
   },
   
   description: 'Payvost offers fast, secure, and low-cost global money transfers. Send and receive money internationally across 70+ countries with competitive exchange rates. Track your transfers in real-time with enterprise-grade security.',

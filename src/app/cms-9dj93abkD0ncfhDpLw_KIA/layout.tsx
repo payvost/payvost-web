@@ -1,4 +1,7 @@
 import React from 'react';
+import { metadata as cmsMetadata } from './metadata';
+
+export const metadata = cmsMetadata;
 
 export default async function WriterPanelLayout({
   children,

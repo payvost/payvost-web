@@ -2,9 +2,21 @@
 import { AuthProvider } from '@/hooks/use-auth';
 import { Toaster } from '@/components/ui/toaster';
 
-export const metadata = {
-  title: 'Payvost - Customer Support Panel',
-  description: 'Customer support management dashboard for Payvost.',
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Customer Support Panel',
+    template: '%s',
+  },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export default async function SupportLayout({

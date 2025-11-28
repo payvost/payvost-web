@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Support Center | Help & FAQs - Payvost',
+  title: 'Support Center | Help & FAQs',
   description: 'Get help with Payvost. Find answers to frequently asked questions, access support resources, and contact our customer support team. 24/7 assistance available.',
   keywords: [
     'payvost support',

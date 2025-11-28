@@ -199,7 +199,7 @@ export default function WalletsPage() {
                         !isKycVerified
                             ? {
                                 label: "Complete KYC First",
-                                onClick: () => window.location.href = '/dashboard/get-started',
+                                onClick: () => window.location.href = '/dashboard/profile',
                                 variant: 'outline',
                             }
                             : undefined

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Secure Escrow Services | Protected Payments - Payvost',
+  title: 'Secure Escrow Services | Protected Payments',
   description: 'Protect your transactions with secure escrow services. Funds held securely until conditions are met. Perfect for marketplace transactions, service agreements, and milestone payments.',
   keywords: [
     'escrow',
