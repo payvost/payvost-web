@@ -2,6 +2,7 @@ services:
   # Main Backend API Gateway (includes Support Service and all other services)
   - type: web
     name: payvost-backend-gateway
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -38,6 +39,7 @@ services:
   # Rate Alert Monitor Service (Background Worker / Cron Job)
   - type: web
     name: payvost-rate-alert-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -68,6 +70,7 @@ services:
   # Currency Service
   - type: web
     name: payvost-currency-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -84,6 +87,7 @@ services:
   # Fraud Detection Service
   - type: web
     name: payvost-fraud-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -102,6 +106,7 @@ services:
   # Core Banking Service
   - type: web
     name: payvost-core-banking-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -120,6 +125,7 @@ services:
   # Webhook Service
   - type: web
     name: payvost-web-hook-services
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -140,6 +146,7 @@ services:
   # Admin Stats Service
   - type: web
     name: payvost-admin-stat-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -156,6 +163,7 @@ services:
   # PDF Generator Service
   - type: web
     name: payvost-pdf-generator
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -172,6 +180,7 @@ services:
   # Email Service
   - type: web
     name: payvost-email-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
@@ -192,6 +201,7 @@ services:
   # Notification Service (Webhook-based notifications)
   - type: web
     name: payvost-notification-service
+    autoDeploy: false
     env: node
     region: oregon
     plan: starter
