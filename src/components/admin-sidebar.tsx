@@ -116,7 +116,7 @@ export function AdminSidebar() {
         items: [
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/bank-integrations', icon: <Landmark />, label: 'Bank Integrations' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/correspondent-banking', icon: <Network />, label: 'Correspondent Banking' },
-          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/integrations', icon: <Puzzle />, label: 'Payment Provider Management' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/payment-provider-management', icon: <Puzzle />, label: 'Payment Provider Management' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/api-settings', icon: <KeyRound />, label: 'API & Webhooks' },
         ]
       },
