@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SecureStorage } from '../utils/security';
+import { SecureStorage } from '../../utils/security';
 import { getProfile } from '../utils/api/user';
 import { getWallets, type Wallet as WalletType } from '../utils/api/wallet';
 import { getTransactions, type Transaction as TransactionType } from '../utils/api/transactions';

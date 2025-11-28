@@ -93,17 +93,39 @@ export function LoginForm() {
       } catch (error: any) {
         // If MFA is required, extract resolver and show dialog
         if (error?.code === 'auth/multi-factor-auth-required') {
-          // Use getMultiFactorResolver to extract resolver from error
-          let resolver: MultiFactorResolver;
-          try {
-            resolver = getMultiFactorResolver(auth, error);
-          } catch (resolverError: any) {
-            console.error('Failed to get MFA resolver:', resolverError);
-            console.error('Original error:', error);
-            throw { 
-              code: 'auth/multi-factor-auth-required', 
-              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
-            };
+          // Try to get resolver from error - try direct access first, then getMultiFactorResolver
+          let resolver: MultiFactorResolver | null = null;
+          
+          // First, try direct access (works in some Firebase versions)
+          if (error.resolver) {
+            resolver = error.resolver;
+          } else {
+            // Fallback: use getMultiFactorResolver (for Firebase v9+)
+            // Only try this if the error looks like it might have resolver info
+            try {
+              // Check if error has the necessary structure for getMultiFactorResolver
+              if (error && typeof error === 'object' && 'code' in error) {
+                resolver = getMultiFactorResolver(auth, error);
+              } else {
+                throw new Error('Error object does not have expected structure');
+              }
+            } catch (resolverError: any) {
+              console.error('Failed to get MFA resolver:', resolverError);
+              console.error('Original error structure:', {
+                code: error?.code,
+                message: error?.message,
+                hasResolver: !!error?.resolver,
+                errorType: typeof error,
+                errorKeys: error ? Object.keys(error) : [],
+                errorString: JSON.stringify(error, null, 2).substring(0, 500),
+              });
+              // If both methods fail, show helpful error asking user to disable MFA
+              setIsLoading(false);
+              throw { 
+                code: 'auth/multi-factor-auth-required', 
+                message: 'Multi-factor authentication is enabled on this account. To log in, please temporarily disable MFA in your account settings, or contact support for assistance.' 
+              };
+            }
           }
           
           // Check if resolver exists and has hints

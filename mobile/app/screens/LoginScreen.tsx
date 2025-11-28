@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, Alert } from 'react-native';
 import { login } from '../utils/api/user';
-import { SecureStorage, DeviceSecurity } from '../utils/security';
+import { SecureStorage, DeviceSecurity } from '../../utils/security';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
