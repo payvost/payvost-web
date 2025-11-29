@@ -183,7 +183,7 @@ export function RichTextEditor({
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'color', 'background',
     'script',
-    'list', 'bullet', 'indent',
+    'list', 'indent',
     'direction', 'align',
     'link', 'image', 'video',
     'code-block', 'code'

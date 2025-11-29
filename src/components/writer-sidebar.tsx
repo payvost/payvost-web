@@ -32,9 +32,14 @@ export function WriterSidebar() {
 
   const menuItems = [
     {
-      group: 'Content',
+      group: 'Dashboard',
       items: [
         { href: basePath, icon: <Home className="h-4 w-4" />, label: 'Dashboard' },
+      ]
+    },
+    {
+      group: 'Content',
+      items: [
         { href: `${basePath}/content`, icon: <FileText className="h-4 w-4" />, label: 'All Content' },
         { href: `${basePath}/content/blog`, icon: <BookOpen className="h-4 w-4" />, label: 'Blog Posts' },
         { href: `${basePath}/content/press`, icon: <Newspaper className="h-4 w-4" />, label: 'Press Releases' },
@@ -45,7 +50,7 @@ export function WriterSidebar() {
     {
       group: 'Media',
       items: [
-        { href: `${basePath}/media`, icon: <Image className="h-4 w-4" />, label: 'Media Library' },
+        { href: `${basePath}/media`, icon: <Image className="h-4 w-4" />, label: 'Media' },
       ]
     },
     {

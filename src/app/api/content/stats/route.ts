@@ -30,13 +30,48 @@ export async function GET(request: NextRequest) {
     const queryString = searchParams.toString();
     const url = `${BACKEND_URL}/api/v1/content/stats${queryString ? `?${queryString}` : ''}`;
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': `writer_session=${sessionCookie}`, // Backend middleware now supports session cookies
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': `writer_session=${sessionCookie}`, // Backend middleware now supports session cookies
+        },
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+    } catch (fetchError: any) {
+      console.error('Fetch error connecting to backend:', {
+        url,
+        error: fetchError.message,
+        code: fetchError.code,
+      });
+      
+      if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError') {
+        return NextResponse.json(
+          { error: 'Request timeout: Backend service did not respond in time' },
+          { status: 504 }
+        );
+      }
+      
+      if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed')) {
+        return NextResponse.json(
+          { error: 'Backend service is not available. Please check if the backend server is running and BACKEND_URL is configured correctly.' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: `Network error: ${fetchError.message || 'Failed to connect to backend'}` },
+        { status: 503 }
+      );
+    }
+
+    // Handle non-OK responses
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return NextResponse.json(errorData, { status: response.status });
+    }
 
     const data = await response.json().catch(() => ({}));
     return NextResponse.json(data, { status: response.status });

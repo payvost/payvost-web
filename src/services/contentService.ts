@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://payvost-backend-gateway-tn32.onrender.com';
 
 export type ContentType = 'BLOG' | 'PRESS_RELEASE' | 'DOCUMENTATION' | 'KNOWLEDGE_BASE';
 export type ContentStatus = 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED';
