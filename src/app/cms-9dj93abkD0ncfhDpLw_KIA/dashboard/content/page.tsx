@@ -9,50 +9,52 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle, MoreHorizontal, Search, Eye, Edit, Trash2, FileText } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Search, Eye, Edit, Trash2, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-
-interface ContentItem {
-  id: string;
-  title: string;
-  contentType: 'BLOG' | 'PRESS_RELEASE' | 'DOCUMENTATION' | 'KNOWLEDGE_BASE';
-  status: 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED';
-  author: string;
-  updatedAt: string;
-  publishedAt?: string;
-}
+import { contentService, Content } from '@/services/contentService';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ContentListPage() {
   const router = useRouter();
-  const [content, setContent] = useState<ContentItem[]>([]);
+  const { toast } = useToast();
+  const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fetchContent = async () => {
+    try {
+      setLoading(true);
+      const filters: any = {
+        search: searchQuery || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      };
+      const response = await contentService.list(filters);
+      setContent(response.items);
+    } catch (error: any) {
+      console.error('Error fetching content:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load content',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // TODO: Fetch from API
-    // Placeholder data
-    setContent([
-      {
-        id: '1',
-        title: 'How to Send Money Internationally',
-        contentType: 'BLOG',
-        status: 'PUBLISHED',
-        author: 'John Doe',
-        updatedAt: '2024-01-15',
-        publishedAt: '2024-01-10',
-      },
-      {
-        id: '2',
-        title: 'Payvost Launches New Features',
-        contentType: 'PRESS_RELEASE',
-        status: 'DRAFT',
-        author: 'Jane Smith',
-        updatedAt: '2024-01-14',
-      },
-    ]);
-    setLoading(false);
-  }, []);
+    fetchContent();
+  }, [statusFilter]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchContent();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     PUBLISHED: 'default',
@@ -66,6 +68,31 @@ export default function ContentListPage() {
     PRESS_RELEASE: 'Press',
     DOCUMENTATION: 'Docs',
     KNOWLEDGE_BASE: 'KB',
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(id);
+      await contentService.delete(id);
+      toast({
+        title: 'Success',
+        description: 'Content deleted successfully',
+      });
+      fetchContent();
+    } catch (error: any) {
+      console.error('Error deleting content:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete content',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const filteredContent = content.filter((item) => {
@@ -115,7 +142,10 @@ export default function ContentListPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading content...</p>
+            </div>
           ) : filteredContent.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -143,13 +173,17 @@ export default function ContentListPage() {
                     <TableCell>
                       <Badge variant={statusVariant[item.status]}>{item.status}</Badge>
                     </TableCell>
-                    <TableCell>{item.author}</TableCell>
+                    <TableCell>{item.authorName}</TableCell>
                     <TableCell>{new Date(item.updatedAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" disabled={deletingId === item.id}>
+                            {deletingId === item.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -160,12 +194,18 @@ export default function ContentListPage() {
                             </Link>
                           </DropdownMenuItem>
                           {item.status === 'PUBLISHED' && (
-                            <DropdownMenuItem>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
+                            <DropdownMenuItem asChild>
+                              <Link href={`/blog/${item.slug}`} target="_blank">
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Link>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="text-destructive">
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deletingId === item.id}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>

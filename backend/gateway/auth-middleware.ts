@@ -17,7 +17,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Verify Firebase ID token
+ * Verify Firebase ID token or session cookie
  * Standard authentication middleware for all protected routes
  */
 export async function verifyFirebaseToken(
@@ -26,28 +26,49 @@ export async function verifyFirebaseToken(
   next: NextFunction
 ): Promise<void> {
   try {
+    let decodedToken: admin.auth.DecodedIdToken;
+    
+    // Try to get token from Authorization header first
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({
-        error: 'Authentication required',
-        message: 'Missing or invalid authorization header. Expected: Bearer <token>'
-      });
-      return;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      
+      if (token && token.trim().length > 0) {
+        // Verify Firebase ID token
+        decodedToken = await admin.auth().verifyIdToken(token);
+      } else {
+        res.status(401).json({
+          error: 'Authentication required',
+          message: 'Token is required'
+        });
+        return;
+      }
+    } else {
+      // Try to get session cookie from cookies
+      const cookies = req.headers.cookie || '';
+      const sessionCookieMatch = cookies.match(/(?:^|;\s*)(?:writer_session|session|support_session)=([^;]*)/);
+      
+      if (sessionCookieMatch && sessionCookieMatch[1]) {
+        const sessionCookie = sessionCookieMatch[1];
+        try {
+          // Verify session cookie
+          decodedToken = await admin.auth().verifySessionCookie(sessionCookie, true);
+        } catch (cookieError: any) {
+          logger.warn({ error: cookieError.message }, 'Session cookie verification failed');
+          res.status(401).json({
+            error: 'Authentication required',
+            message: 'Missing or invalid authorization. Please log in again.'
+          });
+          return;
+        }
+      } else {
+        res.status(401).json({
+          error: 'Authentication required',
+          message: 'Missing or invalid authorization header. Expected: Bearer <token> or session cookie'
+        });
+        return;
+      }
     }
-
-    const token = authHeader.substring(7);
-    
-    if (!token || token.trim().length === 0) {
-      res.status(401).json({
-        error: 'Authentication required',
-        message: 'Token is required'
-      });
-      return;
-    }
-    
-    // Verify Firebase token
-    const decodedToken = await admin.auth().verifyIdToken(token);
     
     // Fetch user data from Firestore for additional context
     let userData: any = {};
@@ -70,7 +91,7 @@ export async function verifyFirebaseToken(
   } catch (error: any) {
     logger.warn({ error: error.message }, 'Firebase token verification failed');
     
-    if (error.code === 'auth/id-token-expired') {
+    if (error.code === 'auth/id-token-expired' || error.code === 'auth/session-cookie-expired') {
       res.status(401).json({
         error: 'Token expired',
         message: 'Your session has expired. Please log in again.'

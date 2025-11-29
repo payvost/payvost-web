@@ -3,53 +3,48 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileText, BookOpen, Newspaper, FileCode, TrendingUp, Eye } from 'lucide-react';
+import { PlusCircle, FileText, BookOpen, Newspaper, FileCode, TrendingUp, Eye, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
-
-interface ContentStats {
-  total: number;
-  published: number;
-  draft: number;
-  byType: {
-    blog: number;
-    press: number;
-    docs: number;
-    knowledgeBase: number;
-  };
-}
+import { contentService, ContentStats } from '@/services/contentService';
+import { useToast } from '@/hooks/use-toast';
 
 export default function WriterDashboard() {
   const router = useRouter();
+  const { toast } = useToast();
   const [stats, setStats] = useState<ContentStats>({
     total: 0,
     published: 0,
     draft: 0,
-    byType: {
-      blog: 0,
-      press: 0,
-      docs: 0,
-      knowledgeBase: 0,
-    },
+    review: 0,
+    archived: 0,
+    byType: {},
   });
   const [loading, setLoading] = useState(true);
+  const [recentContent, setRecentContent] = useState<any[]>([]);
 
   useEffect(() => {
-    // TODO: Fetch actual stats from API
-    // For now, using placeholder data
-    setStats({
-      total: 24,
-      published: 18,
-      draft: 6,
-      byType: {
-        blog: 12,
-        press: 5,
-        docs: 4,
-        knowledgeBase: 3,
-      },
-    });
-    setLoading(false);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [statsData, contentData] = await Promise.all([
+          contentService.getStats(),
+          contentService.list({ limit: 5 }),
+        ]);
+        setStats(statsData);
+        setRecentContent(contentData.items);
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to load dashboard data',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   const quickActions = [
@@ -102,8 +97,14 @@ export default function WriterDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">All content items</p>
+            {loading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <p className="text-xs text-muted-foreground">All content items</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -112,8 +113,14 @@ export default function WriterDashboard() {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.published}</div>
-            <p className="text-xs text-muted-foreground">Live on site</p>
+            {loading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.published}</div>
+                <p className="text-xs text-muted-foreground">Live on site</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -122,18 +129,30 @@ export default function WriterDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.draft}</div>
-            <p className="text-xs text-muted-foreground">In progress</p>
+            {loading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.draft}</div>
+                <p className="text-xs text-muted-foreground">In progress</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Views</CardTitle>
+            <CardTitle className="text-sm font-medium">In Review</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1.2K</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            {loading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.review}</div>
+                <p className="text-xs text-muted-foreground">Awaiting review</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -171,10 +190,34 @@ export default function WriterDashboard() {
           <CardDescription>Your recently created or edited content</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No recent content. Create your first piece!</p>
-          </div>
+          {loading ? (
+            <div className="text-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading recent content...</p>
+            </div>
+          ) : recentContent.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No recent content. Create your first piece!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentContent.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer"
+                  onClick={() => router.push(`/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content/${item.id}`)}
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.contentType} • {item.status} • {new Date(item.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
