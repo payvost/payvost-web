@@ -130,8 +130,9 @@ async function getAuthToken(): Promise<string | null> {
 }
 
 // Create axios instance with default config
+// Use Next.js API routes which handle session cookie authentication
 const contentApi = axios.create({
-  baseURL: `${API_BASE_URL}/api/content`,
+  baseURL: '/api/content', // Use Next.js API routes instead of direct backend
   withCredentials: true, // Send cookies
   headers: {
     'Content-Type': 'application/json',
@@ -193,7 +194,7 @@ export const contentService = {
    * Publish content
    */
   async publish(id: string): Promise<Content> {
-    const response = await contentApi.post(`/${id}/publish`);
+    const response = await contentApi.post(`/${id}/publish`, {});
     return response.data;
   },
 
@@ -201,7 +202,7 @@ export const contentService = {
    * Unpublish content
    */
   async unpublish(id: string): Promise<Content> {
-    const response = await contentApi.post(`/${id}/unpublish`);
+    const response = await contentApi.post(`/${id}/unpublish`, {});
     return response.data;
   },
 

@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, Eye, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { contentService, CreateContentInput, UpdateContentInput } from '@/services/contentService';
 
 export default function ContentEditPage() {
   const router = useRouter();
@@ -42,45 +43,102 @@ export default function ContentEditPage() {
   });
 
   useEffect(() => {
-    if (!isNew) {
-      // TODO: Fetch content from API
-      // Placeholder
-      setFormData({
-        title: 'Sample Blog Post',
-        contentType: 'BLOG',
-        status: 'DRAFT',
-        excerpt: 'This is a sample excerpt',
-        content: '<p>Sample content</p>',
-        category: 'General',
-        tags: ['sample', 'blog'],
-        metaTitle: '',
-        metaDescription: '',
-        metaKeywords: [],
-        featuredImage: '',
-        isPublic: true,
-      });
-      setLoading(false);
-    }
+    const fetchContent = async () => {
+      if (!isNew) {
+        try {
+          setLoading(true);
+          const content = await contentService.get(id);
+          setFormData({
+            title: content.title,
+            contentType: content.contentType,
+            status: content.status,
+            excerpt: content.excerpt || '',
+            content: content.content,
+            category: content.category || '',
+            tags: content.tags || [],
+            metaTitle: content.metaTitle || '',
+            metaDescription: content.metaDescription || '',
+            metaKeywords: content.metaKeywords || [],
+            featuredImage: content.featuredImage || '',
+            isPublic: content.isPublic,
+          });
+        } catch (error: any) {
+          console.error('Error fetching content:', error);
+          toast({
+            title: 'Error',
+            description: error.message || 'Failed to load content',
+            variant: 'destructive',
+          });
+          router.push('/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content');
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    fetchContent();
   }, [id, isNew]);
 
   const handleSave = async (publish = false) => {
+    if (!formData.title.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Title is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.content.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Content is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      // TODO: Save to API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      toast({
-        title: 'Success',
-        description: publish ? 'Content published successfully' : 'Content saved as draft',
-      });
-      
+      const contentData: CreateContentInput | UpdateContentInput = {
+        title: formData.title,
+        contentType: formData.contentType,
+        status: publish ? 'PUBLISHED' : formData.status,
+        excerpt: formData.excerpt || undefined,
+        content: formData.content,
+        category: formData.category || undefined,
+        tags: formData.tags,
+        metaTitle: formData.metaTitle || undefined,
+        metaDescription: formData.metaDescription || undefined,
+        metaKeywords: formData.metaKeywords,
+        featuredImage: formData.featuredImage || undefined,
+        isPublic: formData.isPublic,
+      };
+
       if (isNew) {
-        router.push('/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content');
+        const created = await contentService.create(contentData as CreateContentInput);
+        toast({
+          title: 'Success',
+          description: publish ? 'Content published successfully' : 'Content saved as draft',
+        });
+        router.push(`/cms-9dj93abkD0ncfhDpLw_KIA/dashboard/content/${created.id}`);
+      } else {
+        if (publish) {
+          await contentService.publish(id);
+        } else {
+          await contentService.update(id, contentData as UpdateContentInput);
+        }
+        toast({
+          title: 'Success',
+          description: publish ? 'Content published successfully' : 'Content saved as draft',
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error saving content:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save content',
+        description: error.message || 'Failed to save content',
         variant: 'destructive',
       });
     } finally {
