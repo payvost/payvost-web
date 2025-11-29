@@ -55,6 +55,17 @@ match /invoice_logos/{userId}/{fileName} {
   // User can read their own logo
   allow read: if request.auth != null && request.auth.uid == userId;
 
+// 📝 Content images (for blog posts, press releases, documentation, knowledge base)
+match /content/{userId}/{fileName} {
+  // Authenticated user can upload content images
+  allow create: if request.auth != null
+                && request.auth.uid == userId
+                && request.resource.size < 5 * 1024 * 1024
+                && request.resource.contentType.matches('image/.*');
+
+  // Public read access for content images
+  allow read: if true;
+
   // Admins can read if needed for invoice verification
   allow read: if request.auth != null && request.auth.token.admin == true;
 
