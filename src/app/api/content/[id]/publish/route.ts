@@ -31,18 +31,50 @@ export async function POST(
 
     const url = `${BACKEND_URL}/api/v1/content/${params.id}/publish`;
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': `writer_session=${sessionCookie}`,
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': `writer_session=${sessionCookie}`,
+        },
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (fetchError: any) {
+      console.error('Fetch error connecting to backend:', {
+        url,
+        error: fetchError.message,
+      });
+      
+      if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed')) {
+        return NextResponse.json(
+          { error: 'Backend service is not available. Please check if the backend server is running.' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: `Network error: ${fetchError.message || 'Failed to connect to backend'}` },
+        { status: 503 }
+      );
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return NextResponse.json(errorData, { status: response.status });
+    }
 
     const data = await response.json().catch(() => ({}));
     return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     console.error('Content publish API error:', error);
+    if (error.code === 'auth/session-cookie-expired' || error.code === 'auth/argument-error') {
+      return NextResponse.json(
+        { error: 'Session expired', message: 'Please log in again' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: error.message || 'Failed to publish content' },
       { status: 500 }
