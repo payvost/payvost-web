@@ -122,6 +122,39 @@ export async function POST(
       previousKycStatus: userData.kycStatus,
     });
 
+    // Send notification to user about the decision
+    if (decision === 'approved') {
+      try {
+        // Create in-app notification in user's notifications subcollection
+        await db.collection('users').doc(userId).collection('notifications').add({
+          userId,
+          title: 'Account Verified!',
+          description: 'Congratulations! Your account has been verified. You now have full access to all features.',
+          message: 'Congratulations! Your account has been verified. You now have full access to all features.',
+          type: 'kyc',
+          icon: 'kyc',
+          context: 'personal',
+          read: false,
+          date: now,
+          href: '/dashboard/profile',
+          link: '/dashboard/profile',
+          data: {
+            status: 'approved',
+            tier: 'tier1',
+          },
+          createdAt: now,
+        });
+
+        // Mark welcome notification as sent to prevent duplicate from dashboard listener
+        await userRef.update({
+          'welcomeNotificationSent.personal': true,
+        });
+      } catch (error) {
+        console.error('Error sending tier1 approval notification:', error);
+        // Don't fail the request if notification fails
+      }
+    }
+
     return NextResponse.json({ 
       success: true,
       userId,

@@ -26,7 +26,7 @@ import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { db } from '@/lib/firebase';
 import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, type DocumentSnapshot, type QuerySnapshot, type FirestoreError } from 'firebase/firestore';
+import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, getDocs, type DocumentSnapshot, type QuerySnapshot, type FirestoreError } from 'firebase/firestore';
 import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -188,15 +188,32 @@ export default function DashboardPage() {
         const welcomeNotificationSent = data.welcomeNotificationSent || {};
   
         // Welcome notification for personal KYC
+        // Only create notification if:
+        // 1. KYC is verified
+        // 2. Welcome notification hasn't been sent yet
+        // 3. User has display name
+        // 4. Check if notification already exists to prevent duplicates
     if (normalizedKycStatus === 'verified' && !welcomeNotificationSent.personal && user.displayName) {
-            console.log("User KYC verified, sending welcome notification.");
+            console.log("User KYC verified, checking for existing notification before sending welcome notification.");
             try {
-                await addDoc(collection(db, "users", user.uid, "notifications"), {
-                    icon: 'kyc', title: 'Account Verified!',
-                    description: 'Congratulations! Your account has been verified. You now have full access to all features.',
-                    date: serverTimestamp(), read: false, href: '/dashboard/profile', context: 'personal'
-                });
-                await updateDoc(userDocRef, { 'welcomeNotificationSent.personal': true });
+                // Check if a notification with this title already exists
+                const notificationsRef = collection(db, "users", user.uid, "notifications");
+                const existingNotifications = await getDocs(
+                    query(notificationsRef, where("title", "==", "Account Verified!"), where("context", "==", "personal"))
+                );
+                
+                // Only create notification if one doesn't already exist
+                if (existingNotifications.empty) {
+                    await addDoc(notificationsRef, {
+                        icon: 'kyc', title: 'Account Verified!',
+                        description: 'Congratulations! Your account has been verified. You now have full access to all features.',
+                        date: serverTimestamp(), read: false, href: '/dashboard/profile', context: 'personal'
+                    });
+                    await updateDoc(userDocRef, { 'welcomeNotificationSent.personal': true });
+                } else {
+                    // Notification already exists, just mark as sent
+                    await updateDoc(userDocRef, { 'welcomeNotificationSent.personal': true });
+                }
             } catch (error) {
                 console.error("Failed to send welcome notification:", error);
             }

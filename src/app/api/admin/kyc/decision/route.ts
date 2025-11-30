@@ -175,8 +175,73 @@ export async function POST(request: NextRequest) {
       previousStatus: submissionData.status,
     });
 
-    // TODO: Send notification to user about the decision
-    // This would typically call a notification service or trigger a Cloud Function
+    // Send notification to user about the decision
+    if (decision === 'approved') {
+      try {
+        const tierName = submissionLevel === 'tier2' ? 'Tier 2' : submissionLevel === 'tier3' ? 'Tier 3' : 'Higher Tier';
+        const notificationTitle = `${tierName} Verification Approved!`;
+        const notificationBody = submissionLevel === 'tier2'
+          ? 'Congratulations! Your Tier 2 verification has been approved. You now have enhanced access to additional features and higher transaction limits.'
+          : submissionLevel === 'tier3'
+          ? 'Congratulations! Your Tier 3 verification has been approved. You now have full access to all features including business account capabilities.'
+          : 'Congratulations! Your verification has been approved.';
+
+        // Create in-app notification in user's notifications subcollection
+        await db.collection('users').doc(userId).collection('notifications').add({
+          userId,
+          title: notificationTitle,
+          description: notificationBody,
+          message: notificationBody,
+          type: 'kyc',
+          icon: 'success',
+          context: 'personal',
+          read: false,
+          date: new Date(),
+          href: '/dashboard/profile',
+          link: '/dashboard/profile',
+          data: {
+            status: 'approved',
+            tier: submissionLevel,
+            submissionId,
+          },
+          createdAt: new Date(),
+        });
+      } catch (error) {
+        console.error('Error sending KYC approval notification:', error);
+        // Don't fail the request if notification fails
+      }
+    } else {
+      // Send rejection notification
+      try {
+        const tierName = submissionLevel === 'tier2' ? 'Tier 2' : submissionLevel === 'tier3' ? 'Tier 3' : 'Higher Tier';
+        const notificationTitle = `${tierName} Verification Update`;
+        const notificationBody = `Your ${tierName.toLowerCase()} verification has been reviewed.${reason ? ` Reason: ${reason}` : ''} Please review the details and take necessary actions.`;
+
+        await db.collection('users').doc(userId).collection('notifications').add({
+          userId,
+          title: notificationTitle,
+          description: notificationBody,
+          message: notificationBody,
+          type: 'kyc',
+          icon: 'alert',
+          context: 'personal',
+          read: false,
+          date: new Date(),
+          href: '/dashboard/get-started/onboarding',
+          link: '/dashboard/get-started/onboarding',
+          data: {
+            status: 'rejected',
+            tier: submissionLevel,
+            submissionId,
+            reason: reason || null,
+          },
+          createdAt: new Date(),
+        });
+      } catch (error) {
+        console.error('Error sending KYC rejection notification:', error);
+        // Don't fail the request if notification fails
+      }
+    }
 
     return NextResponse.json({ 
       success: true,
