@@ -41,8 +41,12 @@ export function EnhancedTabs({
   onValueChange,
   ...props
 }: EnhancedTabsProps) {
-  const [internalValue, setInternalValue] = useState(defaultValue || tabs[0]?.value || '');
+  const initialValue = defaultValue || tabs[0]?.value || '';
+  const [internalValue, setInternalValue] = useState(initialValue);
   const activeValue = controlledValue !== undefined ? controlledValue : internalValue;
+  
+  // Ensure activeValue is never empty
+  const safeActiveValue = activeValue || initialValue;
 
   const handleValueChange = (newValue: string) => {
     if (controlledValue === undefined) {
@@ -58,20 +62,27 @@ export function EnhancedTabs({
   };
 
   const triggerStyles = {
-    default: 'transition-all duration-200 relative overflow-visible font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm',
+    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
     pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
     underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative overflow-visible',
   };
 
+  const tabsProps: any = {
+    ...props,
+    orientation,
+    className,
+    onValueChange: handleValueChange,
+  };
+
+  // Use controlled mode if value is provided, otherwise use defaultValue
+  if (controlledValue !== undefined) {
+    tabsProps.value = safeActiveValue;
+  } else {
+    tabsProps.defaultValue = defaultValue || initialValue;
+  }
+
   return (
-    <Tabs 
-      {...props} 
-      orientation={orientation} 
-      className={className}
-      value={activeValue}
-      onValueChange={handleValueChange}
-      defaultValue={defaultValue}
-    >
+    <Tabs {...tabsProps}>
       <TabsList className={cn(
         "overflow-x-auto sm:overflow-visible overflow-y-visible",
         variantStyles[variant],
@@ -79,7 +90,7 @@ export function EnhancedTabs({
       )}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeValue === tab.value;
+          const isActive = safeActiveValue === tab.value;
           const content = (
             <TabsTrigger
               key={tab.value}
@@ -88,7 +99,7 @@ export function EnhancedTabs({
               className={cn(
                 triggerStyles[variant], 
                 "flex items-center gap-2",
-                variant === 'default' && "data-[state=active]:[&_svg]:!text-foreground",
+                variant === 'default' && "data-[state=active]:[&_svg]:!text-primary-foreground",
                 variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
                 "data-[state=active]:[&_svg]:scale-110",
                 "[&_svg]:transition-all [&_svg]:duration-200"

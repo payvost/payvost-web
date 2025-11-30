@@ -190,7 +190,7 @@ export function CreateQuoteForm({ onBack, quoteId }: CreateQuoteFormProps) {
                      <div className="space-y-2"><Label>Notes/Terms</Label><Textarea {...register('notes')} /></div>
                     <div className="space-y-2">
                         <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-                        <div className="flex justify-between items-center"><Label>Tax (%)</Label><Input type="number" {...register('taxRate')} className="w-20 h-8" /></div>
+                        <div className="flex justify-between items-center"><Label>Tax (%)</Label><Input type="number" step="0.01" {...register('taxRate')} className="w-20 h-8" /></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>{formatCurrency(taxAmount)}</span></div>
                         <Separator />
                         <div className="flex justify-between font-bold text-lg"><span>Total</span><span>{formatCurrency(grandTotal)}</span></div>

@@ -220,7 +220,7 @@ export function BusinessInvoiceSettings() {
                     <div className="space-y-2">
                         <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
                         <div className="relative">
-                            <Input id="defaultTaxRate" type="number" {...register('defaultTaxRate')} placeholder="8.5" className="pl-8"/>
+                            <Input id="defaultTaxRate" type="number" step="0.01" {...register('defaultTaxRate')} placeholder="8.5" className="pl-8"/>
                             <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                         </div>
                          {errors.defaultTaxRate && <p className="text-sm text-destructive">{errors.defaultTaxRate.message}</p>}
