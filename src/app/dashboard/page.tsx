@@ -397,11 +397,6 @@ export default function DashboardPage() {
                 <Card className="border-2 border-dashed">
                     <CardContent className="p-6">
                         <div className="flex flex-col items-center text-center space-y-4 max-w-xl mx-auto">
-                            {/* Icon */}
-                            <div className="p-3 bg-primary/10 rounded-full">
-                                <Wallet className="h-8 w-8 text-primary" />
-                            </div>
-                            
                             {/* Heading */}
                             <div className="space-y-1">
                                 <CardTitle className="text-xl font-bold">
@@ -410,25 +405,6 @@ export default function DashboardPage() {
                                 <CardDescription className="text-sm">
                                     Create your first currency wallet to send, receive, and manage money across borders instantly.
                                 </CardDescription>
-                            </div>
-
-                            {/* Benefits Grid */}
-                            <div className="grid grid-cols-3 gap-2 w-full mt-2">
-                                <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                    <ArrowRightLeft className="h-4 w-4 text-primary mb-1" />
-                                    <h4 className="font-semibold text-xs mb-0.5">Instant</h4>
-                                    <p className="text-[10px] text-muted-foreground text-center leading-tight">Send globally</p>
-                                </div>
-                                <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                    <LineChart className="h-4 w-4 text-primary mb-1" />
-                                    <h4 className="font-semibold text-xs mb-0.5">Multi-Currency</h4>
-                                    <p className="text-[10px] text-muted-foreground text-center leading-tight">Hold multiple</p>
-                                </div>
-                                <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                    <ShieldAlert className="h-4 w-4 text-primary mb-1" />
-                                    <h4 className="font-semibold text-xs mb-0.5">Secure</h4>
-                                    <p className="text-[10px] text-muted-foreground text-center leading-tight">Bank-level</p>
-                                </div>
                             </div>
 
                             {/* CTA Button */}
@@ -614,11 +590,6 @@ export default function DashboardPage() {
                     <Card className="border-2 border-dashed">
                         <CardContent className="p-6">
                             <div className="flex flex-col items-center text-center space-y-4 max-w-xl mx-auto">
-                                {/* Icon */}
-                                <div className="p-3 bg-primary/10 rounded-full">
-                                    <Wallet className="h-8 w-8 text-primary" />
-                                </div>
-                                
                                 {/* Heading */}
                                 <div className="space-y-1">
                                     <CardTitle className="text-xl font-bold">
@@ -627,25 +598,6 @@ export default function DashboardPage() {
                                     <CardDescription className="text-sm">
                                         Create your first currency wallet to send, receive, and manage money across borders instantly.
                                     </CardDescription>
-                                </div>
-
-                                {/* Benefits Grid */}
-                                <div className="grid grid-cols-3 gap-2 w-full mt-2">
-                                    <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                        <ArrowRightLeft className="h-4 w-4 text-primary mb-1" />
-                                        <h4 className="font-semibold text-xs mb-0.5">Instant</h4>
-                                        <p className="text-[10px] text-muted-foreground text-center leading-tight">Send globally</p>
-                                    </div>
-                                    <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                        <LineChart className="h-4 w-4 text-primary mb-1" />
-                                        <h4 className="font-semibold text-xs mb-0.5">Multi-Currency</h4>
-                                        <p className="text-[10px] text-muted-foreground text-center leading-tight">Hold multiple</p>
-                                    </div>
-                                    <div className="flex flex-col items-center p-2 rounded border border-border/50">
-                                        <ShieldAlert className="h-4 w-4 text-primary mb-1" />
-                                        <h4 className="font-semibold text-xs mb-0.5">Secure</h4>
-                                        <p className="text-[10px] text-muted-foreground text-center leading-tight">Bank-level</p>
-                                    </div>
                                 </div>
 
                                 {/* CTA Button */}
