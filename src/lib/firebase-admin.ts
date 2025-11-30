@@ -37,11 +37,49 @@ function initFirebaseAdmin() {
       console.log('Firebase Admin SDK: Using service account from environment variable');
       let parsed: any;
       try {
-        const raw = envJson ?? Buffer.from(envB64 as string, 'base64').toString('utf8');
+        let raw = envJson ?? Buffer.from(envB64 as string, 'base64').toString('utf8');
+        
+        // Trim whitespace from start and end
+        raw = raw.trim();
+        
+        // Handle double-encoded JSON (if the env var is a JSON string containing another JSON string)
+        // Try to detect if it's double-encoded by checking if it starts and ends with quotes
+        if (raw.startsWith('"') && raw.endsWith('"')) {
+          try {
+            const parsed = JSON.parse(raw);
+            // If it parsed to a string, it was double-encoded, use the inner string
+            if (typeof parsed === 'string') {
+              raw = parsed;
+            }
+          } catch {
+            // If parsing as double-encoded fails, continue with original
+          }
+        }
+        
+        // Sanitize the JSON string: replace actual newlines and other control characters
+        // that might break JSON parsing, but preserve escaped sequences
+        // First, protect already-escaped sequences
+        raw = raw.replace(/\\n/g, '___ESCAPED_NEWLINE___');
+        raw = raw.replace(/\\r/g, '___ESCAPED_CARRIAGE___');
+        raw = raw.replace(/\\t/g, '___ESCAPED_TAB___');
+        
+        // Replace actual control characters with escaped versions
+        raw = raw.replace(/\n/g, '\\n');
+        raw = raw.replace(/\r/g, '\\r');
+        raw = raw.replace(/\t/g, '\\t');
+        
+        // Restore the protected escaped sequences
+        raw = raw.replace(/___ESCAPED_NEWLINE___/g, '\\n');
+        raw = raw.replace(/___ESCAPED_CARRIAGE___/g, '\\r');
+        raw = raw.replace(/___ESCAPED_TAB___/g, '\\t');
+        
         parsed = JSON.parse(raw);
       } catch (e: any) {
-        const hint = `Invalid FIREBASE_SERVICE_ACCOUNT_KEY$${envB64 ? '_BASE64' : ''}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
-        throw new Error(`${hint} Original error: ${e?.message || e}`);
+        const envVarName = `FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}`;
+        const rawPreview = (envJson ?? (envB64 ? Buffer.from(envB64 as string, 'base64').toString('utf8') : '')).trim().substring(0, 100);
+        const hint = `Invalid ${envVarName}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
+        const debugInfo = `First 100 chars: ${rawPreview}${rawPreview.length >= 100 ? '...' : ''}`;
+        throw new Error(`${hint} Original error: ${e?.message || e}. ${debugInfo}`);
       }
 
       // Normalize private_key newlines if they are escaped ("\\n")

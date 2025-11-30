@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 // @ts-ignore - Common file is compiled separately to dist/common
-import { sendEmail, isMailgunConfigured } from './common/mailgun';
+import { sendEmail, isMailgunConfigured } from '../../common/mailgun';
 
 const app = express();
 const PORT = process.env.EMAIL_SERVICE_PORT || 3006;
