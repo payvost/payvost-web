@@ -1,16 +1,22 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Clock, CircleDollarSign, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, CircleDollarSign, AlertCircle, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 // Dummy data for a single agreement - in a real app, you'd fetch this by ID
 const agreementDetails = {
@@ -38,14 +44,106 @@ const milestoneStatusInfo = {
 
 export default function ManageFundsPage({ params }: { params: { id: string } }) {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
+    const { user, loading: authLoading } = useAuth();
+    const [userData, setUserData] = useState<any>(null);
+    const [loadingUser, setLoadingUser] = useState(true);
+    const router = useRouter();
     const { toast } = useToast();
     const agreement = agreementDetails;
+
+    // Load user data to check tier 3 status
+    useEffect(() => {
+        if (authLoading) return;
+        if (!user) {
+            setLoadingUser(false);
+            return;
+        }
+
+        const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+            if (doc.exists()) {
+                setUserData(doc.data());
+            }
+            setLoadingUser(false);
+        }, (error) => {
+            console.error("Error fetching user data:", error);
+            setLoadingUser(false);
+        });
+
+        return () => unsub();
+    }, [user, authLoading]);
+
+    // Check if user has tier 3 access
+    const hasTier3Access = userData?.kycProfile?.tiers?.tier3?.status === 'approved' || 
+                           userData?.kycTier === 'tier3' || 
+                           userData?.userType === 'Tier 3';
 
     const handleAction = (action: string, milestone: any) => {
         toast({
             title: `Action: ${action}`,
             description: `Triggered "${action}" for milestone: ${milestone.description}`,
         });
+    }
+
+    // Show loading state while checking tier
+    if (authLoading || loadingUser) {
+        return (
+            <DashboardLayout language={language} setLanguage={setLanguage}>
+                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                    <div className="flex items-center justify-center min-h-[400px]">
+                        <Skeleton className="h-12 w-full max-w-md" />
+                    </div>
+                </main>
+            </DashboardLayout>
+        );
+    }
+
+    // Show access denied if user doesn't have tier 3
+    if (!hasTier3Access) {
+        return (
+            <DashboardLayout language={language} setLanguage={setLanguage}>
+                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                    <Card className="max-w-2xl mx-auto mt-8">
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-destructive/10 rounded-lg">
+                                    <Lock className="h-6 w-6 text-destructive" />
+                                </div>
+                                <div>
+                                    <CardTitle>Access Restricted</CardTitle>
+                                    <CardDescription>
+                                        Escrow services are only available to Tier 3 users
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Alert variant="destructive">
+                                <Lock className="h-4 w-4" />
+                                <AlertTitle>Tier 3 Verification Required</AlertTitle>
+                                <AlertDescription>
+                                    Escrow services require Tier 3: Verified Pro status. To access escrow services, you need to complete the enhanced due diligence verification process.
+                                </AlertDescription>
+                            </Alert>
+                        </CardContent>
+                        <CardFooter className="flex gap-3">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => router.push('/dashboard/escrow')}
+                                className="flex-1"
+                            >
+                                Back to Escrow
+                            </Button>
+                            <Button 
+                                onClick={() => router.push('/dashboard/profile')}
+                                className="flex-1"
+                            >
+                                View Profile
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </main>
+            </DashboardLayout>
+        );
     }
 
     return (

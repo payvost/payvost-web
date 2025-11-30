@@ -18,8 +18,12 @@ import { CreateEscrowAgreementForm } from '@/components/create-escrow-agreement-
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, DocumentData, or } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, DocumentData, or, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Lock, ArrowRight } from 'lucide-react';
 
 const statusVariant: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
   'In Escrow': 'default',
@@ -36,10 +40,46 @@ export default function EscrowPage() {
   const { user, loading: authLoading } = useAuth();
   const [agreements, setAgreements] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
+  // Load user data to check tier 3 status
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
+        setLoadingUser(false);
+        return;
+    }
+
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+        if (doc.exists()) {
+            setUserData(doc.data());
+        }
+        setLoadingUser(false);
+    }, (error) => {
+        console.error("Error fetching user data:", error);
+        setLoadingUser(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading]);
+
+  // Check if user has tier 3 access
+  const hasTier3Access = userData?.kycProfile?.tiers?.tier3?.status === 'approved' || 
+                         userData?.kycTier === 'tier3' || 
+                         userData?.userType === 'Tier 3';
+
+  useEffect(() => {
+    if (authLoading || loadingUser) return;
+    if (!user) {
+        setLoading(false);
+        return;
+    }
+
+    // Only fetch escrow agreements if user has tier 3 access
+    if (!hasTier3Access) {
         setLoading(false);
         return;
     }
@@ -56,7 +96,7 @@ export default function EscrowPage() {
     });
     
     return () => unsubscribe();
-  }, [user, authLoading]);
+  }, [user, authLoading, loadingUser, hasTier3Access]);
 
   const activeAgreementsCount = agreements.filter(a => ['In Escrow', 'Awaiting Funding'].includes(a.status)).length;
   const totalInEscrow = agreements
@@ -235,6 +275,90 @@ export default function EscrowPage() {
         </Table>
       </CardContent>
   );
+
+  // Show loading state while checking tier
+  if (authLoading || loadingUser) {
+    return (
+      <DashboardLayout language={language} setLanguage={setLanguage}>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Skeleton className="h-12 w-full max-w-md" />
+          </div>
+        </main>
+      </DashboardLayout>
+    );
+  }
+
+  // Show access denied if user doesn't have tier 3
+  if (!hasTier3Access) {
+    return (
+      <DashboardLayout language={language} setLanguage={setLanguage}>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+          <Card className="max-w-2xl mx-auto mt-8">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-destructive/10 rounded-lg">
+                  <Lock className="h-6 w-6 text-destructive" />
+                </div>
+                <div>
+                  <CardTitle>Access Restricted</CardTitle>
+                  <CardDescription>
+                    Escrow services are only available to Tier 3 users
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Alert variant="destructive">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Tier 3 Verification Required</AlertTitle>
+                <AlertDescription>
+                  Escrow services require Tier 3: Verified Pro status. To access escrow services, you need to complete the enhanced due diligence verification process.
+                </AlertDescription>
+              </Alert>
+              <div className="mt-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Tier 3 Benefits:</h3>
+                  <ul className="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+                    <li>Unlimited transactions</li>
+                    <li>Escrow services</li>
+                    <li>All Tier 2 services</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => router.push('/dashboard/profile')}
+                className="flex-1"
+              >
+                Back to Profile
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (userData?.kycProfile?.tiers?.tier2?.status === 'approved') {
+                    router.push('/dashboard/kyc/upgrade-tier3');
+                  } else {
+                    router.push('/dashboard/profile');
+                    toast({
+                      title: 'Tier 2 Required',
+                      description: 'Please complete Tier 2 verification before upgrading to Tier 3.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                className="flex-1"
+              >
+                Upgrade to Tier 3
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        </main>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
