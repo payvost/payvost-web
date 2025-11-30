@@ -315,6 +315,8 @@ async function handleVirtualAccountDeposit(data: any) {
     });
 
     if (transaction) {
+      const previousStatus = transaction.status;
+      
       await prisma.externalTransaction.update({
         where: { id: transaction.id },
         data: {
@@ -324,6 +326,25 @@ async function handleVirtualAccountDeposit(data: any) {
           completedAt: new Date(),
         },
       });
+
+      // Send notification for completed deposit
+      if (previousStatus !== 'COMPLETED') {
+        try {
+          const { notifyDeposit, notifyLargeDeposit } = await import('@/lib/unified-notifications');
+          const amount = parseFloat(transaction.amount.toString());
+          const currency = transaction.currency;
+          
+          await notifyDeposit(transaction.userId, amount, currency, 'Virtual Account Deposit');
+          
+          // Check for large deposit (threshold: 1000)
+          if (amount >= 1000) {
+            await notifyLargeDeposit(transaction.userId, amount, currency, 1000);
+          }
+        } catch (notifError) {
+          console.error('Error sending deposit notification:', notifError);
+          // Don't fail webhook if notification fails
+        }
+      }
     }
   } catch (error) {
     console.error('[Rapyd Webhook] Error handling virtual account deposit:', error);

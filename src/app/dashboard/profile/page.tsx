@@ -281,6 +281,15 @@ export default function ProfilePage() {
         const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
         await reauthenticateWithCredential(user, credential);
         await updatePassword(user, data.newPassword);
+        
+        // Send notification
+        try {
+          const { notifyPasswordChanged } = await import('@/lib/unified-notifications');
+          await notifyPasswordChanged(user.uid);
+        } catch (notifError) {
+          console.error('Error sending password change notification:', notifError);
+        }
+        
         toast({ title: 'Password Updated', description: 'Your password has been changed successfully.' });
         resetPasswordForm();
         setIsPasswordDialogOpen(false);
@@ -318,6 +327,15 @@ export default function ProfilePage() {
         try {
             const userDocRef = doc(db, 'users', user.uid);
             await updateDoc(userDocRef, { transactionPin: data.newPin });
+            
+            // Send notification
+            try {
+              const { notifyPinChanged } = await import('@/lib/unified-notifications');
+              await notifyPinChanged(user.uid);
+            } catch (notifError) {
+              console.error('Error sending PIN change notification:', notifError);
+            }
+            
             toast({ title: 'Transaction PIN Changed', description: 'Your PIN has been updated successfully.' });
             resetChangePinForm();
             setIsPinDialogOpen(false);

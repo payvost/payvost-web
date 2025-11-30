@@ -74,11 +74,12 @@ export interface NotificationPayload {
   userId: string;
   title: string;
   body: string;
-  type: 'transaction' | 'kyc' | 'payment' | 'bill' | 'security' | 'announcement' | 'general';
+  type: 'transaction' | 'kyc' | 'payment' | 'bill' | 'security' | 'announcement' | 'general' | 'wallet' | 'support' | 'dispute';
   data?: Record<string, string>;
   clickAction?: string;
   emailTemplate?: EmailTemplate;
   emailVariables?: Record<string, any>;
+  context?: 'personal' | 'business';
 }
 
 /**
@@ -90,7 +91,7 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
   email: { success: boolean; error?: string };
   inApp: { success: boolean; error?: string };
 }> {
-  const { userId, title, body, type, data, clickAction, emailTemplate, emailVariables } = payload;
+  const { userId, title, body, type, data, clickAction, emailTemplate, emailVariables, context = 'personal' } = payload;
 
   const results = {
     push: { success: false } as { success: boolean; error?: string },
@@ -158,16 +159,20 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
       }
     }
 
-    // 3. Create In-App Notification
+    // 3. Create In-App Notification (store in user's notifications subcollection)
     try {
-      await addDoc(collection(db, 'notifications'), {
+      await addDoc(collection(db, 'users', userId, 'notifications'), {
         userId,
         title,
+        description: body,
         message: body,
         type: mapTypeToIcon(type),
         icon: getIconForType(type),
+        context: context,
         read: false,
+        date: serverTimestamp(),
         createdAt: serverTimestamp(),
+        href: clickAction || '/dashboard/notifications',
         link: clickAction || '/dashboard/notifications',
         data: data || {},
       });
@@ -517,7 +522,10 @@ export async function broadcastNotification(payload: {
       clickAction: clickAction || '/dashboard',
     });
 
-    // Create broadcast in-app notification
+    // Create broadcast in-app notification for all users
+    // Note: This would need to be done via a batch operation for all users
+    // For now, we'll create it in a global notifications collection
+    // In production, you'd want to iterate through all users and add to their subcollections
     await addDoc(collection(db, 'notifications'), {
       broadcast: true,
       title,
@@ -550,6 +558,9 @@ function mapTypeToIcon(type: string): string {
     security: 'alert',
     announcement: 'info',
     general: 'info',
+    wallet: 'success',
+    support: 'info',
+    dispute: 'alert',
   };
 
   return iconMap[type] || 'info';
@@ -564,9 +575,362 @@ function getIconForType(type: string): string {
     security: 'alert',
     announcement: 'bell',
     general: 'bell',
+    wallet: 'gift',
+    support: 'bell',
+    dispute: 'alert',
   };
 
   return iconMap[type] || 'bell';
+}
+
+/**
+ * Security Event Notifications
+ */
+
+export async function notifyPasswordChanged(userId: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Password Changed',
+    body: 'Your password has been successfully changed. If you did not make this change, please contact support immediately.',
+    type: 'security',
+    data: {
+      eventType: 'password_changed',
+    },
+    clickAction: '/dashboard/settings/security',
+  });
+}
+
+export async function notifyEmailChanged(userId: string, newEmail: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Email Address Changed',
+    body: `Your email address has been changed to ${newEmail}. If you did not make this change, please contact support immediately.`,
+    type: 'security',
+    data: {
+      eventType: 'email_changed',
+      newEmail,
+    },
+    clickAction: '/dashboard/settings',
+  });
+}
+
+export async function notifySuspiciousLogin(userId: string, deviceInfo: string, location: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Suspicious Login Detected',
+    body: `A login was detected from ${deviceInfo} in ${location}. If this wasn't you, please secure your account immediately.`,
+    type: 'security',
+    data: {
+      eventType: 'suspicious_login',
+      deviceInfo,
+      location,
+    },
+    clickAction: '/dashboard/settings/security',
+    emailTemplate: 'login_alert',
+    emailVariables: {
+      deviceInfo,
+      location,
+    },
+  });
+}
+
+export async function notifyTwoFactorEnabled(userId: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Two-Factor Authentication Enabled',
+    body: 'Two-factor authentication has been enabled on your account for added security.',
+    type: 'security',
+    data: {
+      eventType: '2fa_enabled',
+    },
+    clickAction: '/dashboard/settings/security',
+  });
+}
+
+export async function notifyTwoFactorDisabled(userId: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Two-Factor Authentication Disabled',
+    body: 'Two-factor authentication has been disabled on your account. Your account security has been reduced.',
+    type: 'security',
+    data: {
+      eventType: '2fa_disabled',
+    },
+    clickAction: '/dashboard/settings/security',
+  });
+}
+
+export async function notifyPinChanged(userId: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Transaction PIN Changed',
+    body: 'Your transaction PIN has been successfully changed.',
+    type: 'security',
+    data: {
+      eventType: 'pin_changed',
+    },
+    clickAction: '/dashboard/settings/security',
+  });
+}
+
+export async function notifyAccountLocked(userId: string, reason: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Account Temporarily Locked',
+    body: `Your account has been temporarily locked for security reasons: ${reason}. Please contact support if you need assistance.`,
+    type: 'security',
+    data: {
+      eventType: 'account_locked',
+      reason,
+    },
+    clickAction: '/dashboard/support',
+  });
+}
+
+/**
+ * Wallet & Balance Notifications
+ */
+
+export async function notifyLowBalance(userId: string, balance: number, currency: string, threshold: number = 10) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Low Balance Alert',
+    body: `Your wallet balance is low: ${balance} ${currency}. Consider adding funds to avoid service interruptions.`,
+    type: 'wallet',
+    data: {
+      balance: balance.toString(),
+      currency,
+      threshold: threshold.toString(),
+      alertType: 'low_balance',
+    },
+    clickAction: '/dashboard/wallet',
+    emailTemplate: 'low_balance_alert',
+    emailVariables: {
+      balance: balance.toString(),
+      currency,
+      threshold: threshold.toString(),
+    },
+  });
+}
+
+export async function notifyLargeDeposit(userId: string, amount: number, currency: string, threshold: number = 1000) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Large Deposit Received',
+    body: `You received a large deposit of ${amount} ${currency}. Your funds are now available in your wallet.`,
+    type: 'wallet',
+    data: {
+      amount: amount.toString(),
+      currency,
+      alertType: 'large_deposit',
+    },
+    clickAction: '/dashboard/wallet',
+    emailTemplate: 'deposit_received',
+    emailVariables: {
+      amount: amount.toString(),
+      currency,
+      date: new Date().toLocaleString(),
+    },
+  });
+}
+
+export async function notifyBalanceThreshold(userId: string, balance: number, currency: string, threshold: number) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Balance Threshold Reached',
+    body: `Your wallet balance has reached ${balance} ${currency}, which is below your set threshold of ${threshold} ${currency}.`,
+    type: 'wallet',
+    data: {
+      balance: balance.toString(),
+      currency,
+      threshold: threshold.toString(),
+      alertType: 'threshold_reached',
+    },
+    clickAction: '/dashboard/wallet',
+  });
+}
+
+/**
+ * Dispute & Support Notifications
+ */
+
+export async function notifyDisputeRaised(userId: string, disputeId: string, reason: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Dispute Raised',
+    body: `Your dispute has been raised successfully. Reason: ${reason}. We will review and respond within 7 business days.`,
+    type: 'dispute',
+    data: {
+      disputeId,
+      reason,
+      status: 'open',
+    },
+    clickAction: '/dashboard/disputes',
+  });
+}
+
+export async function notifyDisputeStatusChange(userId: string, disputeId: string, status: string, resolution?: string) {
+  const statusMessages: Record<string, string> = {
+    resolved: 'Your dispute has been resolved.',
+    closed: 'Your dispute has been closed.',
+    under_review: 'Your dispute is under review.',
+    rejected: 'Your dispute has been rejected.',
+  };
+
+  return sendUnifiedNotification({
+    userId,
+    title: `Dispute ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+    body: resolution 
+      ? `${statusMessages[status] || 'Your dispute status has changed.'} ${resolution}`
+      : statusMessages[status] || 'Your dispute status has changed.',
+    type: 'dispute',
+    data: {
+      disputeId,
+      status,
+      resolution: resolution || null,
+    },
+    clickAction: '/dashboard/disputes',
+  });
+}
+
+export async function notifySupportTicketCreated(userId: string, ticketId: string, subject: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Support Ticket Created',
+    body: `Your support ticket "${subject}" has been created. Ticket ID: ${ticketId}. We'll respond as soon as possible.`,
+    type: 'support',
+    data: {
+      ticketId,
+      subject,
+      status: 'open',
+    },
+    clickAction: '/dashboard/support',
+  });
+}
+
+export async function notifySupportTicketResponse(userId: string, ticketId: string, subject: string, response: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'New Response to Your Support Ticket',
+    body: `You have a new response to your support ticket "${subject}". ${response.substring(0, 100)}...`,
+    type: 'support',
+    data: {
+      ticketId,
+      subject,
+    },
+    clickAction: '/dashboard/support',
+  });
+}
+
+export async function notifySupportTicketResolved(userId: string, ticketId: string, subject: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Support Ticket Resolved',
+    body: `Your support ticket "${subject}" has been marked as resolved. If you need further assistance, please reopen the ticket.`,
+    type: 'support',
+    data: {
+      ticketId,
+      subject,
+      status: 'resolved',
+    },
+    clickAction: '/dashboard/support',
+  });
+}
+
+/**
+ * Payment Method Notifications
+ */
+
+export async function notifyPaymentMethodAdded(userId: string, methodType: string, last4?: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Payment Method Added',
+    body: `A new ${methodType}${last4 ? ` ending in ${last4}` : ''} has been added to your account.`,
+    type: 'security',
+    data: {
+      eventType: 'payment_method_added',
+      methodType,
+      last4: last4 || null,
+    },
+    clickAction: '/dashboard/settings/payment-methods',
+  });
+}
+
+export async function notifyPaymentMethodRemoved(userId: string, methodType: string, last4?: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Payment Method Removed',
+    body: `Your ${methodType}${last4 ? ` ending in ${last4}` : ''} has been removed from your account.`,
+    type: 'security',
+    data: {
+      eventType: 'payment_method_removed',
+      methodType,
+      last4: last4 || null,
+    },
+    clickAction: '/dashboard/settings/payment-methods',
+  });
+}
+
+/**
+ * Transaction Limit Notifications
+ */
+
+export async function notifyTransactionLimitReached(userId: string, limitType: 'daily' | 'monthly', amount: number, currency: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: `${limitType.charAt(0).toUpperCase() + limitType.slice(1)} Transaction Limit Reached`,
+    body: `You have reached your ${limitType} transaction limit of ${amount} ${currency}. Please upgrade your account tier for higher limits.`,
+    type: 'transaction',
+    data: {
+      limitType,
+      amount: amount.toString(),
+      currency,
+    },
+    clickAction: '/dashboard/settings',
+  });
+}
+
+export async function notifyTransactionLimitWarning(userId: string, limitType: 'daily' | 'monthly', remaining: number, currency: string, percentage: number) {
+  return sendUnifiedNotification({
+    userId,
+    title: `${limitType.charAt(0).toUpperCase() + limitType.slice(1)} Limit Warning`,
+    body: `You have used ${100 - percentage}% of your ${limitType} limit. ${remaining} ${currency} remaining.`,
+    type: 'transaction',
+    data: {
+      limitType,
+      remaining: remaining.toString(),
+      currency,
+      percentage: percentage.toString(),
+    },
+    clickAction: '/dashboard/transactions',
+  });
+}
+
+/**
+ * Large Transaction Alerts
+ */
+
+export async function notifyLargeTransaction(userId: string, amount: number, currency: string, recipient: string, transactionId: string) {
+  return sendUnifiedNotification({
+    userId,
+    title: 'Large Transaction Alert',
+    body: `A large transaction of ${amount} ${currency} to ${recipient} has been processed.`,
+    type: 'transaction',
+    data: {
+      transactionId,
+      amount: amount.toString(),
+      currency,
+      alertType: 'large_transaction',
+    },
+    clickAction: '/dashboard/transactions',
+    emailTemplate: 'transaction_success',
+    emailVariables: {
+      amount: amount.toString(),
+      currency,
+      recipient,
+      transactionId,
+    },
+  });
 }
 
 /**
@@ -578,6 +942,9 @@ export async function getUserNotificationPreferences(userId: string): Promise<{
   sms: boolean;
   transactionAlerts: boolean;
   marketingEmails: boolean;
+  securityAlerts: boolean;
+  lowBalanceAlerts: boolean;
+  largeTransactionAlerts: boolean;
 } | null> {
   try {
     const userDoc = await getDoc(doc(db, 'users', userId));
@@ -591,6 +958,9 @@ export async function getUserNotificationPreferences(userId: string): Promise<{
       sms: userData.preferences?.sms !== false,
       transactionAlerts: userData.preferences?.transactionAlerts !== false,
       marketingEmails: userData.preferences?.marketingEmails === true,
+      securityAlerts: userData.preferences?.securityAlerts !== false,
+      lowBalanceAlerts: userData.preferences?.lowBalanceAlerts !== false,
+      largeTransactionAlerts: userData.preferences?.largeTransactionAlerts !== false,
     };
   } catch (error) {
     console.error('Error getting notification preferences:', error);
@@ -609,18 +979,25 @@ export async function updateNotificationPreferences(
     sms?: boolean;
     transactionAlerts?: boolean;
     marketingEmails?: boolean;
+    securityAlerts?: boolean;
+    lowBalanceAlerts?: boolean;
+    largeTransactionAlerts?: boolean;
   }
 ): Promise<boolean> {
   try {
     const { updateDoc } = await import('firebase/firestore');
     
-    await updateDoc(doc(db, 'users', userId), {
-      'preferences.push': preferences.push,
-      'preferences.email': preferences.email,
-      'preferences.sms': preferences.sms,
-      'preferences.transactionAlerts': preferences.transactionAlerts,
-      'preferences.marketingEmails': preferences.marketingEmails,
-    });
+    const updateData: any = {};
+    if (preferences.push !== undefined) updateData['preferences.push'] = preferences.push;
+    if (preferences.email !== undefined) updateData['preferences.email'] = preferences.email;
+    if (preferences.sms !== undefined) updateData['preferences.sms'] = preferences.sms;
+    if (preferences.transactionAlerts !== undefined) updateData['preferences.transactionAlerts'] = preferences.transactionAlerts;
+    if (preferences.marketingEmails !== undefined) updateData['preferences.marketingEmails'] = preferences.marketingEmails;
+    if (preferences.securityAlerts !== undefined) updateData['preferences.securityAlerts'] = preferences.securityAlerts;
+    if (preferences.lowBalanceAlerts !== undefined) updateData['preferences.lowBalanceAlerts'] = preferences.lowBalanceAlerts;
+    if (preferences.largeTransactionAlerts !== undefined) updateData['preferences.largeTransactionAlerts'] = preferences.largeTransactionAlerts;
+    
+    await updateDoc(doc(db, 'users', userId), updateData);
 
     console.log('✅ Notification preferences updated');
     return true;

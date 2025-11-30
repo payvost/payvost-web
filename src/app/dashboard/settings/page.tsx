@@ -46,8 +46,15 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { TwoFactorSettings } from '@/components/two-factor-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { reload } from 'firebase/auth';
+import { getUserNotificationPreferences, updateNotificationPreferences } from '@/lib/unified-notifications';
+import { 
+  Wallet, 
+  AlertCircle, 
+  TrendingUp,
+  Smartphone,
+} from 'lucide-react';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -56,6 +63,17 @@ export default function SettingsPage() {
   const [loadingBusiness, setLoadingBusiness] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    push: true,
+    email: true,
+    sms: false,
+    transactionAlerts: true,
+    marketingEmails: false,
+    securityAlerts: true,
+    lowBalanceAlerts: true,
+    largeTransactionAlerts: true,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -67,6 +85,29 @@ export default function SettingsPage() {
     // Check email verification status
     setEmailVerified(user.emailVerified || false);
 
+    // Load notification preferences
+    const loadPreferences = async () => {
+      try {
+        const prefs = await getUserNotificationPreferences(user.uid);
+        if (prefs) {
+          setNotificationPreferences({
+            push: prefs.push ?? true,
+            email: prefs.email ?? true,
+            sms: prefs.sms ?? false,
+            transactionAlerts: prefs.transactionAlerts ?? true,
+            marketingEmails: prefs.marketingEmails ?? false,
+            securityAlerts: prefs.securityAlerts ?? true,
+            lowBalanceAlerts: prefs.lowBalanceAlerts ?? true,
+            largeTransactionAlerts: prefs.largeTransactionAlerts ?? true,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading notification preferences:', error);
+      }
+    };
+
+    loadPreferences();
+
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
         const userData = doc.data();
@@ -75,6 +116,21 @@ export default function SettingsPage() {
           setBusinessProfile(profile);
         } else {
           setBusinessProfile(null);
+        }
+        
+        // Update preferences from user document if available
+        if (userData.preferences) {
+          setNotificationPreferences(prev => ({
+            ...prev,
+            push: userData.preferences.push !== false,
+            email: userData.preferences.email !== false,
+            sms: userData.preferences.sms === true,
+            transactionAlerts: userData.preferences.transactionAlerts !== false,
+            marketingEmails: userData.preferences.marketingEmails === true,
+            securityAlerts: userData.preferences.securityAlerts !== false,
+            lowBalanceAlerts: userData.preferences.lowBalanceAlerts !== false,
+            largeTransactionAlerts: userData.preferences.largeTransactionAlerts !== false,
+          }));
         }
       } else {
         setBusinessProfile(null);
@@ -131,6 +187,33 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveNotificationPreferences = async () => {
+    if (!user) return;
+
+    setSavingPreferences(true);
+    try {
+      const success = await updateNotificationPreferences(user.uid, notificationPreferences);
+      
+      if (success) {
+        toast({
+          title: 'Preferences Saved',
+          description: 'Your notification preferences have been updated successfully.',
+        });
+      } else {
+        throw new Error('Failed to save preferences');
+      }
+    } catch (error: any) {
+      console.error('Error saving notification preferences:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save notification preferences. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
+
   const getBusinessInitials = (name?: string) => {
     if (!name) return 'B';
     return name
@@ -162,57 +245,170 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how we contact you.</CardDescription>
+                <CardDescription>Manage how we contact you and what notifications you receive.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start justify-between p-4 rounded-lg border">
-                  <div className='space-y-1'>
-                    <Label htmlFor="email-notifications" className="flex items-center"><Mail className="mr-2 h-4 w-4" /> Email Notifications</Label>
-                    <p className="text-xs text-muted-foreground">Receive updates about transactions and account security via email.</p>
+                {/* Delivery Channels */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-muted-foreground">Delivery Channels</Label>
+                  <div className="flex items-start justify-between p-4 rounded-lg border">
+                    <div className='space-y-1'>
+                      <Label htmlFor="email-notifications" className="flex items-center">
+                        <Mail className="mr-2 h-4 w-4" /> Email Notifications
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Receive updates about transactions and account security via email.</p>
+                    </div>
+                    <Switch 
+                      id="email-notifications" 
+                      checked={notificationPreferences.email}
+                      onCheckedChange={(checked) => 
+                        setNotificationPreferences(prev => ({ ...prev, email: checked }))
+                      }
+                    />
                   </div>
-                  <Switch id="email-notifications" defaultChecked />
-                </div>
-                <div className="flex items-start justify-between p-4 rounded-lg border">
-                  <div className='space-y-1'>
-                    <Label htmlFor="sms-notifications" className="flex items-center"><MessageSquare className="mr-2 h-4 w-4" /> SMS Notifications</Label>
-                    <p className="text-xs text-muted-foreground">Get critical alerts via text message.</p>
+                  <div className="flex items-start justify-between p-4 rounded-lg border">
+                    <div className='space-y-1'>
+                      <Label htmlFor="push-notifications" className="flex items-center">
+                        <Smartphone className="mr-2 h-4 w-4" /> Push Notifications
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Get real-time alerts on your device via push notifications.</p>
+                    </div>
+                    <Switch 
+                      id="push-notifications" 
+                      checked={notificationPreferences.push}
+                      onCheckedChange={(checked) => 
+                        setNotificationPreferences(prev => ({ ...prev, push: checked }))
+                      }
+                    />
                   </div>
-                  <Switch id="sms-notifications" />
-                </div>
-                <div className="flex items-start justify-between p-4 rounded-lg border">
-                  <div className='space-y-1'>
-                    <Label htmlFor="in-app-notifications" className="flex items-center"><Bell className="mr-2 h-4 w-4" /> In-App Notifications</Label>
-                    <p className="text-xs text-muted-foreground">Get real-time alerts within the dashboard.</p>
+                  <div className="flex items-start justify-between p-4 rounded-lg border">
+                    <div className='space-y-1'>
+                      <Label htmlFor="sms-notifications" className="flex items-center">
+                        <MessageSquare className="mr-2 h-4 w-4" /> SMS Notifications
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Get critical alerts via text message.</p>
+                    </div>
+                    <Switch 
+                      id="sms-notifications" 
+                      checked={notificationPreferences.sms}
+                      onCheckedChange={(checked) => 
+                        setNotificationPreferences(prev => ({ ...prev, sms: checked }))
+                      }
+                    />
                   </div>
-                  <Switch id="in-app-notifications" defaultChecked />
+                  <div className="flex items-start justify-between p-4 rounded-lg border">
+                    <div className='space-y-1'>
+                      <Label htmlFor="in-app-notifications" className="flex items-center">
+                        <Bell className="mr-2 h-4 w-4" /> In-App Notifications
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Get real-time alerts within the dashboard. (Always enabled)</p>
+                    </div>
+                    <Switch id="in-app-notifications" checked={true} disabled />
+                  </div>
                 </div>
+
                 <Separator />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Transaction Alerts</Label>
-                        <div className="flex items-center space-x-2">
-                            <Switch id="toggle-trans-alerts" defaultChecked/>
-                            <Label htmlFor="toggle-trans-alerts" className="text-xs text-muted-foreground">Enable/Disable</Label>
-                        </div>
+
+                {/* Notification Types */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-muted-foreground">Notification Types</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start justify-between p-4 rounded-lg border">
+                      <div className='space-y-1 flex-1'>
+                        <Label htmlFor="transaction-alerts" className="flex items-center">
+                          <TrendingUp className="mr-2 h-4 w-4" /> Transaction Alerts
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Alerts for successful, failed, or pending transactions.</p>
+                      </div>
+                      <Switch 
+                        id="transaction-alerts" 
+                        checked={notificationPreferences.transactionAlerts}
+                        onCheckedChange={(checked) => 
+                          setNotificationPreferences(prev => ({ ...prev, transactionAlerts: checked }))
+                        }
+                      />
                     </div>
-                     <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Promotions</Label>
-                        <div className="flex items-center space-x-2">
-                            <Switch id="toggle-promo" />
-                            <Label htmlFor="toggle-promo" className="text-xs text-muted-foreground">Enable/Disable</Label>
-                        </div>
+                    <div className="flex items-start justify-between p-4 rounded-lg border">
+                      <div className='space-y-1 flex-1'>
+                        <Label htmlFor="security-alerts" className="flex items-center">
+                          <ShieldCheck className="mr-2 h-4 w-4" /> Security Alerts
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Password changes, login alerts, and security warnings.</p>
+                      </div>
+                      <Switch 
+                        id="security-alerts" 
+                        checked={notificationPreferences.securityAlerts}
+                        onCheckedChange={(checked) => 
+                          setNotificationPreferences(prev => ({ ...prev, securityAlerts: checked }))
+                        }
+                      />
                     </div>
-                     <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Security Warnings</Label>
-                        <div className="flex items-center space-x-2">
-                            <Switch id="toggle-security" defaultChecked/>
-                            <Label htmlFor="toggle-security" className="text-xs text-muted-foreground">Enable/Disable</Label>
-                        </div>
+                    <div className="flex items-start justify-between p-4 rounded-lg border">
+                      <div className='space-y-1 flex-1'>
+                        <Label htmlFor="low-balance-alerts" className="flex items-center">
+                          <Wallet className="mr-2 h-4 w-4" /> Low Balance Alerts
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Get notified when your wallet balance is low.</p>
+                      </div>
+                      <Switch 
+                        id="low-balance-alerts" 
+                        checked={notificationPreferences.lowBalanceAlerts}
+                        onCheckedChange={(checked) => 
+                          setNotificationPreferences(prev => ({ ...prev, lowBalanceAlerts: checked }))
+                        }
+                      />
                     </div>
+                    <div className="flex items-start justify-between p-4 rounded-lg border">
+                      <div className='space-y-1 flex-1'>
+                        <Label htmlFor="large-transaction-alerts" className="flex items-center">
+                          <AlertCircle className="mr-2 h-4 w-4" /> Large Transaction Alerts
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Alerts for transactions above $1,000.</p>
+                      </div>
+                      <Switch 
+                        id="large-transaction-alerts" 
+                        checked={notificationPreferences.largeTransactionAlerts}
+                        onCheckedChange={(checked) => 
+                          setNotificationPreferences(prev => ({ ...prev, largeTransactionAlerts: checked }))
+                        }
+                      />
+                    </div>
+                    <div className="flex items-start justify-between p-4 rounded-lg border">
+                      <div className='space-y-1 flex-1'>
+                        <Label htmlFor="marketing-emails" className="flex items-center">
+                          <Sparkles className="mr-2 h-4 w-4" /> Promotions & Marketing
+                        </Label>
+                        <p className="text-xs text-muted-foreground">Receive updates about new features and special offers.</p>
+                      </div>
+                      <Switch 
+                        id="marketing-emails" 
+                        checked={notificationPreferences.marketingEmails}
+                        onCheckedChange={(checked) => 
+                          setNotificationPreferences(prev => ({ ...prev, marketingEmails: checked }))
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>Save Notification Preferences</Button>
+                <Button 
+                  onClick={handleSaveNotificationPreferences}
+                  disabled={savingPreferences}
+                  className="w-full"
+                >
+                  {savingPreferences ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Save Notification Preferences
+                    </>
+                  )}
+                </Button>
               </CardFooter>
             </Card>
 
