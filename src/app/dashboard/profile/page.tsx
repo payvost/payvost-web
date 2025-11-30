@@ -1072,7 +1072,7 @@ export default function ProfilePage() {
                                     </Button>
                                 ) : userData?.kycProfile?.tiers?.tier2?.status === 'approved' ? (
                                     <Button className="w-full" asChild>
-                                        <Link href="/dashboard/get-started/onboarding/business">
+                                        <Link href="/dashboard/kyc/upgrade-tier3">
                                             Upgrade to Tier 3 <ArrowRight className="ml-2 h-4 w-4"/>
                                         </Link>
                                     </Button>
