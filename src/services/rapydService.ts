@@ -363,19 +363,32 @@ class RapydService {
       throw new RapydError('Rapyd credentials not configured');
     }
 
-    const body = data ? JSON.stringify(data) : '';
+    // Normalize body: remove whitespace for signature (Rapyd requirement)
+    // For GET requests, body should be empty string
+    let body = '';
+    if (data && method !== 'GET') {
+      // Stringify without any whitespace
+      body = JSON.stringify(data).replace(/\s+/g, '');
+    }
+    
     const urlPath = endpoint;
     const authHeaders = this.getAuthHeaders(method, urlPath, body);
 
     const url = `${this.baseUrl}${endpoint}`;
 
     try {
+      // Build headers - only include Content-Type for non-GET requests
+      const headers: Record<string, string> = {
+        ...authHeaders,
+      };
+      
+      if (method !== 'GET' && body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
+        headers,
         body: method !== 'GET' ? body : undefined,
       });
 
