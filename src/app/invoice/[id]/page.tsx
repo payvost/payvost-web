@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DocumentData } from 'firebase/firestore';
 import StripeCheckout from '@/components/StripeCheckout';
-import { RapydInvoiceCheckout } from '@/components/RapydInvoiceCheckout';
+import { InvoicePaymentOptions } from '@/components/InvoicePaymentOptions';
 import { SiteHeader } from '@/components/site-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -341,6 +341,12 @@ export default function PublicInvoicePage() {
         description: "Complete your payment below.",
       });
       // The StripeCheckout component is already rendered below, so we just guide the user.
+    } else if (invoice.paymentMethod === 'rapyd') {
+      // Scroll to payment options (they're already rendered below)
+      const paymentSection = document.getElementById('payment-options');
+      if (paymentSection) {
+        paymentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } else {
       toast({
         title: "Payment not available",
@@ -578,10 +584,10 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
-            {/* ---------------- Rapyd Payment Form ---------------- */}
+            {/* ---------------- Payment Options ---------------- */}
             {invoice.paymentMethod === 'rapyd' && currentStatus !== 'Paid' && !isRenderForPdf && (
-              <div className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
-                <RapydInvoiceCheckout
+              <div id="payment-options" className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
+                <InvoicePaymentOptions
                   invoiceId={id}
                   amount={invoice.grandTotal}
                   currency={invoice.currency}
