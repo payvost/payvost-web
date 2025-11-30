@@ -70,3 +70,4 @@ payvost-web.git.bfg-report
 
 # markdown files
 .mdfiles
+.env*.local
