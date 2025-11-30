@@ -9,8 +9,10 @@ import { requireAuth } from '@/lib/api/auth';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Require authentication
-    await requireAuth(req);
+    // Authentication is optional for public invoice pages
+    // Check if auth header exists, but don't require it
+    const authHeader = req.headers.get('authorization');
+    const isAuthenticated = authHeader && authHeader.toLowerCase().startsWith('bearer ');
 
     const { searchParams } = new URL(req.url);
     const countryCode = searchParams.get('country');
@@ -22,7 +24,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get payment methods from Rapyd
+    // Get payment methods from Rapyd (works without authentication)
     const paymentMethods = await rapydService.getPaymentMethodsByCountry(countryCode);
 
     return NextResponse.json({ 
