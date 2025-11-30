@@ -43,9 +43,16 @@ export function EnhancedTabs({
 }: EnhancedTabsProps) {
   const initialValue = defaultValue || tabs[0]?.value || '';
   const [internalValue, setInternalValue] = useState(initialValue);
-  const activeValue = controlledValue !== undefined ? controlledValue : internalValue;
   
-  // Ensure activeValue is never empty
+  // Sync internal state when controlledValue changes
+  useEffect(() => {
+    if (controlledValue !== undefined) {
+      setInternalValue(controlledValue);
+    }
+  }, [controlledValue]);
+  
+  // Determine the active value
+  const activeValue = controlledValue !== undefined ? controlledValue : internalValue;
   const safeActiveValue = activeValue || initialValue;
 
   const handleValueChange = (newValue: string) => {
@@ -55,18 +62,21 @@ export function EnhancedTabs({
     onValueChange?.(newValue);
   };
 
-  const variantStyles = {
-    default: 'bg-muted',
+  // TabsList styles - only override background for non-default variants
+  const listStyles = {
+    default: '', // Use base component's bg-muted
     pills: 'bg-transparent p-0 gap-2',
     underline: 'bg-transparent border-b p-0 h-auto',
   };
 
-  const triggerStyles = {
-    default: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
-    pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
-    underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative overflow-visible',
+  // TabsTrigger additional styles - don't override base active styles for default variant
+  const triggerAdditionalStyles = {
+    default: '', // Base component already has active styles, just add layout
+    pills: 'rounded-full px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:scale-105',
+    underline: 'rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:font-semibold',
   };
 
+  // Build tabs props
   const tabsProps: any = {
     ...props,
     orientation,
@@ -85,30 +95,31 @@ export function EnhancedTabs({
     <Tabs {...tabsProps}>
       <TabsList className={cn(
         "overflow-x-auto sm:overflow-visible overflow-y-visible",
-        variantStyles[variant],
+        listStyles[variant],
         orientation === 'vertical' && 'flex-col h-auto w-auto'
       )}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = safeActiveValue === tab.value;
+          
           const content = (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
               disabled={tab.disabled}
               className={cn(
-                triggerStyles[variant], 
                 "flex items-center gap-2",
-                variant === 'default' && "data-[state=active]:[&_svg]:!text-primary-foreground",
+                triggerAdditionalStyles[variant],
+                // Icon styles for active state
+                variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
                 variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                "data-[state=active]:[&_svg]:scale-110",
-                "[&_svg]:transition-all [&_svg]:duration-200"
+                variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
+                "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
+                "data-[state=active]:[&_svg]:scale-110"
               )}
             >
               {Icon && (
-                <Icon className={cn(
-                  "h-4 w-4 transition-all duration-200 shrink-0"
-                )} />
+                <Icon className="h-4 w-4" />
               )}
               <span className="relative">
                 {tab.label}
@@ -156,4 +167,3 @@ export function EnhancedTabs({
 }
 
 // Note: Use TabsContent from '@/components/ui/tabs' directly when using EnhancedTabs
-
