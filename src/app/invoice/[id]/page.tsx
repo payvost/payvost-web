@@ -381,18 +381,37 @@ export default function PublicInvoicePage() {
     );
   }
 
-  const currentStatus = invoice.status as Status;
-  const currentStatusInfo = statusInfo[currentStatus];
+  // Normalize status from backend (might be uppercase like 'PENDING') to title case
+  const normalizeStatus = (status: string | undefined): Status => {
+    if (!status) return 'Pending';
+    const statusLower = String(status).toLowerCase();
+    if (statusLower === 'paid') return 'Paid';
+    if (statusLower === 'pending') return 'Pending';
+    if (statusLower === 'overdue') return 'Overdue';
+    if (statusLower === 'draft') return 'Draft';
+    return 'Pending'; // Default fallback
+  };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    const symbol = currencySymbols[currency] || currency;
-    const formattedAmount = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+  const currentStatus = normalizeStatus(invoice.status);
+  const currentStatusInfo = statusInfo[currentStatus] || statusInfo['Pending']; // Fallback to Pending if status not found
+
+  const formatCurrency = (amount: number | string | undefined | null, currency: string | undefined | null) => {
+    const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount || 0));
+    if (isNaN(numAmount)) return '$0.00';
+    
+    const safeCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'USD';
+    const symbol = currencySymbols[safeCurrency] || safeCurrency;
+    const formattedAmount = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numAmount);
     return `${symbol}${formattedAmount}`;
   };
 
-  const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
-  const taxAmount = invoice.grandTotal - subtotal;
-  const amountInWords = numberToWords(invoice.grandTotal, invoice.currency);
+  const subtotal = (invoice.items || []).reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.price || 0)), 0);
+  const taxAmount = (invoice.grandTotal || 0) - subtotal;
+  
+  // Safely convert amount and currency for numberToWords
+  const safeGrandTotal = typeof invoice.grandTotal === 'number' ? invoice.grandTotal : parseFloat(String(invoice.grandTotal || 0));
+  const safeCurrency = invoice.currency && typeof invoice.currency === 'string' ? invoice.currency : 'USD';
+  const amountInWords = numberToWords(safeGrandTotal, safeCurrency);
 
   return (
     <>
@@ -455,12 +474,12 @@ export default function PublicInvoicePage() {
                 )}
                  <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-primary">INVOICE</h2>
-                    <p className="text-xs sm:text-sm text-muted-foreground"># {invoice.invoiceNumber}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground"># {invoice.invoiceNumber || invoice.id || 'N/A'}</p>
                  </div>
             </div>
             <div className="text-left sm:text-right">
-              <Badge variant={currentStatusInfo.variant} className="capitalize flex items-center gap-1.5 text-sm sm:text-lg w-fit sm:w-auto">
-                {currentStatusInfo.icon} {invoice.status}
+              <Badge variant={currentStatusInfo?.variant || 'secondary'} className="capitalize flex items-center gap-1.5 text-sm sm:text-lg w-fit sm:w-auto">
+                {currentStatusInfo?.icon} {currentStatus}
               </Badge>
             </div>
           </CardHeader>
@@ -469,18 +488,36 @@ export default function PublicInvoicePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
               <div className="space-y-1">
                 <h3 className="font-semibold text-sm sm:text-base">Billed To</h3>
-                <p className="text-xs sm:text-sm">{invoice.toName}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.toAddress}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground break-all">{invoice.toEmail}</p>
+                <p className="text-xs sm:text-sm">{invoice.toName || 'N/A'}</p>
+                {invoice.toAddress && <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.toAddress}</p>}
+                {invoice.toEmail && <p className="text-xs sm:text-sm text-muted-foreground break-all">{invoice.toEmail}</p>}
               </div>
               <div className="space-y-1">
                 <h3 className="font-semibold text-sm sm:text-base">From</h3>
-                <p className="text-xs sm:text-sm">{invoice.fromName}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.fromAddress}</p>
+                <p className="text-xs sm:text-sm">{invoice.fromName || 'N/A'}</p>
+                {invoice.fromAddress && <p className="text-xs sm:text-sm text-muted-foreground break-words">{invoice.fromAddress}</p>}
               </div>
               <div className="space-y-1 text-left sm:text-left md:text-right col-span-1 sm:col-span-2 md:col-span-1">
-                <p className="text-xs sm:text-sm"><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate), 'PPP')}</p>
-                <p className="text-xs sm:text-sm"><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate), 'PPP')}</p>
+                <p className="text-xs sm:text-sm"><strong className="font-semibold">Issue Date:</strong> {
+                  invoice.issueDate ? (() => {
+                    try {
+                      const date = invoice.issueDate?.toDate ? invoice.issueDate.toDate() : new Date(invoice.issueDate);
+                      return isNaN(date.getTime()) ? 'N/A' : format(date, 'PPP');
+                    } catch {
+                      return 'N/A';
+                    }
+                  })() : 'N/A'
+                }</p>
+                <p className="text-xs sm:text-sm"><strong className="font-semibold">Due Date:</strong> {
+                  invoice.dueDate ? (() => {
+                    try {
+                      const date = invoice.dueDate?.toDate ? invoice.dueDate.toDate() : new Date(invoice.dueDate);
+                      return isNaN(date.getTime()) ? 'N/A' : format(date, 'PPP');
+                    } catch {
+                      return 'N/A';
+                    }
+                  })() : 'N/A'
+                }</p>
               </div>
             </div>
 
@@ -497,12 +534,12 @@ export default function PublicInvoicePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoice.items.map((item: any, index: number) => (
+                    {(invoice.items || []).map((item: any, index: number) => (
                       <TableRow key={index} className="border-b border-border last:border-b-0">
-                        <TableCell className="font-medium text-xs sm:text-sm py-3 sm:py-4">{item.description}</TableCell>
-                        <TableCell className="text-center text-xs sm:text-sm py-3 sm:py-4">{item.quantity}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm py-3 sm:py-4">{formatCurrency(item.price, invoice.currency)}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm font-semibold py-3 sm:py-4">{formatCurrency(item.quantity * item.price, invoice.currency)}</TableCell>
+                        <TableCell className="font-medium text-xs sm:text-sm py-3 sm:py-4">{item?.description || 'N/A'}</TableCell>
+                        <TableCell className="text-center text-xs sm:text-sm py-3 sm:py-4">{item?.quantity || 0}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm py-3 sm:py-4">{formatCurrency(item?.price, invoice.currency)}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm font-semibold py-3 sm:py-4">{formatCurrency((item?.quantity || 0) * (item?.price || 0), invoice.currency)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -535,14 +572,14 @@ export default function PublicInvoicePage() {
             )}
 
             {/* ---------------- Stripe Payment Form ---------------- */}
-            {invoice.paymentMethod === 'stripe' && clientSecret && invoice.status !== 'Paid' && !isRenderForPdf && (
+            {invoice.paymentMethod === 'stripe' && clientSecret && currentStatus !== 'Paid' && !isRenderForPdf && (
               <div className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
                 <StripeCheckout clientSecret={clientSecret} />
               </div>
             )}
 
             {/* ---------------- Rapyd Payment Form ---------------- */}
-            {invoice.paymentMethod === 'rapyd' && invoice.status !== 'Paid' && !isRenderForPdf && (
+            {invoice.paymentMethod === 'rapyd' && currentStatus !== 'Paid' && !isRenderForPdf && (
               <div className="mt-6 sm:mt-8 border-t border-border pt-6 sm:pt-8">
                 <RapydInvoiceCheckout
                   invoiceId={id}
@@ -563,7 +600,7 @@ export default function PublicInvoicePage() {
             <CardFooter className="bg-muted/50 p-4 sm:p-6 flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
               <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">Pay with Payvost for a secure and seamless experience.</p>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe' || invoice.paymentMethod === 'rapyd') && invoice.status !== 'Paid' && (
+                {(invoice.paymentMethod === 'manual' || invoice.paymentMethod === 'stripe' || invoice.paymentMethod === 'rapyd') && currentStatus !== 'Paid' && (
                   <Button 
                     size="lg" 
                     onClick={handlePayNow}
@@ -572,7 +609,7 @@ export default function PublicInvoicePage() {
                     Pay {formatCurrency(invoice.grandTotal, invoice.currency)} Now
                   </Button>
                 )}
-                {invoice.status === 'Paid' && (
+                {currentStatus === 'Paid' && (
                   <Button size="lg" disabled className="w-full sm:w-auto">
                     Paid
                   </Button>

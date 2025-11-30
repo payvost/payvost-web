@@ -58,7 +58,16 @@ function convertNumber(num: number): string {
   return result;
 }
 
-export function numberToWords(amount: number, currency: string = 'USD'): string {
+export function numberToWords(amount: number | string | undefined | null, currency: string | undefined | null = 'USD'): string {
+  // Validate and convert amount
+  const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount || 0));
+  if (isNaN(numAmount)) {
+    return 'Zero Dollars Only';
+  }
+
+  // Validate and normalize currency
+  const safeCurrency = currency && typeof currency === 'string' ? currency.toUpperCase() : 'USD';
+  
   const currencyNames: { [key: string]: { singular: string; plural: string } } = {
     USD: { singular: 'Dollar', plural: 'Dollars' },
     EUR: { singular: 'Euro', plural: 'Euros' },
@@ -66,10 +75,10 @@ export function numberToWords(amount: number, currency: string = 'USD'): string 
     NGN: { singular: 'Naira', plural: 'Naira' },
   };
   
-  const currencyInfo = currencyNames[currency.toUpperCase()] || { singular: currency, plural: currency };
+  const currencyInfo = currencyNames[safeCurrency] || { singular: safeCurrency, plural: safeCurrency };
   
-  const wholePart = Math.floor(amount);
-  const fractionalPart = Math.round((amount - wholePart) * 100);
+  const wholePart = Math.floor(numAmount);
+  const fractionalPart = Math.round((numAmount - wholePart) * 100);
   
   let result = convertNumber(wholePart);
   
