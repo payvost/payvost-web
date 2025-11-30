@@ -142,8 +142,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
       <SidebarProvider style={{ "--sidebar-width": "12rem" } as React.CSSProperties}>
         <TooltipProvider>
         <Sidebar>
-          <SidebarHeader className="h-12 lg:h-[52px] flex items-center px-4 border-b">
-            <Link href="/" className="flex items-center justify-start">
+          <SidebarHeader className="h-12 lg:h-[52px] flex items-center justify-start px-4 border-b">
+            <Link href="/" className="flex items-center">
               <Icons.logo className="h-8" />
             </Link>
           </SidebarHeader>

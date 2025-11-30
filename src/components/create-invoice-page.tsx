@@ -475,7 +475,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <Label htmlFor="taxRate">Tax (%)</Label>
-                                    <Input type="number" id="taxRate" {...register('taxRate')} className="w-20 h-8" placeholder="0" />
+                                    <Input type="number" step="0.01" id="taxRate" {...register('taxRate')} className="w-20 h-8" placeholder="0" />
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Tax Amount</span>

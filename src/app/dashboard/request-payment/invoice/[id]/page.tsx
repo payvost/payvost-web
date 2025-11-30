@@ -115,7 +115,7 @@ export default function InvoiceDetailsPage() {
                 title: 'Invoice Deleted',
                 description: 'The invoice has been permanently deleted.',
             });
-            router.push('/dashboard/request-payment');
+            router.push('/dashboard/request-payment?tab=invoice');
         } catch (error) {
             toast({ title: 'Error', description: 'Could not delete the invoice.', variant: 'destructive' });
         } finally {
@@ -226,7 +226,7 @@ export default function InvoiceDetailsPage() {
                 <div className="flex items-center justify-between space-y-2">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                            <Link href="/dashboard/request-payment">
+                            <Link href="/dashboard/request-payment?tab=invoice">
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
@@ -386,20 +386,6 @@ export default function InvoiceDetailsPage() {
                             <div>
                                 <h4 className="font-semibold">Notes</h4>
                                 <p className="text-sm text-muted-foreground">{String(invoice.notes)}</p>
-                            </div>
-                        )}
-
-                        {invoice.publicUrl && (
-                            <div className="p-4 bg-muted rounded-lg">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium">Public Link</p>
-                                        <p className="text-xs text-muted-foreground font-mono">{String(invoice.publicUrl)}</p>
-                                    </div>
-                                    <Button variant="outline" size="sm" onClick={() => copyLink(invoice.publicUrl)}>
-                                        <Copy className="mr-2 h-4 w-4" />Copy
-                                    </Button>
-                                </div>
                             </div>
                         )}
                     </CardContent>
