@@ -52,13 +52,13 @@ export function EnhancedTabs({
   };
 
   const variantStyles = {
-    default: '',
+    default: 'bg-muted',
     pills: 'bg-transparent p-0 gap-2',
     underline: 'bg-transparent border-b p-0 h-auto',
   };
 
   const triggerStyles = {
-    default: 'transition-all duration-200 relative overflow-visible font-medium border border-transparent data-[state=active]:!bg-background data-[state=active]:!text-foreground data-[state=active]:!border-border data-[state=active]:shadow-sm [&[data-state=active]]:!bg-background [&[data-state=active]]:!text-foreground [&[data-state=active]]:!border-border',
+    default: 'transition-all duration-200 relative overflow-visible font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm',
     pills: 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-full px-4 transition-all duration-200 data-[state=active]:scale-105',
     underline: 'data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:bg-transparent data-[state=active]:font-semibold transition-all duration-200 relative overflow-visible',
   };
