@@ -61,6 +61,7 @@ function PaymentsPageContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string | undefined>();
   
   // Tab state management
   const tabFromUrl = searchParams.get('tab');
@@ -352,10 +353,14 @@ function PaymentsPageContent() {
           <TabsContent value="remittances" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div className="lg:col-span-2">
-                    <Payvost />
+                    <Payvost initialBeneficiaryId={selectedBeneficiaryId} />
                 </div>
                 <div className="lg:col-span-1">
-                    <Beneficiaries />
+                    <Beneficiaries 
+                      onSelectBeneficiary={(id) => {
+                        setSelectedBeneficiaryId(id);
+                      }}
+                    />
                 </div>
             </div>
           </TabsContent>
