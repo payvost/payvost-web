@@ -159,6 +159,48 @@ async function handlePaymentCompleted(data: any) {
       }
     }
 
+    // Handle payment link checkout completion
+    const merchantReferenceId = data.merchant_reference_id || data.metadata?.paymentLinkId;
+    if (merchantReferenceId) {
+      try {
+        const { db } = await import('@/lib/firebase-admin');
+        const paymentLinkRef = db.collection('paymentRequests').doc(merchantReferenceId);
+        const linkDoc = await paymentLinkRef.get();
+
+        if (linkDoc.exists) {
+          const linkData = linkDoc.data();
+          const updates: any = {
+            lastPaymentAt: new Date(),
+          };
+
+          // If one-time link, mark as used
+          if (linkData?.linkType === 'one-time') {
+            updates.used = true;
+            updates.status = 'Paid';
+          }
+
+          // Record payment
+          await db.collection('paymentRequests')
+            .doc(merchantReferenceId)
+            .collection('payments')
+            .add({
+              rapydPaymentId: paymentId,
+              rapydCheckoutId: data.checkout_id || data.checkout?.id,
+              amount: data.amount || linkData?.numericAmount,
+              currency: data.currency_code || linkData?.currency,
+              status: status === 'CLO' || status === 'ACT' ? 'COMPLETED' : 'PROCESSING',
+              method: data.payment_method_type || 'Unknown',
+              createdAt: new Date(),
+            });
+
+          await paymentLinkRef.update(updates);
+          console.log(`[Rapyd Webhook] Updated payment link ${merchantReferenceId}`);
+        }
+      } catch (paymentLinkError) {
+        console.error('[Rapyd Webhook] Error updating payment link:', paymentLinkError);
+      }
+    }
+
     // Find transaction by provider transaction ID
     const transaction = await prisma.externalTransaction.findFirst({
       where: {

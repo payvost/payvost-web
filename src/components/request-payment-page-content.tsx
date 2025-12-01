@@ -28,6 +28,7 @@ import { sendPaymentRequestEmail } from '@/services/emailService';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { QRCodeDialog } from '@/components/qr-code-dialog';
 
 
 function PaymentLinkTab() {
@@ -40,6 +41,7 @@ function PaymentLinkTab() {
   const router = useRouter();
   const [currency, setCurrency] = useState('USD');
   const [linkType, setLinkType] = useState<'one-time' | 'reusable'>('one-time');
+  const [showQRCode, setShowQRCode] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -250,7 +252,7 @@ function PaymentLinkTab() {
               <Button variant="outline" size="icon" onClick={() => copyLink(generatedLink)}>
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={() => setShowQRCode(true)}>
                 <QrCode className="h-4 w-4" />
               </Button>
             </CardContent>
@@ -332,6 +334,16 @@ function PaymentLinkTab() {
            )}
         </Card>
       </div>
+
+      {/* QR Code Dialog */}
+      {generatedLink && (
+        <QRCodeDialog
+          isOpen={showQRCode}
+          setIsOpen={setShowQRCode}
+          url={generatedLink}
+          title="Payment Link QR Code"
+        />
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { QRCodeDialog } from '@/components/qr-code-dialog';
 
 const InvoiceTab = dynamic(() => import('@/components/invoice-tab').then(mod => mod.InvoiceTab), { 
     loading: () => <Skeleton className="h-96 w-full" />,
@@ -56,6 +57,7 @@ function PaymentLinkTab() {
   const [currency, setCurrency] = useState('USD');
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [linkType, setLinkType] = useState<'one-time' | 'reusable'>('one-time');
+  const [showQRCode, setShowQRCode] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -283,7 +285,7 @@ function PaymentLinkTab() {
               <Button variant="outline" size="icon" onClick={() => copyLink(generatedLink)}>
                 <Copy className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={() => setShowQRCode(true)}>
                 <QrCode className="h-4 w-4" />
               </Button>
             </CardContent>
@@ -365,6 +367,16 @@ function PaymentLinkTab() {
            )}
         </Card>
       </div>
+
+      {/* QR Code Dialog */}
+      {generatedLink && (
+        <QRCodeDialog
+          isOpen={showQRCode}
+          setIsOpen={setShowQRCode}
+          url={generatedLink}
+          title="Payment Link QR Code"
+        />
+      )}
     </div>
   );
 }
