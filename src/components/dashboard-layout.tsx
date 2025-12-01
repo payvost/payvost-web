@@ -172,7 +172,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                                 <Link href={item.href}>
                                     {item.icon}
                                     {item.label}
-                                    {item.isNew && <SidebarMenuBadge>New</SidebarMenuBadge>}
+                                    {item.isNew && <SidebarMenuBadge className="right-2 bg-primary text-primary-foreground px-1.5 text-[10px] leading-tight font-semibold">New</SidebarMenuBadge>}
                                     {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
                                 </Link>
                             </SidebarMenuButton>

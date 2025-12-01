@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { sendPaymentRequestEmail } from '@/services/emailService';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 function PaymentLinkTab() {
@@ -38,6 +39,7 @@ function PaymentLinkTab() {
   const { toast } = useToast();
   const router = useRouter();
   const [currency, setCurrency] = useState('USD');
+  const [linkType, setLinkType] = useState<'one-time' | 'reusable'>('one-time');
 
   useEffect(() => {
     if (!user) {
@@ -87,6 +89,7 @@ function PaymentLinkTab() {
         userId: user.uid,
         numericAmount: parseFloat(amount),
         currency: currency,
+        linkType: linkType, // 'one-time' or 'reusable'
     };
 
     try {
@@ -128,6 +131,7 @@ function PaymentLinkTab() {
 
       form.reset();
       setCurrency('USD');
+      setLinkType('one-time');
       setGeneratedLink(link);
     } catch (err) {
       console.error('Error saving request:', err);
@@ -199,6 +203,31 @@ function PaymentLinkTab() {
                   placeholder="Send an invoice directly to their email"
                 />
               </div>
+              <div className="space-y-3">
+                <Label>Link Type</Label>
+                <RadioGroup value={linkType} onValueChange={(value) => setLinkType(value as 'one-time' | 'reusable')} className="grid grid-cols-2 gap-4">
+                  <div>
+                    <RadioGroupItem value="one-time" id="one-time" className="peer sr-only" />
+                    <Label 
+                      htmlFor="one-time" 
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                    >
+                      <span className="font-medium">One-Time</span>
+                      <span className="text-xs text-muted-foreground mt-1 text-center">Link expires after first payment</span>
+                    </Label>
+                  </div>
+                  <div>
+                    <RadioGroupItem value="reusable" id="reusable" className="peer sr-only" />
+                    <Label 
+                      htmlFor="reusable" 
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
+                    >
+                      <span className="font-medium">Reusable</span>
+                      <span className="text-xs text-muted-foreground mt-1 text-center">Link can be used multiple times</span>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <p className="text-sm text-muted-foreground">Fees may apply.</p>
@@ -258,7 +287,14 @@ function PaymentLinkTab() {
                     <TableRow key={req.id} className="cursor-pointer" onClick={() => router.push(`/dashboard/request-payment/${req.id}`)}>
                         <TableCell>
                         <div className="font-medium truncate">{req.to}</div>
-                        <div className="text-sm text-muted-foreground">{new Date(req.createdAt.toDate()).toLocaleDateString()}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                            {new Date(req.createdAt.toDate()).toLocaleDateString()}
+                            {req.linkType && (
+                                <Badge variant="outline" className="text-xs">
+                                    {req.linkType === 'reusable' ? 'Reusable' : 'One-Time'}
+                                </Badge>
+                            )}
+                        </div>
                         </TableCell>
                         <TableCell>{req.amount}</TableCell>
                         <TableCell className="text-right">
