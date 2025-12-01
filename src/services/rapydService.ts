@@ -149,6 +149,53 @@ export interface Customer {
 }
 
 /**
+ * Checkout types
+ */
+export interface CreateCheckoutRequest {
+  amount: number;
+  currency: string;
+  country: string;
+  description?: string;
+  merchant_reference_id?: string;
+  customer?: string;
+  payment_method_types_include?: string[];
+  payment_method_types_exclude?: string[];
+  metadata?: Record<string, any>;
+  complete_payment_url?: string;
+  error_payment_url?: string;
+  cancel_payment_url?: string;
+  complete_checkout_url?: string;
+  error_checkout_url?: string;
+  cancel_checkout_url?: string;
+  expiration?: number;
+  language?: string;
+}
+
+export interface Checkout {
+  id: string;
+  amount: number;
+  currency: string;
+  country: string;
+  status: string;
+  description: string;
+  merchant_reference_id: string;
+  customer: string;
+  payment_method_types: string[];
+  payment_method_types_categories: string[];
+  checkout_url: string;
+  redirect_url: string;
+  complete_payment_url: string;
+  error_payment_url: string;
+  cancel_payment_url: string;
+  complete_checkout_url: string;
+  error_checkout_url: string;
+  cancel_checkout_url: string;
+  expiration: number;
+  created_at: number;
+  metadata: Record<string, any>;
+}
+
+/**
  * Payout types
  */
 export interface CreatePayoutRequest {
@@ -546,6 +593,42 @@ class RapydService {
     } catch (error) {
       throw new RapydError(
         `Failed to get customer: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Checkout =============
+
+  /**
+   * Create a checkout page
+   */
+  async createCheckout(checkoutData: CreateCheckoutRequest): Promise<Checkout> {
+    try {
+      return await this.request<Checkout>(
+        'POST',
+        PAYMENT_GATEWAYS.RAPYD.CHECKOUT,
+        checkoutData
+      );
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create checkout: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Get checkout by ID
+   */
+  async getCheckout(checkoutId: string): Promise<Checkout> {
+    try {
+      const endpoint = replaceUrlParams(
+        PAYMENT_GATEWAYS.RAPYD.CHECKOUT_BY_ID,
+        { checkoutId }
+      );
+      return await this.request<Checkout>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get checkout: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
