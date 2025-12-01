@@ -45,7 +45,11 @@ interface FeeBreakdown {
   };
 }
 
-export function Payvost() {
+interface PayvostProps {
+  initialBeneficiaryId?: string;
+}
+
+export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<Account[]>([]);
@@ -125,6 +129,28 @@ export function Payvost() {
 
     fetchData();
   }, [user, authLoading, fromWallet]);
+
+  // Handle initial beneficiary selection from beneficiaries card
+  useEffect(() => {
+    if (initialBeneficiaryId && initialBeneficiaryId !== selectedBeneficiary && beneficiaries.length > 0) {
+      setSelectedBeneficiary(initialBeneficiaryId);
+      // Switch to beneficiary tab
+      setActiveTab('beneficiary');
+      // Update recipient country based on selected beneficiary
+      const beneficiary = beneficiaries.find((b) => b.id === initialBeneficiaryId);
+      if (beneficiary?.countryCode) {
+        setRecipientCountry(beneficiary.countryCode);
+      } else if (beneficiary?.country) {
+        const countryMap: Record<string, string> = {
+          'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
+          'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
+          'Australia': 'AU', 'Germany': 'DE', 'France': 'FR',
+          'USA': 'US', 'NGA': 'NG', 'GBR': 'GB', 'GHA': 'GH'
+        };
+        setRecipientCountry(countryMap[beneficiary.country] || 'NG');
+      }
+    }
+  }, [initialBeneficiaryId, beneficiaries, selectedBeneficiary]);
 
   useEffect(() => {
     const selectedWallet = wallets.find((w) => w.currency === fromWallet);
