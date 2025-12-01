@@ -169,10 +169,12 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     {collectPaymentItems.map(item => (
                         <SidebarMenuItem key={item.href}>
                             <SidebarMenuButton asChild isActive={isActive(item.href)} disabled={item.comingSoon}>
-                                <Link href={item.href}>
+                                <Link href={item.href} className="flex items-center gap-2">
                                     {item.icon}
-                                    {item.label}
-                                    {item.isNew && <SidebarMenuBadge className="right-1 bg-primary text-primary-foreground px-1.5 text-[10px] leading-tight font-semibold">New</SidebarMenuBadge>}
+                                    <span className="flex items-center gap-1.5">
+                                        {item.label}
+                                        {item.isNew && <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">New</Badge>}
+                                    </span>
                                     {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
                                 </Link>
                             </SidebarMenuButton>

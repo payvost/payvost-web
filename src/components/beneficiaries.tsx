@@ -323,7 +323,7 @@ export function Beneficiaries({ onSelectBeneficiary }: BeneficiariesProps) {
                   className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                 >
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={b.avatar || `https://i.pravatar.cc/150?u=${b.email}`} />
+                    {b.avatar && <AvatarImage src={b.avatar} />}
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                       {getInitials(b.name)}
                     </AvatarFallback>

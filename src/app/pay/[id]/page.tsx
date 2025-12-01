@@ -138,16 +138,16 @@ export default function PaymentPage() {
         <SiteHeader />
         <main className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
-            <CardHeader>
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-4 w-1/2 mt-2" />
+            <CardHeader className="px-4 sm:px-6">
+              <Skeleton className="h-6 sm:h-8 w-3/4" />
+              <Skeleton className="h-3 sm:h-4 w-1/2 mt-2" />
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </CardContent>
-            <CardFooter>
-              <Skeleton className="h-12 w-full" />
+            <CardFooter className="px-4 sm:px-6">
+              <Skeleton className="h-11 sm:h-12 w-full" />
             </CardFooter>
           </Card>
         </main>
@@ -160,10 +160,10 @@ export default function PaymentPage() {
       <div className="flex flex-col min-h-screen">
         <SiteHeader />
         <main className="flex-1 flex items-center justify-center text-center p-4">
-          <div className="flex flex-col items-center gap-4">
-            <AlertCircle className="h-16 w-16 text-destructive" />
-            <h1 className="text-3xl font-bold">Payment Link Not Found</h1>
-            <p className="text-muted-foreground">
+          <div className="flex flex-col items-center gap-4 px-4">
+            <AlertCircle className="h-12 w-12 sm:h-16 sm:w-16 text-destructive" />
+            <h1 className="text-2xl sm:text-3xl font-bold">Payment Link Not Found</h1>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-md">
               This payment link is invalid or has been deactivated.
             </p>
           </div>
@@ -180,48 +180,71 @@ export default function PaymentPage() {
   const isUsed = request.linkType === 'one-time' && request.used;
   const paymentLinkUrl = `${window.location.origin}/pay/${id}`;
 
+  // Calculate responsive font size based on amount length
+  const getAmountFontSize = () => {
+    const amountStr = String(displayAmount);
+    const length = amountStr.length;
+    
+    // For very long amounts (15+ chars), use smaller base size
+    if (length >= 15) {
+      return 'text-2xl sm:text-3xl md:text-4xl lg:text-5xl';
+    }
+    // For long amounts (12-14 chars)
+    if (length >= 12) {
+      return 'text-3xl sm:text-4xl md:text-5xl lg:text-6xl';
+    }
+    // For medium amounts (8-11 chars)
+    if (length >= 8) {
+      return 'text-4xl sm:text-5xl md:text-6xl lg:text-7xl';
+    }
+    // For short amounts (< 8 chars), use largest size
+    return 'text-5xl sm:text-6xl md:text-7xl lg:text-8xl';
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-muted/20">
       <SiteHeader />
-      <main className="flex-1 flex items-center justify-center p-4 py-12">
+      <main className="flex-1 flex items-center justify-center p-4 py-6 sm:py-12">
         <Card className="w-full max-w-lg shadow-lg">
-          <CardHeader className="text-center space-y-4">
+          <CardHeader className="text-center space-y-3 sm:space-y-4 px-4 sm:px-6">
             <div className="flex items-center justify-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <Badge variant="outline" className="text-xs">
                 {request.linkType === 'reusable' ? 'Reusable Link' : 'One-Time Payment'}
               </Badge>
             </div>
-            <CardTitle className="text-3xl">Payment Request</CardTitle>
-            <CardDescription className="text-base">{request.description}</CardDescription>
-            <div className="pt-4">
-              <p className="text-5xl font-bold">{displayAmount}</p>
-              <p className="text-sm text-muted-foreground mt-2">
+            <CardTitle className="text-2xl sm:text-3xl">Payment Request</CardTitle>
+            <CardDescription className="text-sm sm:text-base px-2">{request.description}</CardDescription>
+            <div className="pt-3 sm:pt-4">
+              <p className={`${getAmountFontSize()} font-bold break-words leading-tight px-2`}>
+                {displayAmount}
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 px-2">
                 {request.currency} • {request.linkType === 'reusable' ? 'Can be used multiple times' : 'Single use only'}
               </p>
             </div>
           </CardHeader>
 
           {isUsed ? (
-            <CardContent className="space-y-4">
-              <div className="text-center py-8">
-                <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">Link Already Used</h3>
-                <p className="text-muted-foreground">
+            <CardContent className="space-y-4 px-4 sm:px-6">
+              <div className="text-center py-6 sm:py-8">
+                <AlertCircle className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-bold mb-2">Link Already Used</h3>
+                <p className="text-sm sm:text-base text-muted-foreground px-2">
                   This one-time payment link has already been used.
                 </p>
               </div>
             </CardContent>
           ) : (
             <>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 px-4 sm:px-6">
                 <div className="space-y-2">
-                  <Label htmlFor="country">
+                  <Label htmlFor="country" className="text-sm sm:text-base">
                     <Globe className="inline h-4 w-4 mr-2" />
                     Country
                   </Label>
                   <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger id="country">
+                    <SelectTrigger id="country" className="h-10 sm:h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -240,7 +263,7 @@ export default function PaymentPage() {
                 {request.linkType === 'reusable' && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Your Email</Label>
+                      <Label htmlFor="email" className="text-sm sm:text-base">Your Email</Label>
                       <Input
                         id="email"
                         type="email"
@@ -248,34 +271,36 @@ export default function PaymentPage() {
                         value={payerEmail}
                         onChange={(e) => setPayerEmail(e.target.value)}
                         required
+                        className="h-10 sm:h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="name">Your Name (Optional)</Label>
+                      <Label htmlFor="name" className="text-sm sm:text-base">Your Name (Optional)</Label>
                       <Input
                         id="name"
                         placeholder="John Doe"
                         value={payerName}
                         onChange={(e) => setPayerName(e.target.value)}
+                        className="h-10 sm:h-11"
                       />
                     </div>
                   </>
                 )}
 
-                <div className="rounded-lg border p-4 bg-muted/50">
+                <div className="rounded-lg border p-3 sm:p-4 bg-muted/50">
                   <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Secure Payment</span>
+                    <Lock className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium">Secure Payment</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Your payment is processed securely with industry-standard encryption. Multiple payment methods available.
                   </p>
                 </div>
               </CardContent>
 
-              <CardFooter className="flex-col gap-4">
+              <CardFooter className="flex-col gap-3 sm:gap-4 px-4 sm:px-6 pb-4 sm:pb-6">
                 <Button
-                  className="w-full"
+                  className="w-full h-11 sm:h-12 text-sm sm:text-base"
                   size="lg"
                   onClick={handleCreateCheckout}
                   disabled={creatingCheckout || (request.linkType === 'reusable' && !payerEmail)}
@@ -283,16 +308,18 @@ export default function PaymentPage() {
                   {creatingCheckout ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Checkout...
+                      <span className="hidden sm:inline">Creating Checkout...</span>
+                      <span className="sm:hidden">Creating...</span>
                     </>
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Pay {displayAmount}
+                      <span className="hidden sm:inline">Pay {displayAmount}</span>
+                      <span className="sm:hidden">Pay Now</span>
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-xs text-muted-foreground text-center px-2">
                   You'll be redirected to a secure payment page with multiple payment options.
                 </p>
               </CardFooter>

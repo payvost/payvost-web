@@ -159,6 +159,93 @@ class CurrencyService {
   }
 
   /**
+   * Calculate conversion fees
+   */
+  async calculateFees(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+    userTier: string = 'STANDARD'
+  ): Promise<{
+    totalFee: number;
+    conversionFee: number;
+    markup: number;
+    discount: number;
+    effectiveRate: number;
+  }> {
+    try {
+      const response = await apiClient.post<{
+        fees: string;
+        breakdown: {
+          conversionFee: string;
+          markup: string;
+          discount: string;
+        };
+        effectiveRate: string;
+      }>('/api/currency/calculate-fees', {
+        amount,
+        from: fromCurrency,
+        to: toCurrency,
+        userTier,
+      });
+      
+      return {
+        totalFee: parseFloat(response.fees),
+        conversionFee: parseFloat(response.breakdown.conversionFee),
+        markup: parseFloat(response.breakdown.markup),
+        discount: parseFloat(response.breakdown.discount),
+        effectiveRate: parseFloat(response.effectiveRate),
+      };
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to calculate fees: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get exchange rate preview with fees
+   */
+  async getRatePreview(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+    userTier: string = 'STANDARD'
+  ): Promise<{
+    rate: number;
+    convertedAmount: number;
+    fee: number;
+    totalSourceAmount: number;
+    effectiveRate: number;
+  }> {
+    if (fromCurrency === toCurrency) {
+      return {
+        rate: 1,
+        convertedAmount: amount,
+        fee: 0,
+        totalSourceAmount: amount,
+        effectiveRate: 1,
+      };
+    }
+
+    const rate = await this.getRate(fromCurrency, toCurrency);
+    const convertedAmount = amount * rate;
+    const fees = await this.calculateFees(convertedAmount, fromCurrency, toCurrency, userTier);
+    
+    // Calculate source amount needed (reverse conversion with fee)
+    const sourceAmountNeeded = convertedAmount / rate + fees.totalFee;
+
+    return {
+      rate,
+      convertedAmount,
+      fee: fees.totalFee,
+      totalSourceAmount: sourceAmountNeeded,
+      effectiveRate: fees.effectiveRate,
+    };
+  }
+
+  /**
    * Format amount with currency symbol
    */
   formatAmount(amount: number, currency: string): string {
