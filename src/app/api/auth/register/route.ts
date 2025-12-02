@@ -3,6 +3,9 @@ import { adminAuth, adminDb, admin } from '@/lib/firebase-admin';
 import { rateLimit, getClientIP, registrationRateLimit } from '@/lib/rate-limit';
 import { sanitizeEmail, sanitizeText, sanitizePhone } from '@/utils/sanitize';
 
+// Ensure this route runs on Node.js runtime (required for Firebase Admin)
+export const runtime = 'nodejs';
+
 const FieldValue = admin.firestore.FieldValue;
 
 // Reserved usernames that cannot be used
