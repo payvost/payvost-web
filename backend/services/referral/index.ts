@@ -287,7 +287,7 @@ export class ReferralService {
       }
 
       // Credit reward to account
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Update reward status
         await tx.referralReward.update({
           where: { id: rewardId },
@@ -383,10 +383,10 @@ export class ReferralService {
     return {
       referralCode: referralCode?.code || null,
       totalReferrals: referrals.length,
-      activeReferrals: referrals.filter((r) => r.isActive).length,
+      activeReferrals: referrals.filter((r: any) => r.isActive).length,
       totalRewards: rewards.length,
       totalEarned: totalEarned._sum.amount || new Decimal(0),
-      referrals: referrals.map((r) => ({
+      referrals: referrals.map((r: any) => ({
         id: r.id,
         referredUser: r.referred,
         joinedAt: r.createdAt,
@@ -752,11 +752,11 @@ export class ReferralService {
       },
     });
 
-    const activeReferrals = campaignReferrals.filter((r) => r.isActive).length;
-    const firstTxCompleted = campaignReferrals.filter((r) => r.firstTransactionAt !== null).length;
+    const activeReferrals = campaignReferrals.filter((r: any) => r.isActive).length;
+    const firstTxCompleted = campaignReferrals.filter((r: any) => r.firstTransactionAt !== null).length;
 
     // Get rewards for these referrals
-    const referralIds = campaignReferrals.map((r) => r.id);
+    const referralIds = campaignReferrals.map((r: any) => r.id);
     const [rewards, totalRewardsValue] = await Promise.all([
       prisma.referralReward.count({
         where: {

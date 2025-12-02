@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { referralService } from './index';
-import { authMiddleware } from '../user/middleware/authMiddleware';
+import { authenticateJWT } from '../user/middleware/authMiddleware';
 import { verifyFirebaseToken, requireAdmin, AuthenticatedRequest } from '../../gateway/middleware';
 import { ValidationError } from '../../gateway/index';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
 // Get user's referral code
-router.get('/code', authMiddleware, async (req, res) => {
+router.get('/code', authenticateJWT, async (req, res) => {
   try {
     const userId = (req as any).user.uid;
     const code = await referralService.generateReferralCode(userId);
@@ -19,7 +20,7 @@ router.get('/code', authMiddleware, async (req, res) => {
 });
 
 // Get referral statistics
-router.get('/stats', authMiddleware, async (req, res) => {
+router.get('/stats', authenticateJWT, async (req, res) => {
   try {
     const userId = (req as any).user.uid;
     const stats = await referralService.getUserReferralStats(userId);
@@ -98,7 +99,7 @@ router.get('/admin/campaigns', verifyFirebaseToken, requireAdmin, async (req: Au
     const campaigns = await referralService.listCampaigns(filters);
 
     // Serialize Decimal fields to strings for JSON
-    const serializedCampaigns = campaigns.map((campaign) => ({
+    const serializedCampaigns = campaigns.map((campaign: any) => ({
       ...campaign,
       signupBonus: campaign.signupBonus?.toString() || null,
       firstTxBonus: campaign.firstTxBonus?.toString() || null,
