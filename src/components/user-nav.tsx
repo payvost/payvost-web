@@ -36,19 +36,37 @@ export function UserNav({ user, businessLogoUrl }: UserNavProps) {
   const settingsHref = isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/settings' : '/dashboard/settings';
 
   const handleLogout = async () => {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
     try {
-      await signOut(auth);
+      if (isOnline) {
+        try {
+          await Promise.race([
+            signOut(auth),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+            )
+          ]);
+        } catch (error) {
+          console.error('Firebase signOut error:', error);
+        }
+      }
+      
       toast({
         title: "Logged Out",
-        description: "You have been successfully logged out."
-      })
+        description: isOnline 
+          ? "You have been successfully logged out."
+          : "You have been logged out. Please reconnect to complete the logout process.",
+      });
+      
       router.push(isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/login' : '/login');
     } catch (error) {
+      console.error('Logout error:', error);
       toast({
-        title: "Logout Failed",
-        description: "An error occurred while logging out. Please try again.",
-        variant: "destructive"
-      })
+        title: "Logged Out",
+        description: "You have been logged out locally.",
+      });
+      router.push(isAdminRoute ? '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/login' : '/login');
     }
   };
   

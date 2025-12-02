@@ -10,17 +10,41 @@ import { useRouter } from 'next/navigation';
 import { ThemeSwitcher } from './theme-switcher';
 import { Avatar, AvatarFallback } from './ui/avatar';
 
-export function SupportHeader() {
+interface SupportHeaderProps {
+  onLogout?: () => void;
+}
+
+export function SupportHeader({ onLogout }: SupportHeaderProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
     try {
-      await fetch('/api/auth/support-session', { method: 'DELETE' });
+      if (isOnline) {
+        try {
+          await Promise.race([
+            fetch('/api/auth/support-session', { method: 'DELETE' }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout')), 5000)
+            )
+          ]);
+        } catch (error) {
+          console.error('Session deletion error:', error);
+        }
+      }
+      
       router.push('/customer-support-W19KouHGlew7_jf2ds/login');
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);
+      router.push('/customer-support-W19KouHGlew7_jf2ds/login');
     }
   };
 
