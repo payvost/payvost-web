@@ -5,6 +5,7 @@ import { sanitizeEmail, sanitizeText, sanitizePhone } from '@/utils/sanitize';
 
 // Ensure this route runs on Node.js runtime (required for Firebase Admin)
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const FieldValue = admin.firestore.FieldValue;
 
