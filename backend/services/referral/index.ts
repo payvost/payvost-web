@@ -434,6 +434,356 @@ export class ReferralService {
 
     return { valid: true };
   }
+
+  // ==================== Campaign Management Methods ====================
+
+  /**
+   * Create a new referral campaign
+   */
+  async createCampaign(data: {
+    name: string;
+    description?: string;
+    isActive?: boolean;
+    signupBonus?: number | string;
+    signupCurrency?: string;
+    firstTxBonus?: number | string;
+    firstTxCurrency?: string;
+    firstTxMinAmount?: number | string;
+    tier2Percentage?: number | string;
+    tier3Percentage?: number | string;
+    minKycLevel?: string;
+    eligibleCountries?: string[];
+    excludedCountries?: string[];
+    maxReferralsPerUser?: number;
+    maxRewardPerUser?: number | string;
+    maxRewardPerCampaign?: number | string;
+    startDate: string | Date;
+    endDate?: string | Date | null;
+  }) {
+    // Validation
+    if (!data.name || data.name.trim().length === 0) {
+      throw new Error('Campaign name is required');
+    }
+
+    if (!data.startDate) {
+      throw new Error('Start date is required');
+    }
+
+    const startDate = new Date(data.startDate);
+    const endDate = data.endDate ? new Date(data.endDate) : null;
+
+    if (isNaN(startDate.getTime())) {
+      throw new Error('Invalid start date');
+    }
+
+    if (endDate && isNaN(endDate.getTime())) {
+      throw new Error('Invalid end date');
+    }
+
+    if (endDate && endDate <= startDate) {
+      throw new Error('End date must be after start date');
+    }
+
+    // Validate percentages
+    if (data.tier2Percentage !== undefined) {
+      const tier2 = new Decimal(data.tier2Percentage.toString());
+      if (tier2.lessThan(0) || tier2.greaterThan(100)) {
+        throw new Error('Tier 2 percentage must be between 0 and 100');
+      }
+    }
+
+    if (data.tier3Percentage !== undefined) {
+      const tier3 = new Decimal(data.tier3Percentage.toString());
+      if (tier3.lessThan(0) || tier3.greaterThan(100)) {
+        throw new Error('Tier 3 percentage must be between 0 and 100');
+      }
+    }
+
+    // Validate amounts
+    if (data.signupBonus !== undefined && new Decimal(data.signupBonus.toString()).lessThanOrEqualTo(0)) {
+      throw new Error('Signup bonus must be greater than 0');
+    }
+
+    if (data.firstTxBonus !== undefined && new Decimal(data.firstTxBonus.toString()).lessThanOrEqualTo(0)) {
+      throw new Error('First transaction bonus must be greater than 0');
+    }
+
+    const campaign = await prisma.referralCampaign.create({
+      data: {
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        isActive: data.isActive ?? true,
+        signupBonus: data.signupBonus ? new Decimal(data.signupBonus.toString()) : null,
+        signupCurrency: data.signupCurrency || null,
+        firstTxBonus: data.firstTxBonus ? new Decimal(data.firstTxBonus.toString()) : null,
+        firstTxCurrency: data.firstTxCurrency || null,
+        firstTxMinAmount: data.firstTxMinAmount ? new Decimal(data.firstTxMinAmount.toString()) : null,
+        tier2Percentage: data.tier2Percentage ? new Decimal(data.tier2Percentage.toString()) : null,
+        tier3Percentage: data.tier3Percentage ? new Decimal(data.tier3Percentage.toString()) : null,
+        minKycLevel: data.minKycLevel || null,
+        eligibleCountries: data.eligibleCountries || [],
+        excludedCountries: data.excludedCountries || [],
+        maxReferralsPerUser: data.maxReferralsPerUser || null,
+        maxRewardPerUser: data.maxRewardPerUser ? new Decimal(data.maxRewardPerUser.toString()) : null,
+        maxRewardPerCampaign: data.maxRewardPerCampaign ? new Decimal(data.maxRewardPerCampaign.toString()) : null,
+        startDate,
+        endDate,
+      },
+    });
+
+    return campaign;
+  }
+
+  /**
+   * Update an existing referral campaign
+   */
+  async updateCampaign(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      isActive?: boolean;
+      signupBonus?: number | string | null;
+      signupCurrency?: string | null;
+      firstTxBonus?: number | string | null;
+      firstTxCurrency?: string | null;
+      firstTxMinAmount?: number | string | null;
+      tier2Percentage?: number | string | null;
+      tier3Percentage?: number | string | null;
+      minKycLevel?: string | null;
+      eligibleCountries?: string[];
+      excludedCountries?: string[];
+      maxReferralsPerUser?: number | null;
+      maxRewardPerUser?: number | string | null;
+      maxRewardPerCampaign?: number | string | null;
+      startDate?: string | Date;
+      endDate?: string | Date | null;
+    }
+  ) {
+    // Check if campaign exists
+    const existing = await prisma.referralCampaign.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new Error('Campaign not found');
+    }
+
+    // Validation
+    if (data.name !== undefined && data.name.trim().length === 0) {
+      throw new Error('Campaign name cannot be empty');
+    }
+
+    const startDate = data.startDate ? new Date(data.startDate) : existing.startDate;
+    const endDate = data.endDate !== undefined ? (data.endDate ? new Date(data.endDate) : null) : existing.endDate;
+
+    if (endDate && endDate <= startDate) {
+      throw new Error('End date must be after start date');
+    }
+
+    // Validate percentages
+    if (data.tier2Percentage !== undefined && data.tier2Percentage !== null) {
+      const tier2 = new Decimal(data.tier2Percentage.toString());
+      if (tier2.lessThan(0) || tier2.greaterThan(100)) {
+        throw new Error('Tier 2 percentage must be between 0 and 100');
+      }
+    }
+
+    if (data.tier3Percentage !== undefined && data.tier3Percentage !== null) {
+      const tier3 = new Decimal(data.tier3Percentage.toString());
+      if (tier3.lessThan(0) || tier3.greaterThan(100)) {
+        throw new Error('Tier 3 percentage must be between 0 and 100');
+      }
+    }
+
+    // Build update data
+    const updateData: any = {};
+
+    if (data.name !== undefined) updateData.name = data.name.trim();
+    if (data.description !== undefined) updateData.description = data.description?.trim() || null;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.signupBonus !== undefined) updateData.signupBonus = data.signupBonus ? new Decimal(data.signupBonus.toString()) : null;
+    if (data.signupCurrency !== undefined) updateData.signupCurrency = data.signupCurrency || null;
+    if (data.firstTxBonus !== undefined) updateData.firstTxBonus = data.firstTxBonus ? new Decimal(data.firstTxBonus.toString()) : null;
+    if (data.firstTxCurrency !== undefined) updateData.firstTxCurrency = data.firstTxCurrency || null;
+    if (data.firstTxMinAmount !== undefined) updateData.firstTxMinAmount = data.firstTxMinAmount ? new Decimal(data.firstTxMinAmount.toString()) : null;
+    if (data.tier2Percentage !== undefined) updateData.tier2Percentage = data.tier2Percentage ? new Decimal(data.tier2Percentage.toString()) : null;
+    if (data.tier3Percentage !== undefined) updateData.tier3Percentage = data.tier3Percentage ? new Decimal(data.tier3Percentage.toString()) : null;
+    if (data.minKycLevel !== undefined) updateData.minKycLevel = data.minKycLevel || null;
+    if (data.eligibleCountries !== undefined) updateData.eligibleCountries = data.eligibleCountries;
+    if (data.excludedCountries !== undefined) updateData.excludedCountries = data.excludedCountries;
+    if (data.maxReferralsPerUser !== undefined) updateData.maxReferralsPerUser = data.maxReferralsPerUser || null;
+    if (data.maxRewardPerUser !== undefined) updateData.maxRewardPerUser = data.maxRewardPerUser ? new Decimal(data.maxRewardPerUser.toString()) : null;
+    if (data.maxRewardPerCampaign !== undefined) updateData.maxRewardPerCampaign = data.maxRewardPerCampaign ? new Decimal(data.maxRewardPerCampaign.toString()) : null;
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
+    if (data.endDate !== undefined) updateData.endDate = endDate;
+
+    const campaign = await prisma.referralCampaign.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return campaign;
+  }
+
+  /**
+   * Get a campaign by ID
+   */
+  async getCampaign(id: string) {
+    const campaign = await prisma.referralCampaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
+      throw new Error('Campaign not found');
+    }
+
+    return campaign;
+  }
+
+  /**
+   * List all campaigns with optional filters
+   */
+  async listCampaigns(filters?: {
+    isActive?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+  }) {
+    const where: any = {};
+
+    if (filters?.isActive !== undefined) {
+      where.isActive = filters.isActive;
+    }
+
+    if (filters?.startDate) {
+      where.startDate = { lte: filters.startDate };
+    }
+
+    if (filters?.endDate) {
+      where.OR = [
+        { endDate: null },
+        { endDate: { gte: filters.endDate } },
+      ];
+    }
+
+    const campaigns = await prisma.referralCampaign.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return campaigns;
+  }
+
+  /**
+   * Delete a campaign (soft delete by setting isActive to false)
+   */
+  async deleteCampaign(id: string, hardDelete: boolean = false) {
+    const campaign = await prisma.referralCampaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
+      throw new Error('Campaign not found');
+    }
+
+    // Check if campaign has referrals created during its active period
+    if (campaign.isActive) {
+      const dateFilter: any = {
+        gte: campaign.startDate,
+      };
+      if (campaign.endDate) {
+        dateFilter.lte = campaign.endDate;
+      }
+
+      const referralCount = await prisma.referral.count({
+        where: {
+          createdAt: dateFilter,
+        },
+      });
+
+      if (referralCount > 0) {
+        throw new Error('Cannot delete active campaign with existing referrals. Deactivate it first.');
+      }
+    }
+
+    if (hardDelete) {
+      await prisma.referralCampaign.delete({
+        where: { id },
+      });
+    } else {
+      // Soft delete
+      await prisma.referralCampaign.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Get campaign statistics
+   */
+  async getCampaignStats(id: string) {
+    const campaign = await prisma.referralCampaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
+      throw new Error('Campaign not found');
+    }
+
+    // Build date filter for campaign period
+    const dateFilter: any = {
+      gte: campaign.startDate,
+    };
+    if (campaign.endDate) {
+      dateFilter.lte = campaign.endDate;
+    }
+
+    // Get referrals created during campaign period
+    const campaignReferrals = await prisma.referral.findMany({
+      where: {
+        createdAt: dateFilter,
+      },
+      include: {
+        referralCode: true,
+        rewards: true,
+      },
+    });
+
+    const activeReferrals = campaignReferrals.filter((r) => r.isActive).length;
+    const firstTxCompleted = campaignReferrals.filter((r) => r.firstTransactionAt !== null).length;
+
+    // Get rewards for these referrals
+    const referralIds = campaignReferrals.map((r) => r.id);
+    const [rewards, totalRewardsValue] = await Promise.all([
+      prisma.referralReward.count({
+        where: {
+          referralId: { in: referralIds },
+        },
+      }),
+      prisma.referralReward.aggregate({
+        where: {
+          referralId: { in: referralIds },
+          status: 'PAID',
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+    return {
+      campaignId: id,
+      totalReferrals: campaignReferrals.length,
+      activeReferrals,
+      firstTxCompleted,
+      totalRewards: rewards,
+      totalRewardsValue: totalRewardsValue._sum.amount || new Decimal(0),
+      campaign,
+    };
+  }
 }
 
 export const referralService = new ReferralService();

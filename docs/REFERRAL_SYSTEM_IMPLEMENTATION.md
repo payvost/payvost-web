@@ -78,7 +78,7 @@ npx prisma generate
 
 ### 2. Create Initial Campaign
 
-You'll need to create an initial referral campaign. You can do this via:
+You can create an initial referral campaign using one of these methods:
 
 **Option A: Direct Database Insert**
 ```sql
@@ -104,8 +104,28 @@ INSERT INTO "ReferralCampaign" (
 );
 ```
 
-**Option B: Create Admin API Endpoint** (Recommended for future)
-Create an admin endpoint to manage campaigns through the UI.
+**Option B: Admin API Endpoints** ✅ **RECOMMENDED - NOW IMPLEMENTED**
+
+Use the admin API endpoints to create and manage campaigns through the UI. See the [Admin Campaign Management](#admin-campaign-management) section below for details.
+
+**Example using the API client:**
+```typescript
+import { createCampaign } from '@/lib/api/referral-campaigns';
+
+const campaign = await createCampaign({
+  name: 'Launch Campaign',
+  description: 'Initial referral campaign',
+  signupBonus: 10.00,
+  signupCurrency: 'USD',
+  firstTxBonus: 5.00,
+  firstTxCurrency: 'USD',
+  firstTxMinAmount: 50.00,
+  tier2Percentage: 10.00,
+  tier3Percentage: 5.00,
+  startDate: new Date().toISOString(),
+  isActive: true,
+});
+```
 
 ### 3. Environment Variables
 
@@ -126,6 +146,43 @@ import { ReferralDashboard } from '@/components/referral-dashboard';
 // In your dashboard page
 <ReferralDashboard />
 ```
+
+### 5. Admin Campaign Management UI ✅ **IMPLEMENTED**
+
+A complete admin UI component is available for managing referral campaigns:
+
+**Component Location:** `src/components/admin/referral-campaign-manager.tsx`
+
+**Page Location:** `/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/referral-campaigns`
+
+**Features:**
+- ✅ List all campaigns with status indicators
+- ✅ Create new campaigns with full form validation
+- ✅ Edit existing campaigns
+- ✅ Activate/Deactivate campaigns
+- ✅ View campaign statistics (referrals, rewards, etc.)
+- ✅ Delete campaigns (with confirmation)
+- ✅ Responsive design with modern UI
+
+**Usage:**
+The component is already integrated into the admin dashboard. Navigate to:
+```
+/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/referral-campaigns
+```
+
+Or use the component directly:
+```tsx
+import { ReferralCampaignManager } from '@/components/admin/referral-campaign-manager';
+
+<ReferralCampaignManager />
+```
+
+The component automatically handles:
+- Authentication (requires admin role)
+- API calls to backend
+- Form validation
+- Error handling
+- Success notifications
 
 ## How It Works
 
@@ -192,6 +249,179 @@ const stats = await response.json();
 ```typescript
 const response = await fetch(`/api/v1/referral/validate/${code}`);
 const { valid, error } = await response.json();
+```
+
+## Admin Campaign Management
+
+### Overview
+
+Admin API endpoints are available for managing referral campaigns through the UI. All endpoints require admin authentication.
+
+### Frontend API Client
+
+Use the provided API client (`src/lib/api/referral-campaigns.ts`):
+
+```typescript
+import {
+  getCampaigns,
+  getCampaign,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  getCampaignStats,
+} from '@/lib/api/referral-campaigns';
+
+// List all campaigns
+const campaigns = await getCampaigns({ isActive: true });
+
+// Get a specific campaign
+const campaign = await getCampaign('campaign-id');
+
+// Create a new campaign
+const newCampaign = await createCampaign({
+  name: 'Q1 2025 Campaign',
+  description: 'First quarter referral campaign',
+  signupBonus: 10.00,
+  signupCurrency: 'USD',
+  firstTxBonus: 5.00,
+  firstTxCurrency: 'USD',
+  firstTxMinAmount: 50.00,
+  tier2Percentage: 10.00,
+  tier3Percentage: 5.00,
+  startDate: '2025-01-01T00:00:00Z',
+  endDate: '2025-03-31T23:59:59Z',
+  eligibleCountries: ['US', 'GB', 'CA'],
+  isActive: true,
+});
+
+// Update a campaign
+const updated = await updateCampaign('campaign-id', {
+  isActive: false,
+});
+
+// Delete a campaign (soft delete by default)
+await deleteCampaign('campaign-id');
+
+// Hard delete
+await deleteCampaign('campaign-id', true);
+
+// Get campaign statistics
+const stats = await getCampaignStats('campaign-id');
+```
+
+### Backend API Endpoints
+
+All endpoints are prefixed with `/api/v1/referral/admin/campaigns` and require:
+- Firebase authentication token in `Authorization: Bearer <token>` header
+- Admin role (`admin` or `super_admin`)
+
+#### List Campaigns
+```
+GET /api/v1/referral/admin/campaigns
+Query Parameters:
+  - isActive (boolean, optional): Filter by active status
+  - startDate (ISO date string, optional): Filter campaigns starting after this date
+  - endDate (ISO date string, optional): Filter campaigns ending before this date
+
+Response: { campaigns: ReferralCampaign[] }
+```
+
+#### Get Campaign
+```
+GET /api/v1/referral/admin/campaigns/:id
+
+Response: { campaign: ReferralCampaign }
+```
+
+#### Create Campaign
+```
+POST /api/v1/referral/admin/campaigns
+Body: CreateCampaignInput
+
+Response: { campaign: ReferralCampaign }
+```
+
+**Required Fields:**
+- `name`: Campaign name
+- `startDate`: Campaign start date (ISO date string)
+
+**Optional Fields:**
+- `description`: Campaign description
+- `isActive`: Whether campaign is active (default: true)
+- `signupBonus`: Signup bonus amount
+- `signupCurrency`: Currency for signup bonus (default: USD)
+- `firstTxBonus`: First transaction bonus amount
+- `firstTxCurrency`: Currency for first transaction bonus
+- `firstTxMinAmount`: Minimum transaction amount to qualify
+- `tier2Percentage`: Percentage for tier 2 rewards (0-100)
+- `tier3Percentage`: Percentage for tier 3 rewards (0-100)
+- `minKycLevel`: Required KYC level
+- `eligibleCountries`: Array of eligible country codes
+- `excludedCountries`: Array of excluded country codes
+- `maxReferralsPerUser`: Maximum referrals per user
+- `maxRewardPerUser`: Maximum reward per user
+- `maxRewardPerCampaign`: Maximum reward per campaign
+- `endDate`: Campaign end date (ISO date string, optional)
+
+#### Update Campaign
+```
+PUT /api/v1/referral/admin/campaigns/:id
+Body: Partial<CreateCampaignInput>
+
+Response: { campaign: ReferralCampaign }
+```
+
+#### Delete Campaign
+```
+DELETE /api/v1/referral/admin/campaigns/:id
+Query Parameters:
+  - hard (boolean, optional): If true, permanently deletes. If false, soft deletes (default: false)
+
+Response: { success: true, message: string }
+```
+
+#### Get Campaign Statistics
+```
+GET /api/v1/referral/admin/campaigns/:id/stats
+
+Response: {
+  stats: {
+    campaignId: string;
+    totalReferrals: number;
+    activeReferrals: number;
+    firstTxCompleted: number;
+    totalRewards: number;
+    totalRewardsValue: string;
+    campaign: ReferralCampaign;
+  }
+}
+```
+
+### Validation Rules
+
+- **Campaign Name**: Required, cannot be empty
+- **Start Date**: Required, must be a valid date
+- **End Date**: Optional, but if provided, must be after start date
+- **Tier Percentages**: Must be between 0 and 100
+- **Bonus Amounts**: Must be greater than 0 if provided
+- **Country Codes**: Should be valid ISO country codes (e.g., 'US', 'GB', 'CA')
+
+### Error Handling
+
+All endpoints return appropriate HTTP status codes:
+- `200`: Success
+- `201`: Created (for POST)
+- `400`: Bad Request (validation errors)
+- `401`: Unauthorized (missing/invalid token)
+- `403`: Forbidden (not admin)
+- `404`: Not Found (campaign doesn't exist)
+- `500`: Internal Server Error
+
+Error responses follow this format:
+```json
+{
+  "error": "Error message here"
+}
 ```
 
 ## Features
