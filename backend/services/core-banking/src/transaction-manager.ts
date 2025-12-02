@@ -178,6 +178,30 @@ export class TransactionManager {
         );
       }
 
+      // Process referral reward for recipient's first transaction (non-blocking)
+      try {
+        const toAccount = await tx.account.findUnique({
+          where: { id: toAccountId },
+          select: { userId: true },
+        });
+        
+        if (toAccount?.userId) {
+          // Import and call referral hook asynchronously (don't block transaction)
+          // This will be processed in the background
+          setImmediate(async () => {
+            try {
+              const { onTransactionCompleted } = await import('../../referral/transaction-hook');
+              await onTransactionCompleted(toAccount.userId, amount, currency);
+            } catch (error) {
+              console.error('Error processing referral reward:', error);
+            }
+          });
+        }
+      } catch (error) {
+        // Don't fail transaction if referral processing fails
+        console.error('Error setting up referral reward processing:', error);
+      }
+
       return transfer;
     });
   }

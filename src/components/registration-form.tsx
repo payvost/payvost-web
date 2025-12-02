@@ -150,6 +150,7 @@ const registrationSchema = z
     agreeTerms: z.boolean().refine((val) => val === true, {
       message: 'You must agree to the terms and conditions',
     }),
+    referralCode: z.string().optional(),
   })
   .merge(dynamicFieldsSchema)
   .refine((data) => data.password === data.confirmPassword, {
@@ -230,6 +231,17 @@ export function RegistrationForm() {
         city: ''
     }
   });
+
+  // Check for referral code in URL params
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get('ref');
+      if (refCode) {
+        setValue('referralCode', refCode.toUpperCase(), { shouldDirty: false });
+      }
+    }
+  }, [setValue]);
 
   // Restore form data from localStorage on mount
   useEffect(() => {
@@ -925,7 +937,7 @@ export function RegistrationForm() {
       const registerResponse = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+          body: JSON.stringify({
           email: data.email.trim().toLowerCase(),
           password: data.password,
           displayName: fullName,
@@ -933,6 +945,7 @@ export function RegistrationForm() {
           phoneNumber: `+${data.countryCode}${data.phone}`,
           countryCode: data.country,
           userType: 'Pending',
+          referralCode: data.referralCode?.trim().toUpperCase() || undefined,
         }),
       });
 
@@ -1370,6 +1383,21 @@ export function RegistrationForm() {
                 </div>
                 {shouldShowError('confirmPassword') && errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referralCode">Referral Code <span className="text-xs text-muted-foreground">(Optional)</span></Label>
+              <Input 
+                id="referralCode" 
+                {...register('referralCode')} 
+                placeholder="Enter referral code if you have one"
+                disabled={isLoading}
+                className="uppercase"
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                  setValue('referralCode', value, { shouldValidate: true });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Have a referral code? Enter it here to get rewards!</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

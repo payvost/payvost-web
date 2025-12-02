@@ -48,6 +48,12 @@ model User {
   ticketAttachments TicketAttachment[]
   kbArticlesCreated KnowledgeBaseArticle[] @relation("KBArticlesCreated")
   kbArticlesUpdated KnowledgeBaseArticle[] @relation("KBArticlesUpdated")
+
+  // Referral relations
+  referralCode      ReferralCode?
+  referrerReferrals Referral[]            @relation("ReferrerReferrals")
+  referredAs        Referral?              @relation("ReferredUsers")
+  referralRewards   ReferralReward[]
 }
 
 model Account {
@@ -65,6 +71,7 @@ model Account {
   fromTransfers Transfer[]        @relation("fromAccount")
   toTransfers   Transfer[]        @relation("toAccount")
   appliedFees   AppliedFee[]
+  referralRewards ReferralReward[]
 
   @@index([userId])
   @@index([rapydWalletId])
@@ -1079,4 +1086,153 @@ model SystemIncident {
   @@index([severity])
   @@index([startedAt])
   @@index([status, severity])
+}
+
+// Referral System Models
+enum ReferralRewardType {
+  SIGNUP_BONUS
+  FIRST_TRANSACTION
+  MONTHLY_ACTIVE
+  TIER_UPGRADE
+  CUSTOM
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum ReferralTier {
+  TIER_1  // Direct referral
+  TIER_2  // Referral of referral
+  TIER_3  // Third level
+}
+
+model ReferralCode {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id])
+  referrals   Referral[]
+  
+  @@index([code])
+  @@index([userId])
+}
+
+model Referral {
+  id                String   @id @default(uuid())
+  referrerId        String   // User who referred
+  referredId        String   @unique // User who was referred
+  referralCodeId   String
+  tier              ReferralTier @default(TIER_1)
+  parentReferralId  String?  // For multi-tier tracking
+  
+  // Status tracking
+  isActive          Boolean  @default(true)
+  referredKycStatus String?  // Track KYC completion
+  firstTransactionAt DateTime?
+  
+  // Relationships
+  referralCode      ReferralCode @relation(fields: [referralCodeId], references: [id])
+  referrer          User         @relation("ReferrerReferrals", fields: [referrerId], references: [id])
+  referred          User         @relation("ReferredUsers", fields: [referredId], references: [id])
+  parentReferral    Referral?    @relation("ReferralHierarchy", fields: [parentReferralId], references: [id])
+  childReferrals    Referral[]   @relation("ReferralHierarchy")
+  rewards           ReferralReward[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([referralCodeId])
+  @@index([tier])
+  @@index([isActive])
+}
+
+model ReferralReward {
+  id              String              @id @default(uuid())
+  referralId      String
+  userId          String  // Who gets the reward
+  rewardType      ReferralRewardType
+  amount          Decimal @db.Decimal(20, 8)
+  currency        String
+  status          ReferralRewardStatus @default(PENDING)
+  tier            ReferralTier
+  
+  // Reward details
+  description     String?
+  metadata        Json? // Additional reward context
+  
+  // Payment tracking
+  accountId       String? // Account where reward was credited
+  transferId      String? // Transfer record if paid
+  paidAt          DateTime?
+  
+  // Approval workflow
+  approvedBy      String? // Admin who approved
+  approvedAt      DateTime?
+  cancelledReason String?
+  
+  // Relationships
+  referral        Referral @relation(fields: [referralId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+  account         Account? @relation(fields: [accountId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  expiresAt       DateTime? // Reward expiration
+  
+  @@index([referralId])
+  @@index([userId])
+  @@index([status])
+  @@index([rewardType])
+  @@index([tier])
+  @@index([createdAt])
+}
+
+model ReferralCampaign {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?  @db.Text
+  isActive        Boolean  @default(true)
+  
+  // Reward configuration
+  signupBonus     Decimal? @db.Decimal(20, 8)
+  signupCurrency  String?
+  firstTxBonus    Decimal? @db.Decimal(20, 8)
+  firstTxCurrency String?
+  firstTxMinAmount Decimal? @db.Decimal(20, 8)
+  
+  // Multi-tier rewards (percentage of direct referral reward)
+  tier2Percentage Decimal? @db.Decimal(5, 2) // e.g., 10.00 for 10%
+  tier3Percentage Decimal? @db.Decimal(5, 2)
+  
+  // Eligibility
+  minKycLevel     String?  // Required KYC level
+  eligibleCountries String[] // Country codes
+  excludedCountries String[]
+  
+  // Limits
+  maxReferralsPerUser Int?
+  maxRewardPerUser    Decimal? @db.Decimal(20, 8)
+  maxRewardPerCampaign Decimal? @db.Decimal(20, 8)
+  
+  // Timing
+  startDate       DateTime
+  endDate         DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([startDate, endDate])
 }
