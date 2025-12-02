@@ -17,19 +17,41 @@ import { useAuth } from '@/hooks/use-auth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { WriterSidebar } from './writer-sidebar';
 
-export function WriterHeader() {
+interface WriterHeaderProps {
+  onLogout?: () => void;
+}
+
+export function WriterHeader({ onLogout }: WriterHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
 
   const handleLogout = async () => {
+    if (onLogout) {
+      onLogout();
+      return;
+    }
+    
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
     try {
-      await fetch('/api/auth/writer-session', {
-        method: 'DELETE',
-      });
+      if (isOnline) {
+        try {
+          await Promise.race([
+            fetch('/api/auth/writer-session', { method: 'DELETE' }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout')), 5000)
+            )
+          ]);
+        } catch (error) {
+          console.error('Session deletion error:', error);
+        }
+      }
+      
       router.push('/cms-9dj93abkD0ncfhDpLw_KIA/login');
       router.refresh();
     } catch (error) {
       console.error('Logout error:', error);
+      router.push('/cms-9dj93abkD0ncfhDpLw_KIA/login');
     }
   };
 

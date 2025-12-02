@@ -3,6 +3,9 @@ import { auth } from '@/lib/firebase-admin';
 import { isAdmin, logAdminAccess } from '@/lib/auth-helpers';
 import { cookies } from 'next/headers';
 
+// Ensure this route runs on Node.js runtime (required for Firebase Admin)
+export const runtime = 'nodejs';
+
 /**
  * POST /api/auth/session
  * Creates a secure session cookie after successful Firebase authentication

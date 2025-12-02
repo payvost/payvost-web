@@ -37,8 +37,39 @@ export function AdminLoginForm() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create session")
+        let errorMessage = "Failed to create session"
+        try {
+          const contentType = response.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } else {
+            // Handle non-JSON responses (like 405 with empty body)
+            const text = await response.text()
+            if (text) {
+              errorMessage = text
+            } else {
+              // Provide specific message for 405
+              if (response.status === 405) {
+                errorMessage = "Server configuration error. Please contact support."
+              } else {
+                errorMessage = `Server error (${response.status})`
+              }
+            }
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use status-based message
+          if (response.status === 405) {
+            errorMessage = "Server configuration error. Please contact support."
+          } else if (response.status === 401) {
+            errorMessage = "Authentication failed. Please try again."
+          } else if (response.status === 403) {
+            errorMessage = "Access denied. You do not have admin privileges."
+          } else {
+            errorMessage = `Server error (${response.status})`
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
