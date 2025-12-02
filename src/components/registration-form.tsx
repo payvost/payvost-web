@@ -950,14 +950,53 @@ export function RegistrationForm() {
       });
 
       if (!registerResponse.ok) {
-        const errorData = await registerResponse.json();
-        const errorMessage = errorData.message || errorData.error || 'Registration failed. Please try again.';
+        let errorMessage = 'Registration failed. Please try again.';
+        try {
+          const contentType = registerResponse.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await registerResponse.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else {
+            // Handle non-JSON responses (like 405 with empty body)
+            const text = await registerResponse.text();
+            if (text) {
+              errorMessage = text;
+            } else {
+              // Provide specific message for 405
+              if (registerResponse.status === 405) {
+                errorMessage = "Server configuration error. Please contact support.";
+              } else if (registerResponse.status === 429) {
+                errorMessage = "Too many registration attempts. Please try again later.";
+              } else {
+                errorMessage = `Server error (${registerResponse.status})`;
+              }
+            }
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use status-based message
+          if (registerResponse.status === 405) {
+            errorMessage = "Server configuration error. Please contact support.";
+          } else if (registerResponse.status === 429) {
+            errorMessage = "Too many registration attempts. Please try again later.";
+          } else if (registerResponse.status === 409) {
+            errorMessage = "An account with this email already exists.";
+          } else if (registerResponse.status === 400) {
+            errorMessage = "Invalid registration data. Please check your information.";
+          } else {
+            errorMessage = `Server error (${registerResponse.status})`;
+          }
+        }
         
         // Handle rate limiting
         if (registerResponse.status === 429) {
-          const retryAfter = errorData.retryAfter || 3600;
-          const minutes = Math.ceil(retryAfter / 60);
-          throw new Error(`Too many registration attempts. Please try again after ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+          try {
+            const errorData = await registerResponse.json().catch(() => ({}));
+            const retryAfter = errorData.retryAfter || 3600;
+            const minutes = Math.ceil(retryAfter / 60);
+            errorMessage = `Too many registration attempts. Please try again after ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+          } catch {
+            // Use default message if parsing fails
+          }
         }
         
         throw new Error(errorMessage);

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, admin } from '@/lib/firebase-admin';
 import { sendLoginNotification } from '@/lib/notification-webhook';
 
+// Ensure this route runs on Node.js runtime (required for Firebase Admin)
+export const runtime = 'nodejs';
+
 /**
  * POST /api/auth/track-login
  * Tracks user login and updates lastLoginAt, lastLoginIp, and lastLoginDevice
