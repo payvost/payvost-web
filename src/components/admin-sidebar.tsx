@@ -45,6 +45,7 @@ import {
   Network,
   Database,
   FileBarChart2,
+  Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -98,6 +99,7 @@ export function AdminSidebar() {
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/merchant-management', icon: <UserCog />, label: 'Merchant Management' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/kyc-review', icon: <ShieldCheck />, label: 'KYC/AML Review' },
           { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-onboarding', icon: <Building2 />, label: 'Business Onboarding' },
+          { href: '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/referral-campaigns', icon: <Gift />, label: 'Referral Campaigns' },
         ]
       },
       {
