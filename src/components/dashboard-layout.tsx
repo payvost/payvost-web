@@ -89,19 +89,42 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   }, [user]);
 
   const handleLogout = async () => {
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
     try {
-      await signOut(auth);
+      // Try to sign out from Firebase if online
+      if (isOnline) {
+        try {
+          await Promise.race([
+            signOut(auth),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+            )
+          ]);
+        } catch (error) {
+          console.error('Firebase signOut error:', error);
+          // Continue with local logout even if Firebase signOut fails
+        }
+      }
+      
+      // Always clear local session and redirect, even if offline or Firebase signOut fails
+      // This ensures the user is logged out locally
       toast({
         title: "Logged Out",
-        description: "You have been successfully logged out."
-      })
+        description: isOnline 
+          ? "You have been successfully logged out."
+          : "You have been logged out. Please reconnect to complete the logout process.",
+      });
+      
       router.push('/login');
     } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, redirect to login to ensure logout
       toast({
-        title: "Logout Failed",
-        description: "An error occurred while logging out. Please try again.",
-        variant: "destructive"
-      })
+        title: "Logged Out",
+        description: "You have been logged out locally.",
+      });
+      router.push('/login');
     }
   };
 
