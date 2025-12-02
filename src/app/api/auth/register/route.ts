@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let { email, password, displayName, phoneNumber, countryCode, userType, username } = body;
+    let { email, password, displayName, phoneNumber, countryCode, userType, username, referralCode } = body;
 
     // Sanitize inputs
     email = sanitizeEmail(email || '');
@@ -254,6 +254,35 @@ export async function POST(request: NextRequest) {
       
       await adminDb.collection('users').doc(userRecord.uid).set(userDocData);
       console.log('[Register API] User document created successfully in Firestore');
+      
+      // Process referral code if provided
+      if (referralCode && typeof referralCode === 'string' && referralCode.trim()) {
+        try {
+          const referralServiceUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+          const referralResponse = await fetch(`${referralServiceUrl}/api/v1/referral/process`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              referredUserId: userRecord.uid,
+              referralCode: referralCode.trim().toUpperCase(),
+            }),
+          });
+
+          if (referralResponse.ok) {
+            const referralResult = await referralResponse.json();
+            console.log('[Register API] Referral processed successfully:', referralResult);
+          } else {
+            // Don't fail registration if referral processing fails
+            const referralError = await referralResponse.json().catch(() => ({ error: 'Unknown error' }));
+            console.warn('[Register API] Referral processing failed (non-blocking):', referralError);
+          }
+        } catch (referralError) {
+          // Don't fail registration if referral processing fails
+          console.warn('[Register API] Referral processing error (non-blocking):', referralError);
+        }
+      }
     } catch (firestoreError: unknown) {
       const firestoreErrorDetails = firestoreError as { code?: string; message?: string; stack?: string };
       console.error('[Register API] Firestore write failed:', {

@@ -65,6 +65,7 @@ let invoiceRoutes: any;
 let businessRoutes: any;
 let contentRoutes: any;
 let supportRoutes: any;
+let referralRoutes: any;
 
 try {
   logger.info('Firebase Admin SDK initialized');
@@ -82,6 +83,7 @@ try {
   businessRoutes = loadService('./services/business/routes', false);
   contentRoutes = loadService('./services/content/routes', false);
   supportRoutes = loadService('./services/support/routes', false);
+  referralRoutes = loadService('./services/referral/routes', false);
   
   const loadedServices = [
     userRoutes && 'User',
@@ -97,6 +99,7 @@ try {
     businessRoutes && 'Business',
     contentRoutes && 'Content',
     supportRoutes && 'Support',
+    referralRoutes && 'Referral',
   ].filter(Boolean);
   
   logger.info({ services: loadedServices }, 'Service routes loaded');
@@ -174,6 +177,10 @@ try {
   
   if (supportRoutes) {
     registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
+  }
+  
+  if (referralRoutes) {
+    registerVersionedRoutes(app, 'Referral Service', '/api/referral', referralRoutes, ['v1']);
   }
   
   logger.info('All service routes registered with versioning support');
