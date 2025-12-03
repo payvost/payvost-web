@@ -46,24 +46,25 @@ export function ReferralDashboard() {
     
     try {
       const token = await user.getIdToken();
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-      const response = await fetch(`${backendUrl}/api/v1/referral/stats`, {
+      // Use Next.js API route as proxy (runs server-side, avoids CORS)
+      const response = await fetch('/api/referral/stats', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch referral stats');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch referral stats' }));
+        throw new Error(errorData.error || 'Failed to fetch referral stats');
       }
 
       const data = await response.json();
       setStats(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching referral stats:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load referral statistics. Please try again later.',
+        description: error.message || 'Failed to load referral statistics. Please try again later.',
         variant: 'destructive',
       });
     } finally {
