@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
+import { isAdmin } from '@/lib/auth-helpers';
 
 const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
@@ -35,12 +36,11 @@ async function proxyRequest(
       );
     }
 
-    // Check if user is admin
-    const userRecord = await adminAuth.getUser(decodedToken.uid);
-    const customClaims = userRecord.customClaims || {};
-    const isAdmin = customClaims.role === 'admin' || customClaims.role === 'super_admin';
+    // Check if user is admin using Firestore (not custom claims)
+    const hasAdminAccess = await isAdmin(decodedToken.uid);
     
-    if (!isAdmin) {
+    if (!hasAdminAccess) {
+      console.error(`[Referral Campaigns API] Access denied for user: ${decodedToken.uid}`);
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
