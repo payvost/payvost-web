@@ -62,8 +62,6 @@ export interface CampaignStats {
   campaign: ReferralCampaign;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3001';
-
 /**
  * Get authentication token from Firebase
  */
@@ -77,30 +75,50 @@ async function getAuthToken(): Promise<string> {
 }
 
 /**
- * Make authenticated request to backend
+ * Make authenticated request through Next.js API route (proxy)
+ * This avoids CORS issues and handles authentication server-side
  */
 async function authenticatedFetch(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const token = await getAuthToken();
-  const url = `${BACKEND_URL}/api/v1/referral${endpoint}`;
+  
+  // Use Next.js API route as proxy (runs server-side, avoids CORS)
+  // The API route will forward to the backend
+  const apiUrl = `/api/admin/referral-campaigns${endpoint}`;
+  
+  console.log('[Referral Campaigns API] Making request to:', apiUrl);
+  
+  try {
+    const response = await fetch(apiUrl, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...options.headers,
+      },
+    });
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || error.details || `HTTP ${response.status}: ${response.statusText}`);
+    }
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+    return response;
+  } catch (error: any) {
+    // Handle network errors with better messages
+    if (error.message?.includes('ERR_NAME_NOT_RESOLVED') || error.message?.includes('Failed to fetch')) {
+      console.error('[Referral Campaigns API] Network error:', {
+        apiUrl,
+        error: error.message,
+      });
+      throw new Error(
+        'Unable to connect to the API. Please check your internet connection and try again.'
+      );
+    }
+    throw error;
   }
-
-  return response;
 }
 
 /**
@@ -123,7 +141,7 @@ export async function getCampaigns(filters?: {
   }
 
   const queryString = queryParams.toString();
-  const endpoint = `/admin/campaigns${queryString ? `?${queryString}` : ''}`;
+  const endpoint = `${queryString ? `?${queryString}` : ''}`;
 
   const response = await authenticatedFetch(endpoint);
   const data = await response.json();
@@ -134,7 +152,7 @@ export async function getCampaigns(filters?: {
  * Get a specific campaign by ID
  */
 export async function getCampaign(id: string): Promise<ReferralCampaign> {
-  const response = await authenticatedFetch(`/admin/campaigns/${id}`);
+  const response = await authenticatedFetch(`?id=${id}`);
   const data = await response.json();
   return data.campaign;
 }
@@ -143,7 +161,7 @@ export async function getCampaign(id: string): Promise<ReferralCampaign> {
  * Create a new referral campaign
  */
 export async function createCampaign(input: CreateCampaignInput): Promise<ReferralCampaign> {
-  const response = await authenticatedFetch('/admin/campaigns', {
+  const response = await authenticatedFetch('', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -158,7 +176,7 @@ export async function updateCampaign(
   id: string,
   input: UpdateCampaignInput
 ): Promise<ReferralCampaign> {
-  const response = await authenticatedFetch(`/admin/campaigns/${id}`, {
+  const response = await authenticatedFetch(`?id=${id}`, {
     method: 'PUT',
     body: JSON.stringify(input),
   });
@@ -172,8 +190,8 @@ export async function updateCampaign(
  * @param hardDelete If true, permanently deletes the campaign. If false, soft deletes (sets isActive to false)
  */
 export async function deleteCampaign(id: string, hardDelete: boolean = false): Promise<void> {
-  const queryString = hardDelete ? '?hard=true' : '';
-  await authenticatedFetch(`/admin/campaigns/${id}${queryString}`, {
+  const queryString = `?id=${id}${hardDelete ? '&hard=true' : ''}`;
+  await authenticatedFetch(queryString, {
     method: 'DELETE',
   });
 }
@@ -182,7 +200,7 @@ export async function deleteCampaign(id: string, hardDelete: boolean = false): P
  * Get statistics for a specific campaign
  */
 export async function getCampaignStats(id: string): Promise<CampaignStats> {
-  const response = await authenticatedFetch(`/admin/campaigns/${id}/stats`);
+  const response = await authenticatedFetch(`?id=${id}&stats=true`);
   const data = await response.json();
   return data.stats;
 }
