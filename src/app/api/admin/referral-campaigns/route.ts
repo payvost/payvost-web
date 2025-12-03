@@ -3,11 +3,23 @@
  * This handles authentication and forwards requests to the backend service
  */
 
+// Ensure this route runs on Node.js runtime (required for Firebase Admin)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { isAdmin } from '@/lib/auth-helpers';
 
-const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// Get and normalize backend URL
+function getBackendUrl(): string {
+  const envUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+  
+  // Remove trailing slash if present
+  return envUrl.replace(/\/+$/, '');
+}
+
+const BACKEND_URL = getBackendUrl();
 
 async function proxyRequest(
   request: NextRequest,
@@ -47,10 +59,12 @@ async function proxyRequest(
       );
     }
 
-    // Construct backend URL
-    const url = `${BACKEND_URL}/api/v1/referral${endpoint}`;
+    // Construct backend URL - ensure no double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${BACKEND_URL}/api/v1/referral${cleanEndpoint}`;
     
     console.log(`[Referral Campaigns API] Proxying ${method} request to: ${url}`);
+    console.log(`[Referral Campaigns API] BACKEND_URL: ${BACKEND_URL}, endpoint: ${cleanEndpoint}`);
 
     // Forward request to backend
     const response = await fetch(url, {
