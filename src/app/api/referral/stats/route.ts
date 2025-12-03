@@ -61,6 +61,21 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
       console.error(`[Referral Stats API] Backend returned ${response.status}: ${errorText}`);
+      console.error(`[Referral Stats API] Request URL: ${url}`);
+      console.error(`[Referral Stats API] BACKEND_URL: ${BACKEND_URL}`);
+      
+      // If it's a 404, the route might not be registered on the backend
+      if (response.status === 404) {
+        return NextResponse.json(
+          { 
+            error: 'Referral service endpoint not found',
+            details: 'The backend referral service may not be deployed or the route is not registered. Please check backend deployment.',
+            backendUrl: BACKEND_URL,
+            requestedPath: '/api/v1/referral/stats'
+          },
+          { status: 503 }
+        );
+      }
       
       // Try to parse as JSON if possible
       let errorData;
