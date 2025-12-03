@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search, Gift } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -213,7 +213,20 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                     </Button>
                  </div>
           </SidebarContent>
-           <SidebarFooter className="p-2 mt-auto">
+           <SidebarFooter className="p-2 mt-auto space-y-2">
+            <SidebarGroup>
+              <SidebarGroupLabel>Rewards</SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive('/dashboard/referrals')}>
+                    <Link href="/dashboard/referrals">
+                      <Gift strokeWidth={2.5} />
+                      <span className="group-data-[collapsible=icon]:hidden">Referrals</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
             <SidebarMenu className="w-full">
                 <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
                     <SidebarMenuItem className="w-full">
