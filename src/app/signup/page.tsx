@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
  * Signup page - redirects to /register with referral code preserved
  * This maintains backward compatibility for referral links that use /signup
  */
-export default function SignupPage() {
+function SignupRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -32,6 +32,20 @@ export default function SignupPage() {
         <p className="text-muted-foreground">Redirecting to registration...</p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignupRedirect />
+    </Suspense>
   );
 }
 
