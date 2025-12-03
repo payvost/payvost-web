@@ -180,7 +180,7 @@ try {
   }
   
   if (referralRoutes) {
-    registerVersionedRoutes(app, 'Referral Service', '/api/referral', referralRoutes, ['v1']);
+    registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
   }
   
   logger.info('All service routes registered with versioning support');
