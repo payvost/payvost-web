@@ -560,8 +560,6 @@ export class ReferralService {
       });
       throw new Error(`Database error: ${prismaError.message || 'Failed to create campaign'}`);
     }
-
-    return campaign;
   }
 
   /**
