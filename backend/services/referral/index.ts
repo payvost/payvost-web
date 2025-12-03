@@ -518,28 +518,48 @@ export class ReferralService {
       throw new Error('First transaction bonus must be greater than 0');
     }
 
-    const campaign = await prisma.referralCampaign.create({
-      data: {
-        name: data.name.trim(),
-        description: data.description?.trim() || null,
-        isActive: data.isActive ?? true,
-        signupBonus: data.signupBonus ? new Decimal(data.signupBonus.toString()) : null,
-        signupCurrency: data.signupCurrency || null,
-        firstTxBonus: data.firstTxBonus ? new Decimal(data.firstTxBonus.toString()) : null,
-        firstTxCurrency: data.firstTxCurrency || null,
-        firstTxMinAmount: data.firstTxMinAmount ? new Decimal(data.firstTxMinAmount.toString()) : null,
-        tier2Percentage: data.tier2Percentage ? new Decimal(data.tier2Percentage.toString()) : null,
-        tier3Percentage: data.tier3Percentage ? new Decimal(data.tier3Percentage.toString()) : null,
-        minKycLevel: data.minKycLevel || null,
-        eligibleCountries: data.eligibleCountries || [],
-        excludedCountries: data.excludedCountries || [],
-        maxReferralsPerUser: data.maxReferralsPerUser || null,
-        maxRewardPerUser: data.maxRewardPerUser ? new Decimal(data.maxRewardPerUser.toString()) : null,
-        maxRewardPerCampaign: data.maxRewardPerCampaign ? new Decimal(data.maxRewardPerCampaign.toString()) : null,
-        startDate,
-        endDate,
-      },
-    });
+    // Ensure arrays are properly formatted (filter out empty strings and nulls)
+    const eligibleCountries = Array.isArray(data.eligibleCountries) 
+      ? data.eligibleCountries.filter((c: any) => c && typeof c === 'string' && c.trim().length > 0)
+      : (data.eligibleCountries ? [data.eligibleCountries].filter(Boolean) : []);
+    
+    const excludedCountries = Array.isArray(data.excludedCountries)
+      ? data.excludedCountries.filter((c: any) => c && typeof c === 'string' && c.trim().length > 0)
+      : (data.excludedCountries ? [data.excludedCountries].filter(Boolean) : []);
+
+    try {
+      const campaign = await prisma.referralCampaign.create({
+        data: {
+          name: data.name.trim(),
+          description: data.description?.trim() || null,
+          isActive: data.isActive ?? true,
+          signupBonus: data.signupBonus ? new Decimal(data.signupBonus.toString()) : null,
+          signupCurrency: data.signupCurrency || null,
+          firstTxBonus: data.firstTxBonus ? new Decimal(data.firstTxBonus.toString()) : null,
+          firstTxCurrency: data.firstTxCurrency || null,
+          firstTxMinAmount: data.firstTxMinAmount ? new Decimal(data.firstTxMinAmount.toString()) : null,
+          tier2Percentage: data.tier2Percentage ? new Decimal(data.tier2Percentage.toString()) : null,
+          tier3Percentage: data.tier3Percentage ? new Decimal(data.tier3Percentage.toString()) : null,
+          minKycLevel: data.minKycLevel || null,
+          eligibleCountries,
+          excludedCountries,
+          maxReferralsPerUser: data.maxReferralsPerUser || null,
+          maxRewardPerUser: data.maxRewardPerUser ? new Decimal(data.maxRewardPerUser.toString()) : null,
+          maxRewardPerCampaign: data.maxRewardPerCampaign ? new Decimal(data.maxRewardPerCampaign.toString()) : null,
+          startDate,
+          endDate,
+        },
+      });
+
+      return campaign;
+    } catch (prismaError: any) {
+      console.error('[Referral Service] Prisma error creating campaign:', {
+        code: prismaError.code,
+        meta: prismaError.meta,
+        message: prismaError.message,
+      });
+      throw new Error(`Database error: ${prismaError.message || 'Failed to create campaign'}`);
+    }
 
     return campaign;
   }

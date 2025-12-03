@@ -154,6 +154,8 @@ router.post('/admin/campaigns', verifyFirebaseToken, requireAdmin, async (req: A
   try {
     const data = req.body;
 
+    console.log('[Referral Campaigns] Creating campaign with data:', JSON.stringify(data, null, 2));
+
     // Validate required fields
     if (!data.name) {
       throw new ValidationError('Campaign name is required');
@@ -178,9 +180,27 @@ router.post('/admin/campaigns', verifyFirebaseToken, requireAdmin, async (req: A
 
     res.status(201).json({ campaign: serializedCampaign });
   } catch (error: any) {
-    console.error('Error creating campaign:', error);
+    console.error('[Referral Campaigns] Error creating campaign:', error);
+    console.error('[Referral Campaigns] Error stack:', error.stack);
+    console.error('[Referral Campaigns] Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
+    
     const status = error instanceof ValidationError ? 400 : 500;
-    res.status(status).json({ error: error.message || 'Failed to create campaign' });
+    res.status(status).json({ 
+      error: error.message || 'Internal server error',
+      message: error.message || 'An unexpected error occurred',
+      ...(process.env.NODE_ENV === 'development' && {
+        details: {
+          name: error.name,
+          code: error.code,
+          meta: error.meta,
+        }
+      })
+    });
   }
 });
 

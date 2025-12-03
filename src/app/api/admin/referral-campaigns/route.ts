@@ -65,6 +65,9 @@ async function proxyRequest(
     
     console.log(`[Referral Campaigns API] Proxying ${method} request to: ${url}`);
     console.log(`[Referral Campaigns API] BACKEND_URL: ${BACKEND_URL}, endpoint: ${cleanEndpoint}`);
+    if (body) {
+      console.log(`[Referral Campaigns API] Request body:`, JSON.stringify(body, null, 2));
+    }
 
     // Forward request to backend
     const response = await fetch(url, {
@@ -78,10 +81,28 @@ async function proxyRequest(
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      console.error(`[Referral Campaigns API] Backend returned ${response.status}: ${errorText}`);
+      // Try to parse as JSON first, fallback to text
+      let errorData: any;
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text().catch(() => 'Unknown error') };
+        }
+      } else {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        errorData = { error: errorText };
+      }
+      
+      console.error(`[Referral Campaigns API] Backend returned ${response.status}:`, JSON.stringify(errorData, null, 2));
+      
       return NextResponse.json(
-        { error: errorText || `Backend error: ${response.status}` },
+        { 
+          error: errorData.error || errorData.message || `Backend error: ${response.status}`,
+          message: errorData.message || errorData.error || 'An unexpected error occurred',
+          details: errorData.details || errorData
+        },
         { status: response.status }
       );
     }
