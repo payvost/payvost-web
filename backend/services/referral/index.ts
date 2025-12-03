@@ -342,10 +342,20 @@ export class ReferralService {
 
   /**
    * Get user's referral statistics
+   * Automatically generates a referral code if the user doesn't have one
    */
   async getUserReferralStats(userId: string) {
-    const [referralCode, referrals, rewards, totalEarned] = await Promise.all([
-      prisma.referralCode.findUnique({ where: { userId } }),
+    // Auto-generate referral code if user doesn't have one
+    let referralCode = await prisma.referralCode.findUnique({ where: { userId } });
+    
+    if (!referralCode) {
+      // Generate code automatically for existing users
+      await this.generateReferralCode(userId);
+      // Fetch the newly created code
+      referralCode = await prisma.referralCode.findUnique({ where: { userId } });
+    }
+
+    const [referrals, rewards, totalEarned] = await Promise.all([
       prisma.referral.findMany({
         where: { referrerId: userId, isActive: true },
         include: {
