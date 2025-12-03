@@ -23,7 +23,7 @@ function initFirebaseAdmin() {
         const raw = envJson ?? Buffer.from(envB64 as string, 'base64').toString('utf8');
         parsed = JSON.parse(raw);
       } catch (e: any) {
-        const hint = `Invalid FIREBASE_SERVICE_ACCOUNT_KEY$${envB64 ? '_BASE64' : ''}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
+        const hint = `Invalid FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
         throw new Error(`${hint} Original error: ${e?.message || e}`);
       }
       if (parsed.private_key && typeof parsed.private_key === 'string') {
