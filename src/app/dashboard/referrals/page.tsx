@@ -10,7 +10,7 @@ export default function ReferralsPage() {
   
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
-      <div className="container mx-auto py-6 space-y-6">
+      <main className="flex-1 p-4 lg:p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Referral Program</h1>
           <p className="text-muted-foreground mt-1">
@@ -18,7 +18,7 @@ export default function ReferralsPage() {
           </p>
         </div>
         <ReferralDashboard />
-      </div>
+      </main>
     </DashboardLayout>
   );
 }
