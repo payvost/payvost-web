@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.InvoiceService = void 0;
 const library_1 = require("@prisma/client/runtime/library");
+const firebase_admin_1 = __importDefault(require("firebase-admin"));
 class InvoiceService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -78,9 +82,10 @@ class InvoiceService {
     }
     /**
      * Get public invoice (for public pages)
+     * Checks Prisma (PostgreSQL), Firestore invoices collection, and Firestore businessInvoices collection
      */
     async getPublicInvoice(idOrNumber) {
-        // Try by ID first
+        // Try Prisma first (for migrated invoices)
         let invoice = await this.prisma.invoice.findUnique({
             where: { id: idOrNumber },
         });
@@ -90,10 +95,196 @@ class InvoiceService {
                 where: { invoiceNumber: idOrNumber },
             });
         }
-        if (!invoice || !invoice.isPublic) {
-            return null;
+        // If found in Prisma, check if public
+        if (invoice) {
+            if (!invoice.isPublic) {
+                return null;
+            }
+            return invoice;
         }
-        return invoice;
+        // If not in Prisma, check Firestore collections (both invoices and businessInvoices)
+        try {
+            // Check if Firebase Admin is initialized
+            if (!firebase_admin_1.default.apps.length) {
+                console.error('Firebase Admin not initialized');
+                throw new Error('Firebase Admin SDK not initialized');
+            }
+            const db = firebase_admin_1.default.firestore();
+            if (!db) {
+                console.error('Firestore database not available');
+                throw new Error('Firestore database not available');
+            }
+            let firestoreInvoice = null;
+            let isBusinessInvoice = false;
+            // Helper function to convert Firestore invoice to Prisma format
+            const convertFirestoreInvoice = (invoiceDoc, isBusiness) => {
+                const data = invoiceDoc.data();
+                if (!data) {
+                    console.warn('Firestore invoice document exists but has no data');
+                    return null;
+                }
+                // Check if invoice is public
+                if (isBusiness) {
+                    // Business invoices: check if draft
+                    const isDraft = data?.status === 'Draft';
+                    if (isDraft) {
+                        return null;
+                    }
+                }
+                else {
+                    // Regular invoices: check isPublic flag
+                    if (data?.isPublic !== true) {
+                        return null;
+                    }
+                }
+                // Helper to safely convert Firestore Timestamp to Date
+                const toDate = (timestamp) => {
+                    if (!timestamp)
+                        return new Date();
+                    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+                        return timestamp.toDate();
+                    }
+                    if (timestamp instanceof Date) {
+                        return timestamp;
+                    }
+                    if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+                        return new Date(timestamp);
+                    }
+                    return new Date();
+                };
+                if (isBusiness) {
+                    // Convert business invoice format
+                    return {
+                        id: invoiceDoc.id,
+                        invoiceNumber: data?.invoiceNumber || '',
+                        invoiceType: 'BUSINESS',
+                        userId: data?.createdBy || '',
+                        businessId: data?.businessId || null,
+                        createdBy: data?.createdBy || '',
+                        issueDate: toDate(data?.issueDate),
+                        dueDate: toDate(data?.dueDate),
+                        status: (data?.status?.toUpperCase() || 'PENDING'),
+                        currency: data?.currency || 'USD',
+                        grandTotal: new library_1.Decimal(Number(data?.grandTotal || 0)),
+                        taxRate: new library_1.Decimal(Number(data?.taxRate || 0)),
+                        fromInfo: {
+                            name: data?.fromName || '',
+                            address: data?.fromAddress || '',
+                            email: data?.fromEmail || '',
+                        },
+                        toInfo: {
+                            name: data?.toName || '',
+                            address: data?.toAddress || '',
+                            email: data?.toEmail || '',
+                        },
+                        items: Array.isArray(data?.items) ? data.items : [],
+                        paymentMethod: (data?.paymentMethod?.toUpperCase() || 'PAYVOST'),
+                        manualBankDetails: data?.paymentMethod === 'manual' ? {
+                            bankName: data?.manualBankName || '',
+                            accountName: data?.manualAccountName || '',
+                            accountNumber: data?.manualAccountNumber || '',
+                            otherDetails: data?.manualOtherDetails || '',
+                        } : null,
+                        notes: data?.notes || null,
+                        isPublic: data?.isPublic !== false,
+                        publicUrl: data?.publicUrl || null,
+                        pdfUrl: data?.pdfUrl || null,
+                        createdAt: toDate(data?.createdAt),
+                        updatedAt: toDate(data?.updatedAt),
+                    };
+                }
+                else {
+                    // Convert regular invoice format
+                    return {
+                        id: invoiceDoc.id,
+                        invoiceNumber: data?.invoiceNumber || '',
+                        invoiceType: 'USER',
+                        userId: data?.userId || '',
+                        businessId: null,
+                        createdBy: data?.userId || '',
+                        issueDate: toDate(data?.issueDate),
+                        dueDate: toDate(data?.dueDate),
+                        status: (data?.status?.toUpperCase() || 'PENDING'),
+                        currency: data?.currency || 'USD',
+                        grandTotal: new library_1.Decimal(Number(data?.grandTotal || 0)),
+                        taxRate: new library_1.Decimal(Number(data?.taxRate || 0)),
+                        fromInfo: {
+                            name: data?.fromName || '',
+                            address: data?.fromAddress || '',
+                            email: data?.fromEmail || '',
+                        },
+                        toInfo: {
+                            name: data?.toName || '',
+                            address: data?.toAddress || '',
+                            email: data?.toEmail || '',
+                        },
+                        items: Array.isArray(data?.items) ? data.items : [],
+                        paymentMethod: (data?.paymentMethod?.toUpperCase() || 'PAYVOST'),
+                        manualBankDetails: data?.paymentMethod === 'manual' ? {
+                            bankName: data?.manualBankName || '',
+                            accountName: data?.manualAccountName || '',
+                            accountNumber: data?.manualAccountNumber || '',
+                            otherDetails: data?.manualOtherDetails || '',
+                        } : null,
+                        notes: data?.notes || null,
+                        isPublic: data?.isPublic === true,
+                        publicUrl: data?.publicUrl || null,
+                        pdfUrl: data?.pdfUrl || null,
+                        createdAt: toDate(data?.createdAt),
+                        updatedAt: toDate(data?.updatedAt),
+                    };
+                }
+            };
+            // First, try regular invoices collection
+            let docRef = db.collection('invoices').doc(idOrNumber);
+            firestoreInvoice = await docRef.get();
+            // If not found by ID, try querying by invoiceNumber in invoices collection
+            if (!firestoreInvoice.exists) {
+                const querySnapshot = await db.collection('invoices')
+                    .where('invoiceNumber', '==', idOrNumber)
+                    .limit(1)
+                    .get();
+                if (!querySnapshot.empty) {
+                    firestoreInvoice = querySnapshot.docs[0];
+                    isBusinessInvoice = false;
+                }
+            }
+            else {
+                isBusinessInvoice = false;
+            }
+            // If not found in invoices collection, try businessInvoices collection
+            if (!firestoreInvoice || !firestoreInvoice.exists) {
+                docRef = db.collection('businessInvoices').doc(idOrNumber);
+                firestoreInvoice = await docRef.get();
+                if (!firestoreInvoice.exists) {
+                    const querySnapshot = await db.collection('businessInvoices')
+                        .where('invoiceNumber', '==', idOrNumber)
+                        .limit(1)
+                        .get();
+                    if (!querySnapshot.empty) {
+                        firestoreInvoice = querySnapshot.docs[0];
+                        isBusinessInvoice = true;
+                    }
+                }
+                else {
+                    isBusinessInvoice = true;
+                }
+            }
+            if (firestoreInvoice && firestoreInvoice.exists) {
+                const converted = convertFirestoreInvoice(firestoreInvoice, isBusinessInvoice);
+                if (converted) {
+                    return converted;
+                }
+            }
+        }
+        catch (error) {
+            console.error('Error fetching invoice from Firestore:', error);
+            console.error('Error details:', error instanceof Error ? error.stack : String(error));
+            console.error('Invoice ID/Number:', idOrNumber);
+            // Re-throw the error so the route handler can catch it and return proper error
+            throw error;
+        }
+        return null;
     }
     /**
      * List invoices for a user
@@ -190,27 +381,100 @@ class InvoiceService {
     }
     /**
      * Mark invoice as paid
+     * Handles both Prisma (PostgreSQL) and Firestore business invoices
      */
     async markAsPaid(id, userId) {
-        // Verify ownership first
+        // Try Prisma first
         const existing = await this.prisma.invoice.findUnique({
             where: { id },
         });
-        if (!existing) {
-            throw new Error('Invoice not found');
+        if (existing) {
+            // Verify ownership
+            if (existing.userId !== userId && existing.createdBy !== userId) {
+                throw new Error('Unauthorized');
+            }
+            const invoice = await this.prisma.invoice.update({
+                where: { id },
+                data: {
+                    status: 'PAID',
+                    paidAt: new Date(),
+                    updatedAt: new Date(),
+                },
+            });
+            return invoice;
         }
-        if (existing.userId !== userId && existing.createdBy !== userId) {
-            throw new Error('Unauthorized');
-        }
-        const invoice = await this.prisma.invoice.update({
-            where: { id },
-            data: {
+        // If not in Prisma, check Firestore businessInvoices collection
+        try {
+            if (!firebase_admin_1.default.apps.length) {
+                throw new Error('Firebase Admin SDK not initialized');
+            }
+            const db = firebase_admin_1.default.firestore();
+            const docRef = db.collection('businessInvoices').doc(id);
+            const firestoreInvoice = await docRef.get();
+            if (!firestoreInvoice.exists) {
+                throw new Error('Invoice not found');
+            }
+            const data = firestoreInvoice.data();
+            if (!data) {
+                throw new Error('Invoice data not found');
+            }
+            // Verify ownership
+            if (data.createdBy !== userId) {
+                throw new Error('Unauthorized');
+            }
+            // Update in Firestore
+            await docRef.update({
+                status: 'Paid',
+                paidAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+            });
+            // Return updated data in Prisma format for consistency
+            const updatedDoc = await docRef.get();
+            const updatedData = updatedDoc.data();
+            return {
+                id: updatedDoc.id,
+                invoiceNumber: updatedData?.invoiceNumber || '',
+                invoiceType: 'BUSINESS',
+                userId: updatedData?.createdBy || '',
+                businessId: updatedData?.businessId || null,
+                createdBy: updatedData?.createdBy || '',
+                issueDate: updatedData?.issueDate?.toDate ? updatedData.issueDate.toDate() : new Date(updatedData?.issueDate),
+                dueDate: updatedData?.dueDate?.toDate ? updatedData.dueDate.toDate() : new Date(updatedData?.dueDate),
                 status: 'PAID',
-                paidAt: new Date(),
-                updatedAt: new Date(),
-            },
-        });
-        return invoice;
+                currency: updatedData?.currency || 'USD',
+                grandTotal: new library_1.Decimal(Number(updatedData?.grandTotal || 0)),
+                taxRate: new library_1.Decimal(Number(updatedData?.taxRate || 0)),
+                fromInfo: {
+                    name: updatedData?.fromName || '',
+                    address: updatedData?.fromAddress || '',
+                    email: updatedData?.fromEmail || '',
+                },
+                toInfo: {
+                    name: updatedData?.toName || '',
+                    address: updatedData?.toAddress || '',
+                    email: updatedData?.toEmail || '',
+                },
+                items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+                paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST'),
+                manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+                    bankName: updatedData?.manualBankName || '',
+                    accountName: updatedData?.manualAccountName || '',
+                    accountNumber: updatedData?.manualAccountNumber || '',
+                    otherDetails: updatedData?.manualOtherDetails || '',
+                } : null,
+                notes: updatedData?.notes || null,
+                isPublic: updatedData?.isPublic !== false,
+                publicUrl: updatedData?.publicUrl || null,
+                pdfUrl: updatedData?.pdfUrl || null,
+                paidAt: updatedData?.paidAt?.toDate ? updatedData.paidAt.toDate() : new Date(),
+                createdAt: updatedData?.createdAt?.toDate ? updatedData.createdAt.toDate() : new Date(),
+                updatedAt: updatedData?.updatedAt?.toDate ? updatedData.updatedAt.toDate() : new Date(),
+            };
+        }
+        catch (error) {
+            console.error('Error marking Firestore invoice as paid:', error);
+            throw error;
+        }
     }
     /**
      * Delete invoice

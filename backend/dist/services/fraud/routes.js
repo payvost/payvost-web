@@ -1,9 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
-const decimal_js_1 = require("decimal.js");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const prisma_1 = require("../../common/prisma");
 const router = (0, express_1.Router)();
 /**
@@ -29,7 +32,7 @@ router.post('/analyze-transaction', middleware_1.verifyFirebaseToken, async (req
         const riskScore = await calculateRiskScore({
             fromAccountId,
             toAccountId,
-            amount: new decimal_js_1.Decimal(amount),
+            amount: new decimal_js_1.default(amount),
             currency,
         });
         res.status(200).json({
@@ -164,7 +167,7 @@ async function calculateRiskScore(params) {
         _avg: { amount: true },
     });
     if (avgTransfer._avg.amount) {
-        const avgAmount = new decimal_js_1.Decimal(avgTransfer._avg.amount.toString());
+        const avgAmount = new decimal_js_1.default(avgTransfer._avg.amount.toString());
         const ratio = amount.div(avgAmount);
         if (ratio.greaterThan(10)) {
             score += 40;

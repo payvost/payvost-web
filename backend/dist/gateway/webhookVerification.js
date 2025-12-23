@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyReloadlyWebhook = verifyReloadlyWebhook;
 exports.verifyStripeWebhook = verifyStripeWebhook;
 exports.verifyWebhookSignature = verifyWebhookSignature;
+exports.verifyMailgunWebhook = verifyMailgunWebhook;
 exports.captureRawBody = captureRawBody;
 const crypto_1 = __importDefault(require("crypto"));
 const logger_1 = require("../common/logger");
@@ -162,6 +163,60 @@ function verifyWebhookSignature(options) {
             return res.status(500).json({ error: 'Webhook verification failed' });
         }
     };
+}
+/**
+ * Verify webhook signature for Mailgun
+ * Mailgun uses HMAC SHA256 with timestamp and token
+ * Format: signature = HMAC-SHA256(timestamp + token, signing_key)
+ */
+function verifyMailgunWebhook(req, res, next) {
+    const signingKey = process.env.MAILGUN_WEBHOOK_SIGNING_KEY;
+    if (!signingKey) {
+        logger_1.logger.warn('MAILGUN_WEBHOOK_SIGNING_KEY not configured. Webhook verification disabled.');
+        return next();
+    }
+    try {
+        // Mailgun sends signature, timestamp, and token
+        // Can be in body (form-encoded) or headers
+        const signature = req.body?.signature ||
+            req.body?.['signature']?.signature ||
+            req.headers['x-mailgun-signature'];
+        const timestamp = req.body?.timestamp ||
+            req.body?.['signature']?.timestamp ||
+            req.headers['x-mailgun-timestamp'];
+        const token = req.body?.token ||
+            req.body?.['signature']?.token ||
+            req.headers['x-mailgun-token'];
+        if (!signature || !timestamp || !token) {
+            logger_1.logger.warn('Missing Mailgun webhook signature, timestamp, or token');
+            return res.status(401).json({ error: 'Missing webhook signature' });
+        }
+        // Mailgun signature verification: HMAC-SHA256(timestamp + token, signing_key)
+        const signedString = timestamp + token;
+        const expectedSignature = crypto_1.default
+            .createHmac('sha256', signingKey)
+            .update(signedString)
+            .digest('hex');
+        // Use constant-time comparison to prevent timing attacks
+        if (!crypto_1.default.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+            logger_1.logger.warn({ ip: req.ip }, 'Invalid Mailgun webhook signature');
+            return res.status(401).json({ error: 'Invalid webhook signature' });
+        }
+        // Verify timestamp to prevent replay attacks (within 15 minutes)
+        const requestTime = parseInt(timestamp, 10);
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeDiff = Math.abs(currentTime - requestTime);
+        if (timeDiff > 900) { // 15 minutes
+            logger_1.logger.warn({ timeDiff }, 'Mailgun webhook timestamp too old');
+            return res.status(401).json({ error: 'Webhook timestamp expired' });
+        }
+        logger_1.logger.info('Mailgun webhook signature verified');
+        next();
+    }
+    catch (error) {
+        logger_1.logger.error({ err: error }, 'Error verifying Mailgun webhook');
+        return res.status(500).json({ error: 'Webhook verification failed' });
+    }
 }
 /**
  * Middleware to capture raw body for webhook verification

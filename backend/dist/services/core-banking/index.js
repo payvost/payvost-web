@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.TransactionTypeEnum = void 0;
 exports.transferFunds = transferFunds;
 exports.getAccountBalance = getAccountBalance;
 exports.createAccount = createAccount;
-const client_1 = require("@prisma/client");
 const prisma_1 = require("../../common/prisma");
 // Use Prisma enum - fallback to string if not available
-const TransactionTypeEnum = client_1.TransactionType || {
+exports.TransactionTypeEnum = {
     INTERNAL_TRANSFER: 'INTERNAL_TRANSFER',
     EXTERNAL_TRANSFER: 'EXTERNAL_TRANSFER',
     CARD_PAYMENT: 'CARD_PAYMENT',
@@ -59,7 +59,7 @@ async function transferFunds(fromAccountId, toAccountId, amount, currency, idemp
                     amount: amountStr,
                     currency,
                     status: 'completed',
-                    type: TransactionTypeEnum.INTERNAL_TRANSFER,
+                    type: exports.TransactionTypeEnum.INTERNAL_TRANSFER,
                     idempotencyKey: idempotencyKey ?? null,
                     description: description ?? null,
                 },

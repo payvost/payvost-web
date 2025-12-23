@@ -1,13 +1,16 @@
 "use strict";
 // Fixer.io API Service
 // Provides real-time exchange rates from Fixer.io
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLatestRates = getLatestRates;
 exports.convertCurrency = convertCurrency;
 exports.getHistoricalRates = getHistoricalRates;
 exports.getTimeSeriesRates = getTimeSeriesRates;
 exports.getSupportedCurrencies = getSupportedCurrencies;
-const decimal_js_1 = require("decimal.js");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const FIXER_API_KEY = process.env.FIXER_API_KEY;
 const FIXER_BASE_URL = 'https://api.fixer.io/';
 /**
@@ -36,7 +39,7 @@ async function getLatestRates(base = 'EUR', symbols) {
     // Convert rates to Decimal for precision
     const rates = {};
     for (const [currency, rate] of Object.entries(data.rates)) {
-        rates[currency] = new decimal_js_1.Decimal(rate);
+        rates[currency] = new decimal_js_1.default(rate);
     }
     return {
         base: data.base,
@@ -55,7 +58,7 @@ async function convertCurrency(from, to, amount) {
     if (!FIXER_API_KEY) {
         throw new Error('FIXER_API_KEY is not configured');
     }
-    const amountDecimal = amount instanceof decimal_js_1.Decimal ? amount : new decimal_js_1.Decimal(amount);
+    const amountDecimal = amount instanceof decimal_js_1.default ? amount : new decimal_js_1.default(amount);
     const url = new URL(`${FIXER_BASE_URL}convert`);
     url.searchParams.append('access_key', FIXER_API_KEY);
     url.searchParams.append('from', from);
@@ -73,8 +76,8 @@ async function convertCurrency(from, to, amount) {
         from: data.query.from,
         to: data.query.to,
         amount: amountDecimal,
-        result: new decimal_js_1.Decimal(data.result),
-        rate: new decimal_js_1.Decimal(data.info.rate),
+        result: new decimal_js_1.default(data.result),
+        rate: new decimal_js_1.default(data.info.rate),
         timestamp: data.info.timestamp,
     };
 }
@@ -105,7 +108,7 @@ async function getHistoricalRates(date, base = 'EUR', symbols) {
     // Convert rates to Decimal for precision
     const rates = {};
     for (const [currency, rate] of Object.entries(data.rates)) {
-        rates[currency] = new decimal_js_1.Decimal(rate);
+        rates[currency] = new decimal_js_1.default(rate);
     }
     return {
         base: data.base,
@@ -146,7 +149,7 @@ async function getTimeSeriesRates(startDate, endDate, base = 'EUR', symbols) {
     for (const [date, rates] of Object.entries(data.rates)) {
         timeSeries[date] = {};
         for (const [currency, rate] of Object.entries(rates)) {
-            timeSeries[date][currency] = new decimal_js_1.Decimal(rate);
+            timeSeries[date][currency] = new decimal_js_1.default(rate);
         }
     }
     return timeSeries;

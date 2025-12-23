@@ -1,7 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FeeEngine = exports.TransactionType = exports.FeeType = void 0;
-const decimal_js_1 = require("decimal.js");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 // Temporary enums until they're added to Prisma schema
 var FeeType;
 (function (FeeType) {
@@ -29,17 +32,17 @@ class FeeEngine {
      * Calculate fees for a transaction based on applicable rules
      */
     async calculateFees(params) {
-        const amount = new decimal_js_1.Decimal(params.amount);
+        const amount = new decimal_js_1.default(params.amount);
         const { currency, transactionType, fromCountry, toCountry, userTier } = params;
         // Get applicable fee rules from temporary storage
         const feeRules = Array.from(this.feeRules.values()).filter(rule => rule.isActive &&
             rule.currency === currency &&
             rule.transactionType === transactionType &&
             (!rule.country || rule.country === fromCountry || rule.country === toCountry));
-        let totalFees = new decimal_js_1.Decimal(0);
-        let fixedFees = new decimal_js_1.Decimal(0);
-        let percentageFees = new decimal_js_1.Decimal(0);
-        let discounts = new decimal_js_1.Decimal(0);
+        let totalFees = new decimal_js_1.default(0);
+        let fixedFees = new decimal_js_1.default(0);
+        let percentageFees = new decimal_js_1.default(0);
+        let discounts = new decimal_js_1.default(0);
         const appliedRules = [];
         // Apply each fee rule
         for (const rule of feeRules) {
@@ -48,7 +51,7 @@ class FeeEngine {
                 continue;
             }
             // Calculate fee based on rule type
-            let ruleFee = new decimal_js_1.Decimal(0);
+            let ruleFee = new decimal_js_1.default(0);
             if (rule.fixedAmount) {
                 ruleFee = ruleFee.plus(rule.fixedAmount);
                 fixedFees = fixedFees.plus(rule.fixedAmount);

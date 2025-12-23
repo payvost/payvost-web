@@ -13,7 +13,7 @@ class StripeProvider {
         this.supportedCountries = ['US', 'GB', 'DE', 'FR', 'ES', 'IT'];
         this.minimumAmount = { USD: 0.5, EUR: 0.5, GBP: 0.3 };
         this.maximumAmount = { USD: 999999.99, EUR: 999999.99, GBP: 999999.99 };
-        this.stripe = new stripe_1.default(apiKey, { apiVersion: '2025-09-30.clover' });
+        this.stripe = new stripe_1.default(apiKey, { apiVersion: '2023-10-16' });
     }
     async createPaymentIntent(request) {
         const paymentIntent = await this.stripe.paymentIntents.create({

@@ -444,6 +444,7 @@ const InvoiceDocument = ({ invoice }) => {
   const daysUntilDue = getDueDateInfo();
   const isOverdue = daysUntilDue !== null && daysUntilDue < 0;
   const isDueSoon = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+  const overdueInfo = isOverdue ? `Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}` : null;
   const amountInWords = numberToWords(grandTotal, currency);
 
   // Render business invoice with template
@@ -466,15 +467,32 @@ const InvoiceDocument = ({ invoice }) => {
           )
         ),
         
-        // Billing Information
+        // Invoice Details (at top, as list)
+        React.createElement(View, { style: { 
+          flexDirection: 'column', 
+          marginBottom: 30,
+          backgroundColor: '#f8fafc',
+          padding: 16,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: '#e2e8f0'
+        } },
+          React.createElement(Text, { style: activeStyles.sectionHeader }, 'Invoice Details'),
+          React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
+          React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
+          React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Currency: ${currency}`),
+          overdueInfo && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
+        ),
+        
+        // Billing Information (side by side with more space)
         React.createElement(View, { style: activeStyles.section },
-          React.createElement(View, { style: activeStyles.column },
+          React.createElement(View, { style: { ...activeStyles.column, flex: 1.2 } },
             React.createElement(Text, { style: activeStyles.sectionHeader }, 'Billed To'),
             React.createElement(Text, { style: activeStyles.text }, invoice.toName || 'Customer Name'),
             invoice.toEmail && React.createElement(Text, { style: activeStyles.mutedText }, invoice.toEmail),
             invoice.toAddress && React.createElement(Text, { style: activeStyles.mutedText }, invoice.toAddress)
           ),
-          React.createElement(View, { style: activeStyles.column },
+          React.createElement(View, { style: { ...activeStyles.column, flex: 1.2 } },
             React.createElement(Text, { style: activeStyles.sectionHeader }, 'From'),
             React.createElement(Text, { style: activeStyles.text }, invoice.fromName || brandName),
             invoice.fromAddress && React.createElement(Text, { style: activeStyles.mutedText }, invoice.fromAddress),
@@ -482,13 +500,7 @@ const InvoiceDocument = ({ invoice }) => {
             businessProfile.registrationNumber && React.createElement(Text, { style: activeStyles.mutedText }, `Reg: ${businessProfile.registrationNumber}`),
             businessProfile.taxId && React.createElement(Text, { style: activeStyles.mutedText }, `Tax ID: ${businessProfile.taxId}`),
             invoice.fromEmail && React.createElement(Text, { style: activeStyles.mutedText }, invoice.fromEmail)
-          ),
-          !invoiceTemplate || invoiceTemplate === 'default' ? React.createElement(View, { style: { flex: 1, alignItems: 'flex-end', backgroundColor: '#F5F5F7', padding: 16, borderRadius: 4 } },
-            React.createElement(Text, { style: activeStyles.sectionHeader }, 'Invoice Details'),
-            React.createElement(Text, { style: activeStyles.text }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
-            React.createElement(Text, { style: activeStyles.text }, `Due Date: ${formatDate(invoice.dueDate)}`),
-            React.createElement(Text, { style: activeStyles.text }, `Currency: ${currency}`)
-          ) : null
+          )
         ),
         
         // Items Table
@@ -574,25 +586,36 @@ const InvoiceDocument = ({ invoice }) => {
         )
       ),
       
+      // Invoice Details (at top, as list)
+      React.createElement(View, { style: { 
+        flexDirection: 'column', 
+        marginBottom: 30,
+        backgroundColor: '#f8fafc',
+        padding: 16,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+      } },
+        React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
+        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
+        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
+        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Currency: ${invoice.currency || 'USD'}`),
+        isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
+        isDueSoon && !isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
+      ),
+      
       React.createElement(View, { style: baseStyles.section },
-        React.createElement(View, { style: baseStyles.column },
+        React.createElement(View, { style: { ...baseStyles.column, flex: 1.2 } },
           React.createElement(Text, { style: baseStyles.sectionHeader }, 'Billed To'),
           React.createElement(Text, { style: baseStyles.text }, invoice.toName || 'Customer Name'),
           invoice.toEmail && React.createElement(Text, { style: baseStyles.mutedText }, invoice.toEmail),
           invoice.toAddress && React.createElement(Text, { style: baseStyles.mutedText }, invoice.toAddress)
         ),
-        React.createElement(View, { style: baseStyles.column },
+        React.createElement(View, { style: { ...baseStyles.column, flex: 1.2 } },
           React.createElement(Text, { style: baseStyles.sectionHeader }, 'From'),
           React.createElement(Text, { style: baseStyles.text }, invoice.fromName || 'Your Business'),
           invoice.fromAddress && React.createElement(Text, { style: baseStyles.mutedText }, invoice.fromAddress),
           invoice.fromEmail && React.createElement(Text, { style: baseStyles.mutedText }, invoice.fromEmail)
-        ),
-        React.createElement(View, { style: baseStyles.columnRight },
-          React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
-          React.createElement(Text, { style: baseStyles.text }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
-          React.createElement(Text, { style: baseStyles.text }, `Due Date: ${formatDate(invoice.dueDate)}`),
-          isOverdue && React.createElement(Text, { style: [baseStyles.mutedText, { color: '#dc2626', fontWeight: 'bold', marginTop: 5 }] }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
-          isDueSoon && !isOverdue && React.createElement(Text, { style: [baseStyles.mutedText, { color: '#f59e0b', fontWeight: 'bold', marginTop: 5 }] }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
         )
       ),
       

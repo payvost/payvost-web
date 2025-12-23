@@ -7,25 +7,16 @@ exports.NotificationTemplates = void 0;
 const express_1 = require("express");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
-const nodemailer_1 = __importDefault(require("nodemailer"));
 const fcm_1 = require("./fcm");
 const twilio_1 = require("./twilio");
 const logger_1 = require("../../common/logger");
+const mailgun_1 = require("../../common/mailgun");
+const firebase_admin_1 = __importDefault(require("firebase-admin"));
 const router = (0, express_1.Router)();
-// Initialize Nodemailer with Mailgun SMTP
-const emailTransporter = nodemailer_1.default.createTransport({
-    host: process.env.MAILGUN_SMTP_HOST || 'smtp.mailgun.org',
-    port: parseInt(process.env.MAILGUN_SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-        user: process.env.MAILGUN_SMTP_LOGIN || '',
-        pass: process.env.MAILGUN_SMTP_PASSWORD || '',
-    },
-});
 // Check if email service is configured
-const isEmailConfigured = !!(process.env.MAILGUN_SMTP_LOGIN && process.env.MAILGUN_SMTP_PASSWORD);
+const isEmailConfigured = (0, mailgun_1.isMailgunConfigured)();
 if (!isEmailConfigured) {
-    logger_1.logger.warn('Mailgun SMTP not configured. Email notifications will be disabled.');
+    logger_1.logger.warn('Mailgun API not configured. Email notifications will be disabled.');
 }
 // Initialize Twilio
 (0, twilio_1.initTwilio)();
@@ -257,7 +248,7 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
         if (!userId) {
             throw new index_1.ValidationError('User ID is required');
         }
-        // Store preferences (would typically use Firestore or database)
+        // Store preferences in Firestore
         const preferences = {
             userId,
             email: email !== undefined ? email : true,
@@ -265,10 +256,22 @@ router.post('/preferences', middleware_1.verifyFirebaseToken, async (req, res) =
             sms: sms !== undefined ? sms : false,
             transactionAlerts: transactionAlerts !== undefined ? transactionAlerts : true,
             marketingEmails: marketingEmails !== undefined ? marketingEmails : false,
-            updatedAt: new Date().toISOString(),
+            updatedAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
         };
-        // TODO: Save to database
-        logger_1.logger.info({ userId, preferences }, 'Updated notification preferences');
+        // Save to Firestore
+        try {
+            await firebase_admin_1.default.firestore()
+                .collection('users')
+                .doc(userId)
+                .collection('notificationPreferences')
+                .doc('settings')
+                .set(preferences, { merge: true });
+            logger_1.logger.info({ userId, preferences }, 'Updated notification preferences');
+        }
+        catch (dbError) {
+            logger_1.logger.error({ err: dbError, userId }, 'Failed to save notification preferences to database');
+            // Continue anyway - preferences are still returned to user
+        }
         res.status(200).json({
             success: true,
             preferences,
@@ -290,14 +293,24 @@ async function sendEmailNotification(params) {
     }
     try {
         const html = getEmailTemplate(template, variables || {});
-        const info = await emailTransporter.sendMail({
-            from: `Payvost <${process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com'}>`,
+        const text = html.replace(/<[^>]*>/g, '').trim(); // Generate text version from HTML
+        const result = await (0, mailgun_1.sendEmail)({
             to: email,
             subject,
             html,
+            text,
+            from: `Payvost <${process.env.MAILGUN_FROM_EMAIL || 'no-reply@payvost.com'}>`,
+            tags: ['notification', template],
+            variables: variables || {},
         });
-        logger_1.logger.info({ messageId: info.messageId, email }, 'Email sent successfully');
-        return { success: true, messageId: info.messageId };
+        if (result.success) {
+            logger_1.logger.info({ messageId: result.messageId, email }, 'Email sent successfully via Mailgun API');
+            return { success: true, messageId: result.messageId };
+        }
+        else {
+            logger_1.logger.error({ error: result.error, email }, 'Email sending error');
+            return { success: false, error: result.error };
+        }
     }
     catch (error) {
         logger_1.logger.error({ err: error, email }, 'Email sending error');

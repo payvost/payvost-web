@@ -14,6 +14,7 @@ exports.resolveDispute = resolveDispute;
 exports.cancelEscrow = cancelEscrow;
 exports.getEscrowDetails = getEscrowDetails;
 exports.getUserEscrows = getUserEscrows;
+const library_1 = require("@prisma/client/runtime/library");
 const decimal_js_1 = __importDefault(require("decimal.js"));
 const types_1 = require("./types");
 const prisma_1 = require("../../common/prisma");
@@ -70,8 +71,8 @@ async function createEscrow(input, creatorUserId) {
     // Calculate total amount from milestones
     const totalAmount = input.milestones.reduce((sum, m) => sum + m.amount, 0);
     // Calculate platform fee
-    const platformFeePercent = new decimal_js_1.default(2.5); // 2.5%
-    const platformFee = new decimal_js_1.default(totalAmount).mul(platformFeePercent).div(100);
+    const platformFeePercent = new library_1.Decimal(2.5); // 2.5%
+    const platformFee = new library_1.Decimal(totalAmount).mul(platformFeePercent).div(100);
     // Create escrow with parties and milestones in a transaction
     const escrow = await prisma_1.prisma.$transaction(async (tx) => {
         // Create the escrow
@@ -81,7 +82,7 @@ async function createEscrow(input, creatorUserId) {
                 description: input.description,
                 status: types_1.EscrowStatusEnum.DRAFT,
                 currency: input.currency,
-                totalAmount: new decimal_js_1.default(totalAmount),
+                totalAmount: new library_1.Decimal(totalAmount),
                 platformFee: platformFee,
                 platformFeePercent: platformFeePercent,
                 autoReleaseEnabled: input.autoReleaseEnabled || false,
@@ -124,7 +125,7 @@ async function createEscrow(input, creatorUserId) {
             order: index + 1,
             title: m.title,
             description: m.description,
-            amount: new decimal_js_1.default(m.amount),
+            amount: new library_1.Decimal(m.amount.toString()),
             status: types_1.MilestoneStatusEnum.PENDING,
             requiresApproval: m.requiresApproval !== false,
             deliverableDescription: m.deliverableDescription,
@@ -209,7 +210,8 @@ async function fundMilestone(escrowId, input, userId) {
         if (milestone.escrowId !== escrowId)
             throw new Error('Milestone does not belong to this escrow');
         const amount = new decimal_js_1.default(input.amount);
-        const newFundedAmount = new decimal_js_1.default(milestone.amountFunded).add(amount);
+        const milestoneAmount = new decimal_js_1.default(milestone.amountFunded.toString());
+        const newFundedAmount = milestoneAmount.add(amount);
         if (newFundedAmount.gt(milestone.amount)) {
             throw new Error('Funding amount exceeds milestone amount');
         }
@@ -218,7 +220,7 @@ async function fundMilestone(escrowId, input, userId) {
         await tx.milestone.update({
             where: { id: input.milestoneId },
             data: {
-                amountFunded: newFundedAmount,
+                amountFunded: new library_1.Decimal(newFundedAmount.toString()),
                 status: isFunded ? types_1.MilestoneStatusEnum.FUNDED : types_1.MilestoneStatusEnum.AWAITING_FUNDING,
                 fundedAt: isFunded ? new Date() : undefined,
             },
@@ -229,7 +231,7 @@ async function fundMilestone(escrowId, input, userId) {
                 escrowId,
                 milestoneId: input.milestoneId,
                 type: 'FUNDING',
-                amount: amount,
+                amount: new library_1.Decimal(amount.toString()),
                 currency: milestone.escrow.currency,
                 status: 'COMPLETED',
                 accountId: input.accountId,
@@ -445,8 +447,8 @@ async function resolveDispute(escrowId, input, userId) {
                 resolutionNotes: input.resolutionNotes,
                 resolvedBy: userId,
                 resolvedAt: new Date(),
-                refundAmount: input.refundAmount ? new decimal_js_1.default(input.refundAmount) : undefined,
-                releaseAmount: input.releaseAmount ? new decimal_js_1.default(input.releaseAmount) : undefined,
+                refundAmount: input.refundAmount ? new library_1.Decimal(input.refundAmount.toString()) : undefined,
+                releaseAmount: input.releaseAmount ? new library_1.Decimal(input.releaseAmount.toString()) : undefined,
             },
         });
         // Update escrow status based on resolution
@@ -564,7 +566,7 @@ async function getEscrowDetails(escrowId) {
             amount: Number(m.amount),
             status: m.status,
             amountFunded: Number(m.amountFunded),
-            fundingProgress: Number(new decimal_js_1.default(m.amountFunded).div(m.amount).mul(100)),
+            fundingProgress: Number(new decimal_js_1.default(m.amountFunded.toString()).div(m.amount.toString()).mul(100)),
             deliverableSubmitted: m.deliverableSubmitted,
             deliverableUrl: m.deliverableUrl || undefined,
         })),

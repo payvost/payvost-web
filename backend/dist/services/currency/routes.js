@@ -1,9 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const middleware_1 = require("../../gateway/middleware");
 const index_1 = require("../../gateway/index");
-const decimal_js_1 = require("decimal.js");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const router = (0, express_1.Router)();
 // In-memory exchange rate cache (in production, use Redis or similar)
 const exchangeRateCache = new Map();
@@ -56,7 +59,7 @@ router.post('/convert', middleware_1.optionalAuth, async (req, res) => {
             throw new index_1.ValidationError(`Unsupported target currency: ${to}`);
         }
         const result = await convertCurrency({
-            amount: new decimal_js_1.Decimal(amount),
+            amount: new decimal_js_1.default(amount),
             from,
             to,
         });
@@ -98,7 +101,7 @@ router.post('/calculate-fees', middleware_1.verifyFirebaseToken, async (req, res
             throw new index_1.ValidationError('amount, from, and to are required');
         }
         const fees = calculateConversionFees({
-            amount: new decimal_js_1.Decimal(amount),
+            amount: new decimal_js_1.default(amount),
             from,
             to,
             userTier,
@@ -169,7 +172,7 @@ async function getExchangeRates(base, target) {
         const rates = {};
         // Cache and return rates
         Object.entries(data.rates).forEach(([currency, rate]) => {
-            const decimalRate = new decimal_js_1.Decimal(rate);
+            const decimalRate = new decimal_js_1.default(rate);
             rates[currency] = decimalRate.toString();
             exchangeRateCache.set(`${base}-${currency}`, { rate: decimalRate, timestamp: Date.now() });
         });
@@ -207,7 +210,7 @@ function getMockRates(base, target) {
 async function convertCurrency(params) {
     const { amount, from, to } = params;
     if (from === to) {
-        return { convertedAmount: amount, rate: new decimal_js_1.Decimal(1) };
+        return { convertedAmount: amount, rate: new decimal_js_1.default(1) };
     }
     const rate = getMockExchangeRate(from, to);
     const convertedAmount = amount.mul(rate);
@@ -219,26 +222,26 @@ async function convertCurrency(params) {
 function calculateConversionFees(params) {
     const { amount, from, to, userTier } = params;
     // Base conversion fee (1% for standard users)
-    let conversionFeePercent = new decimal_js_1.Decimal(1);
+    let conversionFeePercent = new decimal_js_1.default(1);
     // Apply tier-based discounts
     switch (userTier) {
         case 'PREMIUM':
-            conversionFeePercent = new decimal_js_1.Decimal(0.5);
+            conversionFeePercent = new decimal_js_1.default(0.5);
             break;
         case 'BUSINESS':
-            conversionFeePercent = new decimal_js_1.Decimal(0.75);
+            conversionFeePercent = new decimal_js_1.default(0.75);
             break;
         case 'VIP':
-            conversionFeePercent = new decimal_js_1.Decimal(0.25);
+            conversionFeePercent = new decimal_js_1.default(0.25);
             break;
     }
     // Calculate fees
     const conversionFee = amount.mul(conversionFeePercent).div(100);
-    const markup = new decimal_js_1.Decimal(0); // Could add markup based on corridor
-    const discount = userTier === 'VIP' ? conversionFee.mul(0.1) : new decimal_js_1.Decimal(0);
+    const markup = new decimal_js_1.default(0); // Could add markup based on corridor
+    const discount = userTier === 'VIP' ? conversionFee.mul(0.1) : new decimal_js_1.default(0);
     const totalFee = conversionFee.plus(markup).minus(discount);
     const rate = getMockExchangeRate(from, to);
-    const effectiveRate = rate.mul(new decimal_js_1.Decimal(1).minus(conversionFeePercent.div(100)));
+    const effectiveRate = rate.mul(new decimal_js_1.default(1).minus(conversionFeePercent.div(100)));
     return {
         totalFee,
         conversionFee,
@@ -253,24 +256,24 @@ function calculateConversionFees(params) {
 function getMockExchangeRate(from, to) {
     // Mock rates relative to USD
     const rates = {
-        USD: new decimal_js_1.Decimal(1),
-        EUR: new decimal_js_1.Decimal(0.92),
-        GBP: new decimal_js_1.Decimal(0.79),
-        NGN: new decimal_js_1.Decimal(1580),
-        GHS: new decimal_js_1.Decimal(15.5),
-        KES: new decimal_js_1.Decimal(150),
-        ZAR: new decimal_js_1.Decimal(18.5),
-        JPY: new decimal_js_1.Decimal(149),
-        CAD: new decimal_js_1.Decimal(1.36),
-        AUD: new decimal_js_1.Decimal(1.52),
-        CHF: new decimal_js_1.Decimal(0.88),
-        CNY: new decimal_js_1.Decimal(7.24),
-        INR: new decimal_js_1.Decimal(83.2),
+        USD: new decimal_js_1.default(1),
+        EUR: new decimal_js_1.default(0.92),
+        GBP: new decimal_js_1.default(0.79),
+        NGN: new decimal_js_1.default(1580),
+        GHS: new decimal_js_1.default(15.5),
+        KES: new decimal_js_1.default(150),
+        ZAR: new decimal_js_1.default(18.5),
+        JPY: new decimal_js_1.default(149),
+        CAD: new decimal_js_1.default(1.36),
+        AUD: new decimal_js_1.default(1.52),
+        CHF: new decimal_js_1.default(0.88),
+        CNY: new decimal_js_1.default(7.24),
+        INR: new decimal_js_1.default(83.2),
     };
     if (from === to)
-        return new decimal_js_1.Decimal(1);
-    const fromRate = rates[from] || new decimal_js_1.Decimal(1);
-    const toRate = rates[to] || new decimal_js_1.Decimal(1);
+        return new decimal_js_1.default(1);
+    const fromRate = rates[from] || new decimal_js_1.default(1);
+    const toRate = rates[to] || new decimal_js_1.default(1);
     // Convert via USD
     return toRate.div(fromRate);
 }

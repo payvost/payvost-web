@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DisputeResolutionEnum = exports.DisputeStatusEnum = exports.MilestoneStatusEnum = exports.EscrowPartyRoleEnum = exports.EscrowStatusEnum = void 0;
-const client_1 = require("@prisma/client");
 // Export enum values for runtime use - with fallback
-exports.EscrowStatusEnum = client_1.EscrowStatus || {
+exports.EscrowStatusEnum = {
     DRAFT: 'DRAFT',
     AWAITING_ACCEPTANCE: 'AWAITING_ACCEPTANCE',
     AWAITING_FUNDING: 'AWAITING_FUNDING',
@@ -14,13 +13,13 @@ exports.EscrowStatusEnum = client_1.EscrowStatus || {
     DISPUTED: 'DISPUTED',
     REFUNDED: 'REFUNDED',
 };
-exports.EscrowPartyRoleEnum = client_1.EscrowPartyRole || {
+exports.EscrowPartyRoleEnum = {
     BUYER: 'BUYER',
     SELLER: 'SELLER',
     MEDIATOR: 'MEDIATOR',
     ADMIN: 'ADMIN',
 };
-exports.MilestoneStatusEnum = client_1.MilestoneStatus || {
+exports.MilestoneStatusEnum = {
     PENDING: 'PENDING',
     AWAITING_FUNDING: 'AWAITING_FUNDING',
     FUNDED: 'FUNDED',
@@ -30,7 +29,7 @@ exports.MilestoneStatusEnum = client_1.MilestoneStatus || {
     DISPUTED: 'DISPUTED',
     CANCELLED: 'CANCELLED',
 };
-exports.DisputeStatusEnum = client_1.DisputeStatus || {
+exports.DisputeStatusEnum = {
     OPEN: 'OPEN',
     UNDER_REVIEW: 'UNDER_REVIEW',
     EVIDENCE_SUBMITTED: 'EVIDENCE_SUBMITTED',
@@ -40,7 +39,7 @@ exports.DisputeStatusEnum = client_1.DisputeStatus || {
     RESOLVED_PARTIAL: 'RESOLVED_PARTIAL',
     CLOSED: 'CLOSED',
 };
-exports.DisputeResolutionEnum = client_1.DisputeResolution || {
+exports.DisputeResolutionEnum = {
     REFUND_BUYER: 'REFUND_BUYER',
     RELEASE_SELLER: 'RELEASE_SELLER',
     PARTIAL_REFUND: 'PARTIAL_REFUND',

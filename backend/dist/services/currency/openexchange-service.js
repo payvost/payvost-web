@@ -1,6 +1,9 @@
 "use strict";
 // Open Exchange Rates API Service
 // Provides real-time exchange rates from openexchangerates.org
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLatestRates = getLatestRates;
 exports.convertCurrency = convertCurrency;
@@ -8,7 +11,7 @@ exports.getHistoricalRates = getHistoricalRates;
 exports.getTimeSeriesRates = getTimeSeriesRates;
 exports.getSupportedCurrencies = getSupportedCurrencies;
 exports.getUsageStats = getUsageStats;
-const decimal_js_1 = require("decimal.js");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const OXR_APP_ID = process.env.OPEN_EXCHANGE_RATES_APP_ID;
 const OXR_BASE_URL = 'https://openexchangerates.org/api/';
 /**
@@ -38,7 +41,7 @@ async function getLatestRates(base = 'USD', symbols) {
     // Convert rates to Decimal for precision
     const rates = {};
     for (const [currency, rate] of Object.entries(data.rates)) {
-        rates[currency] = new decimal_js_1.Decimal(rate);
+        rates[currency] = new decimal_js_1.default(rate);
     }
     return {
         base: data.base,
@@ -58,7 +61,7 @@ async function convertCurrency(from, to, amount) {
     if (!OXR_APP_ID) {
         throw new Error('OPEN_EXCHANGE_RATES_APP_ID is not configured');
     }
-    const amountDecimal = amount instanceof decimal_js_1.Decimal ? amount : new decimal_js_1.Decimal(amount);
+    const amountDecimal = amount instanceof decimal_js_1.default ? amount : new decimal_js_1.default(amount);
     // Get latest rates for both currencies
     const ratesData = await getLatestRates('USD', [from, to]);
     if (!ratesData.rates[from] || !ratesData.rates[to]) {
@@ -107,7 +110,7 @@ async function getHistoricalRates(date, base = 'USD', symbols) {
     // Convert rates to Decimal for precision
     const rates = {};
     for (const [currency, rate] of Object.entries(data.rates)) {
-        rates[currency] = new decimal_js_1.Decimal(rate);
+        rates[currency] = new decimal_js_1.default(rate);
     }
     return {
         base: data.base,
@@ -149,7 +152,7 @@ async function getTimeSeriesRates(startDate, endDate, base = 'USD', symbols) {
     for (const [date, rates] of Object.entries(data.rates)) {
         timeSeries[date] = {};
         for (const [currency, rate] of Object.entries(rates)) {
-            timeSeries[date][currency] = new decimal_js_1.Decimal(rate);
+            timeSeries[date][currency] = new decimal_js_1.default(rate);
         }
     }
     return timeSeries;

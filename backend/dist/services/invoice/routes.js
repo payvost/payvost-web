@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const invoice_service_1 = require("./src/invoice-service");
 const middleware_1 = require("../../gateway/middleware");
 const prisma_1 = require("../../common/prisma");
+const firebase_1 = __importDefault(require("../../firebase"));
 const router = (0, express_1.Router)();
 const invoiceService = new invoice_service_1.InvoiceService(prisma_1.prisma);
 /**
@@ -95,19 +99,87 @@ router.get('/:id', middleware_1.verifyFirebaseToken, async (req, res) => {
 /**
  * GET /invoices/public/:id
  * Get public invoice (no auth required)
+ * Returns invoice data with business profile if available
  */
 router.get('/public/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const invoice = await invoiceService.getPublicInvoice(id);
+        console.log(`[Public Invoice] Fetching invoice: ${id}`);
+        let invoice;
+        try {
+            invoice = await invoiceService.getPublicInvoice(id);
+        }
+        catch (serviceError) {
+            console.error('[Public Invoice] Service error:', serviceError);
+            console.error('[Public Invoice] Service error stack:', serviceError?.stack);
+            // If it's a Firebase initialization error, return a more helpful message
+            if (serviceError?.message?.includes('not initialized') ||
+                serviceError?.message?.includes('not available')) {
+                return res.status(503).json({
+                    error: 'Service temporarily unavailable',
+                    details: 'Database service is not properly configured'
+                });
+            }
+            // Re-throw to be caught by outer catch
+            throw serviceError;
+        }
         if (!invoice) {
+            console.log(`[Public Invoice] Invoice not found: ${id}`);
             return res.status(404).json({ error: 'Invoice not found or not public' });
         }
-        res.json(invoice);
+        console.log(`[Public Invoice] Invoice found: ${id}, type: ${invoice.invoiceType}`);
+        // Try to fetch business profile if businessId exists
+        let businessProfile = null;
+        if (invoice.businessId) {
+            try {
+                const db = firebase_1.default.firestore();
+                // Query users collection for business profile
+                const usersSnapshot = await db.collection('users')
+                    .where('businessProfile.id', '==', invoice.businessId)
+                    .limit(1)
+                    .get();
+                if (!usersSnapshot.empty) {
+                    const userData = usersSnapshot.docs[0].data();
+                    businessProfile = userData.businessProfile || null;
+                }
+            }
+            catch (profileError) {
+                console.warn('Could not fetch business profile:', profileError);
+                // Continue without business profile
+            }
+        }
+        // Convert Prisma Decimal objects to numbers and dates to ISO strings for JSON serialization
+        const serializedInvoice = {
+            ...invoice,
+            grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
+                ? parseFloat(invoice.grandTotal.toString())
+                : invoice.grandTotal,
+            taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
+                ? parseFloat(invoice.taxRate.toString())
+                : invoice.taxRate || 0,
+            issueDate: invoice.issueDate instanceof Date
+                ? invoice.issueDate.toISOString()
+                : invoice.issueDate,
+            dueDate: invoice.dueDate instanceof Date
+                ? invoice.dueDate.toISOString()
+                : invoice.dueDate,
+            createdAt: invoice.createdAt instanceof Date
+                ? invoice.createdAt.toISOString()
+                : invoice.createdAt,
+            updatedAt: invoice.updatedAt instanceof Date
+                ? invoice.updatedAt.toISOString()
+                : invoice.updatedAt,
+            businessProfile,
+        };
+        res.json(serializedInvoice);
     }
     catch (error) {
         console.error('Error getting public invoice:', error);
-        res.status(500).json({ error: error.message || 'Internal server error' });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({
+            error: error.message || 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 /**
@@ -166,14 +238,43 @@ router.post('/:id/mark-paid', middleware_1.verifyFirebaseToken, async (req, res)
             return res.status(401).json({ error: 'Unauthorized' });
         }
         const invoice = await invoiceService.markAsPaid(id, userId);
-        res.json(invoice);
+        // Serialize response (convert Decimal to numbers, dates to ISO strings)
+        const serializedInvoice = {
+            ...invoice,
+            grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
+                ? parseFloat(invoice.grandTotal.toString())
+                : invoice.grandTotal,
+            taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
+                ? parseFloat(invoice.taxRate.toString())
+                : invoice.taxRate || 0,
+            issueDate: invoice.issueDate instanceof Date
+                ? invoice.issueDate.toISOString()
+                : invoice.issueDate,
+            dueDate: invoice.dueDate instanceof Date
+                ? invoice.dueDate.toISOString()
+                : invoice.dueDate,
+            paidAt: invoice.paidAt instanceof Date
+                ? invoice.paidAt.toISOString()
+                : invoice.paidAt,
+            createdAt: invoice.createdAt instanceof Date
+                ? invoice.createdAt.toISOString()
+                : invoice.createdAt,
+            updatedAt: invoice.updatedAt instanceof Date
+                ? invoice.updatedAt.toISOString()
+                : invoice.updatedAt,
+        };
+        res.json(serializedInvoice);
     }
     catch (error) {
         console.error('Error marking invoice as paid:', error);
+        console.error('Error stack:', error.stack);
         if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
             return res.status(404).json({ error: error.message });
         }
-        res.status(400).json({ error: error.message || 'Failed to mark as paid' });
+        res.status(500).json({
+            error: error.message || 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 /**

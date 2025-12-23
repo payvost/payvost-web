@@ -17,6 +17,8 @@ const rateLimiter_1 = require("./rateLimiter");
 Object.defineProperty(exports, "generalLimiter", { enumerable: true, get: function () { return rateLimiter_1.generalLimiter; } });
 Object.defineProperty(exports, "authLimiter", { enumerable: true, get: function () { return rateLimiter_1.authLimiter; } });
 Object.defineProperty(exports, "transactionLimiter", { enumerable: true, get: function () { return rateLimiter_1.transactionLimiter; } });
+const performance_monitor_1 = require("../common/performance-monitor");
+const apm_setup_1 = require("../common/apm-setup");
 // Domain-specific error classes
 class AuthenticationError extends Error {
     constructor(message) {
@@ -138,33 +140,51 @@ function createGateway() {
         throw new Error('FRONTEND_URL must be set in production environment. ' +
             'Provide comma-separated list of allowed origins (e.g., "https://app.payvost.com,https://www.payvost.com")');
     }
-    app.use((0, cors_1.default)({
-        origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, Postman, etc.) in development only
-            if (!origin && process.env.NODE_ENV !== 'production') {
-                return callback(null, true);
-            }
-            // In production, require origin
-            if (!origin) {
-                return callback(new Error('CORS: Origin header required'));
-            }
-            // Check if origin is allowed
-            if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-                callback(null, true);
-            }
-            else {
-                callback(new Error(`CORS: Origin ${origin} not allowed`));
-            }
-        },
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
-        credentials: true,
-    }));
+    // CORS configuration with conditional origin checking
+    app.use((req, res, next) => {
+        // Health check and monitoring endpoints that don't require strict CORS
+        const noCorsPaths = ['/health', '/'];
+        const isHealthCheck = noCorsPaths.includes(req.path);
+        const isSimpleRequest = ['GET', 'HEAD'].includes(req.method);
+        // Create CORS middleware with access to request context
+        const corsMiddleware = (0, cors_1.default)({
+            origin: (origin, callback) => {
+                // Allow requests with no origin (mobile apps, Postman, etc.) in development only
+                if (!origin && process.env.NODE_ENV !== 'production') {
+                    return callback(null, true);
+                }
+                // Allow requests without origin for health checks and simple GET/HEAD requests
+                // (used by load balancers, monitoring tools, etc.)
+                if (!origin && (isHealthCheck || isSimpleRequest)) {
+                    return callback(null, true);
+                }
+                // In production, require origin for API routes
+                if (!origin) {
+                    return callback(new Error('CORS: Origin header required'));
+                }
+                // Check if origin is allowed
+                if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                }
+                else {
+                    callback(new Error(`CORS: Origin ${origin} not allowed`));
+                }
+            },
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Correlation-ID', 'X-Request-ID'],
+            credentials: true,
+        });
+        return corsMiddleware(req, res, next);
+    });
     // Body parsing
     app.use(express_1.default.json({ limit: '10mb' }));
     app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
     // Request logging (with correlation IDs)
     app.use(logger_1.requestLogger);
+    // APM monitoring (if enabled)
+    app.use(apm_setup_1.apmMiddleware);
+    // Performance monitoring
+    app.use(performance_monitor_1.performanceMiddleware);
     // Rate limiting
     app.use(rateLimiter_1.generalLimiter);
     // Health check
@@ -175,14 +195,31 @@ function createGateway() {
             uptime: process.uptime(),
         });
     });
-    // Root endpoint
+    // Root endpoint with API version info
     app.get('/', (req, res) => {
         res.status(200).json({
             name: 'Payvost API Gateway',
             version: '1.0.0',
             status: 'running',
+            apiVersions: ['v1'],
+            documentation: '/api/v1/docs',
+            endpoints: {
+                health: '/health',
+                api: '/api/v1',
+            },
         });
     });
+    // API version info endpoint
+    app.get('/api/versions', (req, res) => {
+        res.status(200).json({
+            currentVersion: 'v1',
+            supportedVersions: ['v1'],
+            defaultVersion: 'v1',
+            deprecationPolicy: 'https://docs.payvost.com/api/versioning',
+        });
+    });
+    // Performance metrics endpoint (admin only)
+    app.get('/api/admin/performance', performance_monitor_1.getPerformanceStats);
     // Error tracker error handler (must be before other error handlers)
     app.use((0, error_tracker_1.errorTrackerErrorHandler)());
     return app;

@@ -1,11 +1,16 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const transaction_manager_1 = require("../core-banking/src/transaction-manager");
 const fee_engine_1 = require("../core-banking/src/fee-engine");
 const middleware_1 = require("../../gateway/middleware");
-const index_1 = require("../../gateway/index");
-const decimal_js_1 = require("decimal.js");
+const rateLimiter_1 = require("../../gateway/rateLimiter");
+const validation_schemas_1 = require("../../common/validation-schemas");
+const audit_logger_1 = require("../../common/audit-logger");
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const prisma_1 = require("../../common/prisma");
 const router = (0, express_1.Router)();
 const transactionManager = new transaction_manager_1.TransactionManager(prisma_1.prisma);
@@ -13,18 +18,12 @@ const feeEngine = new fee_engine_1.FeeEngine(prisma_1.prisma);
 /**
  * POST /api/transaction/transfer
  * Execute a transfer between accounts
+ * REQUIRES: idempotencyKey to prevent duplicate transactions
  */
-router.post('/transfer', middleware_1.verifyFirebaseToken, middleware_1.requireKYC, async (req, res) => {
+router.post('/transfer', middleware_1.verifyFirebaseToken, middleware_1.requireKYC, rateLimiter_1.transactionLimiter, (0, validation_schemas_1.validateRequest)(validation_schemas_1.transactionSchemas.createTransfer), async (req, res) => {
     try {
         const userId = req.user?.uid;
         const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = req.body;
-        // Validation
-        if (!fromAccountId || !toAccountId || !amount || !currency) {
-            throw new index_1.ValidationError('fromAccountId, toAccountId, amount, and currency are required');
-        }
-        if (amount <= 0) {
-            throw new index_1.ValidationError('Amount must be greater than 0');
-        }
         // Verify the from account belongs to the authenticated user
         const fromAccount = await prisma_1.prisma.account.findFirst({
             where: { id: fromAccountId, userId },
@@ -32,6 +31,14 @@ router.post('/transfer', middleware_1.verifyFirebaseToken, middleware_1.requireK
         if (!fromAccount) {
             return res.status(404).json({ error: 'Source account not found or unauthorized' });
         }
+        // Log transfer initiation
+        await (0, audit_logger_1.logFinancialTransaction)(audit_logger_1.AuditAction.TRANSFER_INITIATED, 'pending', fromAccountId, userId, amount.toString(), currency, description || 'Transfer', {
+            userId,
+            accountId: fromAccountId,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+            correlationId: req.headers['x-correlation-id'],
+        });
         // Execute the transfer
         const transfer = await transactionManager.executeTransfer({
             fromAccountId,
@@ -40,6 +47,15 @@ router.post('/transfer', middleware_1.verifyFirebaseToken, middleware_1.requireK
             currency,
             description,
             idempotencyKey,
+            userId,
+            auditContext: {
+                userId,
+                accountId: fromAccountId,
+                transactionId: 'pending',
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'],
+                correlationId: req.headers['x-correlation-id'],
+            },
         });
         res.status(201).json({ transfer });
     }
@@ -165,14 +181,11 @@ router.get('/transfers/:id', middleware_1.verifyFirebaseToken, async (req, res) 
  * POST /api/transaction/calculate-fees
  * Calculate fees for a potential transfer
  */
-router.post('/calculate-fees', middleware_1.verifyFirebaseToken, async (req, res) => {
+router.post('/calculate-fees', middleware_1.verifyFirebaseToken, (0, validation_schemas_1.validateRequest)(validation_schemas_1.transactionSchemas.calculateFees), async (req, res) => {
     try {
         const { amount, currency, transactionType, fromCountry, toCountry, userTier } = req.body;
-        if (!amount || !currency || !transactionType) {
-            throw new index_1.ValidationError('amount, currency, and transactionType are required');
-        }
         const feeCalculation = await feeEngine.calculateFees({
-            amount: new decimal_js_1.Decimal(amount),
+            amount: new decimal_js_1.default(amount),
             currency,
             transactionType,
             fromCountry: fromCountry || 'US',

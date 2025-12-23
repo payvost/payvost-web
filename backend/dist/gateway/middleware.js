@@ -32,57 +32,29 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireAdmin = void 0;
-exports.verifyFirebaseToken = verifyFirebaseToken;
+exports.optionalAuth = exports.requireKYC = exports.requireAdmin = exports.requireRole = exports.verifyFirebaseToken = void 0;
 exports.verifyJWT = verifyJWT;
-exports.requireRole = requireRole;
-exports.requireKYC = requireKYC;
-exports.optionalAuth = optionalAuth;
-const firebase_admin_1 = __importDefault(require("firebase-admin"));
 const jwt = __importStar(require("jsonwebtoken"));
 const index_1 = require("./index");
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET === 'changeme') {
-    throw new Error('JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
-        'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+// Lazy check for JWT_SECRET - only validate when verifyJWT is actually called
+function getJWTSecret() {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET || JWT_SECRET === 'changeme') {
+        throw new Error('JWT_SECRET must be set in environment variables and cannot be "changeme". ' +
+            'Generate a strong secret: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    }
+    return JWT_SECRET;
 }
 /**
- * Middleware to verify Firebase ID tokens
+ * Re-export all authentication middleware from auth-middleware
  */
-async function verifyFirebaseToken(req, res, next) {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new index_1.AuthenticationError('Missing or invalid authorization header');
-        }
-        const token = authHeader.substring(7);
-        // Verify Firebase token
-        const decodedToken = await firebase_admin_1.default.auth().verifyIdToken(token);
-        // Fetch user data from Firestore
-        const userDoc = await firebase_admin_1.default.firestore().collection('users').doc(decodedToken.uid).get();
-        const userData = userDoc.data();
-        req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email,
-            role: userData?.role || 'user',
-            kycStatus: userData?.kycStatus || 'pending',
-        };
-        next();
-    }
-    catch (error) {
-        if (error.code === 'auth/id-token-expired') {
-            return next(new index_1.AuthenticationError('Token expired'));
-        }
-        if (error.code === 'auth/argument-error') {
-            return next(new index_1.AuthenticationError('Invalid token format'));
-        }
-        next(new index_1.AuthenticationError('Authentication failed'));
-    }
-}
+var auth_middleware_1 = require("./auth-middleware");
+Object.defineProperty(exports, "verifyFirebaseToken", { enumerable: true, get: function () { return auth_middleware_1.verifyFirebaseToken; } });
+Object.defineProperty(exports, "requireRole", { enumerable: true, get: function () { return auth_middleware_1.requireRole; } });
+Object.defineProperty(exports, "requireAdmin", { enumerable: true, get: function () { return auth_middleware_1.requireAdmin; } });
+Object.defineProperty(exports, "requireKYC", { enumerable: true, get: function () { return auth_middleware_1.requireKYC; } });
+Object.defineProperty(exports, "optionalAuth", { enumerable: true, get: function () { return auth_middleware_1.optionalAuth; } });
 /**
  * Middleware to verify JWT tokens (alternative to Firebase)
  */
@@ -93,8 +65,7 @@ function verifyJWT(req, res, next) {
             throw new index_1.AuthenticationError('Missing or invalid authorization header');
         }
         const token = authHeader.substring(7);
-        // JWT_SECRET is validated at module load time, so it's safe to use here
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, getJWTSecret());
         req.user = {
             uid: decoded.userId,
             email: decoded.email,
@@ -112,59 +83,4 @@ function verifyJWT(req, res, next) {
         }
         next(new index_1.AuthenticationError('Authentication failed'));
     }
-}
-/**
- * Middleware to check if user has required role
- */
-function requireRole(...roles) {
-    return (req, res, next) => {
-        if (!req.user) {
-            return next(new index_1.AuthenticationError('Not authenticated'));
-        }
-        if (!roles.includes(req.user.role || 'user')) {
-            return next(new index_1.AuthorizationError('Insufficient permissions'));
-        }
-        next();
-    };
-}
-/**
- * Middleware to check if user has completed KYC
- */
-function requireKYC(req, res, next) {
-    if (!req.user) {
-        return next(new index_1.AuthenticationError('Not authenticated'));
-    }
-    if (req.user.kycStatus !== 'verified') {
-        return next(new index_1.KYCError('KYC verification required. Please complete identity verification to access this feature.'));
-    }
-    next();
-}
-/**
- * Middleware to check if user is admin
- */
-exports.requireAdmin = requireRole('admin', 'superadmin');
-/**
- * Optional authentication - adds user to request if token is valid, but doesn't require it
- */
-async function optionalAuth(req, res, next) {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return next();
-        }
-        const token = authHeader.substring(7);
-        const decodedToken = await firebase_admin_1.default.auth().verifyIdToken(token);
-        const userDoc = await firebase_admin_1.default.firestore().collection('users').doc(decodedToken.uid).get();
-        const userData = userDoc.data();
-        req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email,
-            role: userData?.role || 'user',
-            kycStatus: userData?.kycStatus || 'pending',
-        };
-    }
-    catch (error) {
-        // Ignore auth errors for optional auth
-    }
-    next();
 }

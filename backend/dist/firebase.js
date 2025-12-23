@@ -8,7 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 // Single, robust initializer for firebase-admin.
 // Supports both environment variable (production) and local file (development).
-const LOCAL_SA_FILENAME = 'payvost-f28db3f2f0bc.json';
+const LOCAL_SA_FILENAME = 'payvost-web-firebase-adminsdk-fbsvc-f14c86f5d6.json';
 function initFirebaseAdmin() {
     if (firebase_admin_1.default.apps.length)
         return firebase_admin_1.default;
@@ -24,7 +24,7 @@ function initFirebaseAdmin() {
                 parsed = JSON.parse(raw);
             }
             catch (e) {
-                const hint = `Invalid FIREBASE_SERVICE_ACCOUNT_KEY$${envB64 ? '_BASE64' : ''}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
+                const hint = `Invalid FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
                 throw new Error(`${hint} Original error: ${e?.message || e}`);
             }
             if (parsed.private_key && typeof parsed.private_key === 'string') {
