@@ -2,9 +2,11 @@
   "name": "@payvost/invoice-service",
   "version": "1.0.0",
   "description": "Invoice management service",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "scripts": {
-    "migrate": "ts-node migrate-firestore-to-postgres.ts"
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/src/index.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
