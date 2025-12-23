@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 
-type ServiceStatus = 'Operational' | 'Degraded Performance' | 'Major Outage';
+export type ServiceStatus = 'Operational' | 'Degraded Performance' | 'Major Outage';
 
 interface HealthCheckResult {
   status: ServiceStatus;
@@ -506,7 +506,7 @@ export async function calculateUptime(serviceName: string, days: number = 30): P
     }
 
     const operationalCount = checks.filter(
-      (check) => check.status === 'OPERATIONAL'
+      (check: any) => check.status === 'OPERATIONAL'
     ).length;
 
     const uptime = (operationalCount / checks.length) * 100;
@@ -554,7 +554,7 @@ export async function detectAndStoreIncidents(
       const severity = service.status === 'Major Outage' ? 'HIGH' : 'MEDIUM';
 
       // Check if incident already exists for this service
-      const existingIncident = existingIncidents.find((incident) =>
+      const existingIncident = existingIncidents.find((incident: any) =>
         incident.affectedServices.includes(service.name)
       );
 
