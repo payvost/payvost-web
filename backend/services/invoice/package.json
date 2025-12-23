@@ -4,8 +4,8 @@
   "description": "Invoice management service",
   "main": "dist/index.js",
   "scripts": {
-    "build": "prisma generate --schema=../../prisma/schema.prisma && tsc --project tsconfig.json",
-    "prestart": "prisma generate --schema=../../prisma/schema.prisma",
+    "postinstall": "node -e \"const fs = require('fs'); const path = require('path'); const schema = path.resolve(__dirname, '../../prisma/schema.prisma'); if (fs.existsSync(schema)) { require('child_process').execSync('npx prisma generate --schema ' + schema, {stdio: 'inherit'}); }\" || true",
+    "build": "tsc --project tsconfig.json",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
   },
