@@ -1,0 +1,122 @@
+/* Print and PDF-specific styles for invoices */
+
+@media print {
+  /* Hide action buttons and navigation when printing */
+  .invoice-actions {
+    display: none !important;
+  }
+
+  button,
+  [role="button"],
+  .btn-group,
+  .dropdown-menu,
+  .alert-dialog {
+    display: none !important;
+  }
+
+  /* Optimize for print */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  html {
+    background: white;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .dashboard-layout {
+    display: block;
+  }
+
+  /* Hide sidebar and header */
+  nav,
+  aside,
+  .sidebar,
+  [class*="Sidebar"],
+  [class*="Header"],
+  [class*="Navigation"] {
+    display: none !important;
+  }
+
+  .invoice-container {
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: avoid;
+    background: white;
+    padding: 0.5in !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure tables don't break awkwardly */
+  table {
+    page-break-inside: avoid;
+    width: 100%;
+  }
+
+  tbody tr {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group; /* Repeat header on each page */
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Keep text readable */
+  a {
+    text-decoration: none;
+    color: black;
+  }
+
+  /* Remove card shadows and borders */
+  [class*="Card"] {
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid;
+  }
+
+  /* Optimize colors for print (B&W friendly) */
+  .text-primary {
+    color: black !important;
+  }
+
+  .text-muted-foreground {
+    color: #666 !important;
+  }
+
+  /* Ensure spacing is print-friendly */
+  * {
+    orphans: 2;
+    widows: 2;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+
+  /* Badge styling for print */
+  [class*="Badge"] {
+    border: 1px solid black;
+    background: white !important;
+    color: black !important;
+    padding: 2px 4px;
+  }
+}
+
+/* Screen-only adjustments */
+@media screen {
+  .invoice-container {
+    background: white;
+  }
+}
