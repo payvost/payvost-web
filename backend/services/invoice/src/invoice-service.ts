@@ -99,7 +99,7 @@ export class InvoiceService {
    * Create a new invoice
    */
   async createInvoice(input: CreateInvoiceInput) {
-    const { items, taxRate = 0, status = 'DRAFT', ...rest } = input;
+    const { items, taxRate = 0, status = 'DRAFT', paymentMethod, ...rest } = input;
     
     // Calculate totals
     const { grandTotal } = this.calculateTotals(items, taxRate);
@@ -114,7 +114,8 @@ export class InvoiceService {
       data: {
         ...rest,
         invoiceType: input.invoiceType as InvoiceType,
-        paymentMethod: input.paymentMethod as PaymentMethod,
+        // Ensure the value matches the Prisma enum type
+        paymentMethod: (paymentMethod || 'PAYVOST') as any,
         status: status as InvoiceStatus,
         grandTotal: new Decimal(grandTotal),
         taxRate: new Decimal(taxRate),
@@ -127,7 +128,7 @@ export class InvoiceService {
         publicUrl,
       },
     });
-
+  
     return invoice;
   }
 
@@ -147,6 +148,25 @@ export class InvoiceService {
     }
 
     return invoice;
+  }
+
+  /**
+   * Get all invoices for a user
+   */
+  async getInvoicesByUserId(userId: string) {
+    const invoices = await this.prisma.invoice.findMany({
+      where: {
+        OR: [
+          { userId },
+          { createdBy: userId },
+        ],
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return invoices;
   }
 
   /**
@@ -498,15 +518,32 @@ export class InvoiceService {
       publicUrl = null;
     }
 
+    // Build update data object explicitly to avoid type issues
+    const updateData: any = {
+      grandTotal,
+      isPublic,
+      publicUrl,
+      updatedAt: new Date(),
+    };
+
+    // Only include fields that are provided in input
+    if (input.invoiceNumber !== undefined) updateData.invoiceNumber = input.invoiceNumber;
+    if (input.issueDate !== undefined) updateData.issueDate = input.issueDate;
+    if (input.dueDate !== undefined) updateData.dueDate = input.dueDate;
+    if (input.status !== undefined) updateData.status = input.status;
+    if (input.fromInfo !== undefined) updateData.fromInfo = input.fromInfo;
+    if (input.toInfo !== undefined) updateData.toInfo = input.toInfo;
+    if (input.items !== undefined) updateData.items = input.items;
+    if (input.taxRate !== undefined) updateData.taxRate = new Decimal(Number(input.taxRate));
+    if (input.notes !== undefined) updateData.notes = input.notes;
+    if (input.paymentMethod !== undefined) updateData.paymentMethod = input.paymentMethod;
+    if (input.manualBankDetails !== undefined) updateData.manualBankDetails = input.manualBankDetails;
+    if (input.pdfUrl !== undefined) updateData.pdfUrl = input.pdfUrl;
+    if (input.publicUrl !== undefined) updateData.publicUrl = input.publicUrl;
+
     const invoice = await this.prisma.invoice.update({
       where: { id },
-      data: {
-        ...input,
-        grandTotal,
-        isPublic,
-        publicUrl,
-        updatedAt: new Date(),
-      },
+      data: updateData,
     });
 
     return invoice;
@@ -623,7 +660,7 @@ export class InvoiceService {
   /**
    * Delete invoice
    */
-  async deleteInvoice(id: string, userId: string): Promise<void> {
+  async deleteInvoice(id: string, userId: string): Promise<boolean> {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
     });
@@ -639,6 +676,8 @@ export class InvoiceService {
     await this.prisma.invoice.delete({
       where: { id },
     });
+
+    return true;
   }
 
   /**

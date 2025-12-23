@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from 'express';
-import { InvoiceService } from './invoice-service';
+import invoiceRoutes from './routes';
 
 const app: Express = express();
 
@@ -11,9 +11,16 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'invoice-service' });
 });
 
-// Invoice routes would be added here
-app.get('/api/invoices', (req: Request, res: Response) => {
-  res.json({ message: 'Invoice service is running' });
+// Mount invoice routes
+app.use('/api', invoiceRoutes);
+
+// Root endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.json({ 
+    message: 'Invoice Service',
+    status: 'running',
+    version: '1.0.0'
+  });
 });
 
 export default app;
