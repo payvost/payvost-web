@@ -11,8 +11,11 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let id: string = '';
+  
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    id = resolvedParams.id;
     
     if (!id) {
       return NextResponse.json({ error: 'Missing invoice ID' }, { status: 400 });
@@ -230,7 +233,7 @@ export async function GET(
       }
 
       // Return PDF with proper headers
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(new Uint8Array(Buffer.isBuffer(pdfBuffer) ? pdfBuffer : pdfBuffer), {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',

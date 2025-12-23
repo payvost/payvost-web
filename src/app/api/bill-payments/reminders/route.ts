@@ -5,7 +5,7 @@ import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, update
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await requireAuth(req);
+    const { uid } = await requireAuth(req);
     const body = await req.json();
 
     const { billPaymentId, reminderDays } = body;
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const remindersRef = collection(db, 'users', user.uid, 'billReminders');
+    const remindersRef = collection(db, 'users', uid, 'billReminders');
     await addDoc(remindersRef, {
       billPaymentId,
       reminderDays,
@@ -41,8 +41,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await requireAuth(req);
-    const remindersRef = collection(db, 'users', user.uid, 'billReminders');
+    const { uid } = await requireAuth(req);
+    const remindersRef = collection(db, 'users', uid, 'billReminders');
     const q = query(remindersRef, where('enabled', '==', true));
     const snapshot = await getDocs(q);
 
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { user } = await requireAuth(req);
+    const { uid } = await requireAuth(req);
     const body = await req.json();
 
     const { reminderId, enabled } = body;
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const reminderRef = doc(db, 'users', user.uid, 'billReminders', reminderId);
+    const reminderRef = doc(db, 'users', uid, 'billReminders', reminderId);
     await updateDoc(reminderRef, {
       enabled,
       updatedAt: serverTimestamp(),

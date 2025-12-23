@@ -5,7 +5,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await requireAuth(req);
+    const { uid } = await requireAuth(req);
     const body = await req.json();
 
     const {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const recurringBillRef = collection(db, 'users', user.uid, 'recurringBills');
+    const recurringBillRef = collection(db, 'users', uid, 'recurringBills');
     const docRef = await addDoc(recurringBillRef, {
       billerId,
       accountNumber,
@@ -64,10 +64,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await requireAuth(req);
+    const { uid } = await requireAuth(req);
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    const recurringBillsRef = collection(db, 'users', user.uid, 'recurringBills');
+    const recurringBillsRef = collection(db, 'users', uid, 'recurringBills');
     const q = query(recurringBillsRef, where('status', '==', 'ACTIVE'));
     const snapshot = await getDocs(q);
 

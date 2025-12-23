@@ -104,7 +104,7 @@ export async function checkAuthenticationServiceHealth(): Promise<HealthCheckRes
 
   try {
     // Check if Firebase Admin is initialized and can connect
-    const auth = adminAuth();
+    const auth = adminAuth;
     
     // Try to list users (with limit 1) to check connectivity
     // This is a lightweight check that verifies the service is working

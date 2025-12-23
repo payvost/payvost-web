@@ -101,7 +101,7 @@ export async function createPushSubscription(): Promise<PushSubscription | null>
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey,
+        applicationServerKey: applicationServerKey as BufferSource,
       });
       console.log('[Web Push] Push subscription created:', subscription);
     } else {

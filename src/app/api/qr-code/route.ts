@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return new NextResponse(qrCodeBuffer, {
+    return new NextResponse(new Uint8Array(Buffer.isBuffer(qrCodeBuffer) ? qrCodeBuffer : qrCodeBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',

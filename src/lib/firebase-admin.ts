@@ -40,10 +40,10 @@ function initFirebaseAdmin() {
         // For base64, decode first, otherwise use the JSON string directly
         const raw = envB64 
           ? Buffer.from(envB64 as string, 'base64').toString('utf8')
-          : envJson;
+          : (envJson || '{}');
         
         // Parse directly - the env var should already be valid JSON
-        parsed = JSON.parse(raw);
+        parsed = JSON.parse(raw || '{}');
         
         // Normalize private_key newlines if they are escaped ("\\n")
         if (parsed.private_key && typeof parsed.private_key === 'string') {

@@ -13,6 +13,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     Completed: { icon: <CheckCircle className="h-3 w-3 mr-1" />, color: 'text-green-600', variant: 'default'},
