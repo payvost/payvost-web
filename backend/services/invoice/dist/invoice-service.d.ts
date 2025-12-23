@@ -1,5 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { PrismaClient } from '@prisma/client';
 export type InvoiceStatus = 'DRAFT' | 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 export type InvoiceType = 'USER' | 'BUSINESS';
 export type PaymentMethod = 'PAYVOST' | 'MANUAL' | 'STRIPE' | 'RAPYD';
@@ -69,223 +68,24 @@ export declare class InvoiceService {
     /**
      * Create a new invoice
      */
-    createInvoice(input: CreateInvoiceInput): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    }>;
+    createInvoice(input: CreateInvoiceInput): Promise<any>;
     /**
      * Get invoice by ID
      */
-    getInvoiceById(id: string, userId?: string): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    } | null>;
+    getInvoiceById(id: string, userId?: string): Promise<any>;
     /**
      * Get all invoices for a user
      */
-    getInvoicesByUserId(userId: string): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    }[]>;
+    getInvoicesByUserId(userId: string): Promise<any>;
     /**
      * Get invoice by invoice number
      */
-    getInvoiceByNumber(invoiceNumber: string, userId?: string): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    } | null>;
+    getInvoiceByNumber(invoiceNumber: string, userId?: string): Promise<any>;
     /**
      * Get public invoice (for public pages)
      * Checks Prisma (PostgreSQL), Firestore invoices collection, and Firestore businessInvoices collection
      */
-    getPublicInvoice(idOrNumber: string): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    } | {
-        id: string;
-        invoiceNumber: any;
-        invoiceType: "BUSINESS";
-        userId: any;
-        businessId: any;
-        createdBy: any;
-        issueDate: Date;
-        dueDate: Date;
-        status: any;
-        currency: any;
-        grandTotal: Decimal;
-        taxRate: Decimal;
-        fromInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        toInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        items: any[];
-        paymentMethod: any;
-        manualBankDetails: {
-            bankName: any;
-            accountName: any;
-            accountNumber: any;
-            otherDetails: any;
-        } | null;
-        notes: any;
-        isPublic: boolean;
-        publicUrl: any;
-        pdfUrl: any;
-        createdAt: Date;
-        updatedAt: Date;
-    } | {
-        id: string;
-        invoiceNumber: any;
-        invoiceType: "USER";
-        userId: any;
-        businessId: null;
-        createdBy: any;
-        issueDate: Date;
-        dueDate: Date;
-        status: any;
-        currency: any;
-        grandTotal: Decimal;
-        taxRate: Decimal;
-        fromInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        toInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        items: any[];
-        paymentMethod: any;
-        manualBankDetails: {
-            bankName: any;
-            accountName: any;
-            accountNumber: any;
-            otherDetails: any;
-        } | null;
-        notes: any;
-        isPublic: boolean;
-        publicUrl: any;
-        pdfUrl: any;
-        createdAt: Date;
-        updatedAt: Date;
-    } | null>;
+    getPublicInvoice(idOrNumber: string): Promise<any>;
     /**
      * List invoices for a user
      */
@@ -294,33 +94,8 @@ export declare class InvoiceService {
         limit?: number;
         offset?: number;
     }): Promise<{
-        invoices: {
-            items: Prisma.JsonValue;
-            taxRate: Prisma.Decimal;
-            status: import(".prisma/client").$Enums.InvoiceStatus;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            invoiceNumber: string;
-            invoiceType: import(".prisma/client").$Enums.InvoiceType;
-            userId: string;
-            businessId: string | null;
-            createdBy: string;
-            issueDate: Date;
-            dueDate: Date;
-            currency: string;
-            fromInfo: Prisma.JsonValue;
-            toInfo: Prisma.JsonValue;
-            notes: string | null;
-            manualBankDetails: Prisma.JsonValue | null;
-            grandTotal: Prisma.Decimal;
-            id: string;
-            isPublic: boolean;
-            publicUrl: string | null;
-            pdfUrl: string | null;
-            createdAt: Date;
-            updatedAt: Date;
-            paidAt: Date | null;
-        }[];
-        total: number;
+        invoices: any;
+        total: any;
     }>;
     /**
      * List business invoices
@@ -330,131 +105,18 @@ export declare class InvoiceService {
         limit?: number;
         offset?: number;
     }): Promise<{
-        invoices: {
-            items: Prisma.JsonValue;
-            taxRate: Prisma.Decimal;
-            status: import(".prisma/client").$Enums.InvoiceStatus;
-            paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-            invoiceNumber: string;
-            invoiceType: import(".prisma/client").$Enums.InvoiceType;
-            userId: string;
-            businessId: string | null;
-            createdBy: string;
-            issueDate: Date;
-            dueDate: Date;
-            currency: string;
-            fromInfo: Prisma.JsonValue;
-            toInfo: Prisma.JsonValue;
-            notes: string | null;
-            manualBankDetails: Prisma.JsonValue | null;
-            grandTotal: Prisma.Decimal;
-            id: string;
-            isPublic: boolean;
-            publicUrl: string | null;
-            pdfUrl: string | null;
-            createdAt: Date;
-            updatedAt: Date;
-            paidAt: Date | null;
-        }[];
-        total: number;
+        invoices: any;
+        total: any;
     }>;
     /**
      * Update invoice
      */
-    updateInvoice(id: string, userId: string, input: UpdateInvoiceInput): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    }>;
+    updateInvoice(id: string, userId: string, input: UpdateInvoiceInput): Promise<any>;
     /**
      * Mark invoice as paid
      * Handles both Prisma (PostgreSQL) and Firestore business invoices
      */
-    markAsPaid(id: string, userId: string): Promise<{
-        items: Prisma.JsonValue;
-        taxRate: Prisma.Decimal;
-        status: import(".prisma/client").$Enums.InvoiceStatus;
-        paymentMethod: import(".prisma/client").$Enums.PaymentMethod;
-        invoiceNumber: string;
-        invoiceType: import(".prisma/client").$Enums.InvoiceType;
-        userId: string;
-        businessId: string | null;
-        createdBy: string;
-        issueDate: Date;
-        dueDate: Date;
-        currency: string;
-        fromInfo: Prisma.JsonValue;
-        toInfo: Prisma.JsonValue;
-        notes: string | null;
-        manualBankDetails: Prisma.JsonValue | null;
-        grandTotal: Prisma.Decimal;
-        id: string;
-        isPublic: boolean;
-        publicUrl: string | null;
-        pdfUrl: string | null;
-        createdAt: Date;
-        updatedAt: Date;
-        paidAt: Date | null;
-    } | {
-        id: string;
-        invoiceNumber: any;
-        invoiceType: "BUSINESS";
-        userId: any;
-        businessId: any;
-        createdBy: any;
-        issueDate: any;
-        dueDate: any;
-        status: any;
-        currency: any;
-        grandTotal: Decimal;
-        taxRate: Decimal;
-        fromInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        toInfo: {
-            name: any;
-            address: any;
-            email: any;
-        };
-        items: any[];
-        paymentMethod: any;
-        manualBankDetails: {
-            bankName: any;
-            accountName: any;
-            accountNumber: any;
-            otherDetails: any;
-        } | null;
-        notes: any;
-        isPublic: boolean;
-        publicUrl: any;
-        pdfUrl: any;
-        paidAt: any;
-        createdAt: any;
-        updatedAt: any;
-    }>;
+    markAsPaid(id: string, userId: string): Promise<any>;
     /**
      * Delete invoice
      */
