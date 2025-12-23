@@ -98,12 +98,20 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
     
     const handleMarkAsPaid = async (invoiceId: string) => {
         try {
+            if (!user) {
+                throw new Error('User not authenticated');
+            }
+
+            // Get Firebase ID token
+            const token = await user.getIdToken();
+
             // Use backend API endpoint instead of direct Firestore update
             // This ensures proper authorization and handles both Prisma and Firestore invoices
             const response = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 cache: 'no-store',
             });

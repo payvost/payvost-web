@@ -4,7 +4,7 @@ const { Document, Page, Text, View, StyleSheet, Image } = require('@react-pdf/re
 // Base styles (for personal invoices - keep existing design)
 const baseStyles = StyleSheet.create({
   page: { 
-    padding: 50, 
+    padding: 30, 
     fontFamily: 'Helvetica', 
     fontSize: 10, 
     color: '#1e293b',
@@ -14,11 +14,11 @@ const baseStyles = StyleSheet.create({
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'flex-start', 
-    marginBottom: 40, 
-    paddingBottom: 25,
-    paddingTop: 20,
-    paddingLeft: 20,
-    paddingRight: 20,
+    marginBottom: 20, 
+    paddingBottom: 12,
+    paddingTop: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
     borderBottomWidth: 3,
     borderBottomColor: '#1e40af',
     borderBottomStyle: 'solid',
@@ -30,14 +30,14 @@ const baseStyles = StyleSheet.create({
     fontSize: 38, 
     fontWeight: 'bold', 
     color: '#1e40af', 
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: 1.2
   },
   invoiceNumber: { 
     fontSize: 13, 
     color: '#64748b',
     fontWeight: '600',
-    marginTop: 4
+    marginTop: 2
   },
   statusBadge: { 
     padding: '10 20', 
@@ -65,14 +65,14 @@ const baseStyles = StyleSheet.create({
   },
   section: { 
     flexDirection: 'row', 
-    marginBottom: 35,
-    gap: 20
+    marginBottom: 18,
+    gap: 12
   },
   column: { 
     flex: 1, 
-    paddingRight: 15,
+    paddingRight: 10,
     backgroundColor: '#f8fafc',
-    padding: 20,
+    padding: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0'
@@ -81,7 +81,7 @@ const baseStyles = StyleSheet.create({
     flex: 1, 
     alignItems: 'flex-end',
     backgroundColor: '#f8fafc',
-    padding: 20,
+    padding: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0'
@@ -89,17 +89,17 @@ const baseStyles = StyleSheet.create({
   sectionHeader: { 
     fontSize: 12, 
     fontWeight: 'bold', 
-    marginBottom: 12,
+    marginBottom: 6,
     color: '#1e40af',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    paddingBottom: 8,
+    paddingBottom: 4,
     borderBottomWidth: 2,
     borderBottomColor: '#1e40af'
   },
   text: { 
     fontSize: 11, 
-    marginBottom: 5,
+    marginBottom: 3,
     color: '#1e293b',
     lineHeight: 1.5,
     fontWeight: '600'
@@ -107,12 +107,12 @@ const baseStyles = StyleSheet.create({
   mutedText: { 
     fontSize: 9.5, 
     color: '#64748b', 
-    marginBottom: 4,
+    marginBottom: 2,
     lineHeight: 1.4
   },
   table: { 
-    marginTop: 30, 
-    marginBottom: 30,
+    marginTop: 15, 
+    marginBottom: 15,
     borderWidth: 1,
     borderColor: '#cbd5e1',
     borderRadius: 12,
@@ -121,12 +121,12 @@ const baseStyles = StyleSheet.create({
   tableHeader: { 
     flexDirection: 'row', 
     backgroundColor: '#1e40af', 
-    padding: 14,
+    padding: 10,
     borderBottomWidth: 0
   },
   tableRow: { 
     flexDirection: 'row', 
-    padding: 14, 
+    padding: 10, 
     borderBottomWidth: 1, 
     borderBottomColor: '#e2e8f0',
     backgroundColor: '#ffffff'
@@ -152,12 +152,12 @@ const baseStyles = StyleSheet.create({
   totalsSection: { 
     flexDirection: 'row', 
     justifyContent: 'flex-end', 
-    marginTop: 30 
+    marginTop: 15 
   },
   totalsBox: { 
     width: 280,
     backgroundColor: '#ffffff',
-    padding: 24,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#1e40af'
@@ -165,9 +165,9 @@ const baseStyles = StyleSheet.create({
   totalRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginBottom: 10, 
+    marginBottom: 6, 
     fontSize: 10.5,
-    paddingVertical: 5
+    paddingVertical: 3
   },
   totalLabel: { 
     color: '#64748b',
@@ -182,15 +182,15 @@ const baseStyles = StyleSheet.create({
   grandTotalRow: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginTop: 15, 
-    paddingTop: 15, 
+    marginTop: 8, 
+    paddingTop: 8, 
     borderTopWidth: 3, 
     borderTopColor: '#1e40af',
-    paddingVertical: 10,
+    paddingVertical: 6,
     backgroundColor: '#f0f9ff',
     borderRadius: 8,
-    paddingLeft: 12,
-    paddingRight: 12
+    paddingLeft: 8,
+    paddingRight: 8
   },
   grandTotalText: { 
     fontSize: 15, 
@@ -203,8 +203,8 @@ const baseStyles = StyleSheet.create({
     color: '#1e40af'
   },
   paymentSection: {
-    marginTop: 30,
-    padding: 20,
+    marginTop: 15,
+    padding: 12,
     backgroundColor: '#f0f9ff',
     borderRadius: 10,
     borderLeftWidth: 5,
@@ -215,7 +215,7 @@ const baseStyles = StyleSheet.create({
   paymentHeader: {
     fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 6,
     color: '#1e40af',
     textTransform: 'uppercase',
     letterSpacing: 0.8
@@ -223,12 +223,12 @@ const baseStyles = StyleSheet.create({
   paymentText: {
     fontSize: 10,
     color: '#1e293b',
-    lineHeight: 1.6,
-    marginBottom: 6
+    lineHeight: 1.5,
+    marginBottom: 3
   },
   notesSection: { 
-    marginTop: 30,
-    padding: 20,
+    marginTop: 15,
+    padding: 12,
     backgroundColor: '#fffbeb',
     borderRadius: 10,
     borderLeftWidth: 5,
@@ -239,7 +239,7 @@ const baseStyles = StyleSheet.create({
   notesHeader: { 
     fontSize: 12, 
     fontWeight: 'bold', 
-    marginBottom: 10,
+    marginBottom: 6,
     color: '#92400e',
     textTransform: 'uppercase',
     letterSpacing: 0.8
@@ -247,27 +247,27 @@ const baseStyles = StyleSheet.create({
   notesText: { 
     fontSize: 10, 
     color: '#78350f', 
-    lineHeight: 1.6
+    lineHeight: 1.5
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 50,
-    right: 50,
+    bottom: 20,
+    left: 30,
+    right: 30,
     textAlign: 'center',
     color: '#64748b',
-    fontSize: 9,
+    fontSize: 8,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingTop: 15,
-    lineHeight: 1.6
+    paddingTop: 10,
+    lineHeight: 1.4
   },
   footerText: {
-    marginBottom: 4
+    marginBottom: 2
   },
   amountWords: {
-    marginTop: 20,
-    padding: 15,
+    marginTop: 12,
+    padding: 10,
     backgroundColor: '#f5f5f7',
     borderRadius: 8,
     borderLeftWidth: 3,
@@ -279,75 +279,75 @@ const baseStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: '#6E6E73',
-    marginBottom: 5
+    marginBottom: 3
   },
   amountWordsValue: {
     fontSize: 10,
     color: '#1D1D1F',
     fontStyle: 'italic',
-    lineHeight: 1.5
+    lineHeight: 1.4
   }
 });
 
 // Business invoice template styles
 const businessStyles = {
   default: StyleSheet.create({
-    page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    title: { fontSize: 28, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 4 },
+    page: { padding: 25, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
+    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    title: { fontSize: 28, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 2 },
     invoiceNumber: { fontSize: 12, color: '#6E6E73' },
-    section: { flexDirection: 'row', marginBottom: 30, gap: 30 },
-    column: { flex: 1, backgroundColor: '#F5F5F7', padding: 16, borderRadius: 4 },
-    sectionHeader: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', color: '#6E6E73', marginBottom: 10 },
-    text: { fontSize: 11, marginBottom: 4, color: '#1D1D1F' },
-    mutedText: { fontSize: 10, color: '#6E6E73', marginBottom: 3 },
-    table: { marginTop: 25, marginBottom: 25, borderWidth: 1, borderColor: '#E5E5E5' },
-    tableHeader: { flexDirection: 'row', backgroundColor: '#F5F5F7', padding: 12, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    tableRow: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
-    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 25 },
-    totalsBox: { width: 250, padding: 20, backgroundColor: '#ffffff' },
-    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 8, fontSize: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
-    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 8, borderTopWidth: 2, borderTopColor: '#E5E5E5', fontSize: 16, fontWeight: 'bold' }
+    section: { flexDirection: 'row', marginBottom: 15, gap: 15 },
+    column: { flex: 1, backgroundColor: '#F5F5F7', padding: 10, borderRadius: 4 },
+    sectionHeader: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', color: '#6E6E73', marginBottom: 6 },
+    text: { fontSize: 11, marginBottom: 2, color: '#1D1D1F' },
+    mutedText: { fontSize: 10, color: '#6E6E73', marginBottom: 2 },
+    table: { marginTop: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E5E5' },
+    tableHeader: { flexDirection: 'row', backgroundColor: '#F5F5F7', padding: 8, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    tableRow: { flexDirection: 'row', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
+    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
+    totalsBox: { width: 250, padding: 12, backgroundColor: '#ffffff' },
+    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 5, fontSize: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
+    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, marginTop: 5, borderTopWidth: 2, borderTopColor: '#E5E5E5', fontSize: 16, fontWeight: 'bold' }
   }),
   classic: StyleSheet.create({
-    page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#1D1D1F' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 35, paddingBottom: 25, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 6 },
+    page: { padding: 25, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#1D1D1F' },
+    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, paddingBottom: 15, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
+    title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 3 },
     invoiceNumber: { fontSize: 14, color: '#6E6E73' },
-    section: { flexDirection: 'row', marginBottom: 35, gap: 35, padding: 20, backgroundColor: '#F5F5F7', borderWidth: 1, borderColor: '#E5E5E5' },
-    column: { flex: 1, padding: 16 },
-    sectionHeader: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, color: '#1D1D1F', marginBottom: 12, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
-    text: { fontSize: 11, marginBottom: 5, color: '#1D1D1F', fontWeight: '500' },
-    mutedText: { fontSize: 10, color: '#6E6E73', marginBottom: 4 },
-    table: { marginTop: 30, marginBottom: 30, borderWidth: 1, borderColor: '#E5E5E5' },
-    tableHeader: { flexDirection: 'row', backgroundColor: '#F5F5F7', padding: 14, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
-    tableRow: { flexDirection: 'row', padding: 14, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 30 },
-    totalsBox: { width: 280, borderWidth: 1, borderColor: '#E5E5E5', padding: 20, backgroundColor: '#F5F5F7' },
-    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, fontSize: 11, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 14, marginTop: 8, borderTopWidth: 2, borderTopColor: '#1D1D1F', fontSize: 18, fontWeight: 'bold' }
+    section: { flexDirection: 'row', marginBottom: 18, gap: 18, padding: 12, backgroundColor: '#F5F5F7', borderWidth: 1, borderColor: '#E5E5E5' },
+    column: { flex: 1, padding: 10 },
+    sectionHeader: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, color: '#1D1D1F', marginBottom: 7, paddingBottom: 5, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
+    text: { fontSize: 11, marginBottom: 3, color: '#1D1D1F', fontWeight: '500' },
+    mutedText: { fontSize: 10, color: '#6E6E73', marginBottom: 2 },
+    table: { marginTop: 15, marginBottom: 15, borderWidth: 1, borderColor: '#E5E5E5' },
+    tableHeader: { flexDirection: 'row', backgroundColor: '#F5F5F7', padding: 10, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
+    tableRow: { flexDirection: 'row', padding: 10, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 },
+    totalsBox: { width: 280, borderWidth: 1, borderColor: '#E5E5E5', padding: 12, backgroundColor: '#F5F5F7' },
+    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 6, fontSize: 11, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 5, borderTopWidth: 2, borderTopColor: '#1D1D1F', fontSize: 18, fontWeight: 'bold' }
   }),
   professional: StyleSheet.create({
-    page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
-    brandHeader: { padding: 25, borderBottomWidth: 4, borderBottomColor: '#0066FF', marginBottom: 30 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 35, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 6, letterSpacing: -0.5 },
+    page: { padding: 25, fontFamily: 'Helvetica', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
+    brandHeader: { padding: 15, borderBottomWidth: 4, borderBottomColor: '#0066FF', marginBottom: 15 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 3, letterSpacing: -0.5 },
     invoiceNumber: { fontSize: 12, color: '#6E6E73' },
-    section: { flexDirection: 'row', marginBottom: 35, gap: 35 },
+    section: { flexDirection: 'row', marginBottom: 18, gap: 18 },
     column: { flex: 1 },
-    sectionHeader: { fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: '#6E6E73', marginBottom: 12 },
-    text: { fontSize: 12, marginBottom: 5, color: '#1D1D1F' },
-    mutedText: { fontSize: 11, color: '#6E6E73', marginBottom: 4 },
-    table: { marginTop: 35, marginBottom: 35 },
-    tableHeader: { flexDirection: 'row', padding: 14, borderBottomWidth: 2, borderBottomColor: '#E5E5E5' },
-    tableRow: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
-    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 35 },
+    sectionHeader: { fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: '#6E6E73', marginBottom: 7 },
+    text: { fontSize: 12, marginBottom: 3, color: '#1D1D1F' },
+    mutedText: { fontSize: 11, color: '#6E6E73', marginBottom: 2 },
+    table: { marginTop: 18, marginBottom: 18 },
+    tableHeader: { flexDirection: 'row', padding: 10, borderBottomWidth: 2, borderBottomColor: '#E5E5E5' },
+    tableRow: { flexDirection: 'row', padding: 10, borderBottomWidth: 1, borderBottomColor: '#F5F5F7' },
+    totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 18 },
     totalsBox: { width: 260 },
-    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, fontSize: 12, color: '#6E6E73' },
-    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 18, marginTop: 12, borderTopWidth: 3, borderTopColor: '#0066FF', fontSize: 20, fontWeight: 'bold', color: '#1D1D1F' },
-    paymentBox: { marginTop: 30, padding: 25, backgroundColor: '#0066FF', borderRadius: 8 },
-    paymentHeader: { fontSize: 16, fontWeight: 'bold', color: '#ffffff', marginBottom: 10 },
-    paymentText: { fontSize: 11, color: '#ffffff', lineHeight: 1.6, opacity: 0.9 }
+    totalRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 6, fontSize: 12, color: '#6E6E73' },
+    grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 7, borderTopWidth: 3, borderTopColor: '#0066FF', fontSize: 20, fontWeight: 'bold', color: '#1D1D1F' },
+    paymentBox: { marginTop: 15, padding: 15, backgroundColor: '#0066FF', borderRadius: 8 },
+    paymentHeader: { fontSize: 16, fontWeight: 'bold', color: '#ffffff', marginBottom: 6 },
+    paymentText: { fontSize: 11, color: '#ffffff', lineHeight: 1.5, opacity: 0.9 }
   })
 };
 
@@ -357,13 +357,10 @@ const formatCurrency = (amount, currency) => {
   const num = Number(amount);
   if (isNaN(num)) return '0.00';
   const formattedAmount = num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const currencyMap = {
-    'USD': `$ ${formattedAmount}`,
-    'EUR': `€ ${formattedAmount}`,
-    'GBP': `£ ${formattedAmount}`,
-    'NGN': `₦ ${formattedAmount}`,
-  };
-  return currencyMap[currency] || `${currency} ${formattedAmount}`;
+  
+  // Use a safer approach for currency symbols in React PDF
+  const currencySymbol = currencySymbols[currency] || currency;
+  return `${currencySymbol} ${formattedAmount}`;
 };
 
 const formatDate = (dateValue) => {
@@ -480,7 +477,6 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, { style: activeStyles.sectionHeader }, 'Invoice Details'),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-          React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Currency: ${currency}`),
           overdueInfo && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
         ),
         
@@ -499,7 +495,7 @@ const InvoiceDocument = ({ invoice }) => {
             businessProfile.businessAddress && React.createElement(Text, { style: activeStyles.mutedText }, businessProfile.businessAddress),
             businessProfile.registrationNumber && React.createElement(Text, { style: activeStyles.mutedText }, `Reg: ${businessProfile.registrationNumber}`),
             businessProfile.taxId && React.createElement(Text, { style: activeStyles.mutedText }, `Tax ID: ${businessProfile.taxId}`),
-            invoice.fromEmail && React.createElement(Text, { style: activeStyles.mutedText }, invoice.fromEmail)
+            (invoice.fromEmail || businessProfile.businessEmail) && React.createElement(Text, { style: activeStyles.mutedText }, invoice.fromEmail || businessProfile.businessEmail)
           )
         ),
         
@@ -567,7 +563,7 @@ const InvoiceDocument = ({ invoice }) => {
         // Footer
         React.createElement(View, { style: baseStyles.footer },
           React.createElement(Text, { style: baseStyles.footerText }, 'Thank you for your business!'),
-          invoice.fromEmail && React.createElement(Text, { style: baseStyles.footerText }, `Email: ${invoice.fromEmail}`)
+          (invoice.fromEmail || businessProfile.businessEmail) && React.createElement(Text, { style: baseStyles.footerText }, `Email: ${invoice.fromEmail || businessProfile.businessEmail}`)
         )
       )
     );
@@ -598,8 +594,7 @@ const InvoiceDocument = ({ invoice }) => {
       } },
         React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
-        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Currency: ${invoice.currency || 'USD'}`),
+        React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
         isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
         isDueSoon && !isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
       ),
@@ -615,7 +610,7 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, { style: baseStyles.sectionHeader }, 'From'),
           React.createElement(Text, { style: baseStyles.text }, invoice.fromName || 'Your Business'),
           invoice.fromAddress && React.createElement(Text, { style: baseStyles.mutedText }, invoice.fromAddress),
-          invoice.fromEmail && React.createElement(Text, { style: baseStyles.mutedText }, invoice.fromEmail)
+          (invoice.fromEmail || businessProfile.businessEmail) && React.createElement(Text, { style: baseStyles.mutedText }, invoice.fromEmail || businessProfile.businessEmail)
         )
       ),
       
@@ -679,7 +674,7 @@ const InvoiceDocument = ({ invoice }) => {
       React.createElement(View, { style: baseStyles.footer },
         React.createElement(Text, { style: baseStyles.footerText }, 'Thank you for your business!'),
         React.createElement(Text, { style: baseStyles.footerText }, 'If you have any questions about this invoice, please contact us.'),
-        invoice.fromEmail && React.createElement(Text, { style: baseStyles.footerText }, `Email: ${invoice.fromEmail}`)
+        (invoice.fromEmail || businessProfile.businessEmail) && React.createElement(Text, { style: baseStyles.footerText }, `Email: ${invoice.fromEmail || businessProfile.businessEmail}`)
       )
     )
   );
