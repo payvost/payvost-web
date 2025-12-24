@@ -35,6 +35,26 @@ services:
         sync: false  # Optional: Twilio phone number
       - key: JWT_SECRET
         sync: false  # Optional: JWT secret for token signing
+      - key: OPENAI_API_KEY
+        sync: false  # Optional: OpenAI API key for AI chat features
+      - key: PDF_SERVICE_URL
+        sync: false  # URL of PDF service (set after deployment)
+      - key: EMAIL_SERVICE_URL
+        sync: false  # URL of Email service (set after deployment)
+      - key: ADMIN_STATS_SERVICE_URL
+        sync: false  # URL of Admin Stats service (set after deployment)
+      - key: WEBHOOK_SERVICE_URL
+        sync: false  # URL of Webhook service (set after deployment)
+      - key: CURRENCY_SERVICE_URL
+        sync: false  # URL of Currency service (set after deployment)
+      - key: FRAUD_SERVICE_URL
+        sync: false  # URL of Fraud service (set after deployment)
+      - key: CORE_BANKING_SERVICE_URL
+        sync: false  # URL of Core Banking service (set after deployment)
+      - key: RATE_ALERT_SERVICE_URL
+        sync: false  # URL of Rate Alert service (set after deployment)
+      - key: NOTIFICATION_SERVICE_URL
+        sync: false  # URL of Notification service (set after deployment)
 
   # Rate Alert Monitor Service (Background Worker / Cron Job)
   - type: web
@@ -43,7 +63,7 @@ services:
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd backend/services/rate-alert-service && npm install --include=dev && npm run build
+    buildCommand: cd backend/services/rate-alert-service && npm install && npm run build
     startCommand: cd backend/services/rate-alert-service && npm start
     envVars:
       - key: RATE_ALERT_SERVICE_PORT

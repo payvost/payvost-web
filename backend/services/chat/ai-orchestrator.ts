@@ -2,9 +2,16 @@ import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client only if API key is available
+let openai: OpenAI | null = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+} else {
+  logger.warn('OpenAI API key not configured. AI chat features will be disabled.');
+}
 
 interface ChatContext {
   userId: string;
@@ -123,6 +130,11 @@ export class AIOrchestrator {
     context: ChatContext
   ): Promise<MessageAnalysis> {
     // Use OpenAI to analyze message intent and sentiment
+    if (!openai) {
+      logger.warn('OpenAI not available, using fallback analysis');
+      return this.fallbackAnalysis(message, context);
+    }
+
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
@@ -189,6 +201,11 @@ Context: User has ${context.recentTickets?.length || 0} recent tickets.`,
     message: string,
     context: ChatContext
   ): Promise<string> {
+    if (!openai) {
+      logger.warn('OpenAI not available, returning fallback response');
+      return "I'm currently unable to process AI responses. Please ask to speak with a human agent for assistance.";
+    }
+
     try {
       const systemPrompt = `You are a friendly and helpful customer support assistant for Payvost, a global remittance service.
 Your goal is to assist users with their questions about the platform.

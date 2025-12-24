@@ -2,6 +2,8 @@
 
 This document describes the deployment of all Payvost services on Render.
 
+**📋 For complete environment variable requirements, see [RENDER_ENVIRONMENT_VARIABLES.md](./RENDER_ENVIRONMENT_VARIABLES.md)**
+
 ## Services Overview
 
 ### Already Deployed
@@ -33,23 +35,36 @@ This document describes the deployment of all Payvost services on Render.
    - Render will automatically detect `render.yaml`
 
 3. **Set Environment Variables**
-   For each service, set the following in Render Dashboard:
+   
+   **See [RENDER_ENVIRONMENT_VARIABLES.md](./RENDER_ENVIRONMENT_VARIABLES.md) for complete list.**
+   
+   Key variables to set:
+   
+   **Backend Gateway:**
+   - `DATABASE_URL` (required)
+   - `FIREBASE_SERVICE_ACCOUNT_KEY` (required)
+   - `FRONTEND_URL` (required)
+   - `OPENAI_API_KEY` (optional, for AI chat)
+   - Service URLs (set after deploying other services)
    
    **Rate Alert Service:**
-   - `MAILGUN_API_KEY`
-   - `MAILGUN_DOMAIN`
-   - `VAPID_PUBLIC_KEY`
-   - `VAPID_PRIVATE_KEY`
-   - `OPEN_EXCHANGE_RATES_APP_ID` h
+   - `DATABASE_URL` (required)
+   - `OPEN_EXCHANGE_RATES_APP_ID` (required)
+   - `MAILGUN_API_KEY` (optional)
+   - `MAILGUN_DOMAIN` (optional)
+   - `VAPID_PUBLIC_KEY` (optional)
+   - `VAPID_PRIVATE_KEY` (optional)
    
    **Currency Service:**
-   - `OPEN_EXCHANGE_RATES_APP_ID`
+   - `OPEN_EXCHANGE_RATES_APP_ID` (required)
    
    **Fraud Service:**
-   - `INTERNAL_API_KEY` (generate a secure random string)
+   - `DATABASE_URL` (required)
+   - `INTERNAL_API_KEY` (required - generate secure random string)
    
    **Core Banking Service:**
-   - `INTERNAL_API_KEY` (same as Fraud Service or separate)
+   - `DATABASE_URL` (required)
+   - `INTERNAL_API_KEY` (required - can use same as Fraud Service or separate)
 
 4. **Deploy**
    - Render will automatically deploy all services
@@ -257,4 +272,9 @@ curl -X POST https://payvost-core-banking-service.onrender.com/transfer \
 3. Update frontend/backend to use new service URLs
 4. Test all integrations
 5. Monitor performance and adjust as needed
+
+## Environment Variables Reference
+
+For a complete list of all required and optional environment variables for each service, see:
+**[RENDER_ENVIRONMENT_VARIABLES.md](./RENDER_ENVIRONMENT_VARIABLES.md)**
 
