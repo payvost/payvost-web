@@ -657,12 +657,14 @@ export function EnhancedLiveChat({
                 type="submit"
                 disabled={isLoading || !input.trim()}
                 size="icon"
+                aria-label="Send message"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
+                <span className="sr-only">Send message</span>
               </Button>
             </form>
           </div>

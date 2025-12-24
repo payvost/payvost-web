@@ -35,6 +35,8 @@ export class ApiError extends Error {
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean;
   timeout?: number;
+  retries?: number;
+  retryDelay?: number;
 }
 
 /**
@@ -64,9 +66,67 @@ class ApiClient {
   }
 
   /**
-   * Make an HTTP request
+   * Sleep helper for retry delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if an error is retryable
+   */
+  private isRetryableError(error: any): boolean {
+    if (error instanceof ApiError) {
+      // Retry on network errors, timeouts, and 5xx server errors
+      const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
+      return retryableStatusCodes.includes(error.statusCode || 0) || 
+             error.message.includes('timeout') ||
+             error.message.includes('network');
+    }
+    // Retry on network errors
+    if (error instanceof Error) {
+      return error.name === 'AbortError' || 
+             error.message.includes('fetch failed') ||
+             error.message.includes('network');
+    }
+    return false;
+  }
+
+  /**
+   * Make an HTTP request with retry logic
    */
   private async request<T>(
+    endpoint: string,
+    options: RequestOptions = {}
+  ): Promise<T> {
+    const { skipAuth = false, timeout = 30000, retries = 2, retryDelay = 1000, ...fetchOptions } = options;
+    
+    let lastError: any;
+    
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await this.executeRequest<T>(endpoint, { skipAuth, timeout, ...fetchOptions });
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry on last attempt or if error is not retryable
+        if (attempt >= retries || !this.isRetryableError(error)) {
+          throw error;
+        }
+        
+        // Calculate exponential backoff delay
+        const delay = retryDelay * Math.pow(2, attempt);
+        await this.sleep(delay);
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * Execute a single HTTP request (without retry logic)
+   */
+  private async executeRequest<T>(
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
@@ -149,7 +209,12 @@ class ApiClient {
 
       // Handle abort/timeout
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new ApiError('Request timeout', 408);
+        throw new ApiError('The request took too long to complete', 408);
+      }
+      
+      // Handle network errors
+      if (error instanceof Error && (error.message.includes('fetch failed') || error.message.includes('network'))) {
+        throw new ApiError('Network error. Please check your connection and try again.', 0);
       }
 
       // Re-throw ApiError

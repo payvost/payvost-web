@@ -186,8 +186,10 @@ export function SearchableLocationInput({
             onMouseDown={(e) => {
               e.preventDefault();
             }}
+            aria-label={open ? "Close location options" : "Show location options"}
           >
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
+            <span className="sr-only">{open ? "Close location options" : "Show location options"}</span>
           </Button>
         )}
       </div>

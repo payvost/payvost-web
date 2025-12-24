@@ -726,13 +726,17 @@ export default function RealTimePage() {
                                     <AnimatePresence initial={false}>
                                         {filteredTransactions.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center p-8 text-muted-foreground">
-                                                    <p>No transactions found.</p>
-                                                    {searchTerm || statusFilter !== 'all' || riskFilter !== 'all' || currencyFilter !== 'all' || dateRange.from || amountRange.min || amountRange.max ? (
-                                                        <p className="text-xs mt-2">Try adjusting your filters.</p>
-                                                    ) : (
-                                                        <p className="text-xs mt-2">Transactions will appear here as they occur.</p>
-                                                    )}
+                                                <TableCell colSpan={7} className="p-0">
+                                                    <div className="flex flex-col items-center justify-center py-12 px-4">
+                                                        <div className="text-center space-y-2">
+                                                            <p className="text-base font-medium">No transactions found</p>
+                                                            {searchTerm || statusFilter !== 'all' || riskFilter !== 'all' || currencyFilter !== 'all' || dateRange.from || amountRange.min || amountRange.max ? (
+                                                                <p className="text-sm text-muted-foreground">Try adjusting your filters to see more results.</p>
+                                                            ) : (
+                                                                <p className="text-sm text-muted-foreground">Transactions will appear here as they occur in real-time.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : (

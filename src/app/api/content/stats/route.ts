@@ -56,13 +56,13 @@ export async function GET(request: NextRequest) {
       
       if (fetchError.code === 'ECONNREFUSED' || fetchError.message?.includes('fetch failed')) {
         return NextResponse.json(
-          { error: 'Backend service is not available. Please check if the backend server is running and BACKEND_URL is configured correctly.' },
+          { error: 'Unable to connect to our servers. Please check your internet connection and try again.' },
           { status: 503 }
         );
       }
       
       return NextResponse.json(
-        { error: `Network error: ${fetchError.message || 'Failed to connect to backend'}` },
+        { error: 'Network error. Please check your connection and try again.' },
         { status: 503 }
       );
     }

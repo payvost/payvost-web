@@ -128,7 +128,7 @@ const registrationSchema = z
       .string()
       .min(8, 'Password must be at least 8 characters')
       .refine((password) => checkPasswordStrength(password) >= 80, {
-        message: 'Password is not strong enough. Aim for at least 80% strength.',
+        message: 'Password is too weak. Please use a mix of uppercase, lowercase, numbers, and special characters.',
       }),
     confirmPassword: z.string().min(8, 'Passwords must match'),
     dateOfBirth: z.date({ required_error: 'Date of birth is required' }),

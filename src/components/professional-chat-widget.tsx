@@ -716,8 +716,10 @@ export function ProfessionalChatWidget({
                 variant="ghost"
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
+                aria-label="Attach file"
               >
                 <Paperclip className="h-4 w-4" />
+                <span className="sr-only">Attach file</span>
               </Button>
               <Input
                 value={input}
@@ -736,6 +738,7 @@ export function ProfessionalChatWidget({
                 type="submit"
                 disabled={isLoading || !input.trim()}
                 size="icon"
+                aria-label="Send message"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
