@@ -95,14 +95,12 @@ export default {
       [
         'expo-notifications',
         {
-          icon: './assets/images/notification-icon.png',
           color: '#16a34a',
           mode: 'production',
         },
       ],
     ],
     notification: {
-      icon: './assets/images/notification-icon.png',
       color: '#16a34a',
       iosDisplayInForeground: true,
       androidMode: 'default',
