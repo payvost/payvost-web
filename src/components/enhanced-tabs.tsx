@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
-import { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 
 interface TabItem {
   value: string;
@@ -91,76 +91,135 @@ export function EnhancedTabs({
     tabsProps.defaultValue = defaultValue || initialValue;
   }
 
+  const hasTooltips = tabs.some(tab => tab.tooltip);
+
   return (
     <Tabs {...tabsProps}>
-      <TabsList className={cn(
-        "overflow-x-auto sm:overflow-visible overflow-y-visible",
-        listStyles[variant],
-        orientation === 'vertical' && 'flex-col h-auto w-auto'
-      )}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = safeActiveValue === tab.value;
-          
-          const content = (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              disabled={tab.disabled}
-              className={cn(
-                "flex items-center gap-2",
-                triggerAdditionalStyles[variant],
-                // Icon styles for active state
-                variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
-                "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
-                "data-[state=active]:[&_svg]:scale-110"
-              )}
-            >
-              {Icon && (
-                <Icon className="h-4 w-4" />
-              )}
-              <span className="relative">
-                {tab.label}
-              </span>
-              {variant === 'underline' && (
-                <span className={cn(
-                  "absolute -bottom-0 left-0 right-0 h-0.5 bg-primary transition-all duration-200 origin-center pointer-events-none z-10",
-                  isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
-                )} />
-              )}
-              {showCounts && tab.count !== undefined && tab.count > 0 && (
-                <Badge 
-                  variant="secondary" 
+      {hasTooltips ? (
+        <TooltipProvider>
+          <TabsList className={cn(
+            "overflow-x-auto sm:overflow-visible overflow-y-visible",
+            listStyles[variant],
+            orientation === 'vertical' && 'flex-col h-auto w-auto'
+          )}>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = safeActiveValue === tab.value;
+              
+              const triggerContent = (
+                <TabsTrigger
+                  value={tab.value}
+                  disabled={tab.disabled}
                   className={cn(
-                    "ml-1 text-xs transition-all duration-200",
-                    "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
+                    "flex items-center gap-2",
+                    triggerAdditionalStyles[variant],
+                    // Icon styles for active state
+                    variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
+                    variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
+                    variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
+                    "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
+                    "data-[state=active]:[&_svg]:scale-110"
                   )}
                 >
-                  {tab.count}
-                </Badge>
-              )}
-              {tab.badge}
-            </TabsTrigger>
-          );
+                  {Icon && (
+                    <Icon className="h-4 w-4" />
+                  )}
+                  <span className="relative">
+                    {tab.label}
+                  </span>
+                  {variant === 'underline' && (
+                    <span className={cn(
+                      "absolute -bottom-0 left-0 right-0 h-0.5 bg-primary transition-all duration-200 origin-center pointer-events-none z-10",
+                      isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                    )} />
+                  )}
+                  {showCounts && tab.count !== undefined && tab.count > 0 && (
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "ml-1 text-xs transition-all duration-200",
+                        "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
+                      )}
+                    >
+                      {tab.count}
+                    </Badge>
+                  )}
+                  {tab.badge}
+                </TabsTrigger>
+              );
 
-          if (tab.tooltip) {
+              if (tab.tooltip) {
+                return (
+                  <Tooltip key={tab.value}>
+                    <TooltipTrigger asChild>
+                      {triggerContent}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{tab.tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return <React.Fragment key={tab.value}>{triggerContent}</React.Fragment>;
+            })}
+          </TabsList>
+        </TooltipProvider>
+      ) : (
+        <TabsList className={cn(
+          "overflow-x-auto sm:overflow-visible overflow-y-visible",
+          listStyles[variant],
+          orientation === 'vertical' && 'flex-col h-auto w-auto'
+        )}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = safeActiveValue === tab.value;
+            
             return (
-              <TooltipProvider key={tab.value}>
-                <Tooltip>
-                  <TooltipTrigger asChild>{content}</TooltipTrigger>
-                  <TooltipContent>
-                    <p>{tab.tooltip}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                disabled={tab.disabled}
+                className={cn(
+                  "flex items-center gap-2",
+                  triggerAdditionalStyles[variant],
+                  // Icon styles for active state
+                  variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
+                  variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
+                  variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
+                  "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
+                  "data-[state=active]:[&_svg]:scale-110"
+                )}
+              >
+                {Icon && (
+                  <Icon className="h-4 w-4" />
+                )}
+                <span className="relative">
+                  {tab.label}
+                </span>
+                {variant === 'underline' && (
+                  <span className={cn(
+                    "absolute -bottom-0 left-0 right-0 h-0.5 bg-primary transition-all duration-200 origin-center pointer-events-none z-10",
+                    isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
+                  )} />
+                )}
+                {showCounts && tab.count !== undefined && tab.count > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "ml-1 text-xs transition-all duration-200",
+                      "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
+                    )}
+                  >
+                    {tab.count}
+                  </Badge>
+                )}
+                {tab.badge}
+              </TabsTrigger>
             );
-          }
-
-          return content;
-        })}
-      </TabsList>
+          })}
+        </TabsList>
+      )}
       {children}
     </Tabs>
   );

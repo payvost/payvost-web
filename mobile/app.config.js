@@ -39,7 +39,7 @@ if (missingVars.length > 0) {
 export default {
   expo: {
     name: 'mobile',
-    slug: 'mobile',
+    slug: 'payvost-app',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',

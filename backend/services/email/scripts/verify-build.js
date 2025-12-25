@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const distIndex = path.join(__dirname, '..', 'dist', 'index.js');
-const backendCommonMailgun = path.join(__dirname, '..', '..', '..', 'common', 'mailgun.js');
+const distCommonMailgun = path.join(__dirname, '..', 'dist', 'common', 'mailgun.js');
 
 if (!fs.existsSync(distIndex)) {
   console.error('[Build Verification] ERROR: dist/index.js not found after compilation');
@@ -29,12 +29,12 @@ if (!fs.existsSync(distIndex)) {
   process.exit(1);
 }
 
-if (!fs.existsSync(backendCommonMailgun)) {
-  console.error('[Build Verification] ERROR: backend/common/mailgun.js not found after compilation');
-  console.error('[Build Verification] Expected location:', backendCommonMailgun);
+if (!fs.existsSync(distCommonMailgun)) {
+  console.error('[Build Verification] ERROR: dist/common/mailgun.js not found after compilation');
+  console.error('[Build Verification] Expected location:', distCommonMailgun);
   process.exit(1);
 }
 
 console.log('[Build Verification] ✓ dist/index.js exists');
-console.log('[Build Verification] ✓ backend/common/mailgun.js exists');
+console.log('[Build Verification] ✓ dist/common/mailgun.js exists');
 
