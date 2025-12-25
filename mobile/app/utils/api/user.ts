@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { SecureStorage } from '../../utils/security';
+import { SecureStorage } from '../../../utils/security';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api/v1/user';
 
