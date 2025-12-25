@@ -290,15 +290,28 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
     
     res.json(serializedInvoice);
   } catch (error: any) {
-    console.error('Error marking invoice as paid:', error);
-    console.error('Error stack:', error.stack);
+    console.error('[POST /invoices/:id/mark-paid] Error marking invoice as paid:', error);
+    console.error('[POST /invoices/:id/mark-paid] Invoice ID:', req.params.id);
+    console.error('[POST /invoices/:id/mark-paid] User ID:', req.user?.uid);
+    console.error('[POST /invoices/:id/mark-paid] Error message:', error?.message);
+    console.error('[POST /invoices/:id/mark-paid] Error stack:', error?.stack);
+    
     if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
-      return res.status(404).json({ error: error.message });
+      return res.status(error.message === 'Unauthorized' ? 403 : 404).json({ error: error.message });
     }
-    res.status(500).json({ 
+    
+    // Return more detailed error in development
+    const errorResponse: any = { 
       error: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.details = error.stack;
+      errorResponse.invoiceId = req.params.id;
+      errorResponse.userId = req.user?.uid;
+    }
+    
+    res.status(500).json(errorResponse);
   }
 });
 

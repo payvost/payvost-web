@@ -580,6 +580,7 @@ export class InvoiceService {
     // If not in Prisma, check Firestore businessInvoices collection
     try {
       if (!admin.apps.length) {
+        console.error('[markAsPaid] Firebase Admin SDK not initialized');
         throw new Error('Firebase Admin SDK not initialized');
       }
 
@@ -588,16 +589,112 @@ export class InvoiceService {
       const firestoreInvoice = await docRef.get();
 
       if (!firestoreInvoice.exists) {
-        throw new Error('Invoice not found');
+        console.error(`[markAsPaid] Invoice not found in businessInvoices collection: ${id}`);
+        // Try to find by invoiceNumber as fallback
+        const querySnapshot = await db.collection('businessInvoices')
+          .where('invoiceNumber', '==', id)
+          .limit(1)
+          .get();
+        
+        if (querySnapshot.empty) {
+          throw new Error('Invoice not found');
+        }
+        
+        // Use the found invoice
+        const foundDoc = querySnapshot.docs[0];
+        const foundData = foundDoc.data();
+        
+        if (!foundData) {
+          throw new Error('Invoice data not found');
+        }
+
+        // Verify ownership
+        if (foundData.createdBy !== userId) {
+          console.error(`[markAsPaid] Unauthorized: userId=${userId}, invoice.createdBy=${foundData.createdBy}`);
+          throw new Error('Unauthorized');
+        }
+
+        // Update using the found document reference
+        const foundDocRef = foundDoc.ref;
+        await foundDocRef.update({
+          status: 'Paid',
+          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Return updated data
+        const updatedDoc = await foundDocRef.get();
+        const updatedData = updatedDoc.data();
+        
+        if (!updatedData) {
+          throw new Error('Invoice data not found after update');
+        }
+
+        // Helper to safely convert Firestore Timestamp to Date
+        const toDate = (timestamp: any): Date => {
+          if (!timestamp) return new Date();
+          if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+          }
+          if (timestamp instanceof Date) {
+            return timestamp;
+          }
+          if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+            return new Date(timestamp);
+          }
+          return new Date();
+        };
+
+        return {
+          id: updatedDoc.id,
+          invoiceNumber: updatedData?.invoiceNumber || '',
+          invoiceType: 'BUSINESS' as const,
+          userId: updatedData?.createdBy || '',
+          businessId: updatedData?.businessId || null,
+          createdBy: updatedData?.createdBy || '',
+          issueDate: toDate(updatedData?.issueDate),
+          dueDate: toDate(updatedData?.dueDate),
+          status: 'PAID' as any,
+          currency: updatedData?.currency || 'USD',
+          grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
+          taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
+          fromInfo: {
+            name: updatedData?.fromName || '',
+            address: updatedData?.fromAddress || '',
+            email: updatedData?.fromEmail || '',
+          },
+          toInfo: {
+            name: updatedData?.toName || '',
+            address: updatedData?.toAddress || '',
+            email: updatedData?.toEmail || '',
+          },
+          items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+          paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+          manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+            bankName: updatedData?.manualBankName || '',
+            accountName: updatedData?.manualAccountName || '',
+            accountNumber: updatedData?.manualAccountNumber || '',
+            otherDetails: updatedData?.manualOtherDetails || '',
+          } : null,
+          notes: updatedData?.notes || null,
+          isPublic: updatedData?.isPublic !== false,
+          publicUrl: updatedData?.publicUrl || null,
+          pdfUrl: updatedData?.pdfUrl || null,
+          paidAt: toDate(updatedData?.paidAt),
+          createdAt: toDate(updatedData?.createdAt),
+          updatedAt: toDate(updatedData?.updatedAt),
+        };
       }
 
       const data = firestoreInvoice.data();
       if (!data) {
+        console.error(`[markAsPaid] Invoice document exists but has no data: ${id}`);
         throw new Error('Invoice data not found');
       }
 
       // Verify ownership
       if (data.createdBy !== userId) {
+        console.error(`[markAsPaid] Unauthorized: userId=${userId}, invoice.createdBy=${data.createdBy}`);
         throw new Error('Unauthorized');
       }
 
@@ -617,17 +714,25 @@ export class InvoiceService {
       };
 
       // Update in Firestore
-      await docRef.update({
-        status: 'Paid',
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      try {
+        await docRef.update({
+          status: 'Paid',
+          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (updateError: any) {
+        console.error('[markAsPaid] Firestore update error:', updateError);
+        console.error('[markAsPaid] Update error code:', updateError?.code);
+        console.error('[markAsPaid] Update error message:', updateError?.message);
+        throw new Error(`Failed to update invoice in Firestore: ${updateError?.message || 'Unknown error'}`);
+      }
 
       // Return updated data in Prisma format for consistency
       const updatedDoc = await docRef.get();
       const updatedData = updatedDoc.data();
       
       if (!updatedData) {
+        console.error('[markAsPaid] Invoice data not found after update, document ID:', updatedDoc.id);
         throw new Error('Invoice data not found after update');
       }
       
@@ -670,8 +775,12 @@ export class InvoiceService {
         createdAt: toDate(updatedData?.createdAt),
         updatedAt: toDate(updatedData?.updatedAt),
       };
-    } catch (error) {
-      console.error('Error marking Firestore invoice as paid:', error);
+    } catch (error: any) {
+      console.error('[markAsPaid] Error marking Firestore invoice as paid:', error);
+      console.error('[markAsPaid] Invoice ID:', id);
+      console.error('[markAsPaid] User ID:', userId);
+      console.error('[markAsPaid] Error message:', error?.message);
+      console.error('[markAsPaid] Error stack:', error?.stack);
       throw error;
     }
   }
