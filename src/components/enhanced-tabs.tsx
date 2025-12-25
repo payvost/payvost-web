@@ -53,7 +53,8 @@ export function EnhancedTabs({
   
   // Determine the active value
   const activeValue = controlledValue !== undefined ? controlledValue : internalValue;
-  const safeActiveValue = activeValue || initialValue;
+  // Only use initialValue as fallback if we truly have no value (not even empty string)
+  const safeActiveValue = activeValue !== undefined && activeValue !== null ? activeValue : initialValue;
 
   const handleValueChange = (newValue: string) => {
     if (controlledValue === undefined) {
@@ -85,10 +86,11 @@ export function EnhancedTabs({
   };
 
   // Use controlled mode if value is provided, otherwise use defaultValue
+  // Ensure value is always a string for Radix UI Tabs
   if (controlledValue !== undefined) {
-    tabsProps.value = safeActiveValue;
+    tabsProps.value = String(safeActiveValue);
   } else {
-    tabsProps.defaultValue = defaultValue || initialValue;
+    tabsProps.defaultValue = String(defaultValue || initialValue);
   }
 
   const hasTooltips = tabs.some(tab => tab.tooltip);
@@ -96,7 +98,7 @@ export function EnhancedTabs({
   return (
     <Tabs {...tabsProps}>
       {hasTooltips ? (
-        <TooltipProvider>
+        <TooltipProvider delayDuration={300}>
           <TabsList className={cn(
             "overflow-x-auto sm:overflow-visible overflow-y-visible",
             listStyles[variant],
@@ -106,8 +108,9 @@ export function EnhancedTabs({
               const Icon = tab.icon;
               const isActive = safeActiveValue === tab.value;
               
-              const triggerContent = (
+              const triggerElement = (
                 <TabsTrigger
+                  key={tab.value}
                   value={tab.value}
                   disabled={tab.disabled}
                   className={cn(
@@ -152,7 +155,7 @@ export function EnhancedTabs({
                 return (
                   <Tooltip key={tab.value}>
                     <TooltipTrigger asChild>
-                      {triggerContent}
+                      {triggerElement}
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{tab.tooltip}</p>
@@ -161,7 +164,7 @@ export function EnhancedTabs({
                 );
               }
 
-              return <React.Fragment key={tab.value}>{triggerContent}</React.Fragment>;
+              return triggerElement;
             })}
           </TabsList>
         </TooltipProvider>
