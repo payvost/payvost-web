@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.payvost.payvost",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This app uses tracking to improve your experience.",
+        "NSCameraUsageDescription": "This app needs access to your camera for KYC verification.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library for KYC verification."
+      }
     },
     "android": {
       "adaptiveIcon": {
