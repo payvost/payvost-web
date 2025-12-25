@@ -225,7 +225,7 @@ services:
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd backend/services/notification-service && npm install --include=dev && npm run build
+    buildCommand: cd backend/services/notification-service && npm install && npm run build
     startCommand: cd backend/services/notification-service && npm start
     envVars:
       - key: NOTIFICATION_SERVICE_PORT
