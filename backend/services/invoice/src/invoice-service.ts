@@ -645,45 +645,53 @@ export class InvoiceService {
           return new Date();
         };
 
-        return {
-          id: updatedDoc.id,
-          invoiceNumber: updatedData?.invoiceNumber || '',
-          invoiceType: 'BUSINESS' as const,
-          userId: updatedData?.createdBy || '',
-          businessId: updatedData?.businessId || null,
-          createdBy: updatedData?.createdBy || '',
-          issueDate: toDate(updatedData?.issueDate),
-          dueDate: toDate(updatedData?.dueDate),
-          status: 'PAID' as any,
-          currency: updatedData?.currency || 'USD',
-          grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
-          taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
-          fromInfo: {
-            name: updatedData?.fromName || '',
-            address: updatedData?.fromAddress || '',
-            email: updatedData?.fromEmail || '',
-          },
-          toInfo: {
-            name: updatedData?.toName || '',
-            address: updatedData?.toAddress || '',
-            email: updatedData?.toEmail || '',
-          },
-          items: Array.isArray(updatedData?.items) ? updatedData.items : [],
-          paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
-          manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
-            bankName: updatedData?.manualBankName || '',
-            accountName: updatedData?.manualAccountName || '',
-            accountNumber: updatedData?.manualAccountNumber || '',
-            otherDetails: updatedData?.manualOtherDetails || '',
-          } : null,
-          notes: updatedData?.notes || null,
-          isPublic: updatedData?.isPublic !== false,
-          publicUrl: updatedData?.publicUrl || null,
-          pdfUrl: updatedData?.pdfUrl || null,
-          paidAt: toDate(updatedData?.paidAt),
-          createdAt: toDate(updatedData?.createdAt),
-          updatedAt: toDate(updatedData?.updatedAt),
-        };
+        try {
+          const result = {
+            id: updatedDoc.id,
+            invoiceNumber: updatedData?.invoiceNumber || '',
+            invoiceType: 'BUSINESS' as const,
+            userId: updatedData?.createdBy || '',
+            businessId: updatedData?.businessId || null,
+            createdBy: updatedData?.createdBy || '',
+            issueDate: toDate(updatedData?.issueDate),
+            dueDate: toDate(updatedData?.dueDate),
+            status: 'PAID' as any,
+            currency: updatedData?.currency || 'USD',
+            grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
+            taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
+            fromInfo: {
+              name: updatedData?.fromName || '',
+              address: updatedData?.fromAddress || '',
+              email: updatedData?.fromEmail || '',
+            },
+            toInfo: {
+              name: updatedData?.toName || '',
+              address: updatedData?.toAddress || '',
+              email: updatedData?.toEmail || '',
+            },
+            items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+            paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+            manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+              bankName: updatedData?.manualBankName || '',
+              accountName: updatedData?.manualAccountName || '',
+              accountNumber: updatedData?.manualAccountNumber || '',
+              otherDetails: updatedData?.manualOtherDetails || '',
+            } : null,
+            notes: updatedData?.notes || null,
+            isPublic: updatedData?.isPublic !== false,
+            publicUrl: updatedData?.publicUrl || null,
+            pdfUrl: updatedData?.pdfUrl || null,
+            paidAt: toDate(updatedData?.paidAt),
+            createdAt: toDate(updatedData?.createdAt),
+            updatedAt: toDate(updatedData?.updatedAt),
+          };
+          console.log('[markAsPaid] Successfully built return object (fallback path) for invoice:', updatedDoc.id);
+          return result;
+        } catch (buildError: any) {
+          console.error('[markAsPaid] Error building return object (fallback path):', buildError);
+          console.error('[markAsPaid] Build error stack:', buildError?.stack);
+          throw new Error(`Failed to build invoice response: ${buildError?.message || 'Unknown error'}`);
+        }
       }
 
       const data = firestoreInvoice.data();
@@ -728,6 +736,7 @@ export class InvoiceService {
       }
 
       // Return updated data in Prisma format for consistency
+      // Note: serverTimestamp() values are resolved when reading the document
       const updatedDoc = await docRef.get();
       const updatedData = updatedDoc.data();
       
@@ -736,45 +745,56 @@ export class InvoiceService {
         throw new Error('Invoice data not found after update');
       }
       
-      return {
-        id: updatedDoc.id,
-        invoiceNumber: updatedData?.invoiceNumber || '',
-        invoiceType: 'BUSINESS' as const,
-        userId: updatedData?.createdBy || '',
-        businessId: updatedData?.businessId || null,
-        createdBy: updatedData?.createdBy || '',
-        issueDate: toDate(updatedData?.issueDate),
-        dueDate: toDate(updatedData?.dueDate),
-        status: 'PAID' as any,
-        currency: updatedData?.currency || 'USD',
-        grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
-        taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
-        fromInfo: {
-          name: updatedData?.fromName || '',
-          address: updatedData?.fromAddress || '',
-          email: updatedData?.fromEmail || '',
-        },
-        toInfo: {
-          name: updatedData?.toName || '',
-          address: updatedData?.toAddress || '',
-          email: updatedData?.toEmail || '',
-        },
-        items: Array.isArray(updatedData?.items) ? updatedData.items : [],
-        paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
-        manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
-          bankName: updatedData?.manualBankName || '',
-          accountName: updatedData?.manualAccountName || '',
-          accountNumber: updatedData?.manualAccountNumber || '',
-          otherDetails: updatedData?.manualOtherDetails || '',
-        } : null,
-        notes: updatedData?.notes || null,
-        isPublic: updatedData?.isPublic !== false,
-        publicUrl: updatedData?.publicUrl || null,
-        pdfUrl: updatedData?.pdfUrl || null,
-        paidAt: toDate(updatedData?.paidAt),
-        createdAt: toDate(updatedData?.createdAt),
-        updatedAt: toDate(updatedData?.updatedAt),
-      };
+      try {
+        // Build the return object with proper error handling
+        const result = {
+          id: updatedDoc.id,
+          invoiceNumber: updatedData?.invoiceNumber || '',
+          invoiceType: 'BUSINESS' as const,
+          userId: updatedData?.createdBy || '',
+          businessId: updatedData?.businessId || null,
+          createdBy: updatedData?.createdBy || '',
+          issueDate: toDate(updatedData?.issueDate),
+          dueDate: toDate(updatedData?.dueDate),
+          status: 'PAID' as any,
+          currency: updatedData?.currency || 'USD',
+          grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
+          taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
+          fromInfo: {
+            name: updatedData?.fromName || '',
+            address: updatedData?.fromAddress || '',
+            email: updatedData?.fromEmail || '',
+          },
+          toInfo: {
+            name: updatedData?.toName || '',
+            address: updatedData?.toAddress || '',
+            email: updatedData?.toEmail || '',
+          },
+          items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+          paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+          manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+            bankName: updatedData?.manualBankName || '',
+            accountName: updatedData?.manualAccountName || '',
+            accountNumber: updatedData?.manualAccountNumber || '',
+            otherDetails: updatedData?.manualOtherDetails || '',
+          } : null,
+          notes: updatedData?.notes || null,
+          isPublic: updatedData?.isPublic !== false,
+          publicUrl: updatedData?.publicUrl || null,
+          pdfUrl: updatedData?.pdfUrl || null,
+          paidAt: toDate(updatedData?.paidAt),
+          createdAt: toDate(updatedData?.createdAt),
+          updatedAt: toDate(updatedData?.updatedAt),
+        };
+        
+        console.log('[markAsPaid] Successfully built return object for invoice:', updatedDoc.id);
+        return result;
+      } catch (buildError: any) {
+        console.error('[markAsPaid] Error building return object:', buildError);
+        console.error('[markAsPaid] Build error stack:', buildError?.stack);
+        console.error('[markAsPaid] Updated data keys:', Object.keys(updatedData || {}));
+        throw new Error(`Failed to build invoice response: ${buildError?.message || 'Unknown error'}`);
+      }
     } catch (error: any) {
       console.error('[markAsPaid] Error marking Firestore invoice as paid:', error);
       console.error('[markAsPaid] Invoice ID:', id);
