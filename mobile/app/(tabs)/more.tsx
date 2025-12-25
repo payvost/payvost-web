@@ -45,31 +45,13 @@ export default function MoreScreen() {
   };
 
   const handleViewTransactions = async () => {
-    setLoadingTransactions(true);
-    try {
-      const transactions = await getAllTransactions({ limit: 50 });
-      // TODO: Navigate to full transaction history screen
-      Alert.alert(
-        'Transaction History',
-        `You have ${transactions.pagination.total} transactions. Full history screen coming soon.`
-      );
-      await trackUserAction.screenOpened('Transaction History');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load transactions');
-    } finally {
-      setLoadingTransactions(false);
-    }
+    await trackUserAction.screenOpened('Transaction History');
+    router.push('/transactions');
   };
 
   const handleViewProfile = async () => {
-    try {
-      const profile = await getProfile();
-      // TODO: Navigate to profile edit screen
-      Alert.alert('Profile', `Name: ${profile.name || 'Not set'}\nEmail: ${profile.email}`);
-      await trackUserAction.screenOpened('Profile');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load profile');
-    }
+    await trackUserAction.screenOpened('Profile');
+    router.push('/profile');
   };
 
   const menuItems: MenuItem[] = [
@@ -93,8 +75,7 @@ export default function MoreScreen() {
       icon: 'settings-outline',
       color: '#8b5cf6',
       onPress: () => {
-        // TODO: Navigate to settings
-        console.log('Settings');
+        router.push('/settings');
       },
     },
     {

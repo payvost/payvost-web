@@ -70,22 +70,22 @@ export default function PaymentsScreen() {
     // Track the action
     await trackUserAction.screenOpened(option.title);
     
-    // Show coming soon for now - in production, navigate to specific flows
+    // Navigate to specific payment flows
     switch (option.id) {
       case 'transfer':
-        Alert.alert('Coming Soon', 'Money transfer feature coming soon');
+        router.push('/transfer');
         break;
       case 'airtime':
-        Alert.alert('Coming Soon', 'Airtime top-up feature coming soon');
+        router.push('/airtime');
         break;
       case 'data':
         Alert.alert('Coming Soon', 'Data bundle feature coming soon');
         break;
       case 'bills':
-        Alert.alert('Coming Soon', 'Bill payment feature coming soon');
+        router.push('/bills');
         break;
       case 'giftcards':
-        Alert.alert('Coming Soon', 'Gift cards feature coming soon');
+        router.push('/giftcards');
         break;
       case 'bulk':
         Alert.alert('Coming Soon', 'Bulk transfer feature coming soon');

@@ -68,6 +68,15 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="transfer" options={{ headerShown: false }} />
+      <Stack.Screen name="airtime" options={{ headerShown: false }} />
+      <Stack.Screen name="bills" options={{ headerShown: false }} />
+      <Stack.Screen name="giftcards" options={{ headerShown: false }} />
+      <Stack.Screen name="fund-wallet" options={{ headerShown: false }} />
+      <Stack.Screen name="withdraw" options={{ headerShown: false }} />
+      <Stack.Screen name="transactions" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
   );
 }

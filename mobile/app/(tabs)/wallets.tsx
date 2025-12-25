@@ -91,8 +91,7 @@ export default function WalletsScreen() {
             Alert.alert('No Wallets', 'Please create a wallet first');
             return;
           }
-          // TODO: Navigate to fund wallet screen
-          Alert.alert('Coming Soon', 'Fund wallet feature coming soon');
+          router.push('/fund-wallet');
         }}>
           <Ionicons name="arrow-down-circle-outline" size={24} color={PRIMARY_COLOR} />
           <Text style={styles.actionButtonText}>Fund Wallet</Text>
