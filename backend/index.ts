@@ -2,9 +2,26 @@
 // Initializes Firebase Admin SDK and configures all service routes
 
 // Load environment variables first
+// Try loading from multiple locations to support both root and backend .env files
 import { config } from 'dotenv';
 import path from 'path';
-config({ path: path.resolve(__dirname, '.env') });
+import fs from 'fs';
+
+// Load both .env files: root first, then backend (backend can override root)
+// This allows shared variables in root .env and service-specific in backend/.env
+const rootEnvPath = path.resolve(__dirname, '..', '.env');
+const backendEnvPath = path.resolve(__dirname, '.env');
+
+// Load root .env first
+if (fs.existsSync(rootEnvPath)) {
+  config({ path: rootEnvPath });
+}
+
+// Load backend .env second (will override root vars if override: true)
+// Default behavior (override: false) means root vars take precedence
+if (fs.existsSync(backendEnvPath)) {
+  config({ path: backendEnvPath, override: true }); // Backend .env overrides root
+}
 
 // Validate environment variables before proceeding
 import { validateEnvironmentOrExit } from './common/env-validation';
