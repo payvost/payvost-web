@@ -601,6 +601,21 @@ export class InvoiceService {
         throw new Error('Unauthorized');
       }
 
+      // Helper to safely convert Firestore Timestamp to Date
+      const toDate = (timestamp: any): Date => {
+        if (!timestamp) return new Date();
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+          return timestamp.toDate();
+        }
+        if (timestamp instanceof Date) {
+          return timestamp;
+        }
+        if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+          return new Date(timestamp);
+        }
+        return new Date();
+      };
+
       // Update in Firestore
       await docRef.update({
         status: 'Paid',
@@ -612,6 +627,10 @@ export class InvoiceService {
       const updatedDoc = await docRef.get();
       const updatedData = updatedDoc.data();
       
+      if (!updatedData) {
+        throw new Error('Invoice data not found after update');
+      }
+      
       return {
         id: updatedDoc.id,
         invoiceNumber: updatedData?.invoiceNumber || '',
@@ -619,8 +638,8 @@ export class InvoiceService {
         userId: updatedData?.createdBy || '',
         businessId: updatedData?.businessId || null,
         createdBy: updatedData?.createdBy || '',
-        issueDate: updatedData?.issueDate?.toDate ? updatedData.issueDate.toDate() : new Date(updatedData?.issueDate),
-        dueDate: updatedData?.dueDate?.toDate ? updatedData.dueDate.toDate() : new Date(updatedData?.dueDate),
+        issueDate: toDate(updatedData?.issueDate),
+        dueDate: toDate(updatedData?.dueDate),
         status: 'PAID' as any,
         currency: updatedData?.currency || 'USD',
         grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
@@ -647,9 +666,9 @@ export class InvoiceService {
         isPublic: updatedData?.isPublic !== false,
         publicUrl: updatedData?.publicUrl || null,
         pdfUrl: updatedData?.pdfUrl || null,
-        paidAt: updatedData?.paidAt?.toDate ? updatedData.paidAt.toDate() : new Date(),
-        createdAt: updatedData?.createdAt?.toDate ? updatedData.createdAt.toDate() : new Date(),
-        updatedAt: updatedData?.updatedAt?.toDate ? updatedData.updatedAt.toDate() : new Date(),
+        paidAt: toDate(updatedData?.paidAt),
+        createdAt: toDate(updatedData?.createdAt),
+        updatedAt: toDate(updatedData?.updatedAt),
       };
     } catch (error) {
       console.error('Error marking Firestore invoice as paid:', error);
