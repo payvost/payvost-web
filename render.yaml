@@ -111,7 +111,7 @@ services:
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd backend/services/fraud-service && npm install --include=dev && npm run build
+    buildCommand: cd backend/services/fraud-service && NODE_ENV=development npm install && npm run build
     startCommand: cd backend/services/fraud-service && npm start
     envVars:
       - key: FRAUD_SERVICE_PORT

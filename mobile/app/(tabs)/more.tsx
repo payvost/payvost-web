@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../../hooks/useAuth';
-import { trackUserAction } from '../../../lib/analytics';
+import { useAuth } from '../../hooks/useAuth';
+import { trackUserAction } from '../../lib/analytics';
 import { getAllTransactions, type Transaction } from '../utils/api/transactions';
 import { getProfile, updateProfile, type UserProfile } from '../utils/api/profile';
 

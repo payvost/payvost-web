@@ -14,9 +14,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { login, register } from '../../utils/api/user';
-import { useAuth } from '../../../hooks/useAuth';
-import { DeviceSecurity } from '../../../utils/security';
-import { trackUserAction } from '../../../lib/analytics';
+import { useAuth } from '../../hooks/useAuth';
+import { DeviceSecurity } from '../../utils/security';
+import { trackUserAction } from '../../lib/analytics';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
