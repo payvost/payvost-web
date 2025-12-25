@@ -384,6 +384,7 @@ function PaymentLinkTab() {
 export default function RequestPaymentPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tab = searchParams.get('tab') || 'payment-link';
   const create = searchParams.get('create');
   
@@ -392,6 +393,14 @@ export default function RequestPaymentPageContent() {
   useEffect(() => {
     setActiveTab(tab);
   }, [tab]);
+  
+  // Handle tab change - update both state and URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', value);
+    router.push(`/dashboard/request-payment?${params.toString()}`, { scroll: false });
+  };
   
   const [invoiceView, setInvoiceView] = useState(create === 'true' ? 'create' : 'list');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
@@ -434,7 +443,7 @@ export default function RequestPaymentPageContent() {
         <EnhancedTabs 
           defaultValue="payment-link" 
           className="w-full" 
-          onValueChange={setActiveTab} 
+          onValueChange={handleTabChange} 
           value={activeTab}
           tabs={[
             {
