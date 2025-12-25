@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getCards, createCard, updateCardStatus, deleteCard, type VirtualCard } from '../utils/api/cards';
+import { trackUserAction } from '../../lib/analytics';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
@@ -8,23 +10,107 @@ const MUTED_TEXT_COLOR = '#6c757d';
 const BACKGROUND_COLOR = '#f8f9fa';
 
 export default function CardsScreen() {
-  const [cards] = useState<any[]>([]); // TODO: Load cards from API
+  const [cards, setCards] = useState<VirtualCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadCards = async () => {
+    try {
+      const cardsData = await getCards();
+      setCards(cardsData);
+    } catch (error: any) {
+      console.error('Failed to load cards:', error);
+      // Don't show error if it's just empty
+      if (error.message !== 'Failed to fetch cards') {
+        Alert.alert('Error', error.message || 'Failed to load cards');
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCards();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadCards();
+  };
+
+  const handleCreateCard = async () => {
+    try {
+      // Simple card creation - in production, show a form
+      const newCard = await createCard({
+        cardLabel: 'My Card',
+        currency: 'USD',
+        cardModel: 'debit',
+      });
+      await trackUserAction.cardCreated('debit');
+      Alert.alert('Success', 'Card created successfully!');
+      loadCards();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create card');
+    }
+  };
+
+  const handleFreezeCard = async (cardId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'frozen' ? 'active' : 'frozen';
+      await updateCardStatus(cardId, newStatus);
+      Alert.alert('Success', `Card ${newStatus === 'frozen' ? 'frozen' : 'unfrozen'}`);
+      loadCards();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update card');
+    }
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    Alert.alert(
+      'Delete Card',
+      'Are you sure you want to delete this card?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCard(cardId);
+              Alert.alert('Success', 'Card deleted successfully');
+              loadCards();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete card');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <Text style={styles.loadingText}>Loading cards...</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Virtual Cards</Text>
         <Text style={styles.subtitle}>Create and manage your cards</Text>
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => {
-            // TODO: Navigate to create card
-            console.log('Create card');
-          }}
-        >
+        <TouchableOpacity style={styles.createButton} onPress={handleCreateCard}>
           <Ionicons name="add-circle" size={24} color="white" />
           <Text style={styles.createButtonText}>Create New Card</Text>
         </TouchableOpacity>
@@ -36,19 +122,48 @@ export default function CardsScreen() {
             <View key={card.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Ionicons name="card" size={24} color="white" />
-                <Text style={styles.cardType}>{card.type}</Text>
+                <View style={styles.cardHeaderRight}>
+                  <Text style={styles.cardType}>{card.cardType?.toUpperCase() || 'VISA'}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleFreezeCard(card.id, card.status)}
+                    style={styles.cardActionButton}
+                  >
+                    <Ionicons
+                      name={card.status === 'frozen' ? 'snow-outline' : 'snow'}
+                      size={16}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteCard(card.id)}
+                    style={styles.cardActionButton}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardNumber}>{card.number}</Text>
+                <Text style={styles.cardNumber}>
+                  {card.fullNumber || `**** **** **** ${card.last4}`}
+                </Text>
                 <View style={styles.cardFooter}>
                   <View>
-                    <Text style={styles.cardLabel}>Cardholder</Text>
-                    <Text style={styles.cardValue}>{card.cardholder}</Text>
+                    <Text style={styles.cardLabel}>Card Label</Text>
+                    <Text style={styles.cardValue}>{card.cardLabel}</Text>
                   </View>
                   <View>
                     <Text style={styles.cardLabel}>Expires</Text>
                     <Text style={styles.cardValue}>{card.expiry}</Text>
                   </View>
+                </View>
+                <View style={styles.cardBalance}>
+                  <Text style={styles.cardLabel}>Balance</Text>
+                  <Text style={styles.cardBalanceAmount}>
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: card.currency,
+                    }).format(card.balance)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -154,11 +269,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
+  cardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardType: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
     textTransform: 'uppercase',
+  },
+  cardActionButton: {
+    padding: 4,
   },
   cardBody: {
     flex: 1,
@@ -184,6 +307,27 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
+  },
+  cardBalance: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  cardBalanceAmount: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: MUTED_TEXT_COLOR,
+    fontSize: 14,
   },
   emptyState: {
     alignItems: 'center',

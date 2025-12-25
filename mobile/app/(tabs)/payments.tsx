@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { trackUserAction } from '../../lib/analytics';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
@@ -65,9 +66,33 @@ const paymentOptions: PaymentOption[] = [
 export default function PaymentsScreen() {
   const router = useRouter();
 
-  const handlePaymentOption = (option: PaymentOption) => {
-    // TODO: Navigate to specific payment flow
-    console.log('Selected payment option:', option.id);
+  const handlePaymentOption = async (option: PaymentOption) => {
+    // Track the action
+    await trackUserAction.screenOpened(option.title);
+    
+    // Show coming soon for now - in production, navigate to specific flows
+    switch (option.id) {
+      case 'transfer':
+        Alert.alert('Coming Soon', 'Money transfer feature coming soon');
+        break;
+      case 'airtime':
+        Alert.alert('Coming Soon', 'Airtime top-up feature coming soon');
+        break;
+      case 'data':
+        Alert.alert('Coming Soon', 'Data bundle feature coming soon');
+        break;
+      case 'bills':
+        Alert.alert('Coming Soon', 'Bill payment feature coming soon');
+        break;
+      case 'giftcards':
+        Alert.alert('Coming Soon', 'Gift cards feature coming soon');
+        break;
+      case 'bulk':
+        Alert.alert('Coming Soon', 'Bulk transfer feature coming soon');
+        break;
+      default:
+        console.log('Selected payment option:', option.id);
+    }
   };
 
   return (

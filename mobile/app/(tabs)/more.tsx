@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../hooks/useAuth';
+import { trackUserAction } from '../../../lib/analytics';
+import { getAllTransactions, type Transaction } from '../utils/api/transactions';
+import { getProfile, updateProfile, type UserProfile } from '../utils/api/profile';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
@@ -19,7 +22,8 @@ interface MenuItem {
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,6 +35,7 @@ export default function MoreScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
+            await trackUserAction.logout();
             await logout();
             router.replace('/auth/LoginScreen');
           },
@@ -39,26 +44,48 @@ export default function MoreScreen() {
     );
   };
 
+  const handleViewTransactions = async () => {
+    setLoadingTransactions(true);
+    try {
+      const transactions = await getAllTransactions({ limit: 50 });
+      // TODO: Navigate to full transaction history screen
+      Alert.alert(
+        'Transaction History',
+        `You have ${transactions.pagination.total} transactions. Full history screen coming soon.`
+      );
+      await trackUserAction.screenOpened('Transaction History');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load transactions');
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const handleViewProfile = async () => {
+    try {
+      const profile = await getProfile();
+      // TODO: Navigate to profile edit screen
+      Alert.alert('Profile', `Name: ${profile.name || 'Not set'}\nEmail: ${profile.email}`);
+      await trackUserAction.screenOpened('Profile');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load profile');
+    }
+  };
+
   const menuItems: MenuItem[] = [
     {
       id: 'profile',
       title: 'Profile',
       icon: 'person-outline',
       color: PRIMARY_COLOR,
-      onPress: () => {
-        // TODO: Navigate to profile
-        console.log('Profile');
-      },
+      onPress: handleViewProfile,
     },
     {
       id: 'transactions',
       title: 'Transaction History',
       icon: 'receipt-outline',
       color: '#3b82f6',
-      onPress: () => {
-        // TODO: Navigate to transactions
-        console.log('Transactions');
-      },
+      onPress: handleViewTransactions,
     },
     {
       id: 'settings',
@@ -114,12 +141,17 @@ export default function MoreScreen() {
             key={item.id}
             style={styles.menuItem}
             onPress={item.onPress}
+            disabled={item.id === 'transactions' && loadingTransactions}
           >
             <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
               <Ionicons name={item.icon} size={24} color={item.color} />
             </View>
             <Text style={styles.menuTitle}>{item.title}</Text>
-            <Ionicons name="chevron-forward-outline" size={20} color={MUTED_TEXT_COLOR} />
+            {item.id === 'transactions' && loadingTransactions ? (
+              <ActivityIndicator size="small" color={PRIMARY_COLOR} />
+            ) : (
+              <Ionicons name="chevron-forward-outline" size={20} color={MUTED_TEXT_COLOR} />
+            )}
           </TouchableOpacity>
         ))}
       </View>

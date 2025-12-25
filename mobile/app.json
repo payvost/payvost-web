@@ -41,8 +41,24 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#16a34a",
+          "sounds": ["./assets/sounds/notification.wav"],
+          "mode": "production"
+        }
       ]
     ],
+    "notification": {
+      "icon": "./assets/images/notification-icon.png",
+      "color": "#16a34a",
+      "iosDisplayInForeground": true,
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} new notifications"
+    },
     "experiments": {
       "typedRoutes": true
     },

@@ -66,3 +66,50 @@ export const getTransactionById = async (transactionId: string): Promise<Transac
   }
 };
 
+/**
+ * Get all transactions with filters
+ */
+export interface TransactionFilters {
+  limit?: number;
+  offset?: number;
+  status?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  type?: 'TRANSFER' | 'PAYMENT' | 'WITHDRAWAL' | 'DEPOSIT' | 'REMITTANCE';
+  currency?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface TransactionListResponse {
+  transfers: Transaction[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export const getAllTransactions = async (filters?: TransactionFilters): Promise<TransactionListResponse> => {
+  try {
+    const token = await SecureStorage.getToken('auth_token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await axios.get(`${API_URL}/api/v1/transaction/transfers`, {
+      params: filters,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching transactions:', error);
+    if (error.response?.status === 401) {
+      throw new Error('Session expired. Please login again.');
+    }
+    throw new Error(error.response?.data?.error || 'Failed to fetch transactions');
+  }
+};
+

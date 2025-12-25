@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getWallets, type Wallet as WalletType } from '../utils/api/wallet';
+import CreateWalletModal from '../../components/CreateWalletModal';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
@@ -37,6 +38,7 @@ export default function WalletsScreen() {
   const [wallets, setWallets] = useState<WalletType[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const loadWallets = async () => {
     try {
@@ -80,16 +82,17 @@ export default function WalletsScreen() {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => {
-          // TODO: Navigate to create wallet
-          console.log('Create wallet');
-        }}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setShowCreateModal(true)}>
           <Ionicons name="add-circle-outline" size={24} color={PRIMARY_COLOR} />
           <Text style={styles.actionButtonText}>Create Wallet</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => {
-          // TODO: Navigate to fund wallet
-          console.log('Fund wallet');
+          if (wallets.length === 0) {
+            Alert.alert('No Wallets', 'Please create a wallet first');
+            return;
+          }
+          // TODO: Navigate to fund wallet screen
+          Alert.alert('Coming Soon', 'Fund wallet feature coming soon');
         }}>
           <Ionicons name="arrow-down-circle-outline" size={24} color={PRIMARY_COLOR} />
           <Text style={styles.actionButtonText}>Fund Wallet</Text>
@@ -131,14 +134,19 @@ export default function WalletsScreen() {
           <Ionicons name="wallet-outline" size={64} color={MUTED_TEXT_COLOR} />
           <Text style={styles.emptyTitle}>No Wallets Yet</Text>
           <Text style={styles.emptyText}>Create your first wallet to get started</Text>
-          <TouchableOpacity style={styles.createButton} onPress={() => {
-            // TODO: Navigate to create wallet
-            console.log('Create wallet');
-          }}>
+          <TouchableOpacity style={styles.createButton} onPress={() => setShowCreateModal(true)}>
             <Text style={styles.createButtonText}>Create Wallet</Text>
           </TouchableOpacity>
         </View>
       )}
+
+      <CreateWalletModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          loadWallets();
+        }}
+      />
     </ScrollView>
   );
 }

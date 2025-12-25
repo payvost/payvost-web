@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { SecureStorage } from '../utils/security';
 import { getProfile } from '../app/utils/api/user';
+import { initializePushNotifications, unregisterPushToken } from '../lib/notifications';
 
 interface User {
   id: string;
@@ -69,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await SecureStorage.setToken('user_id', userId);
       }
       await loadUser();
+      // Initialize push notifications after login
+      await initializePushNotifications();
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -77,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // Unregister push token before logout
+      await unregisterPushToken();
       await SecureStorage.deleteToken('auth_token');
       await SecureStorage.deleteToken('user_id');
       setUser(null);

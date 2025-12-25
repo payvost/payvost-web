@@ -7,6 +7,7 @@ import { getProfile } from '../utils/api/user';
 import { getWallets, type Wallet as WalletType } from '../utils/api/wallet';
 import { getTransactions, type Transaction as TransactionType } from '../utils/api/transactions';
 import { useAuth } from '../../../hooks/useAuth';
+import { trackScreenView, trackUserAction } from '../../../lib/analytics';
 
 const PRIMARY_COLOR = '#16a34a';
 const SECONDARY_COLOR = '#e9f5ee';
@@ -171,6 +172,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboardData();
+    trackScreenView('Dashboard');
   }, []);
 
   const onRefresh = () => {

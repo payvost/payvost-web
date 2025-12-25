@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { login, register } from '../../utils/api/user';
 import { useAuth } from '../../../hooks/useAuth';
 import { DeviceSecurity } from '../../../utils/security';
+import { trackUserAction } from '../../../lib/analytics';
 
 const PRIMARY_COLOR = '#16a34a';
 const TEXT_COLOR = '#1a1a1a';
@@ -71,6 +72,7 @@ export default function LoginScreen() {
         const res = await login(email, password);
         if (res.data.token) {
           await authLogin(res.data.token, res.data.userId || res.data.user?.id);
+          await trackUserAction.login('email');
           router.replace('/');
         } else {
           setError('Login failed: No token received');
@@ -79,6 +81,7 @@ export default function LoginScreen() {
         const res = await register(email, password, name);
         if (res.data.token) {
           await authLogin(res.data.token, res.data.userId || res.data.user?.id);
+          await trackUserAction.signup('email');
           router.replace('/');
         } else {
           setError('Registration failed: No token received');

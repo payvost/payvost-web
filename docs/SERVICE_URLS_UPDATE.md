@@ -9,7 +9,7 @@ All service URLs have been updated to use the new Render deployment URLs from th
 - **Notification Service**: `https://payvost-notification-service-xrk6.onrender.com`
 - **Email Service**: `https://payvost-email-service-3vnx.onrender.com`
 - **PDF Generator**: `https://payvost-pdf-generator-45c7.onrender.com`
-- **Admin Stats Service**: `https://payvost-admin-stat-service-83kh.onrender.com`
+- **Admin Stats Service**: `https://payvost-admin-stat-service-00u8.onrender.com`
 
 ### Additional Services (for reference)
 - **Currency Service**: `https://payvost-currency-service-ju9r.onrender.com`
@@ -51,7 +51,7 @@ These can be set in Vercel/your deployment platform, but defaults are now config
 ```env
 # Optional - defaults are set in code
 NEXT_PUBLIC_NOTIFICATION_SERVICE_URL=https://payvost-notification-service-xrk6.onrender.com
-ADMIN_STATS_SERVICE_URL=https://payvost-admin-stat-service-83kh.onrender.com
+ADMIN_STATS_SERVICE_URL=https://payvost-admin-stat-service-00u8.onrender.com
 PDF_SERVICE_URL=https://payvost-pdf-generator-45c7.onrender.com
 ```
 
@@ -87,7 +87,7 @@ All services should be accessible at their `/health` endpoints:
 - Notification: `https://payvost-notification-service-xrk6.onrender.com/health`
 - Email: `https://payvost-email-service-3vnx.onrender.com/health`
 - PDF: `https://payvost-pdf-generator-45c7.onrender.com/health`
-- Admin Stats: `https://payvost-admin-stat-service-83kh.onrender.com/health`
+- Admin Stats: `https://payvost-admin-stat-service-00u8.onrender.com/health`
 - Currency: `https://payvost-currency-service-ju9r.onrender.com/health`
 - Fraud: `https://payvost-fraud-service-v5hs.onrender.com/health`
 - Core Banking: `https://payvost-core-banking-service-6vod.onrender.com/health`
