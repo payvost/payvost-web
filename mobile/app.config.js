@@ -38,8 +38,36 @@ if (missingVars.length > 0) {
 
 export default {
   expo: {
-    // ... your other expo config
+    name: 'mobile',
+    slug: 'mobile',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/images/icon.png',
+    scheme: 'mobile',
+    userInterfaceStyle: 'automatic',
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.payvost.payvost',
+      buildNumber: '1',
+      infoPlist: {
+        NSUserTrackingUsageDescription: 'This app uses tracking to improve your experience.',
+        NSCameraUsageDescription: 'This app needs access to your camera for KYC verification.',
+        NSPhotoLibraryUsageDescription: 'This app needs access to your photo library for KYC verification.',
+      },
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: './assets/images/adaptive-icon.png',
+        backgroundColor: '#ffffff',
+      },
+      edgeToEdgeEnabled: true,
+      package: 'com.payvost.payvost',
+    },
     web: {
+      bundler: 'metro',
+      output: 'static',
+      favicon: './assets/images/favicon.png',
       config: {
         firebase: {
           apiKey: requiredEnvVars.apiKey,
@@ -51,6 +79,43 @@ export default {
           appId: requiredEnvVars.appId,
           measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
         },
+      },
+    },
+    plugins: [
+      'expo-router',
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/images/splash-icon.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#ffffff',
+        },
+      ],
+      [
+        'expo-notifications',
+        {
+          icon: './assets/images/notification-icon.png',
+          color: '#16a34a',
+          sounds: ['./assets/sounds/notification.wav'],
+          mode: 'production',
+        },
+      ],
+    ],
+    notification: {
+      icon: './assets/images/notification-icon.png',
+      color: '#16a34a',
+      iosDisplayInForeground: true,
+      androidMode: 'default',
+      androidCollapsedTitle: '#{unread_notifications} new notifications',
+    },
+    experiments: {
+      typedRoutes: true,
+    },
+    extra: {
+      router: {},
+      eas: {
+        projectId: '77a7dd52-0975-4ac8-85f2-f3bc2c2fa01a',
       },
     },
   },

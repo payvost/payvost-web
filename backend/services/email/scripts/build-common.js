@@ -7,27 +7,15 @@ const path = require('path');
 const emailServiceDir = __dirname + '/..';
 const commonFile = path.resolve(emailServiceDir, '../../common/mailgun.ts');
 const commonOutDir = path.resolve(emailServiceDir, '../../common');
-const distDir = path.resolve(emailServiceDir, 'dist');
-const distCommonDir = path.resolve(distDir, 'common');
 
 try {
   // Change to email service directory so node_modules resolution works
   process.chdir(emailServiceDir);
   
-  // Compile the common file to the common directory first
+  // Compile the common file to backend/common (where the import expects it)
+  // From dist/index.js, ../../../common/mailgun resolves to backend/common/mailgun.js
   execSync(
     `npx tsc "${commonFile}" --outDir "${commonOutDir}" --module commonjs --target ES2020 --esModuleInterop --skipLibCheck --resolveJsonModule --moduleResolution node`,
-    { stdio: 'inherit', cwd: emailServiceDir }
-  );
-  
-  // Also compile to dist/common so it can access node_modules from the service directory
-  // Create dist/common directory if it doesn't exist
-  if (!fs.existsSync(distCommonDir)) {
-    fs.mkdirSync(distCommonDir, { recursive: true });
-  }
-  
-  execSync(
-    `npx tsc "${commonFile}" --outDir "${distCommonDir}" --module commonjs --target ES2020 --esModuleInterop --skipLibCheck --resolveJsonModule --moduleResolution node`,
     { stdio: 'inherit', cwd: emailServiceDir }
   );
   
