@@ -113,14 +113,25 @@ export function EnhancedTabs({
                   key={tab.value}
                   value={tab.value}
                   disabled={tab.disabled}
+                  data-state={isActive ? 'active' : 'inactive'}
                   className={cn(
                     "flex items-center gap-2",
                     triggerAdditionalStyles[variant],
+                    // Explicit active state styles when tooltips are used
+                    isActive && variant === 'default' && "bg-primary text-primary-foreground shadow-sm",
+                    isActive && variant === 'pills' && "bg-primary text-primary-foreground shadow-md scale-105",
+                    isActive && variant === 'underline' && "border-primary bg-transparent font-semibold",
                     // Icon styles for active state
-                    variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                    variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                    variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
+                    isActive && variant === 'default' && "[&_svg]:text-primary-foreground",
+                    isActive && variant === 'pills' && "[&_svg]:text-primary-foreground",
+                    isActive && variant === 'underline' && "[&_svg]:text-primary",
                     "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
+                    isActive && "[&_svg]:scale-110",
+                    // Fallback to data-state for when Radix UI can set it
+                    variant === 'default' && "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+                    variant === 'pills' && "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:scale-105",
+                    variant === 'underline' && "data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:font-semibold",
+                    "data-[state=active]:[&_svg]:text-primary-foreground",
                     "data-[state=active]:[&_svg]:scale-110"
                   )}
                 >
@@ -141,6 +152,7 @@ export function EnhancedTabs({
                       variant="secondary" 
                       className={cn(
                         "ml-1 text-xs transition-all duration-200",
+                        isActive && "bg-primary-foreground/20 text-primary-foreground",
                         "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
                       )}
                     >
@@ -183,14 +195,25 @@ export function EnhancedTabs({
                 key={tab.value}
                 value={tab.value}
                 disabled={tab.disabled}
+                data-state={isActive ? 'active' : 'inactive'}
                 className={cn(
                   "flex items-center gap-2",
                   triggerAdditionalStyles[variant],
+                  // Explicit active state styles
+                  isActive && variant === 'default' && "bg-primary text-primary-foreground shadow-sm",
+                  isActive && variant === 'pills' && "bg-primary text-primary-foreground shadow-md scale-105",
+                  isActive && variant === 'underline' && "border-primary bg-transparent font-semibold",
                   // Icon styles for active state
-                  variant === 'default' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                  variant === 'pills' && "data-[state=active]:[&_svg]:text-primary-foreground",
-                  variant === 'underline' && "data-[state=active]:[&_svg]:text-primary",
+                  isActive && variant === 'default' && "[&_svg]:text-primary-foreground",
+                  isActive && variant === 'pills' && "[&_svg]:text-primary-foreground",
+                  isActive && variant === 'underline' && "[&_svg]:text-primary",
                   "[&_svg]:transition-all [&_svg]:duration-200 [&_svg]:shrink-0",
+                  isActive && "[&_svg]:scale-110",
+                  // Fallback to data-state for when Radix UI can set it
+                  variant === 'default' && "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm",
+                  variant === 'pills' && "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:scale-105",
+                  variant === 'underline' && "data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:font-semibold",
+                  "data-[state=active]:[&_svg]:text-primary-foreground",
                   "data-[state=active]:[&_svg]:scale-110"
                 )}
               >
@@ -211,6 +234,7 @@ export function EnhancedTabs({
                     variant="secondary" 
                     className={cn(
                       "ml-1 text-xs transition-all duration-200",
+                      isActive && "bg-primary-foreground/20 text-primary-foreground",
                       "data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground"
                     )}
                   >

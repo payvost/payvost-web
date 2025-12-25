@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { login, register } from '../../utils/api/user';
+import { login, register } from '../utils/api/user';
 import { useAuth } from '../../hooks/useAuth';
 import { DeviceSecurity } from '../../utils/security';
 import { trackUserAction } from '../../lib/analytics';
