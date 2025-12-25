@@ -85,15 +85,24 @@ let appCheck: AppCheck | null = null;
 
 if (typeof window !== "undefined") {
   try {
-    const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (recaptchaSiteKey) {
-      appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
-        isTokenAutoRefreshEnabled: true,
-      });
-      console.log("✅ Firebase App Check initialized with reCAPTCHA v3");
+    // Only initialize App Check in production or if explicitly enabled
+    // In development, App Check can cause issues with reCAPTCHA and block authentication
+    const isProduction = process.env.NODE_ENV === 'production';
+    const enableAppCheck = process.env.NEXT_PUBLIC_ENABLE_APP_CHECK === 'true';
+    
+    if (isProduction || enableAppCheck) {
+      const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+      if (recaptchaSiteKey) {
+        appCheck = initializeAppCheck(app, {
+          provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+          isTokenAutoRefreshEnabled: true,
+        });
+        console.log("✅ Firebase App Check initialized with reCAPTCHA v3");
+      } else {
+        console.warn("⚠️ Firebase App Check not initialized: NEXT_PUBLIC_RECAPTCHA_SITE_KEY not set");
+      }
     } else {
-      console.warn("⚠️ Firebase App Check not initialized: NEXT_PUBLIC_RECAPTCHA_SITE_KEY not set");
+      console.log("ℹ️ Firebase App Check skipped in development mode (set NEXT_PUBLIC_ENABLE_APP_CHECK=true to enable)");
     }
   } catch (err) {
     console.warn("⚠️ Firebase App Check not available:", err);
