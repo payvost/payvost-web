@@ -9,6 +9,9 @@ export async function POST(
   try {
     const { token } = await requireAuth(req);
     const url = buildBackendUrl(`/api/invoices/${params.id}/mark-paid`);
+    
+    console.log(`[mark-paid proxy] Calling backend: ${url}`);
+    console.log(`[mark-paid proxy] Invoice ID: ${params.id}`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -18,13 +21,26 @@ export async function POST(
       cache: 'no-store',
     });
 
+    // Log response details for debugging
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[mark-paid proxy] Backend error (${response.status}):`, errorText);
+      try {
+        const errorJson = JSON.parse(errorText);
+        return NextResponse.json(errorJson, { status: response.status });
+      } catch {
+        return NextResponse.json({ error: errorText || 'Backend error' }, { status: response.status });
+      }
+    }
+
     return await backendResponseToNext(response);
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
-    console.error('POST /api/invoices/[id]/mark-paid proxy error:', error);
+    console.error('[mark-paid proxy] Proxy error:', error);
+    console.error('[mark-paid proxy] Error details:', error instanceof Error ? error.stack : String(error));
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
