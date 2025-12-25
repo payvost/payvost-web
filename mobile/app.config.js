@@ -115,7 +115,7 @@ export default {
     extra: {
       router: {},
       eas: {
-        projectId: '77a7dd52-0975-4ac8-85f2-f3bc2c2fa01a',
+        projectId: '74a3ef3a-a7e6-4249-8999-f1fb83725409',
       },
     },
   },
