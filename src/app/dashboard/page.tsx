@@ -31,7 +31,8 @@ import { errorEmitter } from '@/lib/error-emitter';
 import { FirestorePermissionError } from '@/lib/errors';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
-import { externalTransactionService } from '@/services';
+import { externalTransactionService, walletService } from '@/services';
+import type { Account } from '@/services';
 
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
@@ -102,7 +103,7 @@ export default function DashboardPage() {
   const [language, setLanguage] = useState<LanguagePreference>('en');
   const { user, loading: authLoading } = useAuth();
   const LayoutComponent = DashboardLayout;
-  const [wallets, setWallets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<Account[]>([]);
   const [loadingWallets, setLoadingWallets] = useState(true);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [greeting, setGreeting] = useState<GreetingState | null>(null);
@@ -168,9 +169,35 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Fetch wallets from backend API
+  useEffect(() => {
+    if (!user) {
+      setLoadingWallets(false);
+      return;
+    }
+
+    const fetchWallets = async () => {
+      try {
+        const accounts = await walletService.getAccounts();
+        // Ensure balance is a number (Prisma Decimal might be serialized as string)
+        const normalizedAccounts = accounts.map(account => ({
+          ...account,
+          balance: typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance,
+        }));
+        setWallets(normalizedAccounts);
+        setLoadingWallets(false);
+      } catch (error) {
+        console.error('Error fetching wallets:', error);
+        setWallets([]);
+        setLoadingWallets(false);
+      }
+    };
+
+    fetchWallets();
+  }, [user]);
+
   useEffect(() => {
     if (authLoading || !user || !user.email) {
-      setLoadingWallets(false);
       setLoadingInvoices(false);
       setLoadingDisputes(false);
       return;
@@ -180,7 +207,6 @@ export default function DashboardPage() {
     const unsubUser = onSnapshot(userDocRef, async (doc) => {
       if (doc.exists()) {
         const data = doc.data();
-        setWallets(data.wallets || []);
         
     const newKycStatus = data.kycStatus;
     const normalizedKycStatus = typeof newKycStatus === 'string' ? newKycStatus.toLowerCase() : 'unverified';
@@ -253,7 +279,6 @@ export default function DashboardPage() {
             setSpendingData(defaultSpendingData);
         }
       }
-      setLoadingWallets(false);
     },
     (error) => {
         const permissionError = new FirestorePermissionError({
@@ -261,7 +286,6 @@ export default function DashboardPage() {
           operation: 'get',
         });
         errorEmitter.emit('permission-error', permissionError);
-        setLoadingWallets(false);
     });
     
     const invoicesQuery = query(
@@ -371,8 +395,19 @@ export default function DashboardPage() {
     return abbreviateNumber(value);
   }
   
-  const handleWalletCreated = () => {
-    // Real-time listener will update the state automatically
+  const handleWalletCreated = async () => {
+    // Refresh wallets after creation
+    try {
+      const accounts = await walletService.getAccounts();
+      // Ensure balance is a number (Prisma Decimal might be serialized as string)
+      const normalizedAccounts = accounts.map(account => ({
+        ...account,
+        balance: typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance,
+      }));
+      setWallets(normalizedAccounts);
+    } catch (error) {
+      console.error('Error refreshing wallets:', error);
+    }
   };
 
   // Prevent flash of incorrect data by waiting for all data to load
@@ -409,7 +444,7 @@ export default function DashboardPage() {
 
                             {/* CTA Button */}
                             <div className="pt-2">
-                                <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
                                     <Button 
                                         size="default" 
                                         disabled={!isKycVerified}
@@ -463,7 +498,7 @@ export default function DashboardPage() {
                             <CardDescription className="text-xs">Add more currencies to hold.</CardDescription>
                         </div>
                     </div>
-                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
                         <Button size="sm" variant="outline" className="w-full mt-4" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New</Button>
                     </CreateWalletDialog>
                 </Card>
@@ -527,7 +562,7 @@ export default function DashboardPage() {
                     <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                     <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
                     <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
-                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                     <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
                         <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4"/> Add New Wallet</Button>
                     </CreateWalletDialog>
                 </CardContent>
@@ -602,7 +637,7 @@ export default function DashboardPage() {
 
                                 {/* CTA Button */}
                                 <div className="pt-2">
-                                    <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+                                    <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
                                         <Button 
                                             size="default" 
                                             disabled={!isKycVerified}

@@ -7,6 +7,19 @@
  */
 
 import { apiClient, ApiError } from './apiClient';
+
+/**
+ * Custom error that preserves status code from API errors
+ */
+export class WalletServiceError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number
+  ) {
+    super(message);
+    this.name = 'WalletServiceError';
+  }
+}
 import { db, auth } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -128,7 +141,8 @@ class WalletService {
       return response.account;
     } catch (error) {
       if (error instanceof ApiError) {
-        throw new Error(`Failed to create account: ${error.message}`);
+        // Preserve status code for handling specific errors (e.g., 409 Conflict)
+        throw new WalletServiceError(`Failed to create account: ${error.message}`, error.statusCode);
       }
       throw error;
     }

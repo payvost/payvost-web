@@ -9,7 +9,7 @@ export { apiClient, ApiError } from './apiClient';
 export type { default as ApiClient } from './apiClient';
 
 // Wallet Service
-export { walletService } from './walletService';
+export { walletService, WalletServiceError } from './walletService';
 export type {
   Account,
   CreateAccountDto,

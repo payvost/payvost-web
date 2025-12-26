@@ -13,7 +13,7 @@ import { Loader2, Wallet, CheckCircle, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
-import { walletService } from '@/services';
+import { walletService, WalletServiceError, type Account } from '@/services';
 
 interface CreateWalletDialogProps {
   children?: React.ReactNode;
@@ -21,6 +21,7 @@ interface CreateWalletDialogProps {
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  existingWallets?: Account[];
 }
 
 const createWalletSchema = z.object({
@@ -40,13 +41,19 @@ const availableCurrencies = [
   { currency: 'GHS', name: 'Ghanaian Cedi', flag: 'gh' },
 ];
 
-export function CreateWalletDialog({ children, onWalletCreated, disabled = false, open: controlledOpen, onOpenChange }: CreateWalletDialogProps) {
+export function CreateWalletDialog({ children, onWalletCreated, disabled = false, open: controlledOpen, onOpenChange, existingWallets = [] }: CreateWalletDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const [creationStatus, setCreationStatus] = useState<'form' | 'submitting' | 'success'>('form');
+
+  // Filter out currencies that user already has wallets for
+  const existingCurrencies = new Set(existingWallets.map(w => w.currency));
+  const availableCurrenciesFiltered = availableCurrencies.filter(
+    c => !existingCurrencies.has(c.currency)
+  );
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(createWalletSchema),
@@ -75,6 +82,20 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
       reset();
     } catch(error) {
       console.error("Error creating wallet:", error);
+      
+      // Handle 409 Conflict - account already exists
+      if (error instanceof WalletServiceError && error.statusCode === 409) {
+        // Account already exists, refresh the list to show it
+        toast({
+          title: "Wallet Already Exists",
+          description: `You already have a ${data.currency} wallet. Refreshing your wallet list...`,
+        });
+        onWalletCreated(); // Refresh the wallet list
+        setCreationStatus('form');
+        reset();
+        return;
+      }
+      
       const errorMessage = error instanceof Error ? error.message : "Failed to create wallet. Please try again.";
       toast({
         title: "Error",
@@ -151,14 +172,20 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
                                             <SelectValue placeholder="Choose a currency..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {availableCurrencies.map(c => (
-                                                <SelectItem key={c.currency} value={c.currency}>
-                                                    <div className="flex items-center gap-2">
-                                                        <Image src={`/flag/${c.flag.toUpperCase()}.png`} alt={c.name} width={20} height={20} className="rounded-full object-cover"/>
-                                                        <span>{c.name} ({c.currency})</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
+                                            {availableCurrenciesFiltered.length > 0 ? (
+                                                availableCurrenciesFiltered.map(c => (
+                                                    <SelectItem key={c.currency} value={c.currency}>
+                                                        <div className="flex items-center gap-2">
+                                                            <Image src={`/flag/${c.flag.toUpperCase()}.png`} alt={c.name} width={20} height={20} className="rounded-full object-cover"/>
+                                                            <span>{c.name} ({c.currency})</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                                    You already have wallets for all available currencies.
+                                                </div>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 )}
@@ -167,7 +194,11 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit" className="w-full" disabled={creationStatus === 'submitting'}>
+                        <Button 
+                            type="submit" 
+                            className="w-full" 
+                            disabled={creationStatus === 'submitting' || availableCurrenciesFiltered.length === 0}
+                        >
                             {creationStatus === 'submitting' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Create Wallet
                         </Button>

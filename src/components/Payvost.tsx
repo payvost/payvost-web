@@ -174,20 +174,23 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
       try {
         const rate = await currencyService.getRate(fromWallet, receiveCurrency);
+        // Ensure rate is a number (convert from string if needed)
+        const numericRate = typeof rate === 'string' ? parseFloat(rate) : Number(rate);
+        const validRate = !isNaN(numericRate) && isFinite(numericRate) ? numericRate : 0;
         
         // Determine trend
         if (previousRate !== null) {
-          if (rate > previousRate) {
+          if (validRate > previousRate) {
             setRateTrend('up');
-          } else if (rate < previousRate) {
+          } else if (validRate < previousRate) {
             setRateTrend('down');
           } else {
             setRateTrend('neutral');
           }
         }
         
-        setPreviousRate(rate);
-        setExchangeRate(rate);
+        setPreviousRate(validRate);
+        setExchangeRate(validRate);
       } catch (error) {
         console.error('Error fetching exchange rate:', error);
         // Fallback to default rates
@@ -208,8 +211,12 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   // Calculate recipient amount when send amount or rate changes
   useEffect(() => {
     const amount = parseFloat(sendAmount || paymentIdAmount || '0');
-    if (!isNaN(amount) && amount > 0 && exchangeRate > 0) {
-      const convertedAmount = amount * exchangeRate;
+    // Ensure exchangeRate is a number
+    const numericRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : Number(exchangeRate);
+    const validRate = !isNaN(numericRate) && isFinite(numericRate) ? numericRate : 0;
+    
+    if (!isNaN(amount) && amount > 0 && validRate > 0) {
+      const convertedAmount = amount * validRate;
       setRecipientGets(convertedAmount.toFixed(2));
     } else {
       setRecipientGets('0.00');
@@ -417,6 +424,10 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         throw new Error('Selected wallet not found');
       }
 
+      // Ensure exchangeRate is a number for metadata
+      const numericExchangeRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : Number(exchangeRate);
+      const validExchangeRate = !isNaN(numericExchangeRate) && isFinite(numericExchangeRate) ? numericExchangeRate : 0;
+
       const transaction = await transactionService.create({
         fromAccountId: selectedAccount.id,
         toBeneficiaryId: selectedBeneficiary,
@@ -426,7 +437,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         type: 'REMITTANCE',
         description: `Transfer to ${recipientName}`,
         metadata: {
-          exchangeRate,
+          exchangeRate: validExchangeRate,
           recipientGets: parseFloat(recipientGets),
         },
       });
@@ -463,14 +474,24 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   const feeAmount = feeBreakdown?.feeAmount || '0.00';
   const isFreeTransfer = isPaymentIdTransfer;
 
+  // Helper function to safely format exchange rate
+  const formatExchangeRate = (rate: number | string | undefined | null): string => {
+    if (rate == null) return '0.0000';
+    const numericRate = typeof rate === 'string' ? parseFloat(rate) : Number(rate);
+    if (isNaN(numericRate) || !isFinite(numericRate)) {
+      return '0.0000';
+    }
+    return numericRate.toFixed(4);
+  };
+
   const transactionDetails = {
     sendAmount: parseFloat(currentAmount || '0').toFixed(2),
     sendCurrency: fromWallet || '',
     recipientGets: recipientGets,
     recipientCurrency: receiveCurrency,
     recipientName: recipientName,
-    exchangeRate: fromWallet && receiveCurrency && exchangeRate != null && !isNaN(exchangeRate)
-      ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
+    exchangeRate: fromWallet && receiveCurrency && exchangeRate != null && typeof exchangeRate === 'number' && !isNaN(exchangeRate) && exchangeRate > 0
+      ? `1 ${fromWallet} = ${formatExchangeRate(exchangeRate)} ${receiveCurrency}`
       : 'Not available',
     fee: isFreeTransfer ? 'Free' : `$${feeAmount}`,
   };
@@ -492,8 +513,8 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     (activeTab === 'user' ? !paymentIdRecipient : !selectedBeneficiary);
 
   const currentRate =
-    fromWallet && receiveCurrency && exchangeRate != null && !isNaN(exchangeRate) && exchangeRate > 0
-      ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
+    fromWallet && receiveCurrency && exchangeRate != null && typeof exchangeRate === 'number' && !isNaN(exchangeRate) && exchangeRate > 0
+      ? `1 ${fromWallet} = ${formatExchangeRate(exchangeRate)} ${receiveCurrency}`
       : 'Not available';
 
   const RateIcon = rateTrend === 'up' ? TrendingUp : rateTrend === 'down' ? TrendingDown : null;

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -115,7 +115,7 @@ const VALID_TABS = ['remittances', 'bill-payment', 'bulk-transfer', 'scheduled',
 
 function PaymentsPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -163,6 +163,7 @@ function PaymentsPageContent() {
   const [giftCardProducts, setGiftCardProducts] = useState<GiftCardProduct[]>([]);
   const [loadingBillers, setLoadingBillers] = useState(false);
   const [loadingGiftCards, setLoadingGiftCards] = useState(false);
+  const giftCardsLoadedRef = useRef(false);
   
   const currentBillerData = billerData[billCountry];
   const providers = currentBillerData.categories.find((c:any) => c.value === billCategory)?.providers || [];
@@ -170,6 +171,9 @@ function PaymentsPageContent() {
   // Load user accounts
   useEffect(() => {
     const loadAccounts = async () => {
+      // Wait for auth to complete and ensure user is authenticated
+      if (authLoading || !user) return;
+      
       try {
         const userAccounts = await walletService.getAccounts();
         setAccounts(userAccounts);
@@ -184,12 +188,13 @@ function PaymentsPageContent() {
       }
     };
     loadAccounts();
-  }, [currentBillerData.currency, selectedSourceWalletId]);
+  }, [currentBillerData.currency, selectedSourceWalletId, user, authLoading]);
 
   // Calculate rate preview when amount or currencies change
   useEffect(() => {
     const calculatePreview = async () => {
-      if (!billAmount || !selectedSourceWalletId || !currentBillerData) return;
+      // Wait for auth to complete and ensure user is authenticated
+      if (authLoading || !user || !billAmount || !selectedSourceWalletId || !currentBillerData) return;
       
       const sourceAccount = accounts.find(acc => acc.id === selectedSourceWalletId);
       if (!sourceAccount) return;
@@ -216,7 +221,7 @@ function PaymentsPageContent() {
 
     const debounceTimer = setTimeout(calculatePreview, 500);
     return () => clearTimeout(debounceTimer);
-  }, [billAmount, selectedSourceWalletId, accounts, currentBillerData, (user as any)?.tier]);
+  }, [billAmount, selectedSourceWalletId, accounts, currentBillerData, user, authLoading]);
 
   // Filter billers by search
   const filteredBillers = billers.filter(biller =>
@@ -227,7 +232,8 @@ function PaymentsPageContent() {
   // Load billers from Reloadly when component mounts or country changes
   useEffect(() => {
     const loadBillers = async () => {
-      if (!billCountry) return;
+      // Wait for auth to complete and ensure user is authenticated
+      if (authLoading || !user || !billCountry) return;
       
       setLoadingBillers(true);
       try {
@@ -253,11 +259,15 @@ function PaymentsPageContent() {
     };
 
     loadBillers();
-  }, [billCountry]);
+  }, [billCountry, user, authLoading]);
 
   // Load gift cards when gift cards tab is active
   useEffect(() => {
     const loadGiftCards = async () => {
+      // Wait for auth to complete and ensure user is authenticated
+      if (authLoading || !user || giftCardsLoadedRef.current) return;
+      
+      giftCardsLoadedRef.current = true;
       setLoadingGiftCards(true);
       try {
         const products = await reloadlyService.getGiftCardProducts();
@@ -266,6 +276,7 @@ function PaymentsPageContent() {
         setGiftCardProducts(productsArray.slice(0, 12)); // Show first 12
       } catch (error) {
         console.error('Failed to load gift cards:', error);
+        giftCardsLoadedRef.current = false; // Reset on error so we can retry
         toast({
           title: 'Failed to load gift cards',
           description: 'Please try again later',
@@ -276,11 +287,11 @@ function PaymentsPageContent() {
       }
     };
 
-    // Only load once
-    if (giftCardProducts.length === 0) {
+    // Only load once when user is authenticated
+    if (!authLoading && user) {
       loadGiftCards();
     }
-  }, []);
+  }, [user, authLoading, toast]);
 
   const handleBillPayment = async () => {
     if (!selectedBiller || !accountNumber || !billAmount || !user || !selectedSourceWalletId) {

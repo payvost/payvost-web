@@ -37,6 +37,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/empty-state';
 import { Wallet } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -49,6 +51,22 @@ export default function WalletsPage() {
   const [createWalletDialogOpen, setCreateWalletDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Fetch KYC status from Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const userDocRef = doc(db, "users", user.uid);
+    const unsub = onSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        const status = data.kycStatus;
+        setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
+      }
+    });
+
+    return () => unsub();
+  }, [user]);
+
   // Fetch wallets from backend
   useEffect(() => {
     if (!user) {
@@ -59,7 +77,12 @@ export default function WalletsPage() {
     const fetchWallets = async () => {
       try {
         const accounts = await walletService.getAccounts();
-        setWallets(accounts);
+        // Ensure balance is a number (Prisma Decimal might be serialized as string)
+        const normalizedAccounts = accounts.map(account => ({
+          ...account,
+          balance: typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance,
+        }));
+        setWallets(normalizedAccounts);
         setLoadingWallets(false);
       } catch (error) {
         console.error('Error fetching wallets:', error);
@@ -160,7 +183,11 @@ export default function WalletsPage() {
         </Breadcrumb>
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold md:text-2xl">My Wallets</h1>
-          <CreateWalletDialog onWalletCreated={handleWalletCreated} disabled={!isKycVerified}>
+          <CreateWalletDialog 
+            onWalletCreated={handleWalletCreated} 
+            disabled={!isKycVerified}
+            existingWallets={wallets}
+          >
             <Button disabled={!isKycVerified}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add New Wallet
@@ -211,6 +238,7 @@ export default function WalletsPage() {
                     disabled={!isKycVerified}
                     open={createWalletDialogOpen}
                     onOpenChange={setCreateWalletDialogOpen}
+                    existingWallets={wallets}
                 />
             </>
         ) : (
