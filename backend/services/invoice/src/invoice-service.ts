@@ -96,6 +96,36 @@ export class InvoiceService {
   }
 
   /**
+   * Trigger PDF regeneration (async, non-blocking)
+   * Calls the PDF generation endpoint to regenerate the PDF
+   */
+  private async triggerPdfRegeneration(invoiceId: string, source: string): Promise<void> {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
+      const pdfGenerationUrl = `${baseUrl}/api/generate-invoice-pdf`;
+      
+      console.log(`[triggerPdfRegeneration] Triggering PDF regeneration for invoice ${invoiceId} (source: ${source})`);
+      
+      const response = await fetch(pdfGenerationUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId }),
+        signal: AbortSignal.timeout(120000), // 2 minutes timeout
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`[triggerPdfRegeneration] PDF generation returned ${response.status}: ${errorText}`);
+      } else {
+        console.log(`[triggerPdfRegeneration] PDF regeneration triggered successfully for invoice ${invoiceId}`);
+      }
+    } catch (error: any) {
+      console.error(`[triggerPdfRegeneration] Error triggering PDF regeneration for invoice ${invoiceId}:`, error?.message);
+      // Don't throw - this is async and non-blocking
+    }
+  }
+
+  /**
    * Create a new invoice
    */
   async createInvoice(input: CreateInvoiceInput) {
@@ -574,6 +604,12 @@ export class InvoiceService {
         },
       });
 
+      // Trigger PDF regeneration (async, non-blocking) to update status in PDF
+      this.triggerPdfRegeneration(id, 'Prisma').catch(error => {
+        console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+        // Don't throw - mark as paid succeeded, PDF regeneration is async
+      });
+
       return invoice;
     }
 
@@ -620,6 +656,12 @@ export class InvoiceService {
           status: 'Paid',
           paidAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Trigger PDF regeneration (async, non-blocking)
+        this.triggerPdfRegeneration(id, 'Firestore').catch(error => {
+          console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+          // Don't throw - mark as paid succeeded, PDF regeneration is async
         });
 
         // Return updated data
@@ -734,6 +776,12 @@ export class InvoiceService {
         console.error('[markAsPaid] Update error message:', updateError?.message);
         throw new Error(`Failed to update invoice in Firestore: ${updateError?.message || 'Unknown error'}`);
       }
+
+      // Trigger PDF regeneration (async, non-blocking)
+      this.triggerPdfRegeneration(id, 'Firestore').catch(error => {
+        console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+        // Don't throw - mark as paid succeeded, PDF regeneration is async
+      });
 
       // Return updated data in Prisma format for consistency
       // Note: serverTimestamp() values are resolved when reading the document
