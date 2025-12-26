@@ -205,7 +205,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         const taxAmount = subtotal * (watchedTaxRate / 100);
         const grandTotal = subtotal + taxAmount;
         
-        const firestoreData = {
+        const firestoreData: any = {
             ...data,
             issueDate: Timestamp.fromDate(data.issueDate),
             dueDate: Timestamp.fromDate(data.dueDate),
@@ -216,10 +216,19 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             updatedAt: serverTimestamp(),
             isPublic: statusToUse !== 'Draft',
             paymentMethod: data.paymentMethod || 'rapyd',
-            isRecurring: data.isRecurring || false,
-            recurringFrequency: data.isRecurring ? data.recurringFrequency : null,
-            recurringEndDate: data.isRecurring && data.recurringEndDate ? Timestamp.fromDate(data.recurringEndDate) : null,
         };
+
+        // Only add recurring fields if invoice is recurring
+        if (data.isRecurring) {
+            firestoreData.isRecurring = true;
+            firestoreData.recurringFrequency = data.recurringFrequency;
+            if (data.recurringEndDate) {
+                firestoreData.recurringEndDate = Timestamp.fromDate(data.recurringEndDate);
+            }
+        } else {
+            firestoreData.isRecurring = false;
+            // Don't add recurringFrequency or recurringEndDate fields at all
+        }
 
         if (savedInvoiceId) {
             const docRef = doc(db, 'businessInvoices', savedInvoiceId);
