@@ -597,7 +597,7 @@ export class InvoiceService {
           .get();
         
         if (querySnapshot.empty) {
-          throw new Error('Invoice not found');
+        throw new Error('Invoice not found');
         }
         
         // Use the found invoice
@@ -723,11 +723,11 @@ export class InvoiceService {
 
       // Update in Firestore
       try {
-        await docRef.update({
-          status: 'Paid',
-          paidAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+      await docRef.update({
+        status: 'Paid',
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
       } catch (updateError: any) {
         console.error('[markAsPaid] Firestore update error:', updateError);
         console.error('[markAsPaid] Update error code:', updateError?.code);
@@ -748,40 +748,40 @@ export class InvoiceService {
       try {
         // Build the return object with proper error handling
         const result = {
-          id: updatedDoc.id,
-          invoiceNumber: updatedData?.invoiceNumber || '',
-          invoiceType: 'BUSINESS' as const,
-          userId: updatedData?.createdBy || '',
-          businessId: updatedData?.businessId || null,
-          createdBy: updatedData?.createdBy || '',
+        id: updatedDoc.id,
+        invoiceNumber: updatedData?.invoiceNumber || '',
+        invoiceType: 'BUSINESS' as const,
+        userId: updatedData?.createdBy || '',
+        businessId: updatedData?.businessId || null,
+        createdBy: updatedData?.createdBy || '',
           issueDate: toDate(updatedData?.issueDate),
           dueDate: toDate(updatedData?.dueDate),
-          status: 'PAID' as any,
-          currency: updatedData?.currency || 'USD',
-          grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
-          taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
-          fromInfo: {
-            name: updatedData?.fromName || '',
-            address: updatedData?.fromAddress || '',
-            email: updatedData?.fromEmail || '',
-          },
-          toInfo: {
-            name: updatedData?.toName || '',
-            address: updatedData?.toAddress || '',
-            email: updatedData?.toEmail || '',
-          },
-          items: Array.isArray(updatedData?.items) ? updatedData.items : [],
-          paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
-          manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
-            bankName: updatedData?.manualBankName || '',
-            accountName: updatedData?.manualAccountName || '',
-            accountNumber: updatedData?.manualAccountNumber || '',
-            otherDetails: updatedData?.manualOtherDetails || '',
-          } : null,
-          notes: updatedData?.notes || null,
-          isPublic: updatedData?.isPublic !== false,
-          publicUrl: updatedData?.publicUrl || null,
-          pdfUrl: updatedData?.pdfUrl || null,
+        status: 'PAID' as any,
+        currency: updatedData?.currency || 'USD',
+        grandTotal: new Decimal(Number(updatedData?.grandTotal || 0)),
+        taxRate: new Decimal(Number(updatedData?.taxRate || 0)),
+        fromInfo: {
+          name: updatedData?.fromName || '',
+          address: updatedData?.fromAddress || '',
+          email: updatedData?.fromEmail || '',
+        },
+        toInfo: {
+          name: updatedData?.toName || '',
+          address: updatedData?.toAddress || '',
+          email: updatedData?.toEmail || '',
+        },
+        items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+        paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST') as any,
+        manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+          bankName: updatedData?.manualBankName || '',
+          accountName: updatedData?.manualAccountName || '',
+          accountNumber: updatedData?.manualAccountNumber || '',
+          otherDetails: updatedData?.manualOtherDetails || '',
+        } : null,
+        notes: updatedData?.notes || null,
+        isPublic: updatedData?.isPublic !== false,
+        publicUrl: updatedData?.publicUrl || null,
+        pdfUrl: updatedData?.pdfUrl || null,
           paidAt: toDate(updatedData?.paidAt),
           createdAt: toDate(updatedData?.createdAt),
           updatedAt: toDate(updatedData?.updatedAt),
