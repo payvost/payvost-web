@@ -39,7 +39,7 @@ export async function POST(
           'Content-Type': 'application/json',
           'Cookie': `writer_session=${sessionCookie}`,
         },
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
       });
     } catch (fetchError: any) {
       console.error('Fetch error connecting to backend:', {

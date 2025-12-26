@@ -43,7 +43,7 @@ async function proxyRequest(
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(30000), // 30 second timeout
+        signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
       });
     } catch (fetchError: any) {
       // Handle network errors (connection refused, timeout, etc.)

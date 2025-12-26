@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers,
       body: bodyText,
-      // Add timeout but webhooks should respond quickly
-      signal: AbortSignal.timeout(30000), // 30 seconds timeout
+      // Add timeout - accounts for Render cold start (>50s) + processing time
+      signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render cold start
     });
 
     if (!response.ok) {

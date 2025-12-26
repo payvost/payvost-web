@@ -33,6 +33,7 @@ async function proxyRequest(
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
     });
 
     const data = await response.json().catch(() => ({}));

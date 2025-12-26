@@ -77,7 +77,7 @@ async function proxyRequest(
         Authorization: authHeader, // Forward auth header
       },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(30000), // 30 second timeout
+      signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
     });
 
     if (!response.ok) {

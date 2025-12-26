@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
           invoiceId: invoiceId,
         }),
         // Add timeout to prevent hanging
-        signal: AbortSignal.timeout(50000), // 50 seconds timeout
+        signal: AbortSignal.timeout(120000), // 2 minutes timeout - accounts for Render cold start (>50s)
       });
 
       if (!pdfResponse.ok) {

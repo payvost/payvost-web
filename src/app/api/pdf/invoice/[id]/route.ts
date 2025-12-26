@@ -159,7 +159,7 @@ export async function GET(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ invoiceId: id }),
-            signal: AbortSignal.timeout(30000),
+            signal: AbortSignal.timeout(120000), // 2 minutes - accounts for Render cold start
           });
 
           if (!generateResponse.ok) {
@@ -256,7 +256,7 @@ export async function GET(
           headers: {
             'Accept': 'application/pdf',
           },
-          signal: AbortSignal.timeout(60000), // 60 second timeout
+          signal: AbortSignal.timeout(120000), // 2 minutes timeout - accounts for Render cold start
         });
 
         if (pdfResponse.ok && pdfResponse.headers.get('content-type')?.includes('application/pdf')) {
@@ -299,7 +299,7 @@ export async function GET(
         const pdfResponse = await fetch(`${backendUrl}/api/pdf/invoice/${id}?origin=${encodeURIComponent(req.nextUrl.origin)}`, {
           method: 'GET',
           headers: { 'Accept': 'application/pdf' },
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(120000), // 2 minutes - accounts for Render cold start
         });
 
         if (pdfResponse.ok && pdfResponse.headers.get('content-type')?.includes('application/pdf')) {

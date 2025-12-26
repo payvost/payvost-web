@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           'Content-Type': 'application/json',
           'Cookie': `writer_session=${sessionCookie}`, // Backend middleware now supports session cookies
         },
-        signal: AbortSignal.timeout(30000), // 30 second timeout
+        signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
       });
     } catch (fetchError: any) {
       console.error('Fetch error connecting to backend:', {

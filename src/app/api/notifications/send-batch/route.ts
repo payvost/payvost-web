@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ emails }),
-      // Add timeout to prevent hanging
-      signal: AbortSignal.timeout(120000), // 2 minutes timeout
+      // Add timeout to prevent hanging - accounts for Render cold start + batch processing
+      signal: AbortSignal.timeout(180000), // 3 minutes timeout - accounts for Render cold start (>50s) + batch email processing
     });
 
     if (!response.ok) {

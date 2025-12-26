@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
           'Authorization': request.headers.get('Authorization')!,
         }),
       },
+      signal: AbortSignal.timeout(90000), // 90 seconds timeout - accounts for Render backend gateway cold start (>50s)
     });
 
     const data = await response.json().catch(() => ({}));
