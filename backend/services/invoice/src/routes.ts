@@ -1,11 +1,14 @@
 import express, { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { InvoiceService } from './invoice-service';
+import RecurringInvoiceProcessor from './recurring-invoice-processor';
+import { processRecurringInvoices, getSchedulerStatus } from './scheduler';
 import admin from 'firebase-admin';
 
 const router = Router();
 const prisma = new PrismaClient();
 const invoiceService = new InvoiceService(prisma);
+const recurringInvoiceProcessor = new RecurringInvoiceProcessor(prisma);
 
 // Middleware to verify Firebase token
 const verifyFirebaseToken = async (
@@ -140,4 +143,102 @@ router.delete('/invoices/:id', verifyFirebaseToken, async (req: Request, res: Re
   }
 });
 
+// POST /api/invoices/recurring/process - Process all recurring invoices (admin/internal only)
+// Should be called via a scheduled task or cron job
+router.post('/invoices/recurring/process', async (req: Request, res: Response) => {
+  try {
+    // Verify this is an internal request (could add additional auth checks here)
+    const apiKey = req.headers['x-api-key'];
+    const internalSecret = process.env.INTERNAL_API_SECRET || 'default-secret';
+    
+    if (apiKey !== internalSecret && process.env.NODE_ENV === 'production') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('[Invoice Routes] Starting recurring invoice processing');
+    const generatedInvoices = await recurringInvoiceProcessor.processRecurringInvoices();
+    
+    res.json({
+      success: true,
+      message: `Processed recurring invoices. Generated ${generatedInvoices.length} new invoices.`,
+      data: generatedInvoices,
+    });
+  } catch (error) {
+    console.error('[Invoice Routes] Error processing recurring invoices:', error);
+    res.status(500).json({ error: 'Failed to process recurring invoices' });
+  }
+});
+
+// GET /api/invoices/recurring/stats - Get recurring invoice statistics (admin only)
+router.get('/invoices/recurring/stats', async (req: Request, res: Response) => {
+  try {
+    const db = admin.firestore();
+    
+    const recurringSnapshot = await db
+      .collection('businessInvoices')
+      .where('isRecurring', '==', true)
+      .get();
+
+    const stats = {
+      totalRecurringInvoices: recurringSnapshot.size,
+      byFrequency: {
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+      },
+      byStatus: {
+        active: 0,
+        paused: 0,
+      },
+    };
+
+    recurringSnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const frequency = data.recurringFrequency as 'daily' | 'weekly' | 'monthly';
+      if (frequency in stats.byFrequency) {
+        (stats.byFrequency as any)[frequency]++;
+      }
+      
+      const isActive = !data.recurringEndDate || new Date(data.recurringEndDate.toDate ? data.recurringEndDate.toDate() : data.recurringEndDate) > new Date();
+      stats.byStatus[isActive ? 'active' : 'paused']++;
+    });
+
+    res.json(stats);
+  } catch (error) {
+    console.error('GET /api/invoices/recurring/stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch recurring invoice stats' });
+  }
+});
+
+// GET /api/invoices/recurring/scheduler/status - Get scheduler status
+router.get('/invoices/recurring/scheduler/status', async (req: Request, res: Response) => {
+  try {
+    const status = getSchedulerStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('GET /api/invoices/recurring/scheduler/status error:', error);
+    res.status(500).json({ error: 'Failed to fetch scheduler status' });
+  }
+});
+
+// POST /api/invoices/recurring/scheduler/trigger - Manually trigger recurring invoice processing
+router.post('/invoices/recurring/scheduler/trigger', async (req: Request, res: Response) => {
+  try {
+    // Verify this is an internal request
+    const apiKey = req.headers['x-api-key'];
+    const internalSecret = process.env.INTERNAL_API_SECRET || 'default-secret';
+    
+    if (apiKey !== internalSecret && process.env.NODE_ENV === 'production') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const result = await processRecurringInvoices();
+    res.json(result);
+  } catch (error) {
+    console.error('POST /api/invoices/recurring/scheduler/trigger error:', error);
+    res.status(500).json({ error: 'Failed to trigger scheduler' });
+  }
+});
+
 export default router;
+

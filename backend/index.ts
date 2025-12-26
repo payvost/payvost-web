@@ -471,6 +471,26 @@ app.get('/api/pdf/health', async (_req, res) => {
 // Global error handler (must be last)
 app.use(errorHandler);
 
+// Initialize Recurring Invoice Scheduler
+// Processes recurring invoices on a schedule when enabled
+if (process.env.ENABLE_RECURRING_SCHEDULER === 'true') {
+  try {
+    const { startRecurringInvoiceScheduler } = loadService('./services/invoice/src/scheduler', false);
+    if (startRecurringInvoiceScheduler) {
+      // Run daily (24 hours)
+      const intervalMs = 24 * 60 * 60 * 1000;
+      startRecurringInvoiceScheduler(intervalMs);
+      logger.info({ intervalMs }, 'Recurring invoice scheduler initialized');
+    } else {
+      logger.warn('Recurring invoice scheduler module not found');
+    }
+  } catch (err) {
+    logger.error({ err }, 'Failed to initialize recurring invoice scheduler');
+  }
+} else {
+  logger.debug('Recurring invoice scheduler disabled (set ENABLE_RECURRING_SCHEDULER=true to enable)');
+}
+
 // Create HTTP server for WebSocket support
 import { createServer } from 'http';
 import { initializeChatWebSocket } from './services/chat/websocket-server';
