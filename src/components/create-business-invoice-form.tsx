@@ -173,7 +173,11 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
 
     const formatCurrency = (amount: number, currency: string) => {
         const symbol = currencySymbols[currency] || currency;
-        return `${symbol}${amount.toFixed(2)}`;
+        const formattedAmount = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount);
+        return `${symbol}${formattedAmount}`;
     };
 
     // Helper function to format numbers with comma separators
@@ -386,13 +390,47 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                         <div className="space-y-2 col-span-1">
                             <Label>Invoice Date</Label>
                              <Controller name="issueDate" control={control} render={({ field }) => (
-                                <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover>
+                                <Popover open={isIssueDateOpen} onOpenChange={setIsIssueDateOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar 
+                                            mode="single" 
+                                            selected={field.value} 
+                                            onSelect={(date) => {
+                                                field.onChange(date);
+                                                setIsIssueDateOpen(false);
+                                            }} 
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             )} />
                         </div>
                         <div className="space-y-2 col-span-1">
                             <Label>Due Date</Label>
                             <Controller name="dueDate" control={control} render={({ field }) => (
-                                <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent></Popover>
+                                <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar 
+                                            mode="single" 
+                                            selected={field.value} 
+                                            onSelect={(date) => {
+                                                field.onChange(date);
+                                                setIsDueDateOpen(false);
+                                            }} 
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             )} />
                         </div>
                     </div>
@@ -513,7 +551,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                                                         {field.value ? format(field.value, 'PPP') : <span>Pick a date (optional)</span>}
                                                     </Button>
                                                 </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0">
+                                                <PopoverContent className="w-auto p-0" align="start">
                                                     <Calendar mode="single" selected={field.value} onSelect={(date) => {field.onChange(date); setIsRecurringEndDateOpen(false);}} />
                                                 </PopoverContent>
                                             </Popover>
