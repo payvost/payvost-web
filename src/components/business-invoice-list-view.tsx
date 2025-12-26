@@ -164,10 +164,25 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
     const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue');
     const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
 
+    // Helper to safely convert Firestore Timestamp, Date, or ISO string to Date
+    const toDate = (timestamp: any): Date => {
+        if (!timestamp) return new Date();
+        if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+        }
+        if (timestamp instanceof Date) {
+            return timestamp;
+        }
+        if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+            return new Date(timestamp);
+        }
+        return new Date();
+    };
+
     const paidInvoices = invoices.filter(inv => inv.status === 'Paid' && inv.paidAt && inv.issueDate);
     const totalPaymentTime = paidInvoices.reduce((sum, inv) => {
-        const issueDate = inv.issueDate.toDate();
-        const paidAt = inv.paidAt.toDate();
+        const issueDate = toDate(inv.issueDate);
+        const paidAt = toDate(inv.paidAt);
         const diffTime = Math.abs(paidAt.getTime() - issueDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return sum + diffDays;
