@@ -29,7 +29,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Add connection error handling
-prismaInstance.$connect().catch((error) => {
+prismaInstance.$connect().catch((error: unknown) => {
   console.error('Prisma connection error:', error);
   // Don't throw - let Prisma handle reconnection automatically
 });
