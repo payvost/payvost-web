@@ -49,6 +49,23 @@ export function createVersionedRouter(version: string = 'v1'): Router {
   return router;
 }
 
+// Service registry to track registered microservices
+export interface RegisteredService {
+  name: string;
+  basePath: string;
+  supportedVersions: string[];
+  status: 'active' | 'inactive';
+}
+
+const serviceRegistry: RegisteredService[] = [];
+
+/**
+ * Get all registered services
+ */
+export function getRegisteredServices(): RegisteredService[] {
+  return [...serviceRegistry];
+}
+
 /**
  * Register routes with versioning support
  */
@@ -59,6 +76,14 @@ export function registerVersionedRoutes(
   routes: Router,
   supportedVersions: string[] = ['v1']
 ): void {
+  // Register service in registry
+  serviceRegistry.push({
+    name: serviceName,
+    basePath,
+    supportedVersions,
+    status: 'active',
+  });
+
   // Register for each supported version
   supportedVersions.forEach(version => {
     const versionedPath = `/api/${version}${basePath}`;

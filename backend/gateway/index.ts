@@ -8,6 +8,7 @@ import { errorTrackerHandler, errorTrackerErrorHandler } from '../common/error-t
 import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
 import { performanceMiddleware, getPerformanceStats } from '../common/performance-monitor';
 import { apmMiddleware } from '../common/apm-setup';
+import { getRegisteredServices } from './api-versioning';
 
 // Domain-specific error classes
 export class AuthenticationError extends Error {
@@ -220,6 +221,8 @@ export function createGateway() {
 
   // Root endpoint with API version info
   app.get('/', (req, res) => {
+    const registeredServices = getRegisteredServices();
+    
     res.status(200).json({
       name: 'Payvost API Gateway',
       version: '1.0.0',
@@ -230,6 +233,13 @@ export function createGateway() {
         health: '/health',
         api: '/api/v1',
       },
+      services: registeredServices.map(service => ({
+        name: service.name,
+        path: service.basePath,
+        versions: service.supportedVersions,
+        status: service.status,
+      })),
+      serviceCount: registeredServices.length,
     });
   });
 

@@ -280,8 +280,8 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
           : invoice.dueDate,
         paidAt: invoice.paidAt instanceof Date
           ? invoice.paidAt.toISOString()
-          : invoice.paidAt instanceof Date || invoice.paidAt
-            ? (invoice.paidAt instanceof Date ? invoice.paidAt.toISOString() : String(invoice.paidAt))
+          : invoice.paidAt
+            ? String(invoice.paidAt)
             : null,
         createdAt: invoice.createdAt instanceof Date
           ? invoice.createdAt.toISOString()
