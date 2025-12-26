@@ -69,7 +69,14 @@ export default function BusinessDashboardPage() {
             setLoadingData(true);
             setError(null);
             
-            const response = await fetch('/api/business/dashboard');
+            // Get Firebase ID token for authentication
+            const token = await user.getIdToken();
+            
+            const response = await fetch('/api/business/dashboard', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
             
             if (!response.ok) {
                 throw new Error('Failed to fetch dashboard data');

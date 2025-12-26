@@ -160,6 +160,35 @@ export function createGateway() {
     const isHealthCheck = noCorsPaths.includes(req.path);
     const isSimpleRequest = ['GET', 'HEAD'].includes(req.method);
 
+    // Helper function to check if IP is internal/localhost
+    const isInternalIP = (ip: string): boolean => {
+      if (!ip) return false;
+      // Check for localhost IPv4 and IPv6
+      if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') {
+        return true;
+      }
+      // Check for private IP ranges
+      const ipParts = ip.split('.');
+      if (ipParts.length === 4) {
+        const [a, b, c] = ipParts.map(Number);
+        // 10.0.0.0/8
+        if (a === 10) return true;
+        // 172.16.0.0/12
+        if (a === 172 && b >= 16 && b <= 31) return true;
+        // 192.168.0.0/16
+        if (a === 192 && b === 168) return true;
+      }
+      return false;
+    };
+
+    // Helper function to check if request has valid internal API key
+    const hasValidInternalApiKey = (): boolean => {
+      const internalApiKey = process.env.INTERNAL_API_KEY;
+      if (!internalApiKey) return false;
+      const apiKey = req.headers['x-api-key'] as string;
+      return apiKey === internalApiKey;
+    };
+
     // Create CORS middleware with access to request context
     const corsMiddleware = cors({
       origin: (origin, callback) => {
@@ -174,7 +203,19 @@ export function createGateway() {
           return callback(null, true);
         }
         
-        // In production, require origin for API routes
+        // Allow requests without origin if they come from internal IPs
+        // (server-to-server calls, same-origin requests, Render internal systems)
+        if (!origin && isInternalIP(req.ip || '')) {
+          return callback(null, true);
+        }
+        
+        // Allow requests without origin if they have a valid internal API key
+        // (authenticated internal service-to-service calls)
+        if (!origin && hasValidInternalApiKey()) {
+          return callback(null, true);
+        }
+        
+        // In production, require origin for API routes from external sources
         if (!origin) {
           return callback(new Error('CORS: Origin header required'));
         }
