@@ -325,9 +325,13 @@ function PaymentsPageContent() {
       }
 
       // Check balance
-      if (sourceAccount.balance < sourceAmount) {
+      const accountBalance = typeof sourceAccount.balance === 'number' 
+        ? sourceAccount.balance 
+        : parseFloat(String(sourceAccount.balance || '0')) || 0;
+      
+      if (accountBalance < sourceAmount) {
         throw new Error(
-          `Insufficient balance. You have ${sourceAccount.balance.toFixed(2)} ${sourceAccount.currency}, ` +
+          `Insufficient balance. You have ${accountBalance.toFixed(2)} ${sourceAccount.currency}, ` +
           `but need ${sourceAmount.toFixed(2)} ${sourceAccount.currency} ` +
           `(${paymentAmount} ${billCurrency}${needsConversion ? ` + ${conversionFee.toFixed(2)} conversion fee` : ''})`
         );

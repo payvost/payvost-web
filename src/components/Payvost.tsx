@@ -469,7 +469,9 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     recipientGets: recipientGets,
     recipientCurrency: receiveCurrency,
     recipientName: recipientName,
-    exchangeRate: `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`,
+    exchangeRate: fromWallet && receiveCurrency && exchangeRate != null && !isNaN(exchangeRate)
+      ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
+      : 'Not available',
     fee: isFreeTransfer ? 'Free' : `$${feeAmount}`,
   };
 
@@ -490,7 +492,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     (activeTab === 'user' ? !paymentIdRecipient : !selectedBeneficiary);
 
   const currentRate =
-    fromWallet && receiveCurrency && exchangeRate > 0
+    fromWallet && receiveCurrency && exchangeRate != null && !isNaN(exchangeRate) && exchangeRate > 0
       ? `1 ${fromWallet} = ${exchangeRate.toFixed(4)} ${receiveCurrency}`
       : 'Not available';
 

@@ -125,7 +125,10 @@ export function BusinessFinancialSettings() {
     };
 
     const formatAccountDisplay = (account: Account) => {
-        return `${account.currency} Account - ${account.balance.toFixed(2)} ${account.currency}`;
+        const balance = typeof account.balance === 'number' 
+          ? account.balance 
+          : parseFloat(String(account.balance || '0')) || 0;
+        return `${account.currency} Account - ${balance.toFixed(2)} ${account.currency}`;
     };
 
     const formatAccountValue = (account: Account) => {
@@ -200,7 +203,7 @@ export function BusinessFinancialSettings() {
                                                     <Badge variant="outline" className="text-xs">BUSINESS</Badge>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground">
-                                                    Balance: {account.balance.toFixed(2)} {account.currency}
+                                                    Balance: {(typeof account.balance === 'number' ? account.balance : parseFloat(String(account.balance || '0')) || 0).toFixed(2)} {account.currency}
                                                 </p>
                                             </div>
                                         </div>

@@ -86,7 +86,14 @@ export function CurrencyExchangeDialog({ children, wallets }: CurrencyExchangeDi
   
   const getWalletBalance = (currency: string) => {
     const wallet = wallets.find(w => w.currency === currency);
-    return wallet ? wallet.balance.toFixed(2) : '0.00';
+    if (!wallet) return '0.00';
+    
+    // Ensure balance is a number before calling toFixed
+    const balance = typeof wallet.balance === 'number' 
+      ? wallet.balance 
+      : parseFloat(String(wallet.balance || '0')) || 0;
+    
+    return balance.toFixed(2);
   }
 
   return (

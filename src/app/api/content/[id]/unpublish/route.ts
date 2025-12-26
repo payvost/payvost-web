@@ -6,9 +6,10 @@ const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL |
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const sessionCookie = request.cookies.get('writer_session')?.value;
     
     if (!sessionCookie) {
@@ -29,7 +30,7 @@ export async function POST(
       );
     }
 
-    const url = `${BACKEND_URL}/api/v1/content/${params.id}/unpublish`;
+    const url = `${BACKEND_URL}/api/v1/content/${id}/unpublish`;
     
     let response: Response;
     try {

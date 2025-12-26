@@ -28,6 +28,7 @@
     "db:migrate": "prisma migrate dev --schema backend/prisma/schema.prisma",
     "db:push": "prisma db push --schema backend/prisma/schema.prisma",
     "db:studio": "prisma studio --schema backend/prisma/schema.prisma",
+    "db:migrate-data": "tsx scripts/migrate-neon-to-prisma.ts",
     "test": "vitest run"
   },
   "dependencies": {

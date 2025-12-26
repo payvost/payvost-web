@@ -4,11 +4,12 @@ import { buildBackendUrl, backendResponseToNext } from '@/lib/api/backend';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { token } = await requireAuth(req);
-    const url = buildBackendUrl(`/api/invoices/${params.id}`);
+    const { id } = await params;
+    const url = buildBackendUrl(`/api/invoices/${id}`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -31,13 +32,14 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { token } = await requireAuth(req);
+    const { id } = await params;
     const payload = await req.json();
 
-    const response = await fetch(buildBackendUrl(`/api/invoices/${params.id}`), {
+    const response = await fetch(buildBackendUrl(`/api/invoices/${id}`), {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -60,11 +62,12 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { token } = await requireAuth(req);
-    const url = buildBackendUrl(`/api/invoices/${params.id}`);
+    const { id } = await params;
+    const url = buildBackendUrl(`/api/invoices/${id}`);
 
     const response = await fetch(url, {
       method: 'DELETE',

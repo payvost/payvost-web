@@ -4,14 +4,15 @@ import { buildBackendUrl, backendResponseToNext } from '@/lib/api/backend';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { token } = await requireAuth(req);
-    const url = buildBackendUrl(`/api/invoices/${params.id}/mark-paid`);
+    const { id } = await params;
+    const url = buildBackendUrl(`/api/invoices/${id}/mark-paid`);
     
     console.log(`[mark-paid proxy] Calling backend: ${url}`);
-    console.log(`[mark-paid proxy] Invoice ID: ${params.id}`);
+    console.log(`[mark-paid proxy] Invoice ID: ${id}`);
 
     const response = await fetch(url, {
       method: 'POST',

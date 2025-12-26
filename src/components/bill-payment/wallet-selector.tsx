@@ -37,7 +37,7 @@ export function WalletSelector({
               <div className="flex items-center justify-between w-full">
                 <span>{account.currency}</span>
                 <span className="text-muted-foreground ml-2">
-                  {account.balance.toFixed(2)} {account.currency}
+                  {(typeof account.balance === 'number' ? account.balance : parseFloat(String(account.balance || '0')) || 0).toFixed(2)} {account.currency}
                 </span>
               </div>
             </SelectItem>
@@ -52,7 +52,7 @@ export function WalletSelector({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Available balance:</span>
                 <span className="font-semibold">
-                  {selectedAccount.balance.toFixed(2)} {selectedAccount.currency}
+                  {(typeof selectedAccount.balance === 'number' ? selectedAccount.balance : parseFloat(String(selectedAccount.balance || '0')) || 0).toFixed(2)} {selectedAccount.currency}
                 </span>
               </div>
               {needsConversion && (

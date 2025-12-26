@@ -100,7 +100,23 @@ function initFirebaseAdmin() {
 
       console.log(`Firebase Admin SDK: Using local service account file: ${serviceAccountPath}`);
       const fileContents = fs.readFileSync(serviceAccountPath, 'utf8');
-      const serviceAccount = JSON.parse(fileContents);
+      
+      // Clean the JSON content - remove any control characters that might cause parsing issues
+      const cleanedContents = fileContents.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+      
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(cleanedContents);
+      } catch (parseError: any) {
+        // If cleaning caused issues, try original
+        try {
+          serviceAccount = JSON.parse(fileContents);
+        } catch (originalError: any) {
+          console.error('Firebase Admin SDK: Failed to parse service account JSON:', parseError.message);
+          throw new Error(`Invalid JSON in service account file: ${parseError.message}`);
+        }
+      }
+      
       if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
         serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
       }

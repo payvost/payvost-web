@@ -3,11 +3,12 @@ import { buildBackendUrl, backendResponseToNext } from '@/lib/api/backend';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Public endpoint - no auth required
-    const url = buildBackendUrl(`/api/invoices/public/${params.id}`);
+    const { id } = await params;
+    const url = buildBackendUrl(`/api/invoices/public/${id}`);
 
     const response = await fetch(url, {
       method: 'GET',

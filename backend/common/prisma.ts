@@ -12,18 +12,32 @@ declare global {
 
 let prismaInstance: PrismaClient;
 
-if (process.env.NODE_ENV === 'production') {
-  prismaInstance = new PrismaClient({
-    log: ['error'],
+function createPrismaClient() {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+    errorFormat: 'pretty',
   });
+}
+
+if (process.env.NODE_ENV === 'production') {
+  prismaInstance = createPrismaClient();
 } else {
   if (!global.prisma) {
-    global.prisma = new PrismaClient({
-      log: ['query', 'error', 'warn'],
-    });
+    global.prisma = createPrismaClient();
   }
   prismaInstance = global.prisma;
 }
+
+// Add connection error handling
+prismaInstance.$connect().catch((error) => {
+  console.error('Prisma connection error:', error);
+  // Don't throw - let Prisma handle reconnection automatically
+});
+
+// Handle disconnection gracefully
+process.on('beforeExit', async () => {
+  await prismaInstance.$disconnect();
+});
 
 export const prisma = prismaInstance;
 export default prisma;

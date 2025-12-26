@@ -48,16 +48,18 @@ async function proxyRequest(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  return proxyRequest(request, 'GET', `/api/support/tickets/${params.id}`);
+  const { id } = await params;
+  return proxyRequest(request, 'GET', `/api/support/tickets/${id}`);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  return proxyRequest(request, 'PATCH', `/api/support/tickets/${params.id}`, body);
+  return proxyRequest(request, 'PATCH', `/api/support/tickets/${id}`, body);
 }
 

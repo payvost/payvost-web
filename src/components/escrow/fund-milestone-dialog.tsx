@@ -143,11 +143,16 @@ export function FundMilestoneDialog({
               <SelectContent>
                 {accounts
                   .filter((acc) => acc.currency === currency)
-                  .map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {currency} Account - Balance: {account.balance.toFixed(2)}
-                    </SelectItem>
-                  ))}
+                  .map((account) => {
+                    const balance = typeof account.balance === 'number' 
+                      ? account.balance 
+                      : parseFloat(String(account.balance || '0')) || 0;
+                    return (
+                      <SelectItem key={account.id} value={account.id}>
+                        {currency} Account - Balance: {balance.toFixed(2)}
+                      </SelectItem>
+                    );
+                  })}
               </SelectContent>
             </Select>
             {errors.accountId && (
@@ -181,7 +186,7 @@ export function FundMilestoneDialog({
           {selectedAccount && (
             <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
               <p className="text-sm text-blue-900 dark:text-blue-100">
-                Available Balance: {currency} {selectedAccount.balance.toFixed(2)}
+                Available Balance: {currency} {(typeof selectedAccount.balance === 'number' ? selectedAccount.balance : parseFloat(String(selectedAccount.balance || '0')) || 0).toFixed(2)}
               </p>
             </div>
           )}

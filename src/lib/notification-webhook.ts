@@ -11,6 +11,35 @@ const NOTIFICATION_SERVICE_URL =
   'https://payvost-notification-service-xrk6.onrender.com';
 
 /**
+ * Helper function to safely parse JSON response
+ */
+async function parseJsonResponse(response: Response): Promise<{ data: any; error?: string }> {
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('Notification service returned non-JSON response:', {
+      status: response.status,
+      contentType,
+      preview: text.substring(0, 200),
+    });
+    return {
+      data: null,
+      error: `Notification service returned ${contentType || 'unknown content type'} instead of JSON`,
+    };
+  }
+  
+  try {
+    const data = await response.json();
+    return { data };
+  } catch (error: any) {
+    return {
+      data: null,
+      error: `Failed to parse JSON response: ${error.message}`,
+    };
+  }
+}
+
+/**
  * Send login notification
  */
 export async function sendLoginNotification(params: {
@@ -37,7 +66,13 @@ export async function sendLoginNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -84,7 +119,13 @@ export async function sendKycNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -133,7 +174,13 @@ export async function sendBusinessNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -186,7 +233,13 @@ export async function sendTransactionNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -237,7 +290,13 @@ export async function sendPaymentLinkNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
@@ -292,7 +351,13 @@ export async function sendInvoiceNotification(params: {
       }),
     });
 
-    const data = await response.json();
+    const { data, error: parseError } = await parseJsonResponse(response);
+    if (parseError || !data) {
+      return {
+        success: false,
+        error: parseError || 'Failed to parse response',
+      };
+    }
 
     if (!response.ok) {
       return {
