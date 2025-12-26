@@ -15,16 +15,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const [total, completed, pending, failed] = await Promise.all([
+    // Use a transaction to ensure all queries share connections efficiently
+    // This prevents connection pool exhaustion from parallel queries
+    const [total, completed, pending, failed, totalAmountAgg] = await prisma.$transaction([
       prisma.externalTransaction.count({ where: { userId } }),
       prisma.externalTransaction.count({ where: { userId, status: 'COMPLETED' } }),
       prisma.externalTransaction.count({ where: { userId, status: { in: ['PENDING', 'PROCESSING'] } } }),
       prisma.externalTransaction.count({ where: { userId, status: 'FAILED' } }),
-    ]);
-
-    const totalAmountAgg = await prisma.externalTransaction.aggregate({
-      where: { userId, status: 'COMPLETED' },
-      _sum: { amount: true },
+      prisma.externalTransaction.aggregate({
+        where: { userId, status: 'COMPLETED' },
+        _sum: { amount: true },
+      }),
+    ], {
+      timeout: 15000, // 15 second timeout
     });
 
     return NextResponse.json({

@@ -32,6 +32,7 @@ function initFirebaseAdmin() {
     // Prefer environment variables in hosted environments
     const envJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     const envB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
+    const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 
     if (envJson || envB64) {
       console.log('Firebase Admin SDK: Using service account from environment variable');
@@ -51,14 +52,26 @@ function initFirebaseAdmin() {
         }
         credential = admin.credential.cert(parsed as admin.ServiceAccount);
       } catch (e: any) {
-        const envVarName = `FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}`;
-        const rawPreview = (envJson ?? (envB64 ? Buffer.from(envB64 as string, 'base64').toString('utf8') : '')).substring(0, 100);
-        const hint = `Invalid ${envVarName}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
-        const debugInfo = `First 100 chars: ${rawPreview}${rawPreview.length >= 100 ? '...' : ''}`;
-        throw new Error(`${hint} Original error: ${e?.message || e}. ${debugInfo}`);
+        // In development, fall back to local file if env var is invalid
+        if (isDevelopment) {
+          console.warn('Firebase Admin SDK: Invalid FIREBASE_SERVICE_ACCOUNT_KEY in development, falling back to local file');
+          console.warn(`Error: ${e?.message || e}`);
+          // Fall through to local file logic below
+        } else {
+          // In production, throw error
+          const envVarName = `FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}`;
+          const rawPreview = (envJson ?? (envB64 ? Buffer.from(envB64 as string, 'base64').toString('utf8') : '')).substring(0, 100);
+          const hint = `Invalid ${envVarName}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
+          const debugInfo = `First 100 chars: ${rawPreview}${rawPreview.length >= 100 ? '...' : ''}`;
+          throw new Error(`${hint} Original error: ${e?.message || e}. ${debugInfo}`);
+        }
       }
-    } else {
+    }
+    
+    // Use local file if no env var, or if env var failed in development
+    if (!credential) {
       // Development: use local file - try multiple possible paths
+      console.log('Firebase Admin SDK: Using local service account file');
       const possiblePaths = [
         path.resolve(process.cwd(), 'backend', LOCAL_SA_FILENAME),
         path.resolve(process.cwd(), LOCAL_SA_FILENAME),

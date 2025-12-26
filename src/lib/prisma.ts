@@ -1,6 +1,10 @@
 /**
  * Prisma Client Singleton
  * Ensures only one instance of Prisma Client is created across the application
+ * 
+ * Connection pool settings should be configured in DATABASE_URL:
+ * - Add ?connection_limit=10&pool_timeout=20 to increase pool size
+ * - Example: postgresql://user:pass@host:5432/db?connection_limit=10&pool_timeout=20
  */
 // @ts-ignore - Prisma client types
 import { PrismaClient } from '@prisma/client';

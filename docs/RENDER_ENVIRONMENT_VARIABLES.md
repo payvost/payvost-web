@@ -11,6 +11,10 @@ This document lists all required and optional environment variables for each Ren
 ```env
 PORT=3001
 NODE_ENV=production
+# Add connection pool parameters to prevent connection pool exhaustion
+# If DATABASE_URL already has parameters, use & instead of ?
+# Example: postgresql://user:pass@host/db?sslmode=require&connection_limit=10&pool_timeout=20
+# Example: postgresql://user:pass@host/db?connection_limit=10&pool_timeout=20
 DATABASE_URL=<your-neon-postgresql-connection-string>
 FIREBASE_SERVICE_ACCOUNT_KEY=<firebase-service-account-json-as-string>
 FRONTEND_URL=<comma-separated-origins>

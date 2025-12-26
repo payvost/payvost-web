@@ -26,6 +26,19 @@ try {
     { stdio: 'inherit', cwd: emailServiceDir }
   );
   
+  // Also copy to src/common for tsx watch development mode
+  // tsx watch runs TypeScript directly and needs the file in src/common/
+  const srcCommonDir = path.resolve(emailServiceDir, 'src', 'common');
+  if (!fs.existsSync(srcCommonDir)) {
+    fs.mkdirSync(srcCommonDir, { recursive: true });
+  }
+  const compiledFile = path.join(distCommonDir, 'mailgun.js');
+  const srcCommonFile = path.join(srcCommonDir, 'mailgun.js');
+  if (fs.existsSync(compiledFile)) {
+    fs.copyFileSync(compiledFile, srcCommonFile);
+    console.log('[Build] Copied mailgun.js to src/common for development');
+  }
+  
   console.log('[Build] Common mailgun.ts compiled successfully');
 } catch (error) {
   console.error('[Build] Failed to compile common/mailgun.ts:', error.message);
