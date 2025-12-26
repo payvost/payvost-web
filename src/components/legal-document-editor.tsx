@@ -102,7 +102,7 @@ export function LegalDocumentEditor({ value, onChange, placeholder, className }:
     if (quillRef.current) {
       const quill = quillRef.current.getEditor();
       const editorHeadings = quill.root.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      editorHeadings.forEach((heading, index) => {
+      editorHeadings.forEach((heading: Element, index: number) => {
         if (!heading.id) {
           const text = heading.textContent || '';
           const id = `heading-${index}-${text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 50)}`;

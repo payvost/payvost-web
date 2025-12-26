@@ -73,7 +73,7 @@ export default function CardDetailsPage({ params }: { params: { id: string } }) 
                            <Button variant="outline"><Snowflake className="mr-2 h-4 w-4"/>Freeze</Button>
                            <Button variant="outline"><Repeat className="mr-2 h-4 w-4"/>Reset PIN</Button>
                            <Button variant="outline"><FileText className="mr-2 h-4 w-4"/>Statement</Button>
-                           <Button variant="destructive-outline"><Power className="mr-2 h-4 w-4"/>Terminate</Button>
+                           <Button variant="destructive"><Power className="mr-2 h-4 w-4"/>Terminate</Button>
                         </CardContent>
                     </Card>
                     {card.spendingLimit && (

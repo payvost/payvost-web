@@ -240,7 +240,7 @@ export default function AgreementDetailsPage({ params }: { params: { id: string 
                             <CardContent className="space-y-2">
                                 <Button className="w-full justify-start"><ShieldCheck className="mr-2 h-4 w-4" /> Release Next Milestone</Button>
                                 <Button variant="outline" className="w-full justify-start"><FileText className="mr-2 h-4 w-4" /> Download Agreement PDF</Button>
-                                <Button variant="destructive-outline" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Raise a Dispute</Button>
+                                <Button variant="destructive" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Raise a Dispute</Button>
                             </CardContent>
                         </Card>
                          <Card>

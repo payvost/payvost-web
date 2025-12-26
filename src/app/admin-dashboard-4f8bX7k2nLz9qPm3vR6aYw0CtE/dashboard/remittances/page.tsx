@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,7 +84,7 @@ export default function AdminRemittancesPage() {
     const [activeTab, setActiveTab] = useState('all');
     const [filterPartner, setFilterPartner] = useState<string[]>([]);
     const [filterCorridor, setFilterCorridor] = useState<string[]>([]);
-    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const { toast } = useToast();
 
     useEffect(() => {

@@ -36,7 +36,7 @@ const documentTypeMap: { [key: string]: string } = {
     'bank-statement': 'Bank Statement',
 };
 
-function InfoField({ label, value, icon }: { label: string; value: string | undefined | null; icon?: React.ReactNode }) {
+function InfoField({ label, value, icon }: { label: string; value: string | undefined | null | React.ReactNode; icon?: React.ReactNode }) {
     return (
         <div className="p-4 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2 mb-1">

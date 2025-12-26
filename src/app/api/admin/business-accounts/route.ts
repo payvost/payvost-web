@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch business onboarding data and user info from Firestore
     const businessAccountsData: BusinessAccountData[] = await Promise.all(
-      businessAccounts.map(async (account) => {
+      businessAccounts.map(async (account: { id: string; userId: string; currency: string; balance: any; createdAt: Date; updatedAt: Date; type: string }) => {
         try {
           // Get user info from Firestore
           const userDoc = await db.collection('users').doc(account.userId).get();
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
               amount: { gt: 0 }, // Only credits
             },
           });
-          const paymentVolume = ledgerEntries.reduce((sum, entry) => sum + Number(entry.amount), 0);
+          const paymentVolume = ledgerEntries.reduce((sum: number, entry: { amount: any }) => sum + Number(entry.amount), 0);
 
           // Get activity log (simplified - could be enhanced)
           const activityLog = [

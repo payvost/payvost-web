@@ -188,7 +188,7 @@ export default function TransactionDetailsPage() {
                             <CardHeader><CardTitle>Support</CardTitle></CardHeader>
                              <CardContent className="space-y-2">
                                 <Button variant="outline" className="w-full justify-start"><MessageSquareWarning className="mr-2 h-4 w-4" /> Report an Issue</Button>
-                                <Button variant="destructive-outline" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Dispute Transaction</Button>
+                                <Button variant="destructive" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Dispute Transaction</Button>
                             </CardContent>
                         </Card>
                     </div>

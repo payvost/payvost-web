@@ -51,7 +51,7 @@ export default function CustomerDetailsPage() {
         if (!customer) return ['Basic', 'Full', 'Advanced'];
         
         // If user is tier3, they can have Advanced
-        if (customer.kycTier === 'tier3' || customer.userType === 'Tier 3') {
+        if (customer.kycTier === 'tier3') {
             return ['Basic', 'Full', 'Advanced'];
         }
         // If user is tier2, they can have Full
@@ -215,8 +215,8 @@ export default function CustomerDetailsPage() {
             // 1. User is not tier1 (tier1 users don't submit documents)
             // 2. OR user has upgraded and has a kycProfile with tier2/tier3 status that's not locked
             const isTier1Only = customer.kycTier === 'tier1' && 
-                               (customer.kycStatus === 'tier1_pending_review' || 
-                                customer.kycStatus === 'tier1_verified' ||
+                               (customer.kycStatus === 'pending' || 
+                                customer.kycStatus === 'verified' ||
                                 customer.userType === 'Pending' ||
                                 customer.userType === 'Tier 1');
             
@@ -275,16 +275,16 @@ export default function CustomerDetailsPage() {
                 }, []);
                 
                 // Sort by tier level (tier1, tier2, tier3) and then by creation date
-                deduplicatedSubmissions.sort((a, b) => {
+                deduplicatedSubmissions.sort((a: { normalizedLevel?: string; createdAt?: string | Date }, b: { normalizedLevel?: string; createdAt?: string | Date }) => {
                     const tierOrder: { [key: string]: number } = { tier1: 1, tier2: 2, tier3: 3, unknown: 4 };
-                    const aOrder = tierOrder[a.normalizedLevel] || 4;
-                    const bOrder = tierOrder[b.normalizedLevel] || 4;
+                    const aOrder = tierOrder[a.normalizedLevel || ''] || 4;
+                    const bOrder = tierOrder[b.normalizedLevel || ''] || 4;
                     
                     if (aOrder !== bOrder) {
                         return aOrder - bOrder;
                     }
                     
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
                 });
                 
                 setKycSubmissions(deduplicatedSubmissions);
@@ -752,8 +752,8 @@ export default function CustomerDetailsPage() {
                                     <p className="text-sm text-muted-foreground mb-1">KYC Status</p>
                                     <Badge 
                                         variant={
-                                            customer.kycStatus === 'verified' || customer.kycStatus === 'tier1_verified' ? 'default' :
-                                            customer.kycStatus === 'pending' || customer.kycStatus === 'tier1_pending_review' ? 'secondary' :
+                                            customer.kycStatus === 'verified' ? 'default' :
+                                            customer.kycStatus === 'pending' ? 'secondary' :
                                             customer.kycStatus === 'rejected' || customer.kycStatus === 'restricted' ? 'destructive' :
                                             'outline'
                                         }
@@ -995,7 +995,7 @@ export default function CustomerDetailsPage() {
 
                     {/* Tier1 Review Card - Show for tier1 pending users */}
                     {customer.kycTier === 'tier1' && 
-                     (customer.kycStatus === 'tier1_pending_review' || customer.userType === 'Pending') &&
+                     (customer.kycStatus === 'pending' || customer.userType === 'Pending') &&
                      customer.kycProfile?.tiers?.tier1 && 
                      (customer.kycProfile.tiers.tier1.status === 'submitted' || customer.kycProfile.tiers.tier1.status === 'pending_review') && (
                         <Card>
@@ -1302,7 +1302,7 @@ export default function CustomerDetailsPage() {
                                     <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
                                     <p>
                                         {customer.kycTier === 'tier1' && 
-                                         (customer.kycStatus === 'tier1_pending_review' || customer.userType === 'Pending' || customer.userType === 'Tier 1')
+                                         (customer.kycStatus === 'pending' || customer.userType === 'Pending' || customer.userType === 'Tier 1')
                                          ? 'No document submissions. Tier 1 users only provide basic information (BVN, SSN, etc.) during registration.'
                                          : 'No KYC submissions found'}
                                     </p>

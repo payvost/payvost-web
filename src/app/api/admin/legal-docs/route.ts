@@ -72,7 +72,7 @@ export async function GET(request: Request) {
                 createdAt: data?.createdAt?.toDate?.()?.toISOString(),
               };
             })
-            .sort((a, b) => (b.versionNumber || 0) - (a.versionNumber || 0));
+            .sort((a: any, b: any) => ((b.versionNumber as number) || 0) - ((a.versionNumber as number) || 0));
 
           return NextResponse.json({ versions });
         }

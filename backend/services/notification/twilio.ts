@@ -8,12 +8,22 @@ let twilioConfigured = false;
  * Initialize Twilio client
  */
 export function initTwilio() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  // Trim whitespace from environment variables
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const phoneNumber = process.env.TWILIO_PHONE_NUMBER?.trim();
 
+  // Check if credentials are missing or empty
   if (!accountSid || !authToken || !phoneNumber) {
     logger.warn('Twilio credentials not configured. SMS notifications will be disabled.');
+    return;
+  }
+
+  // Validate Account SID format (must start with "AC")
+  if (!accountSid.startsWith('AC')) {
+    logger.warn(
+      `Invalid Twilio Account SID format. Account SID must start with "AC". SMS notifications will be disabled.`
+    );
     return;
   }
 

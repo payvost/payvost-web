@@ -164,7 +164,7 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
                            <div className="grid grid-cols-2 gap-2">
                             <Button variant="outline" className="justify-start"><Check className="mr-2 h-4 w-4"/>Mark as Safe</Button>
                             <Button variant="outline" className="justify-start"><X className="mr-2 h-4 w-4"/>Confirm Fraud</Button>
-                            <Button variant="destructive-outline" className="col-span-2 justify-start"><UserX className="mr-2 h-4 w-4"/>Suspend User Account</Button>
+                            <Button variant="destructive" className="col-span-2 justify-start"><UserX className="mr-2 h-4 w-4"/>Suspend User Account</Button>
                            </div>
                         </CardContent>
                     </Card>

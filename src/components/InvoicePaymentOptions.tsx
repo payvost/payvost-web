@@ -214,7 +214,7 @@ export function InvoicePaymentOptions({
           });
         }
       } else {
-        throw new Error(response.error || 'Failed to create payment');
+        throw new Error((response as any).error || 'Failed to create payment');
       }
     } catch (error: any) {
       console.error('Payment creation error:', error);

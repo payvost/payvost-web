@@ -30,7 +30,7 @@ export default function ContentEditPage() {
   const [formData, setFormData] = useState({
     title: '',
     contentType: (contentTypeParam || 'BLOG') as 'BLOG' | 'PRESS_RELEASE' | 'DOCUMENTATION' | 'KNOWLEDGE_BASE',
-    status: 'DRAFT' as 'DRAFT' | 'REVIEW' | 'PUBLISHED',
+    status: 'DRAFT' as 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED',
     excerpt: '',
     content: '',
     category: '',
@@ -51,7 +51,7 @@ export default function ContentEditPage() {
           setFormData({
             title: content.title,
             contentType: content.contentType,
-            status: content.status,
+            status: content.status as 'DRAFT' | 'REVIEW' | 'PUBLISHED' | 'ARCHIVED' | 'SCHEDULED',
             excerpt: content.excerpt || '',
             content: content.content,
             category: content.category || '',

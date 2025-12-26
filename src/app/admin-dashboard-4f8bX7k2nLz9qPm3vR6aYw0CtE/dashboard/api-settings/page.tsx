@@ -97,7 +97,7 @@ export default function ApiSettingsPage() {
                                 </div>
                             </CardContent>
                              <CardFooter>
-                                <Button variant="destructive-outline"><RefreshCcw className="mr-2 h-4 w-4"/>Roll Test Key</Button>
+                                <Button variant="destructive"><RefreshCcw className="mr-2 h-4 w-4"/>Roll Test Key</Button>
                             </CardFooter>
                         </Card>
                     </div>

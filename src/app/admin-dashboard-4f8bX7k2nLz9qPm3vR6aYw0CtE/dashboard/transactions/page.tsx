@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -79,7 +80,7 @@ export default function AdminTransactionsPage() {
     const [filterType, setFilterType] = useState<string[]>(['Inflow', 'Outflow']);
     const [filterCurrency, setFilterCurrency] = useState<string[]>([]);
     const [filterChannel, setFilterChannel] = useState<string[]>([]);
-    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const { toast } = useToast();

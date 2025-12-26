@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Map database incidents to API format
-    const incidents = recentIncidents.map(incident => ({
+    const incidents = recentIncidents.map((incident: { id: string; title: string; description: string; status: string; severity: string; startedAt: Date; resolvedAt?: Date | null }) => ({
       id: incident.id,
       title: incident.title,
       description: incident.description,

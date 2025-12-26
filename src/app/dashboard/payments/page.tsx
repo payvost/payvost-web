@@ -205,7 +205,7 @@ function PaymentsPageContent() {
           amount,
           sourceAccount.currency,
           currentBillerData.currency,
-          user?.tier || 'STANDARD'
+          (user as any)?.tier || 'STANDARD'
         );
         setRatePreview(preview);
       } catch (error) {
@@ -216,12 +216,12 @@ function PaymentsPageContent() {
 
     const debounceTimer = setTimeout(calculatePreview, 500);
     return () => clearTimeout(debounceTimer);
-  }, [billAmount, selectedSourceWalletId, accounts, currentBillerData, user?.tier]);
+  }, [billAmount, selectedSourceWalletId, accounts, currentBillerData, (user as any)?.tier]);
 
   // Filter billers by search
   const filteredBillers = billers.filter(biller =>
     biller.name.toLowerCase().includes(billerSearch.toLowerCase()) ||
-    biller.category?.toLowerCase().includes(billerSearch.toLowerCase())
+    (biller as any).category?.toLowerCase().includes(billerSearch.toLowerCase())
   );
 
   // Load billers from Reloadly when component mounts or country changes
@@ -297,6 +297,7 @@ function PaymentsPageContent() {
     let accountId: string | null = null;
     let balanceDeducted = false;
     
+    let sourceAmount = 0;
     try {
       const sourceAccount = accounts.find(acc => acc.id === selectedSourceWalletId);
       if (!sourceAccount) {
@@ -306,7 +307,7 @@ function PaymentsPageContent() {
       const billCurrency = currentBillerData.currency;
       const paymentAmount = parseFloat(billAmount);
       let needsConversion = sourceAccount.currency !== billCurrency;
-      let sourceAmount = paymentAmount;
+      sourceAmount = paymentAmount;
       let exchangeRate = 1;
       let conversionFee = 0;
       let totalSourceAmount = paymentAmount;
@@ -380,7 +381,7 @@ function PaymentsPageContent() {
           amount: sourceAmount,
           currency: sourceAccount.currency,
           description: `Bill payment to ${selectedBiller.name} (converted from ${sourceAccount.currency})`,
-          referenceId: transactionRecord.id,
+          referenceId: transactionRecord.id || undefined,
         });
         balanceDeducted = true;
       } else {
@@ -390,7 +391,7 @@ function PaymentsPageContent() {
           amount: paymentAmount,
           currency: billCurrency,
           description: `Bill payment to ${selectedBiller.name}`,
-          referenceId: transactionRecord.id,
+          referenceId: transactionRecord.id || undefined,
         });
         balanceDeducted = true;
       }
@@ -702,7 +703,7 @@ function PaymentsPageContent() {
                     amount={parseFloat(billAmount)}
                     fromCurrency={selectedSourceAccount?.currency || currentBillerData.currency}
                     toCurrency={currentBillerData.currency}
-                    userTier={user?.tier || 'STANDARD'}
+                    userTier={(user as any)?.tier || 'STANDARD'}
                   />
                 )}
                 <div className="space-y-2 pt-2 border-t">

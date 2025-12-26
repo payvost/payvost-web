@@ -87,35 +87,6 @@ export function SMSVerificationDialog({
     }
   }, [open]);
 
-  // Only auto-send if dialog opens and we haven't attempted yet
-  useEffect(() => {
-    if (open && phoneNumber && !confirmationResult && !verificationId && !hasAttemptedSend && !sendingCode) {
-      // Small delay to ensure DOM is ready
-      const timeoutId = setTimeout(() => {
-        sendVerificationCode();
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [open, phoneNumber, confirmationResult, verificationId, hasAttemptedSend, sendingCode, sendVerificationCode]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  // Retry countdown
-  useEffect(() => {
-    if (retryAfter !== null && retryAfter > 0) {
-      const timer = setTimeout(() => setRetryAfter(retryAfter - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (retryAfter === 0) {
-      setRetryAfter(null);
-    }
-  }, [retryAfter]);
-
   const sendVerificationCode = useCallback(async () => {
     if (!phoneNumber) {
       toast({
@@ -242,6 +213,35 @@ export function SMSVerificationDialog({
       setSendingCode(false);
     }
   }, [phoneNumber, retryAfter, toast]);
+
+  // Only auto-send if dialog opens and we haven't attempted yet
+  useEffect(() => {
+    if (open && phoneNumber && !confirmationResult && !verificationId && !hasAttemptedSend && !sendingCode) {
+      // Small delay to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        sendVerificationCode();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [open, phoneNumber, confirmationResult, verificationId, hasAttemptedSend, sendingCode, sendVerificationCode]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  // Retry countdown
+  useEffect(() => {
+    if (retryAfter !== null && retryAfter > 0) {
+      const timer = setTimeout(() => setRetryAfter(retryAfter - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (retryAfter === 0) {
+      setRetryAfter(null);
+    }
+  }, [retryAfter]);
 
   const verifyCode = async () => {
     if (!confirmationResult || verificationCode.length !== 6) {

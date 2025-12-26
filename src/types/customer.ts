@@ -44,11 +44,37 @@ export interface CustomerData {
     ssnLast4?: string; // Last 4 digits of SSN
     kycProfile?: {
         tiers?: {
-            tier1?: { status?: string; submittedAt?: string | Timestamp };
-            tier2?: { status?: string; submittedAt?: string | Timestamp };
-            tier3?: { status?: string; submittedAt?: string | Timestamp };
+            tier1?: { 
+                status?: string; 
+                submittedAt?: string | Timestamp;
+                createdAt?: string | Timestamp;
+                additionalFields?: Record<string, any>;
+                requirements?: string[];
+            };
+            tier2?: { 
+                status?: string; 
+                submittedAt?: string | Timestamp;
+                createdAt?: string | Timestamp;
+                additionalFields?: Record<string, any>;
+                requirements?: string[];
+            };
+            tier3?: { 
+                status?: string; 
+                submittedAt?: string | Timestamp;
+                createdAt?: string | Timestamp;
+                additionalFields?: Record<string, any>;
+                requirements?: string[];
+            };
         };
+        countryIso?: string;
+        countryName?: string;
+        createdAt?: string | Timestamp;
     };
+    dateOfBirth?: string | Timestamp;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
     kycTier?: 'tier1' | 'tier2' | 'tier3' | string;
   userType: UserType;
   riskScore: number;

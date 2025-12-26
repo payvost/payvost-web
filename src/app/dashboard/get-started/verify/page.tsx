@@ -276,7 +276,7 @@ export default function VerifyBusinessPage() {
           const businessData = JSON.parse(businessOnboardingDataStr);
           
           // Determine status: if auto-approved, use 'approved', otherwise use 'submitted' for admin review
-          const submissionStatus = verificationResult?.autoApproved && verificationResult?.verificationStatus === 'approved' 
+          const submissionStatus = verificationResult?.autoApproved && verificationResult?.status === 'approved' 
             ? 'approved' 
             : 'submitted';
           

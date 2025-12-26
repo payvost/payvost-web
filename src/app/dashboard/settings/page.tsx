@@ -678,7 +678,7 @@ export default function SettingsPage() {
                     <CardTitle>Account Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Button asChild variant="destructive-outline" className="w-full justify-start text-destructive hover:text-destructive border-destructive/50 hover:bg-destructive/10"><Link href="#"><Trash2 className="mr-2 h-4 w-4" /> Request Account Deletion</Link></Button>
+                    <Button asChild variant="destructive" className="w-full justify-start text-destructive hover:text-destructive border-destructive/50 hover:bg-destructive/10"><Link href="#"><Trash2 className="mr-2 h-4 w-4" /> Request Account Deletion</Link></Button>
                 </CardContent>
              </Card>
 

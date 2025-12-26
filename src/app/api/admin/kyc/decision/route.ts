@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
     // Update user's KYC status
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
+    const submissionLevel = submissionData.level || level; // tier2, tier3, etc.
     
     if (userDoc.exists) {
       const userData = userDoc.data()!;
-      const submissionLevel = submissionData.level || level; // tier2, tier3, etc.
       
       const userUpdate: any = {
         kycStatus: decision === 'approved' ? 'verified' : 'rejected',

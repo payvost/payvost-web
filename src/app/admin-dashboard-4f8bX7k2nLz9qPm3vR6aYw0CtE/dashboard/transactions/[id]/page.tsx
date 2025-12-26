@@ -139,8 +139,8 @@ export default function AdminTransactionDetailsPage({ params }: { params: { id: 
                         <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
                         <CardContent className="space-y-2">
                            <Button variant="outline" className="w-full justify-start"><Repeat className="mr-2 h-4 w-4"/>Refund Transaction</Button>
-                           <Button variant="destructive-outline" className="w-full justify-start"><MessageSquareWarning className="mr-2 h-4 w-4"/>Flag for Review</Button>
-                           <Button variant="destructive-outline" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4"/>Open Dispute</Button>
+                           <Button variant="destructive" className="w-full justify-start"><MessageSquareWarning className="mr-2 h-4 w-4"/>Flag for Review</Button>
+                           <Button variant="destructive" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4"/>Open Dispute</Button>
                         </CardContent>
                     </Card>
                      <Card>

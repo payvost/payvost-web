@@ -126,7 +126,7 @@ export default function TeamMemberDetailsPage({ params }: { params: { id: string
                                             <TableCell className="font-mono">{session.ip}</TableCell>
                                             <TableCell>{session.lastSeen}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="destructive-outline" size="sm">Revoke</Button>
+                                                <Button variant="destructive" size="sm">Revoke</Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}

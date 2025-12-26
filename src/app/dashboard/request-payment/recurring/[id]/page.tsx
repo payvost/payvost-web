@@ -169,7 +169,7 @@ export default function RecurringPaymentDetailsPage() {
                             <CardContent className="space-y-2">
                                 <Button variant="outline" className="w-full justify-start"><Edit className="mr-2 h-4 w-4"/>Edit Schedule</Button>
                                 <Button variant="outline" className="w-full justify-start"><Pause className="mr-2 h-4 w-4"/>Pause Schedule</Button>
-                                <Button variant="destructive-outline" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4"/>Cancel Schedule</Button>
+                                <Button variant="destructive" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4"/>Cancel Schedule</Button>
                             </CardContent>
                         </Card>
                     </div>

@@ -24,6 +24,8 @@ interface BillPaymentHistoryItem {
     sourceCurrency?: string;
     exchangeRate?: number;
     conversionFee?: number;
+    needsConversion?: boolean;
+    sourceAmount?: number;
   };
 }
 
@@ -45,8 +47,9 @@ export function BillPaymentHistory() {
           limit: 50,
         });
         
-        if (response && response.transactions) {
-          setHistory(response.transactions);
+        if (response) {
+          const transactions = Array.isArray(response) ? response : (response as any).transactions || [];
+          setHistory(transactions);
         }
       } catch (err: any) {
         console.error('Failed to load bill payment history:', err);
