@@ -97,14 +97,23 @@ export class InvoiceService {
 
   /**
    * Trigger PDF regeneration (async, non-blocking)
-   * Calls the PDF generation endpoint to regenerate the PDF
+   * Triggers the PDF generation by calling the frontend API
+   * Falls back to direct regeneration if frontend is unavailable
    */
   private async triggerPdfRegeneration(invoiceId: string, source: string): Promise<void> {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000';
+      // Try to get the frontend URL from environment
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL;
+      
+      // If no base URL set, log and skip PDF regeneration
+      if (!baseUrl) {
+        console.warn(`[triggerPdfRegeneration] No NEXT_PUBLIC_BASE_URL or BASE_URL set, skipping PDF regeneration for ${invoiceId}`);
+        return;
+      }
+
       const pdfGenerationUrl = `${baseUrl}/api/generate-invoice-pdf`;
       
-      console.log(`[triggerPdfRegeneration] Triggering PDF regeneration for invoice ${invoiceId} (source: ${source})`);
+      console.log(`[triggerPdfRegeneration] Triggering PDF regeneration for invoice ${invoiceId} (source: ${source}) via ${pdfGenerationUrl}`);
       
       const response = await fetch(pdfGenerationUrl, {
         method: 'POST',
@@ -120,8 +129,9 @@ export class InvoiceService {
         console.log(`[triggerPdfRegeneration] PDF regeneration triggered successfully for invoice ${invoiceId}`);
       }
     } catch (error: any) {
-      console.error(`[triggerPdfRegeneration] Error triggering PDF regeneration for invoice ${invoiceId}:`, error?.message);
+      console.warn(`[triggerPdfRegeneration] Warning triggering PDF regeneration for invoice ${invoiceId}:`, error?.message);
       // Don't throw - this is async and non-blocking
+      // In production, PDFs can be regenerated on-demand when downloaded
     }
   }
 

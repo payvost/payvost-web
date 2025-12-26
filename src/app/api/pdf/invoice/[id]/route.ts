@@ -149,9 +149,31 @@ export async function GET(
       // Check if PDF exists in Storage
       let [exists] = await file.exists();
     
+      // Check if PDF needs regeneration (status may have changed)
+      let shouldRegenerate = false;
+      if (exists && invoiceData) {
+        try {
+          const metadata = await file.getMetadata();
+          const uploadedTime = new Date(metadata[0].timeCreated).getTime();
+          const invoiceUpdatedTime = invoiceData.updatedAt 
+            ? (invoiceData.updatedAt instanceof Date ? invoiceData.updatedAt.getTime() : new Date(invoiceData.updatedAt).getTime())
+            : uploadedTime;
+          
+          // If invoice was updated after PDF was generated, regenerate
+          if (invoiceUpdatedTime > uploadedTime) {
+            console.log(`[PDF Download] Invoice was updated after PDF generation (${new Date(invoiceUpdatedTime).toISOString()} > ${new Date(uploadedTime).toISOString()}), regenerating PDF for: ${id}`);
+            shouldRegenerate = true;
+            exists = false; // Treat as if it doesn't exist to trigger regeneration
+          }
+        } catch (metadataError: any) {
+          console.warn('[PDF Download] Could not check PDF metadata:', metadataError?.message);
+          // Continue without regenerating
+        }
+      }
+    
       if (!exists) {
-        // PDF doesn't exist - trigger generation
-        console.log(`[PDF Download] PDF not found, triggering generation for invoice: ${id}`);
+        // PDF doesn't exist or needs regeneration - trigger generation
+        console.log(`[PDF Download] PDF ${shouldRegenerate ? 'outdated' : 'not found'}, triggering generation for invoice: ${id}`);
         
         try {
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin;
