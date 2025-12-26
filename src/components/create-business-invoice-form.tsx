@@ -53,6 +53,10 @@ export const invoiceSchema = z.object({
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
   paymentMethod: z.string().optional(),
+  status: z.enum(['Draft', 'Pending', 'Paid']).default('Pending').optional(),
+  isRecurring: z.boolean().default(false).optional(),
+  recurringFrequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
+  recurringEndDate: z.date().optional(),
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -79,6 +83,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
   const [isSaving, setIsSaving] = useState(false);
   const [isIssueDateOpen, setIsIssueDateOpen] = useState(false);
   const [isDueDateOpen, setIsDueDateOpen] = useState(false);
+  const [isRecurringEndDateOpen, setIsRecurringEndDateOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [showSendDialog, setShowSendDialog] = useState(false);
@@ -160,6 +165,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
     const watchedItems = watch('items');
     const watchedTaxRate = watch('taxRate') || 0;
     const selectedCurrency = watch('currency');
+    const isRecurring = watch('isRecurring') || false;
     
     const subtotal = watchedItems.reduce((acc, item) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const taxAmount = subtotal * (watchedTaxRate / 100);
@@ -170,11 +176,27 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         return `${symbol}${amount.toFixed(2)}`;
     };
 
-    const saveInvoice = async (status: 'Draft' | 'Pending') => {
+    // Helper function to format numbers with comma separators
+    const formatNumberInput = (value: string): string => {
+      if (!value) return '';
+      const numStr = String(value).replace(/[^\d.]/g, '');
+      if (!numStr) return '';
+      const [intPart, decPart] = numStr.split('.');
+      const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return decPart ? `${formattedInt}.${decPart.substring(0, 2)}` : formattedInt;
+    };
+
+    // Helper function to parse formatted number back to plain number
+    const parseFormattedNumber = (value: string): string => {
+      return value.replace(/,/g, '');
+    };
+
+    const saveInvoice = async (defaultStatus?: 'Draft' | 'Pending' | 'Paid') => {
         if (!user) throw new Error('User not authenticated.');
         if (!businessId) throw new Error('Business ID not found.');
 
         const data = getValues();
+        const statusToUse = (data.status || defaultStatus || 'Pending') as 'Draft' | 'Pending' | 'Paid';
         const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
         const taxAmount = subtotal * (watchedTaxRate / 100);
         const grandTotal = subtotal + taxAmount;
@@ -186,10 +208,13 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             grandTotal,
             createdBy: user.uid,
             businessId: businessId,
-            status,
+            status: statusToUse,
             updatedAt: serverTimestamp(),
-            isPublic: status !== 'Draft',
+            isPublic: statusToUse !== 'Draft',
             paymentMethod: data.paymentMethod || 'rapyd',
+            isRecurring: data.isRecurring || false,
+            recurringFrequency: data.isRecurring ? data.recurringFrequency : null,
+            recurringEndDate: data.isRecurring && data.recurringEndDate ? Timestamp.fromDate(data.recurringEndDate) : null,
         };
 
         if (savedInvoiceId) {
@@ -197,7 +222,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             await updateDoc(docRef, firestoreData);
             
             // Trigger PDF regeneration if status changed to non-draft
-            if (status !== 'Draft') {
+            if (statusToUse !== 'Draft') {
               fetch('/api/generate-invoice-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -216,7 +241,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             const newId = docRef.id;
             
             // Trigger PDF generation for non-draft invoices (async, don't wait)
-            if (status !== 'Draft') {
+            if (statusToUse !== 'Draft') {
               fetch('/api/generate-invoice-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -314,7 +339,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         <form onSubmit={handleSubmit(onSubmit)}>
             <Card>
                 <CardHeader>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start w-full">
+                     <div className="grid grid-cols-2 md:grid-cols-6 gap-4 items-start w-full">
                         <div className="space-y-2 col-span-2 md:col-span-1">
                             <Label htmlFor="invoiceNumber">Invoice #</Label>
                             <Input id="invoiceNumber" {...register('invoiceNumber')} className="h-10" />
@@ -338,6 +363,25 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                                 )}
                             />
                             {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency.message}</p>}
+                        </div>
+                        <div className="space-y-2 col-span-1">
+                            <Label>Status</Label>
+                            <Controller
+                                name="status"
+                                control={control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} defaultValue={field.value || 'Pending'}>
+                                        <SelectTrigger>
+                                            <SelectValue/>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Draft">Draft</SelectItem>
+                                            <SelectItem value="Pending">Pending</SelectItem>
+                                            <SelectItem value="Paid">Paid</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
                         </div>
                         <div className="space-y-2 col-span-1">
                             <Label>Invoice Date</Label>
@@ -382,7 +426,30 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                                 <TableRow key={field.id} className="align-top">
                                     <TableCell><Input {...register(`items.${index}.description`)} placeholder="Service or product" /></TableCell>
                                     <TableCell><Input type="number" {...register(`items.${index}.quantity`)} placeholder="1" className="w-20" /></TableCell>
-                                    <TableCell><Input type="number" {...register(`items.${index}.price`)} placeholder="0.00" className="w-24" /></TableCell>
+                                    <TableCell>
+                                        <Controller
+                                            name={`items.${index}.price`}
+                                            control={control}
+                                            render={({ field: priceField }) => (
+                                                <Input
+                                                    type="text"
+                                                    placeholder="0.00"
+                                                    className="w-24"
+                                                    value={formatNumberInput(String(priceField.value || ''))}
+                                                    onChange={(e) => {
+                                                        const parsed = parseFormattedNumber(e.target.value);
+                                                        priceField.onChange(parsed ? parseFloat(parsed) : 0);
+                                                    }}
+                                                    onBlur={() => {
+                                                        const parsed = parseFormattedNumber(String(priceField.value || ''));
+                                                        if (parsed) {
+                                                            priceField.onChange(parseFloat(parsed));
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        />
+                                    </TableCell>
                                     <TableCell className="text-right pt-4 font-medium">{formatCurrency((watchedItems[index]?.quantity || 0) * (watchedItems[index]?.price || 0), selectedCurrency)}</TableCell>
                                     <TableCell><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                                 </TableRow>
@@ -392,6 +459,70 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                     <Button type="button" variant="outline" size="sm" onClick={() => append({ description: '', quantity: 1, price: 0 })}>
                         <Plus className="mr-2 h-4 w-4" /> Add Item
                     </Button>
+                    
+                    {/* Recurring Invoice Section */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Controller
+                                name="isRecurring"
+                                control={control}
+                                render={({ field }) => (
+                                    <input
+                                        type="checkbox"
+                                        id="isRecurring"
+                                        checked={field.value || false}
+                                        onChange={(e) => field.onChange(e.target.checked)}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                )}
+                            />
+                            <Label htmlFor="isRecurring" className="font-semibold cursor-pointer">Make this a recurring invoice</Label>
+                        </div>
+                        
+                        {isRecurring && (
+                            <div className="grid grid-cols-2 gap-4 pl-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="recurringFrequency">Frequency</Label>
+                                    <Controller
+                                        name="recurringFrequency"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} defaultValue={field.value || 'monthly'}>
+                                                <SelectTrigger>
+                                                    <SelectValue/>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="daily">Daily</SelectItem>
+                                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>End Date (Optional)</Label>
+                                    <Controller
+                                        name="recurringEndDate"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Popover open={isRecurringEndDateOpen} onOpenChange={setIsRecurringEndDateOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date (optional)</span>}
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0">
+                                                    <Calendar mode="single" selected={field.value} onSelect={(date) => {field.onChange(date); setIsRecurringEndDateOpen(false);}} />
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                      <div className="grid grid-cols-2 gap-8 items-start">
                         <div className="space-y-2"><Label htmlFor="notes">Notes</Label><Textarea id="notes" {...register('notes')} /></div>
                         <div className="space-y-2">

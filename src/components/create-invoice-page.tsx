@@ -53,6 +53,7 @@ export const invoiceSchema = z.object({
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
   paymentMethod: z.string().optional(),
+  status: z.enum(['Draft', 'Pending', 'Paid']).default('Pending').optional(),
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -194,13 +195,16 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         return `${symbol}${formattedAmount}`;
     };
 
-    const saveInvoice = async (status: 'Draft' | 'Pending') => {
+    const saveInvoice = async (defaultStatus?: 'Draft' | 'Pending' | 'Paid') => {
         if (!user) {
             toast({ title: 'Not authenticated', variant: 'destructive'});
             throw new Error('User not authenticated');
         }
         
         const data = getValues();
+        // Use status from form field, or fall back to defaultStatus parameter for backward compatibility
+        const statusToUse = (data.status || defaultStatus || 'Pending') as 'Draft' | 'Pending' | 'Paid';
+        
         const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
         const taxAmount = subtotal * (watchedTaxRate / 100);
         const grandTotal = subtotal + taxAmount;
@@ -211,9 +215,9 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             dueDate: Timestamp.fromDate(data.dueDate),
             grandTotal,
             userId: user.uid,
-            status,
+            status: statusToUse,
             updatedAt: serverTimestamp(),
-            isPublic: status !== 'Draft',
+            isPublic: statusToUse !== 'Draft',
             paymentMethod: data.paymentMethod || 'rapyd',
         };
 
@@ -222,7 +226,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             await updateDoc(docRef, firestoreData);
             
             // Trigger PDF regeneration if status changed to non-draft
-            if (status !== 'Draft') {
+            if (statusToUse !== 'Draft') {
               fetch('/api/generate-invoice-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -317,7 +321,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Card>
                     <CardHeader className="flex flex-col md:flex-row justify-between gap-4 items-start">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-start w-full">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-start w-full">
                             <div className="space-y-2 col-span-2 md:col-span-1">
                                 <Label htmlFor="invoiceNumber">Invoice #</Label>
                                 <Input id="invoiceNumber" {...register('invoiceNumber')} className="h-10" />
@@ -367,6 +371,25 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                  <div className="h-4">
                                     {errors.issueDate && <p className="text-sm text-destructive">{errors.issueDate.message}</p>}
                                  </div>
+                            </div>
+                            <div className="space-y-2 col-span-1">
+                                <Label>Status</Label>
+                                <Controller
+                                    name="status"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Select onValueChange={field.onChange} defaultValue={field.value || 'Pending'}>
+                                            <SelectTrigger>
+                                                <SelectValue/>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Draft">Draft</SelectItem>
+                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                <SelectItem value="Paid">Paid</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
                             </div>
                             <div className="space-y-2 col-span-1">
                                 <Label>Due Date</Label>
