@@ -154,16 +154,23 @@ export async function GET(
       if (exists && invoiceData) {
         try {
           const metadata = await file.getMetadata();
-          const uploadedTime = new Date(metadata[0].timeCreated).getTime();
-          const invoiceUpdatedTime = invoiceData.updatedAt 
-            ? (invoiceData.updatedAt instanceof Date ? invoiceData.updatedAt.getTime() : new Date(invoiceData.updatedAt).getTime())
-            : uploadedTime;
+          const timeCreated = metadata[0]?.timeCreated;
           
-          // If invoice was updated after PDF was generated, regenerate
-          if (invoiceUpdatedTime > uploadedTime) {
-            console.log(`[PDF Download] Invoice was updated after PDF generation (${new Date(invoiceUpdatedTime).toISOString()} > ${new Date(uploadedTime).toISOString()}), regenerating PDF for: ${id}`);
-            shouldRegenerate = true;
-            exists = false; // Treat as if it doesn't exist to trigger regeneration
+          // If we can't get the upload time, skip regeneration check
+          if (!timeCreated) {
+            console.warn('[PDF Download] Could not determine PDF upload time, skipping regeneration check');
+          } else {
+            const uploadedTime = new Date(timeCreated).getTime();
+            const invoiceUpdatedTime = invoiceData.updatedAt 
+              ? (invoiceData.updatedAt instanceof Date ? invoiceData.updatedAt.getTime() : new Date(invoiceData.updatedAt).getTime())
+              : uploadedTime;
+            
+            // If invoice was updated after PDF was generated, regenerate
+            if (invoiceUpdatedTime > uploadedTime) {
+              console.log(`[PDF Download] Invoice was updated after PDF generation (${new Date(invoiceUpdatedTime).toISOString()} > ${new Date(uploadedTime).toISOString()}), regenerating PDF for: ${id}`);
+              shouldRegenerate = true;
+              exists = false; // Treat as if it doesn't exist to trigger regeneration
+            }
           }
         } catch (metadataError: any) {
           console.warn('[PDF Download] Could not check PDF metadata:', metadataError?.message);
