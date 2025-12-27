@@ -297,6 +297,79 @@ export function createGateway() {
   // Performance metrics endpoint (admin only)
   app.get('/api/admin/performance', getPerformanceStats);
 
+  // Test endpoint for Mailgun configuration
+  app.post('/api/test/mailgun', async (req: Request, res: Response) => {
+    try {
+      const { searchParams } = new URL(`http://localhost${req.url}`);
+      const testEmail = searchParams.get('email');
+
+      if (!testEmail) {
+        return res.status(400).json({ 
+          error: 'Email parameter required',
+          usage: 'POST /api/test/mailgun?email=test@example.com',
+          headers: { 'Authorization': 'Bearer <firebase_token>' }
+        });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(testEmail)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      const { sendEmail, isMailgunConfigured } = await import('../common/mailgun');
+
+      if (!isMailgunConfigured()) {
+        return res.status(500).json({
+          error: 'Mailgun is not configured',
+          required_env_vars: ['MAILGUN_API_KEY', 'MAILGUN_DOMAIN'],
+          environment_check: {
+            mailgun_api_key: !!process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET',
+            mailgun_domain: !!process.env.MAILGUN_DOMAIN ? 'SET' : 'NOT SET',
+            mailgun_from_email: !!process.env.MAILGUN_FROM_EMAIL ? 'SET' : 'NOT SET',
+          }
+        });
+      }
+
+      // Send test email
+      const result = await sendEmail({
+        to: testEmail,
+        subject: 'Payvost Mailgun Test Email',
+        template: 'test-email',
+        text: 'This is a test email from Payvost to verify Mailgun integration is working.',
+        variables: {
+          test_time: new Date().toISOString(),
+          recipient_email: testEmail,
+        },
+      });
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          error: result.error || 'Failed to send test email',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Test email sent successfully to ${testEmail}`,
+        messageId: result.messageId,
+        details: {
+          recipient: testEmail,
+          template: 'test-email',
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, '[test/mailgun] Error sending test email');
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      });
+    }
+  });
+
   // Error tracker error handler (must be before other error handlers)
   app.use(errorTrackerErrorHandler());
 
