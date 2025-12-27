@@ -84,6 +84,15 @@ export async function POST(request: NextRequest) {
     // Update submission
     await submissionRef.update(updateData);
 
+    // If approved, also update all documents in the submission to 'approved' status
+    if (decision === 'approved' && submissionData.documents && Array.isArray(submissionData.documents)) {
+      const updatedDocuments = submissionData.documents.map((doc: any) => ({
+        ...doc,
+        status: 'approved',
+      }));
+      await submissionRef.update({ documents: updatedDocuments });
+    }
+
     // Update user's KYC status and business profile
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
