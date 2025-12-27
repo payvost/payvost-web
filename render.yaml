@@ -54,7 +54,9 @@ services:
       - key: RATE_ALERT_SERVICE_URL
         sync: false  # URL of Rate Alert service (set after deployment)
       - key: NOTIFICATION_SERVICE_URL
-        sync: false  # URL of Notification service (set after deployment)
+        sync: false  # URL of Notification Processor for automated tasks (set after deployment)
+      - key: NOTIFICATION_PROCESSOR_URL
+        sync: false  # URL of Notification Processor service (set to payvost-notification-processor URL)
       - key: INTERNAL_SERVICE_TOKEN
         sync: false  # Internal service authentication token for service-to-service communication
 
@@ -217,25 +219,6 @@ services:
         sync: false  # Mailgun domain
       - key: MAILGUN_FROM_EMAIL
         sync: false  # From email address (e.g., no-reply@payvost.com)
-      - key: NODE_ENV
-        value: production
-
-  # Notification Service (Webhook-based notifications)
-  - type: web
-    name: payvost-notification-service
-    autoDeploy: false
-    env: node
-    region: oregon
-    plan: starter
-    buildCommand: cd backend/services/notification-service && npm install --include=dev && npm run build
-    startCommand: cd backend/services/notification-service && npm start
-    envVars:
-      - key: NOTIFICATION_SERVICE_PORT
-        value: 3005
-      - key: EMAIL_SERVICE_URL
-        value: https://payvost-email-service-3vnx.onrender.com
-      - key: INTERNAL_API_KEY
-        sync: false  # Optional: API key for internal service communication
       - key: NODE_ENV
         value: production
 
