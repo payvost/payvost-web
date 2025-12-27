@@ -3,3 +3,9 @@ node_modules
 .env
 
 /generated/prisma
+
+# Compiled output
+dist/
+*.js
+*.d.ts
+!scripts/**/*.js
