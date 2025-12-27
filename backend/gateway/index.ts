@@ -1,8 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import { createRequire } from 'module';
-import path from 'path';
 import { logger, requestLogger, logError } from '../common/logger';
 import { errorTrackerHandler, errorTrackerErrorHandler } from '../common/error-tracker';
 import { generalLimiter, authLimiter, transactionLimiter } from './rateLimiter';
@@ -114,32 +111,42 @@ export function createGateway() {
   // Error tracker request handler (must be first)
   app.use(errorTrackerHandler());
 
-  // Security headers
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-      },
-    },
-    hsts: {
-      maxAge: 31536000, // 1 year
-      includeSubDomains: true,
-      preload: true
-    },
-    frameguard: { action: 'deny' },
-    noSniff: true,
-    xssFilter: true,
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    crossOriginEmbedderPolicy: false, // Allow embedding for API usage
-  }));
+  // Security headers (custom minimal replacement for helmet configuration)
+  app.use((req, res, next) => {
+    // Content-Security-Policy (CSP)
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self'",
+        "img-src 'self' data: https:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "object-src 'none'",
+        "media-src 'self'",
+        "frame-src 'none'",
+      ].join('; ')
+    );
+
+    // HSTS - Strict Transport Security
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY');
+
+    // Prevent MIME-type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    // XSS protection (legacy header)
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+
+    // Referrer policy
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // Do not set Cross-Origin-Embedder-Policy (was disabled in original helmet config)
+    next();
+  });
 
   // CORS - Security: Require explicit origin configuration
   const allowedOrigins = process.env.FRONTEND_URL 
