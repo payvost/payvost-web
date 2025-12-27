@@ -2,7 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
-import { prisma } from '../../common/prisma';
+import { prisma } from './prisma';
 import { sendEmailViaMailgun } from './mailgun';
 import { invoiceReminderCronJob } from './cron-jobs';
 
@@ -56,20 +56,6 @@ app.post('/send', async (req: Request, res: Response) => {
       template: template || type,
       variables: variables || {},
     });
-
-    // Log sent notification to database
-    try {
-      await prisma.sentNotification.create({
-        data: {
-          type,
-          email,
-          status: 'sent',
-          sentAt: new Date(),
-        },
-      });
-    } catch (dbError) {
-      console.warn('Failed to log notification to database:', dbError);
-    }
 
     res.json({
       success: true,

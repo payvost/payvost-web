@@ -1,0 +1,12 @@
+/**
+ * Prisma Client Singleton for Backend
+ * Ensures only one instance of Prisma Client is created across the backend
+ * This prevents connection pool exhaustion
+ */
+import { PrismaClient } from '@prisma/client';
+declare global {
+    var prisma: PrismaClient | undefined;
+}
+export declare const prisma: PrismaClient<import(".prisma/client").Prisma.PrismaClientOptions, never, import(".prisma/client/runtime/library").DefaultArgs>;
+export default prisma;
+//# sourceMappingURL=prisma.d.ts.map

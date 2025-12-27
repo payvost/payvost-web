@@ -1,9 +1,26 @@
-import { prisma } from '../../common/prisma';
+import { prisma } from './prisma';
 import { sendEmailViaMailgun } from './mailgun';
+
+interface InvoiceToInfo {
+  name?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
+}
+
+interface InvoiceFromInfo {
+  name?: string;
+  email?: string;
+  address?: string;
+  phone?: string;
+}
 
 /**
  * Invoice Reminder Cron Job
- * Sends reminders for invoices due within the next 3 days
+ * Sends reminders for unpaid invoices due within the next 3 days
+ *
+ * Note: Works with the actual Invoice schema where customer info
+ * is stored in JSON fields (toInfo, fromInfo)
  */
 export async function invoiceReminderCronJob() {
   console.log('📧 Starting invoice reminder job...');
@@ -12,20 +29,18 @@ export async function invoiceReminderCronJob() {
     // Calculate date 3 days from now
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    const now = new Date();
 
-    // Find pending invoices due in next 3 days that haven't had a reminder sent
+    // Find unpaid invoices due in next 3 days
+    // Invoice schema uses DRAFT for unpaid and has toInfo/fromInfo as JSON fields
     const pendingInvoices = await prisma.invoice.findMany({
       where: {
-        status: 'pending',
+        status: 'DRAFT', // Unpaid invoices
         dueDate: {
           lte: threeDaysFromNow,
-          gte: new Date(), // Not already overdue
+          gte: now,
         },
-        reminderSentAt: null, // Haven't sent reminder yet
-      },
-      include: {
-        user: true,
-        business: true,
+        paidAt: null, // Explicitly not paid
       },
     });
 
@@ -36,50 +51,50 @@ export async function invoiceReminderCronJob() {
     // Send reminder for each invoice
     for (const invoice of pendingInvoices) {
       try {
+        // Extract recipient info from JSON field
+        const toInfo = invoice.toInfo as unknown as InvoiceToInfo;
+        const fromInfo = invoice.fromInfo as unknown as InvoiceFromInfo;
+
+        const customerEmail = toInfo?.email || '';
+        const customerName = toInfo?.name || 'Customer';
+
+        if (!customerEmail) {
+          console.warn(`⚠️ Invoice ${invoice.invoiceNumber} has no customer email, skipping`);
+          continue;
+        }
+
         // Send email
         await sendEmailViaMailgun({
-          to: invoice.customerEmail,
+          to: customerEmail,
           subject: `Payment Reminder: Invoice ${invoice.invoiceNumber} is due soon`,
           template: 'invoice-reminder',
           variables: {
-            customerName: invoice.customerName,
+            customerName,
             invoiceNumber: invoice.invoiceNumber,
-            amount: invoice.amount.toString(),
+            amount: invoice.grandTotal.toString(),
             currency: invoice.currency,
             dueDate: invoice.dueDate.toISOString().split('T')[0],
-            businessName: invoice.business?.businessName || 'Payvost',
-            downloadLink: invoice.downloadUrl || '',
-          },
-        });
-
-        // Update invoice to mark reminder as sent
-        await prisma.invoice.update({
-          where: { id: invoice.id },
-          data: { reminderSentAt: new Date() },
-        });
-
-        // Log to database
-        await prisma.sentNotification.create({
-          data: {
-            type: 'invoice_reminder',
-            email: invoice.customerEmail,
-            status: 'sent',
-            recipientName: invoice.customerName,
-            sentAt: new Date(),
+            businessName: fromInfo?.name || 'Payvost',
+            downloadLink: invoice.publicUrl || invoice.pdfUrl || '',
           },
         });
 
         remindersSent++;
-        console.log(`✅ Reminder sent for invoice ${invoice.invoiceNumber}`);
+        console.log(`✅ Reminder sent for invoice ${invoice.invoiceNumber} to ${customerEmail}`);
       } catch (error: any) {
-        console.error(`❌ Failed to send reminder for invoice ${invoice.invoiceNumber}:`, error);
+        console.error(
+          `❌ Failed to send reminder for invoice ${invoice.invoiceNumber}:`,
+          error.message,
+        );
       }
     }
 
-    console.log(`📊 Invoice reminder job completed: ${remindersSent} reminders sent`);
-    return { success: true, remindersSent };
+    console.log(
+      `📊 Invoice reminder job completed: ${remindersSent}/${pendingInvoices.length} reminders sent`,
+    );
+    return { success: true, remindersSent, totalChecked: pendingInvoices.length };
   } catch (error: any) {
-    console.error('❌ Invoice reminder job failed:', error);
-    throw new Error(`Invoice reminder job failed: ${error.message}`);
+    console.error('❌ Invoice reminder job failed:', error.message);
+    return { success: false, error: error.message };
   }
 }
