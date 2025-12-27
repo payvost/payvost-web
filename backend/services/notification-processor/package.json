@@ -4,6 +4,7 @@
   "description": "Email notification processor with cron jobs for invoice reminders",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "prisma generate --schema=../../prisma/schema.prisma",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
