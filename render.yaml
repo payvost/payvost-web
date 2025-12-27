@@ -55,6 +55,8 @@ services:
         sync: false  # URL of Rate Alert service (set after deployment)
       - key: NOTIFICATION_SERVICE_URL
         sync: false  # URL of Notification service (set after deployment)
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false  # Internal service authentication token for service-to-service communication
 
   # Rate Alert Monitor Service (Background Worker / Cron Job)
   - type: web
@@ -236,6 +238,41 @@ services:
         sync: false  # Optional: API key for internal service communication
       - key: NODE_ENV
         value: production
+
+  # Notification Processor (Email delivery + Cron jobs for reminders)
+  - type: web
+    name: payvost-notification-processor
+    autoDeploy: false
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: cd backend/services/notification-processor && npm install --include=dev && npm run build
+    startCommand: cd backend/services/notification-processor && npm start
+    envVars:
+      - key: PORT
+        value: 3006
+      - key: DATABASE_URL
+        sync: false  # Set to your Neon database connection string in Render Dashboard
+      - key: DIRECT_URL
+        sync: false  # Direct database URL for Prisma (optional, for better performance)
+      - key: MAILGUN_API_KEY
+        sync: false  # Mailgun API key for email delivery
+      - key: MAILGUN_DOMAIN
+        sync: false  # Mailgun domain (e.g., mg.payvost.com)
+      - key: MAILGUN_FROM_EMAIL
+        sync: false  # From email address (e.g., notifications@payvost.com)
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false  # Internal service authentication token (must match gateway token)
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: INVOICE_REMINDER_ENABLED
+        value: "true"
+      - key: INVOICE_REMINDER_SCHEDULE
+        value: "0 9 * * *"  # Run daily at 9 AM UTC
+      - key: TIMEZONE
+        value: UTC
 
 # Optional: Cron Job for Rate Alert Monitor (alternative to always-on service)
 # Uncomment if you prefer scheduled execution instead of always-on service
