@@ -36,13 +36,13 @@ export async function ensurePrismaUser(firebaseUid: string): Promise<SyncUserRes
 
     // Fetch user data from Firestore
     const userDoc = await admin.firestore().collection('users').doc(firebaseUid).get();
-    
+
     if (!userDoc.exists) {
       throw new Error(`Firebase user ${firebaseUid} not found in Firestore`);
     }
 
     const firestoreData = userDoc.data();
-    
+
     if (!firestoreData) {
       throw new Error(`Firestore user ${firebaseUid} has no data`);
     }
@@ -69,12 +69,10 @@ export async function ensurePrismaUser(firebaseUid: string): Promise<SyncUserRes
     // Prepare Prisma User data
     // Note: password is required in schema, but Firebase users don't store password in Firestore
     // We'll use a placeholder that indicates this is a Firebase-authenticated user
-    const passwordHash = firestoreData.passwordHash || 'firebase_auth_only';
-    
     const prismaUserData = {
       id: firebaseUid, // Use Firebase UID as Prisma User ID
       email: email,
-      password: passwordHash,
+      // password field removed from schema
       name: firestoreData.name || firestoreData.fullName || null,
       role: firestoreData.role || 'user',
       kycStatus: firestoreData.kycStatus || 'pending',
@@ -112,13 +110,13 @@ export async function ensurePrismaUser(firebaseUid: string): Promise<SyncUserRes
 export async function syncPrismaUserData(firebaseUid: string): Promise<void> {
   try {
     const userDoc = await admin.firestore().collection('users').doc(firebaseUid).get();
-    
+
     if (!userDoc.exists || !userDoc.data()) {
       return; // User doesn't exist in Firestore, skip update
     }
 
     const firestoreData = userDoc.data()!;
-    
+
     // Update Prisma User with latest Firestore data
     await prisma.user.update({
       where: { id: firebaseUid },

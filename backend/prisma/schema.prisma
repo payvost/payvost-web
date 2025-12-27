@@ -21,7 +21,6 @@ datasource db {
 model User {
   id         String            @id // Firebase UID (no default, must be provided)
   email      String            @unique
-  password   String
   name       String?
   role       String            @default("user")
   kycStatus  String            @default("pending")
