@@ -82,8 +82,8 @@ Response (200):
 ## Environment Variables
 
 ```env
-# backend/.env
-MAILGUN_API_KEY=195a31b9ad37c54f9225b411653aeebc-df55650e-38d06e57
+# backend/.env (see .env file for actual values - DO NOT COMMIT SECRETS)
+MAILGUN_API_KEY=<your_api_key_here>
 MAILGUN_DOMAIN=payvost.com
 MAILGUN_FROM_EMAIL=no-reply@payvost.com
 NOTIFICATION_SERVICE_URL=http://localhost:3006
