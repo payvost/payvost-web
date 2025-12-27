@@ -101,7 +101,7 @@ POST /api/auth/track-login
 ### 1. Backend Environment Variables
 ```bash
 # Check backend/.env has these:
-MAILGUN_API_KEY=195a31b9ad37c54f9225b411653aeebc-df55650e-38d06e57
+MAILGUN_API_KEY=<your_api_key_from_mailgun_dashboard>
 MAILGUN_DOMAIN=payvost.com
 MAILGUN_FROM_EMAIL=no-reply@payvost.com
 NOTIFICATION_SERVICE_URL=http://localhost:3006  # or production URL

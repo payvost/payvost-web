@@ -255,7 +255,7 @@ Notification Processor (Render)
 **Backend (`backend/.env`):**
 ```env
 # Mailgun Configuration
-MAILGUN_API_KEY=195a31b9ad37c54f9225b411653aeebc-df55650e-38d06e57
+MAILGUN_API_KEY=<your_api_key_from_mailgun_dashboard>
 MAILGUN_DOMAIN=payvost.com
 MAILGUN_FROM_EMAIL=no-reply@payvost.com
 MAILGUN_BASE_URL=https://api.mailgun.net
