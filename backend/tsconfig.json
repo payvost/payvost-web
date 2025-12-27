@@ -21,7 +21,8 @@
     "exclude": [
       "node_modules",
       "dist",
-      "services/pdf/**/*"
+      "services/pdf/**/*",
+      "services/notification-processor/**/*"
     ],
   "ts-node": {
     "esm": false,
