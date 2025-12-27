@@ -246,9 +246,12 @@ services:
     env: node
     region: oregon
     plan: starter
-    rootDir: backend/services/notification-processor
-    buildCommand: npm install --include=dev && npx prisma generate --schema=../../prisma/schema.prisma && npm run build
-    startCommand: npm start
+    buildCommand: |
+      cd backend/services/notification-processor && \
+      npm install --include=dev && \
+      npx prisma generate && \
+      npm run build
+    startCommand: cd backend/services/notification-processor && npm start
     envVars:
       - key: PORT
         value: 3006

@@ -1,40 +1,1238 @@
-// Prisma schema for notification-processor service// This is your Prisma schema file,
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// References the main schema but configures output for local node_modules// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-
-
-generator client {// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-
-  provider = "prisma-client-js"// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-  output   = "../node_modules/.prisma/client"
-
-}generator client {
-
+generator client {
   provider = "prisma-client-js"
-
-datasource db {  // Generate Prisma Client into the service's own node_modules
-
-  provider  = "postgresql"  // This ensures it's available at runtime
-
-  url       = env("DATABASE_URL")  output   = "../node_modules/.prisma/client"
-
-  directUrl = env("DIRECT_URL")}
-
+  // Generate Prisma Client into the repo root node_modules/.prisma, which is the
+  // supported location. Imports from '@prisma/client' will automatically forward
+  // to this path.
+  output   = "../../node_modules/.prisma/client"
 }
 
 datasource db {
-
-// This schema delegates to the shared backend schema  provider  = "postgresql"
-
-// In production, ensure DATABASE_URL points to the PostgreSQL database  url       = env("DATABASE_URL")
-
-// The main schema is maintained in ../../prisma/schema.prisma  directUrl = env("DIRECT_URL")
-
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Include all models from the main schema
-// For development, this references ../../prisma/schema.prisma
-// In production, this file should be identical to the main schema
+model User {
+  id         String            @id // Firebase UID (no default, must be provided)
+  email      String            @unique
+  password   String
+  name       String?
+  role       String            @default("user")
+  kycStatus  String            @default("pending")
+  accounts   Account[]
+  activities AccountActivity[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  country    String?
+  userTier   String            @default("STANDARD")
 
+  // 2FA fields
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorMethod      String? // 'email', 'sms', 'authenticator'
+  twoFactorSecret      String? // TOTP secret for authenticator
+  twoFactorPhone       String? // Phone number for SMS 2FA
+  twoFactorBackupCodes String[] // Array of backup codes
+  twoFactorVerified    Boolean  @default(false) // Whether 2FA setup is verified
+
+  // Support relations
+  customerTickets   SupportTicket[]        @relation("CustomerTickets")
+  assignedTickets   SupportTicket[]        @relation("AssignedTickets")
+  createdTickets    SupportTicket[]        @relation("CreatedTickets")
+  ticketMessages    TicketMessage[]
+  ticketAttachments TicketAttachment[]
+  kbArticlesCreated KnowledgeBaseArticle[] @relation("KBArticlesCreated")
+  kbArticlesUpdated KnowledgeBaseArticle[] @relation("KBArticlesUpdated")
+
+  // Referral relations
+  referralCode      ReferralCode?
+  referrerReferrals Referral[]            @relation("ReferrerReferrals")
+  referredAs        Referral?              @relation("ReferredUsers")
+  referralRewards   ReferralReward[]
+}
+
+model Account {
+  id            String            @id @default(uuid())
+  user          User              @relation(fields: [userId], references: [id])
+  userId        String
+  currency      String
+  balance       Decimal           @default(0) @db.Decimal(20, 8)
+  type          String            @default("PERSONAL")
+  rapydWalletId String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  activities    AccountActivity[]
+  ledgerEntries LedgerEntry[]
+  fromTransfers Transfer[]        @relation("fromAccount")
+  toTransfers   Transfer[]        @relation("toAccount")
+  appliedFees   AppliedFee[]
+  referralRewards ReferralReward[]
+
+  @@index([userId])
+  @@index([rapydWalletId])
+}
+
+model LedgerEntry {
+  id           String   @id @default(uuid())
+  account      Account  @relation(fields: [accountId], references: [id])
+  accountId    String
+  amount       Decimal  @db.Decimal(20, 8)
+  balanceAfter Decimal  @db.Decimal(20, 8)
+  type         String
+  description  String?
+  referenceId  String?
+  createdAt    DateTime @default(now())
+
+  @@index([accountId])
+}
+
+model Transfer {
+  id             String          @id @default(uuid())
+  fromAccount    Account         @relation("fromAccount", fields: [fromAccountId], references: [id])
+  fromAccountId  String
+  toAccount      Account         @relation("toAccount", fields: [toAccountId], references: [id])
+  toAccountId    String
+  amount         Decimal         @db.Decimal(20, 8)
+  currency       String
+  status         String
+  type           TransactionType
+  idempotencyKey String?         @unique
+  description    String?
+  createdAt      DateTime        @default(now())
+  appliedFees    AppliedFee[]
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+}
+
+// New models for Reporting Engine
+model AccountActivity {
+  id        String   @id @default(uuid())
+  account   Account  @relation(fields: [accountId], references: [id])
+  accountId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  action    String
+  ipAddress String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([accountId])
+  @@index([userId])
+}
+
+model ComplianceAlert {
+  id          String   @id @default(uuid())
+  type        String
+  severity    String
+  status      String   @default("PENDING")
+  accountId   String?
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// New models for Fee Engine
+enum FeeType {
+  FIXED
+  PERCENTAGE
+  HYBRID
+}
+
+enum TransactionType {
+  INTERNAL_TRANSFER
+  EXTERNAL_TRANSFER
+  CARD_PAYMENT
+  ATM_WITHDRAWAL
+  DEPOSIT
+  CURRENCY_EXCHANGE
+}
+
+model FeeRule {
+  id              String                @id @default(uuid())
+  name            String
+  description     String?
+  feeType         FeeType
+  transactionType TransactionType
+  currency        String
+  fixedAmount     Decimal?              @db.Decimal(20, 8)
+  percentageRate  Decimal?              @db.Decimal(10, 4)
+  minAmount       Decimal?              @db.Decimal(20, 8)
+  maxAmount       Decimal?              @db.Decimal(20, 8)
+  country         String?
+  isActive        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  appliedRules    AppliedRuleInstance[]
+}
+
+model AppliedFee {
+  id            String                @id @default(uuid())
+  transaction   Transfer              @relation(fields: [transactionId], references: [id])
+  transactionId String
+  account       Account               @relation(fields: [accountId], references: [id])
+  accountId     String
+  amount        Decimal               @db.Decimal(20, 8)
+  breakdownJson String
+  createdAt     DateTime              @default(now())
+  appliedRules  AppliedRuleInstance[]
+
+  @@index([transactionId])
+  @@index([accountId])
+}
+
+model AppliedRuleInstance {
+  id             String     @id @default(uuid())
+  appliedFee     AppliedFee @relation(fields: [appliedFeeId], references: [id])
+  appliedFeeId   String
+  feeRule        FeeRule    @relation(fields: [feeRuleId], references: [id])
+  feeRuleId      String
+  amount         Decimal    @db.Decimal(20, 8)
+  percentageRate Decimal    @db.Decimal(10, 4)
+  createdAt      DateTime   @default(now())
+
+  @@index([appliedFeeId])
+  @@index([feeRuleId])
+}
+
+// External Partner Transactions (Reloadly, Rapyd, etc.)
+enum ExternalProvider {
+  RELOADLY
+  RAPYD
+  PAYSTACK
+  FLUTTERWAVE
+  STRIPE
+}
+
+enum ExternalTransactionType {
+  AIRTIME_TOPUP
+  DATA_BUNDLE
+  GIFT_CARD
+  BILL_PAYMENT
+  PAYMENT
+  PAYOUT
+  VIRTUAL_ACCOUNT_DEPOSIT
+  WALLET_TRANSFER
+  CARD_ISSUANCE
+}
+
+enum ExternalTransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model ExternalTransaction {
+  id                    String                    @id @default(uuid())
+  userId                String
+  accountId             String?
+  provider              ExternalProvider
+  providerTransactionId String?                   @unique
+  type                  ExternalTransactionType
+  status                ExternalTransactionStatus @default(PENDING)
+  amount                Decimal                   @db.Decimal(20, 8)
+  currency              String
+  recipientDetails      Json?
+  metadata              Json?
+  errorMessage          String?
+  webhookReceived       Boolean                   @default(false)
+  webhookData           Json?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  completedAt           DateTime?
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([provider])
+  @@index([status])
+  @@index([providerTransactionId])
+}
+
+// Escrow System Models
+enum EscrowStatus {
+  DRAFT
+  AWAITING_ACCEPTANCE
+  AWAITING_FUNDING
+  FUNDED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+enum EscrowPartyRole {
+  BUYER
+  SELLER
+  MEDIATOR
+  ADMIN
+}
+
+enum MilestoneStatus {
+  PENDING
+  AWAITING_FUNDING
+  FUNDED
+  UNDER_REVIEW
+  APPROVED
+  RELEASED
+  DISPUTED
+  CANCELLED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  EVIDENCE_SUBMITTED
+  AWAITING_DECISION
+  RESOLVED_BUYER
+  RESOLVED_SELLER
+  RESOLVED_PARTIAL
+  CLOSED
+}
+
+enum DisputeResolution {
+  REFUND_BUYER
+  RELEASE_SELLER
+  PARTIAL_REFUND
+  CUSTOM_SPLIT
+}
+
+model Escrow {
+  id                 String       @id @default(uuid())
+  title              String
+  description        String?
+  status             EscrowStatus @default(DRAFT)
+  currency           String
+  totalAmount        Decimal      @db.Decimal(20, 8)
+  platformFee        Decimal      @default(0) @db.Decimal(20, 8)
+  platformFeePercent Decimal      @default(2.5) @db.Decimal(5, 2)
+
+  // Linked account for holding funds
+  escrowAccountId String?
+
+  // Key dates
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  acceptedAt  DateTime?
+  fundedAt    DateTime?
+  completedAt DateTime?
+  expiresAt   DateTime?
+
+  // Terms and conditions
+  termsAccepted      Boolean @default(false)
+  autoReleaseEnabled Boolean @default(false)
+  autoReleaseDays    Int?
+
+  // Relationships
+  parties      EscrowParty[]
+  milestones   Milestone[]
+  transactions EscrowTransaction[]
+  disputes     Dispute[]
+  activities   EscrowActivity[]
+  documents    EscrowDocument[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EscrowParty {
+  id          String          @id @default(uuid())
+  escrow      Escrow          @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId    String
+  userId      String?
+  role        EscrowPartyRole
+  email       String
+  name        String?
+  hasAccepted Boolean         @default(false)
+  acceptedAt  DateTime?
+  invitedAt   DateTime        @default(now())
+
+  @@index([escrowId])
+  @@index([userId])
+  @@index([email])
+}
+
+model Milestone {
+  id          String          @id @default(uuid())
+  escrow      Escrow          @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId    String
+  order       Int
+  title       String
+  description String?
+  amount      Decimal         @db.Decimal(20, 8)
+  status      MilestoneStatus @default(PENDING)
+
+  // Funding tracking
+  amountFunded Decimal   @default(0) @db.Decimal(20, 8)
+  fundedAt     DateTime?
+
+  // Release conditions
+  requiresApproval Boolean   @default(true)
+  approvedBy       String? // userId who approved
+  approvedAt       DateTime?
+  releasedAt       DateTime?
+
+  // Deliverables
+  deliverableDescription String?
+  deliverableSubmitted   Boolean   @default(false)
+  deliverableUrl         String?
+  deliverableSubmittedAt DateTime?
+
+  // Auto-release
+  autoReleaseDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions EscrowTransaction[]
+  activities   EscrowActivity[]
+
+  @@index([escrowId])
+  @@index([status])
+}
+
+model EscrowTransaction {
+  id          String     @id @default(uuid())
+  escrow      Escrow     @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId    String
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id])
+  milestoneId String?
+
+  type     String // FUNDING, RELEASE, REFUND, FEE_COLLECTION, DISPUTE_SETTLEMENT
+  amount   Decimal @db.Decimal(20, 8)
+  currency String
+  status   String // PENDING, PROCESSING, COMPLETED, FAILED
+
+  // External references
+  transferId String? // Reference to Transfer model
+  accountId  String? // Account involved
+
+  description  String?
+  metadata     Json?
+  errorMessage String?
+
+  processedBy String? // userId
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([escrowId])
+  @@index([milestoneId])
+  @@index([type])
+  @@index([status])
+}
+
+model Dispute {
+  id       String @id @default(uuid())
+  escrow   Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId String
+
+  raisedBy     String // userId
+  raisedByRole EscrowPartyRole
+  againstRole  EscrowPartyRole?
+
+  reason      String
+  description String
+  status      DisputeStatus      @default(OPEN)
+  resolution  DisputeResolution?
+
+  // Resolution details
+  resolutionNotes String?
+  resolvedBy      String? // userId (mediator or admin)
+  resolvedAt      DateTime?
+
+  // Financial outcomes
+  refundAmount  Decimal? @db.Decimal(20, 8)
+  releaseAmount Decimal? @db.Decimal(20, 8)
+
+  // Response deadline
+  respondByDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  evidence DisputeEvidence[]
+  messages DisputeMessage[]
+
+  @@index([escrowId])
+  @@index([status])
+  @@index([raisedBy])
+}
+
+model DisputeEvidence {
+  id        String  @id @default(uuid())
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  disputeId String
+
+  uploadedBy  String // userId
+  fileUrl     String
+  fileName    String
+  fileType    String?
+  fileSize    Int?
+  description String?
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
+}
+
+model DisputeMessage {
+  id        String  @id @default(uuid())
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  disputeId String
+
+  senderId   String // userId
+  senderRole EscrowPartyRole
+  message    String
+  isInternal Boolean         @default(false) // Only visible to mediators/admins
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
+}
+
+model EscrowActivity {
+  id          String     @id @default(uuid())
+  escrow      Escrow     @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId    String
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id])
+  milestoneId String?
+
+  type            String // CREATED, ACCEPTED, FUNDED, MILESTONE_COMPLETED, DISPUTED, etc.
+  description     String
+  performedBy     String? // userId
+  performedByRole EscrowPartyRole?
+  metadata        Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([escrowId])
+  @@index([createdAt])
+}
+
+model EscrowDocument {
+  id       String @id @default(uuid())
+  escrow   Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  escrowId String
+
+  title       String
+  description String?
+  fileUrl     String
+  fileName    String
+  fileType    String?
+  fileSize    Int?
+
+  uploadedBy String // userId
+  uploadedAt DateTime @default(now())
+
+  @@index([escrowId])
+}
+
+// Rate alert model for user-submitted alerts (email or push)
+model RateAlert {
+  id               String    @id @default(uuid())
+  sourceCurrency   String
+  targetCurrency   String
+  targetRate       Decimal
+  email            String?
+  pushSubscription Json?
+  isActive         Boolean   @default(true)
+  notifiedAt       DateTime?
+  notifiedCount    Int       @default(0)
+  createdAt        DateTime  @default(now())
+}
+
+// Error Tracking Model
+enum ErrorSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ErrorStatus {
+  NEW
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+model ErrorLog {
+  id        String        @id @default(uuid())
+  message   String
+  errorType String // Error class name
+  severity  ErrorSeverity @default(MEDIUM)
+  status    ErrorStatus   @default(NEW)
+
+  // Error details
+  stack   String? @db.Text
+  context Json? // Additional context data
+
+  // Request context
+  method        String? // HTTP method
+  path          String? // Request path
+  query         Json? // Query parameters
+  ipAddress     String?
+  userAgent     String?
+  userId        String? // If user was authenticated
+  correlationId String? // Request correlation ID
+
+  // Environment
+  environment String  @default("development")
+  release     String? // App version/release
+
+  // Occurrence tracking
+  occurrenceCount Int      @default(1)
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+
+  // Resolution
+  resolvedBy      String? // userId who resolved
+  resolvedAt      DateTime?
+  resolutionNotes String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([severity])
+  @@index([status])
+  @@index([errorType])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([correlationId])
+}
+
+// Invoice System Models
+enum InvoiceType {
+  USER
+  BUSINESS
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  PAYVOST
+  MANUAL
+  STRIPE
+  RAPYD
+}
+
+model Invoice {
+  id            String      @id @default(uuid())
+  invoiceNumber String      @unique
+  invoiceType   InvoiceType @default(USER)
+
+  // Ownership
+  userId     String // For user invoices (creator)
+  businessId String? // For business invoices (nullable)
+  createdBy  String // Firebase UID of creator
+
+  // Invoice dates
+  issueDate DateTime
+  dueDate   DateTime
+  status    InvoiceStatus @default(DRAFT)
+
+  // Financial
+  currency   String
+  grandTotal Decimal @db.Decimal(20, 8)
+  taxRate    Decimal @default(0) @db.Decimal(5, 2)
+
+  // Billing information (stored as JSON for flexibility)
+  fromInfo Json // { name, address, email, phone? }
+  toInfo   Json // { name, address, email, phone? }
+  items    Json // Array of { description, quantity, price }
+
+  // Payment
+  paymentMethod     PaymentMethod @default(PAYVOST)
+  manualBankDetails Json? // { bankName, accountName, accountNumber, otherDetails? }
+
+  // Metadata
+  notes     String? @db.Text
+  isPublic  Boolean @default(false)
+  publicUrl String?
+  pdfUrl    String? // Cached PDF URL
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  paidAt    DateTime?
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([createdBy])
+  @@index([status])
+  @@index([invoiceType])
+  @@index([isPublic])
+  @@index([invoiceNumber])
+  @@index([dueDate])
+}
+
+// Content Management System Models
+enum ContentType {
+  BLOG
+  PRESS_RELEASE
+  DOCUMENTATION
+  KNOWLEDGE_BASE
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+  SCHEDULED
+}
+
+model Content {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  contentType ContentType
+  status      ContentStatus @default(DRAFT)
+
+  // Content
+  excerpt    String? @db.Text
+  content    String  @db.Text // HTML/Rich text
+  rawContent Json? // For structured content (JSON)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?  @db.Text
+  metaKeywords    String[]
+  canonicalUrl    String?
+
+  // Organization
+  category String?
+  tags     String[]
+
+  // Media
+  featuredImage String? // URL to image
+  mediaIds      String[] // Array of media IDs
+
+  // Authorship
+  authorId   String // Firebase UID
+  authorName String
+  coAuthors  String[] // Array of Firebase UIDs
+
+  // Publishing
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  expiresAt   DateTime?
+
+  // Versioning
+  version  Int     @default(1)
+  parentId String? // For revisions
+
+  // Analytics
+  viewCount Int @default(0)
+  likeCount Int @default(0)
+
+  // Metadata
+  isPublic      Boolean @default(true)
+  allowComments Boolean @default(false)
+  language      String  @default("en")
+
+  // Relations
+  versions ContentVersion[]
+  comments ContentComment[]
+  media    ContentMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contentType])
+  @@index([status])
+  @@index([authorId])
+  @@index([category])
+  @@index([publishedAt])
+  @@index([slug])
+}
+
+model ContentVersion {
+  id          String   @id @default(uuid())
+  contentItem Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId   String
+  version     Int
+  title       String
+  content     String   @db.Text
+  excerpt     String?  @db.Text
+  authorId    String
+  authorName  String
+  createdAt   DateTime @default(now())
+
+  @@unique([contentId, version])
+  @@index([contentId])
+}
+
+model ContentComment {
+  id         String   @id @default(uuid())
+  content    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId  String
+  authorId   String
+  authorName String
+  comment    String   @db.Text
+  parentId   String? // For nested comments
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([contentId])
+  @@index([parentId])
+}
+
+model ContentMedia {
+  id         String   @id @default(uuid())
+  content    Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+  contentId  String?
+  fileName   String
+  fileUrl    String
+  fileType   String
+  fileSize   Int
+  altText    String?
+  caption    String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  @@index([contentId])
+  @@index([uploadedBy])
+}
+
+// Customer Support System Models
+enum TicketStatus {
+  OPEN
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MessageType {
+  PUBLIC_REPLY
+  INTERNAL_NOTE
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ChatStatus {
+  WAITING
+  ACTIVE
+  ENDED
+}
+
+// Chat Event Types for analytics
+enum ChatEventType {
+  PAGE_VISIT
+  WIDGET_OPENED
+  MESSAGE_SENT
+  MESSAGE_RECEIVED
+  SESSION_STARTED
+  SESSION_ENDED
+  AGENT_ASSIGNED
+  ESCALATED
+  RATED
+}
+
+model SupportTicket {
+  id              String         @id @default(uuid())
+  ticketNumber    String         @unique
+  subject         String
+  description     String         @db.Text
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  category        String
+  customerId      String
+  assignedToId    String?
+  createdById     String?
+  tags            String[]
+  metadata        Json?
+  slaDeadline     DateTime?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  customer    User               @relation("CustomerTickets", fields: [customerId], references: [id])
+  assignedTo  User?              @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdBy   User?              @relation("CreatedTickets", fields: [createdById], references: [id])
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
+
+  @@index([status, priority])
+  @@index([assignedToId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([ticketNumber])
+}
+
+model TicketMessage {
+  id        String        @id @default(uuid())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId  String
+  author    User          @relation(fields: [authorId], references: [id])
+  authorId  String
+  content   String        @db.Text
+  type      MessageType   @default(PUBLIC_REPLY)
+  isRead    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model TicketAttachment {
+  id           String        @id @default(uuid())
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId     String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  uploadedBy   User          @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime      @default(now())
+
+  @@index([ticketId])
+  @@index([uploadedById])
+}
+
+model KnowledgeBaseArticle {
+  id           String        @id @default(uuid())
+  title        String
+  content      String        @db.Text
+  slug         String        @unique
+  category     String
+  tags         String[]
+  status       ArticleStatus @default(DRAFT)
+  language     String        @default("en")
+  views        Int           @default(0)
+  helpfulCount Int           @default(0)
+  createdBy    User          @relation("KBArticlesCreated", fields: [createdById], references: [id])
+  createdById  String
+  updatedBy    User?         @relation("KBArticlesUpdated", fields: [updatedById], references: [id])
+  updatedById  String?
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, category])
+  @@index([slug])
+  @@index([createdById])
+}
+
+model ChatSession {
+  id         String     @id @default(uuid())
+  customerId String
+  agentId    String?
+  status     ChatStatus @default(WAITING)
+  startedAt  DateTime   @default(now())
+  endedAt    DateTime?
+  metadata   Json? // For escalation info, AI analysis, etc.
+
+  // Enhanced fields
+  tags            String[]  @default([]) // Conversation tags
+  priority        String?   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  rating          Int? // 1-5 star rating
+  notes           String?   @db.Text // Agent notes
+  lastMessageAt   DateTime? // Track last activity
+  firstResponseAt DateTime? // First response time
+  resolvedAt      DateTime? // Resolution time
+
+  // Customer metadata
+  customerMetadata Json? // Device, browser, location, pages visited
+
+  messages ChatMessage[]
+  events   ChatEvent[]
+
+  @@index([status, agentId])
+  @@index([customerId])
+  @@index([startedAt])
+  @@index([priority])
+  @@index([lastMessageAt])
+  @@index([tags])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  senderId  String
+  content   String      @db.Text
+  type      String      @default("text") // text, file, card, button, list, system, ai_response
+
+  // Enhanced fields
+  attachments Json? // Array of file attachments
+  metadata    Json? // Rich message data (for cards, buttons, etc.)
+  isRead      Boolean   @default(false)
+  readAt      DateTime? // When message was read
+  readBy      String? // Who read it
+  reactions   Json? // Emoji reactions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([senderId])
+  @@index([isRead])
+  @@index([type])
+}
+
+// Chat Events for analytics and tracking
+model ChatEvent {
+  id        String        @id @default(uuid())
+  session   ChatSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  eventType ChatEventType
+  metadata  Json? // Event-specific data (page URL, device info, etc.)
+  createdAt DateTime      @default(now())
+
+  @@index([sessionId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// Saved Replies (canned responses for agents)
+model SavedReply {
+  id         String   @id @default(uuid())
+  title      String
+  content    String   @db.Text
+  category   String? // Common categories (greeting, closing, technical, etc.)
+  createdBy  String // Agent ID
+  usageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([createdBy])
+  @@index([category])
+}
+
+// System Health Monitoring Models
+enum ServiceStatus {
+  OPERATIONAL
+  DEGRADED_PERFORMANCE
+  MAJOR_OUTAGE
+}
+
+enum IncidentStatus {
+  INVESTIGATING
+  MONITORING
+  RESOLVED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model ServiceHealthCheck {
+  id           String        @id @default(uuid())
+  serviceName  String
+  status       ServiceStatus
+  responseTime Int? // Response time in milliseconds
+  uptime       Decimal?      @db.Decimal(5, 2) // Uptime percentage
+  lastChecked  DateTime      @default(now())
+  details      Json? // Additional service-specific details
+  errorMessage String?       @db.Text
+  createdAt    DateTime      @default(now())
+
+  @@index([serviceName])
+  @@index([status])
+  @@index([lastChecked])
+  @@index([serviceName, lastChecked])
+}
+
+model SystemIncident {
+  id               String           @id @default(uuid())
+  title            String
+  description      String           @db.Text
+  status           IncidentStatus   @default(INVESTIGATING)
+  severity         IncidentSeverity @default(MEDIUM)
+  affectedServices String[] // Array of service names
+  startedAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  metadata         Json? // Additional incident data
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([startedAt])
+  @@index([status, severity])
+}
+
+// Referral System Models
+enum ReferralRewardType {
+  SIGNUP_BONUS
+  FIRST_TRANSACTION
+  MONTHLY_ACTIVE
+  TIER_UPGRADE
+  CUSTOM
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum ReferralTier {
+  TIER_1  // Direct referral
+  TIER_2  // Referral of referral
+  TIER_3  // Third level
+}
+
+model ReferralCode {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  code        String   @unique
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id])
+  referrals   Referral[]
+  
+  @@index([code])
+  @@index([userId])
+}
+
+model Referral {
+  id                String   @id @default(uuid())
+  referrerId        String   // User who referred
+  referredId        String   @unique // User who was referred
+  referralCodeId   String
+  tier              ReferralTier @default(TIER_1)
+  parentReferralId  String?  // For multi-tier tracking
+  
+  // Status tracking
+  isActive          Boolean  @default(true)
+  referredKycStatus String?  // Track KYC completion
+  firstTransactionAt DateTime?
+  
+  // Relationships
+  referralCode      ReferralCode @relation(fields: [referralCodeId], references: [id])
+  referrer          User         @relation("ReferrerReferrals", fields: [referrerId], references: [id])
+  referred          User         @relation("ReferredUsers", fields: [referredId], references: [id])
+  parentReferral    Referral?    @relation("ReferralHierarchy", fields: [parentReferralId], references: [id])
+  childReferrals    Referral[]   @relation("ReferralHierarchy")
+  rewards           ReferralReward[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([referralCodeId])
+  @@index([tier])
+  @@index([isActive])
+}
+
+model ReferralReward {
+  id              String              @id @default(uuid())
+  referralId      String
+  userId          String  // Who gets the reward
+  rewardType      ReferralRewardType
+  amount          Decimal @db.Decimal(20, 8)
+  currency        String
+  status          ReferralRewardStatus @default(PENDING)
+  tier            ReferralTier
+  
+  // Reward details
+  description     String?
+  metadata        Json? // Additional reward context
+  
+  // Payment tracking
+  accountId       String? // Account where reward was credited
+  transferId      String? // Transfer record if paid
+  paidAt          DateTime?
+  
+  // Approval workflow
+  approvedBy      String? // Admin who approved
+  approvedAt      DateTime?
+  cancelledReason String?
+  
+  // Relationships
+  referral        Referral @relation(fields: [referralId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+  account         Account? @relation(fields: [accountId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  expiresAt       DateTime? // Reward expiration
+  
+  @@index([referralId])
+  @@index([userId])
+  @@index([status])
+  @@index([rewardType])
+  @@index([tier])
+  @@index([createdAt])
+}
+
+model ReferralCampaign {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?  @db.Text
+  isActive        Boolean  @default(true)
+  
+  // Reward configuration
+  signupBonus     Decimal? @db.Decimal(20, 8)
+  signupCurrency  String?
+  firstTxBonus    Decimal? @db.Decimal(20, 8)
+  firstTxCurrency String?
+  firstTxMinAmount Decimal? @db.Decimal(20, 8)
+  
+  // Multi-tier rewards (percentage of direct referral reward)
+  tier2Percentage Decimal? @db.Decimal(5, 2) // e.g., 10.00 for 10%
+  tier3Percentage Decimal? @db.Decimal(5, 2)
+  
+  // Eligibility
+  minKycLevel     String?  // Required KYC level
+  eligibleCountries String[] // Country codes
+  excludedCountries String[]
+  
+  // Limits
+  maxReferralsPerUser Int?
+  maxRewardPerUser    Decimal? @db.Decimal(20, 8)
+  maxRewardPerCampaign Decimal? @db.Decimal(20, 8)
+  
+  // Timing
+  startDate       DateTime
+  endDate         DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([startDate, endDate])
+}
