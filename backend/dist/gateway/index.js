@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -271,6 +304,79 @@ function createGateway() {
     });
     // Performance metrics endpoint (admin only)
     app.get('/api/admin/performance', performance_monitor_1.getPerformanceStats);
+    // Test endpoint for Mailgun configuration
+    app.post('/api/test/mailgun', async (req, res) => {
+        try {
+            const { searchParams } = new URL(`http://localhost${req.url}`);
+            const testEmail = searchParams.get('email');
+            if (!testEmail) {
+                return res.status(400).json({
+                    error: 'Email parameter required',
+                    usage: 'POST /api/test/mailgun?email=test@example.com',
+                    headers: { 'Authorization': 'Bearer <firebase_token>' }
+                });
+            }
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(testEmail)) {
+                return res.status(400).json({ error: 'Invalid email format' });
+            }
+            const { sendEmail, isMailgunConfigured } = await Promise.resolve().then(() => __importStar(require('../common/mailgun')));
+            if (!isMailgunConfigured()) {
+                return res.status(500).json({
+                    error: 'Mailgun is not configured',
+                    required_env_vars: ['MAILGUN_API_KEY', 'MAILGUN_DOMAIN'],
+                    environment_check: {
+                        mailgun_api_key: !!process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET',
+                        mailgun_domain: !!process.env.MAILGUN_DOMAIN ? 'SET' : 'NOT SET',
+                        mailgun_from_email: !!process.env.MAILGUN_FROM_EMAIL ? 'SET' : 'NOT SET',
+                    }
+                });
+            }
+            // Send test email (without template, using raw HTML/text)
+            const result = await sendEmail({
+                to: testEmail,
+                subject: 'Payvost Mailgun Test Email',
+                html: `
+          <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>Mailgun Test Email</h2>
+              <p>This is a test email from Payvost to verify Mailgun integration is working.</p>
+              <p><strong>Test Time:</strong> ${new Date().toISOString()}</p>
+              <p><strong>Recipient Email:</strong> ${testEmail}</p>
+              <hr/>
+              <p style="color: #666; font-size: 12px;">This is an automated test message from Payvost.</p>
+            </body>
+          </html>
+        `,
+                text: 'This is a test email from Payvost to verify Mailgun integration is working.',
+            });
+            if (!result.success) {
+                return res.status(500).json({
+                    success: false,
+                    error: result.error || 'Failed to send test email',
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                message: `Test email sent successfully to ${testEmail}`,
+                messageId: result.messageId,
+                details: {
+                    recipient: testEmail,
+                    template: 'test-email',
+                    timestamp: new Date().toISOString(),
+                },
+            });
+        }
+        catch (error) {
+            logger_1.logger.error({ err: error }, '[test/mailgun] Error sending test email');
+            res.status(500).json({
+                success: false,
+                error: error.message || 'Internal server error',
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            });
+        }
+    });
     // Error tracker error handler (must be before other error handlers)
     app.use((0, error_tracker_1.errorTrackerErrorHandler)());
     return app;

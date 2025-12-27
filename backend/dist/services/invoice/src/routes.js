@@ -110,6 +110,65 @@ router.post('/invoices/:id/mark-paid', verifyFirebaseToken, async (req, res) => 
         res.status(500).json({ error: 'Failed to mark invoice as paid' });
     }
 });
+// POST /api/invoices/:id/send-reminder - Send invoice reminder email
+router.post('/invoices/:id/send-reminder', verifyFirebaseToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.uid;
+        const invoice = await invoiceService.getInvoiceById(id, userId);
+        if (!invoice) {
+            return res.status(404).json({ error: 'Invoice not found' });
+        }
+        // Parse toInfo JSON field
+        const toInfo = typeof invoice.toInfo === 'string'
+            ? JSON.parse(invoice.toInfo)
+            : invoice.toInfo;
+        const customerEmail = toInfo?.email;
+        if (!customerEmail) {
+            return res.status(400).json({ error: 'Customer email not found' });
+        }
+        // Call notification service to send reminder
+        const notificationServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006';
+        const reminderPayload = {
+            type: 'invoice-reminder',
+            email: customerEmail,
+            subject: `Invoice Reminder: ${invoice.invoiceNumber}`,
+            template: 'invoice-reminder',
+            variables: {
+                invoiceNumber: invoice.invoiceNumber,
+                amount: invoice.grandTotal.toString(),
+                currency: invoice.currency || 'USD',
+                dueDate: invoice.dueDate.toISOString().split('T')[0],
+                customerName: toInfo?.name || 'Valued Customer',
+            },
+        };
+        const notificationResponse = await fetch(`${notificationServiceUrl}/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reminderPayload),
+        });
+        if (!notificationResponse.ok) {
+            const error = await notificationResponse.text();
+            console.error('Notification service error:', error);
+            return res.status(500).json({ error: 'Failed to send reminder email' });
+        }
+        res.json({
+            success: true,
+            message: `Invoice reminder sent to ${customerEmail}`,
+            email: customerEmail,
+        });
+    }
+    catch (error) {
+        console.error('POST /api/invoices/:id/send-reminder error:', error);
+        if (error.message === 'Invoice not found') {
+            return res.status(404).json({ error: 'Invoice not found' });
+        }
+        if (error.message === 'Unauthorized') {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        res.status(500).json({ error: 'Failed to send invoice reminder' });
+    }
+});
 // DELETE /api/invoices/:id - Delete an invoice
 router.delete('/invoices/:id', verifyFirebaseToken, async (req, res) => {
     try {

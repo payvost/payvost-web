@@ -323,4 +323,75 @@ router.delete('/:id', middleware_1.verifyFirebaseToken, async (req, res) => {
         res.status(400).json({ error: error.message || 'Failed to delete invoice' });
     }
 });
+/**
+ * POST /invoices/:id/send-reminder
+ * Send invoice reminder email to customer
+ */
+router.post('/:id/send-reminder', middleware_1.verifyFirebaseToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.uid;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        // Get the invoice
+        const invoice = await invoiceService.getInvoiceById(id, userId);
+        if (!invoice) {
+            return res.status(404).json({ error: 'Invoice not found' });
+        }
+        // Extract customer email
+        const customerEmail = invoice.toInfo?.email || invoice.toEmail;
+        if (!customerEmail) {
+            return res.status(400).json({ error: 'Customer email not found on invoice' });
+        }
+        // Call notification service to send reminder
+        const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
+        try {
+            const notificationResponse = await fetch(`${NOTIFICATION_SERVICE_URL}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: 'invoice-reminder',
+                    email: customerEmail,
+                    subject: `Invoice Reminder: ${invoice.invoiceNumber}`,
+                    template: 'invoice-reminder',
+                    variables: {
+                        invoiceNumber: invoice.invoiceNumber,
+                        amount: parseFloat(invoice.grandTotal?.toString() || '0'),
+                        currency: invoice.currency || 'USD',
+                        dueDate: invoice.dueDate instanceof Date ? invoice.dueDate.toISOString().split('T')[0] : invoice.dueDate,
+                        customerName: invoice.toInfo?.name || 'Valued Customer',
+                    },
+                }),
+            });
+            if (!notificationResponse.ok) {
+                const errorData = await notificationResponse.text();
+                console.error('[send-reminder] Notification service error:', errorData);
+                return res.status(500).json({
+                    error: 'Failed to send reminder email',
+                    details: process.env.NODE_ENV === 'development' ? errorData : undefined
+                });
+            }
+            const result = await notificationResponse.json();
+            res.json({
+                success: true,
+                message: `Invoice reminder sent to ${customerEmail}`,
+                messageId: result.messageId,
+            });
+        }
+        catch (notificationError) {
+            console.error('[send-reminder] Error calling notification service:', notificationError);
+            return res.status(500).json({
+                error: 'Failed to send reminder email',
+                details: process.env.NODE_ENV === 'development' ? notificationError.message : undefined
+            });
+        }
+    }
+    catch (error) {
+        console.error('[send-reminder] Error:', error);
+        res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+});
 exports.default = router;
