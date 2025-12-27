@@ -1,20 +1,37 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema for notification-processor service// This is your Prisma schema file,
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// References the main schema but configures output for local node_modules// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-generator client {
-  provider = "prisma-client-js"
-  // Generate Prisma Client into the service's own node_modules
-  // This ensures it's available at runtime
+
+
+generator client {// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+
+  provider = "prisma-client-js"// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
   output   = "../node_modules/.prisma/client"
+
+}generator client {
+
+  provider = "prisma-client-js"
+
+datasource db {  // Generate Prisma Client into the service's own node_modules
+
+  provider  = "postgresql"  // This ensures it's available at runtime
+
+  url       = env("DATABASE_URL")  output   = "../node_modules/.prisma/client"
+
+  directUrl = env("DIRECT_URL")}
+
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+
+// This schema delegates to the shared backend schema  provider  = "postgresql"
+
+// In production, ensure DATABASE_URL points to the PostgreSQL database  url       = env("DATABASE_URL")
+
+// The main schema is maintained in ../../prisma/schema.prisma  directUrl = env("DIRECT_URL")
+
 }
 
 // Include all models from the main schema
