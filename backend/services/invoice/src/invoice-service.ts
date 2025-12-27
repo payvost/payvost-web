@@ -20,6 +20,14 @@ export type PaymentMethod =
   | 'STRIPE'
   | 'RAPYD';
 
+// Interface for invoice recipient info (used in JSON fields)
+export interface InvoiceRecipient {
+  name: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface CreateInvoiceInput {
   invoiceNumber: string;
   invoiceType: 'USER' | 'BUSINESS';
