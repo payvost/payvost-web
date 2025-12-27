@@ -1,6 +1,5 @@
-
 import { Request, Response } from 'express';
-import * as bcrypt from 'bcrypt';
+// import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import * as path from 'path';
 import { createRequire } from 'module';
@@ -20,9 +19,7 @@ export const getAllUsers = async (_req: Request, res: Response) => {
     const usersSnapshot = await usersCollection.get();
   const users = usersSnapshot.docs.map((doc: any) => {
     const data = doc.data();
-    // Ensure we don't send back password hashes
-    const { passwordHash, ...userWithoutPassword } = data;
-    return { id: doc.id, ...userWithoutPassword };
+    return { id: doc.id, ...data };
   });
     return res.status(200).json(users);
   } catch (error) {
@@ -44,7 +41,7 @@ export const register = async (req: Request, res: Response) => {
         return res.status(409).json({ error: 'User already exists.' });
     }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+
 
   // Use Firebase Auth to create the user for authentication
   const userRecord = await admin.auth().createUser({
@@ -53,10 +50,9 @@ export const register = async (req: Request, res: Response) => {
     displayName: name,
   });
 
-  const newUser: Omit<User, 'id'> = {
+    const newUser: Omit<User, 'id'> = {
     name,
     email,
-    passwordHash,
     role: 'user',
     kycStatus: 'pending',
     createdAt: new Date(),
@@ -65,11 +61,16 @@ export const register = async (req: Request, res: Response) => {
 
   // Use the Firebase Auth UID as the document ID in Firestore
   await usersCollection.doc(userRecord.uid).set(newUser);
+  
+  // Try to sync to Prisma immediately
+  try {
+      const { ensurePrismaUser } = require('../syncUser');
+      await ensurePrismaUser(userRecord.uid);
+  } catch (err) {
+      console.warn("Prisma sync warning:", err);
+  }
 
-  // Remove passwordHash from response
-  const { passwordHash: _, ...userResponse } = newUser;
-
-  return res.status(201).json({ id: userRecord.uid, ...userResponse });
+  return res.status(201).json({ id: userRecord.uid, ...newUser });
 
   } catch (err) {
     console.error("Registration Error:", err);
@@ -77,38 +78,7 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
-  try {
-    const { credential, password } = req.body;
-    if (!credential || !password) {
-      return res.status(400).json({ error: 'Credential and password are required.' });
-    }
 
-    const isEmail = credential.includes('@');
-    const queryField = isEmail ? 'email' : 'username';
-
-    const userQuery = await usersCollection.where(queryField, '==', credential).limit(1).get();
-    if (userQuery.empty) {
-        return res.status(401).json({ error: 'Invalid credentials.' });
-    }
-    
-    const userDoc = userQuery.docs[0];
-    const user = userDoc.data() as User;
-    
-  const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
-    }
-    
-    // Create a custom token for Firebase Auth
-    const customToken = await admin.auth().createCustomToken(userDoc.id);
-    
-    return res.json({ token: customToken });
-  } catch (err) {
-    console.error("Login Error:", err);
-    return res.status(500).json({ error: 'Login failed.' });
-  }
-};
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -122,8 +92,8 @@ export const getProfile = async (req: Request, res: Response) => {
     }
 
   const userData = userDoc.data();
-  // Exclude passwordHash and id from response
-  const { passwordHash, id, ...profileData } = userData as User;
+  // Exclude id from response
+  const { id, ...profileData } = userData as User;
 
   return res.json({ id: userDoc.id, ...profileData });
   } catch (err) {

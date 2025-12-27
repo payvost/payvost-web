@@ -5,7 +5,7 @@ import { createRequire } from 'module';
 // Use createRequire rooted at this file so relative imports resolve reliably
 const localRequire = createRequire(__filename);
 const controllersMod = localRequire('../controllers/userController');
-const { register, login, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } = controllersMod && controllersMod.default ? controllersMod.default : controllersMod;
+const { register, getProfile, updateKycStatus, updateUserRole, requestPasswordReset, confirmPasswordReset } = controllersMod && controllersMod.default ? controllersMod.default : controllersMod;
 const authMod = localRequire('../middleware/authMiddleware');
 const { authenticateJWT } = authMod && authMod.default ? authMod.default : authMod;
 
@@ -49,8 +49,9 @@ router.get('/', async (req, res) => {
 });
 
 
+
 router.post('/register', register);
-router.post('/login', login);
+// router.post('/login', login); // Removed: Use Firebase SDK on client
 router.get('/profile', authenticateJWT, getProfile);
 
 // Admin endpoints

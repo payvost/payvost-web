@@ -41,93 +41,25 @@ initErrorTracker();
 // Initialize Redis
 initRedis();
 
-// Initialize Firebase first
 const localRequire = createRequire(__filename);
 
-// Helper to load modules in both TS (dev) and JS (prod) builds
-function loadService(modPath: string, required = true) {
-  const candidates = [
-    modPath,
-    `${modPath}.ts`,
-    `${modPath}.js`,
-    `${modPath}/index.ts`,
-    `${modPath}/index.js`,
-  ];
-  for (const p of candidates) {
-    try {
-      const m = localRequire(p);
-      return m && m.default ? m.default : m;
-    } catch (error) {
-      const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      console.warn(`⚠️  Failed to load module candidate ${p}: ${detail}`);
-      // try next candidate
-    }
-  }
-  if (required) {
-    throw new Error(`Cannot load module: ${modPath}`);
-  }
-  return null;
-}
+import userRoutes from './services/user/routes/userRoutes';
+import walletRoutes from './services/wallet/routes';
+import transactionRoutes from './services/transaction/routes';
+import fraudRoutes from './services/fraud/routes';
+import notificationRoutes from './services/notification/routes';
+import currencyRoutes from './services/currency/routes';
+import paymentRoutes from './services/payment/src/routes';
+import escrowRoutes from './services/escrow/routes';
+import errorTrackerRoutes from './services/error-tracker/routes';
+import invoiceRoutes from './services/invoice/routes';
+import businessRoutes from './services/business/routes';
+import contentRoutes from './services/content/routes';
+import supportRoutes from './services/support/routes';
+import referralRoutes from './services/referral/routes';
+import { startRecurringInvoiceScheduler } from './services/invoice/src/scheduler';
 
-let userRoutes: any;
-let walletRoutes: any;
-let transactionRoutes: any;
-let fraudRoutes: any;
-let notificationRoutes: any;
-let currencyRoutes: any;
-let paymentRoutes: any;
-let escrowRoutes: any;
-let errorTrackerRoutes: any;
-let invoiceRoutes: any;
-let businessRoutes: any;
-let contentRoutes: any;
-let supportRoutes: any;
-let referralRoutes: any;
-
-try {
-  logger.info('Firebase Admin SDK initialized');
-  // Load service routes (userRoutes is optional - it requires JWT_SECRET)
-  userRoutes = loadService('./services/user/routes/userRoutes', false);
-  walletRoutes = loadService('./services/wallet/routes', false);
-  transactionRoutes = loadService('./services/transaction/routes', false);
-  fraudRoutes = loadService('./services/fraud/routes', false);
-  notificationRoutes = loadService('./services/notification/routes', false);
-  currencyRoutes = loadService('./services/currency/routes', false);
-  paymentRoutes = loadService('./services/payment/src/routes', false);
-  escrowRoutes = loadService('./services/escrow/routes', false);
-  errorTrackerRoutes = loadService('./services/error-tracker/routes', false);
-  invoiceRoutes = loadService('./services/invoice/routes', false);
-  businessRoutes = loadService('./services/business/routes', false);
-  contentRoutes = loadService('./services/content/routes', false);
-  supportRoutes = loadService('./services/support/routes', false);
-  referralRoutes = loadService('./services/referral/routes', false);
-  
-  const loadedServices = [
-    userRoutes && 'User',
-    walletRoutes && 'Wallet',
-    transactionRoutes && 'Transaction',
-    fraudRoutes && 'Fraud',
-    notificationRoutes && 'Notification',
-    currencyRoutes && 'Currency',
-    paymentRoutes && 'Payment',
-    escrowRoutes && 'Escrow',
-    errorTrackerRoutes && 'ErrorTracker',
-    invoiceRoutes && 'Invoice',
-    businessRoutes && 'Business',
-    contentRoutes && 'Content',
-    supportRoutes && 'Support',
-    referralRoutes && 'Referral',
-  ].filter(Boolean);
-  
-  logger.info({ services: loadedServices }, 'Service routes loaded');
-  
-  if (!userRoutes) {
-    logger.warn('User service not loaded - JWT_SECRET may not be configured');
-  }
-} catch (err) {
-  logger.error({ err }, 'Failed to load backend modules');
-  // Don't exit - continue with available services
-}
+logger.info('Static service imports loaded');
 
 // Create gateway application
 import { createGateway, registerServiceRoutes, errorHandler } from './gateway/index';
@@ -143,69 +75,24 @@ app.use('/api', extractApiVersion);
 // Register service routes with versioning support
 import { registerVersionedRoutes } from './gateway/api-versioning';
 
-try {
-  if (userRoutes) {
-    registerVersionedRoutes(app, 'User Service', '/api/user', userRoutes, ['v1']);
-  }
-  
-  if (walletRoutes) {
-    registerVersionedRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes, ['v1']);
-  }
-  
-  if (transactionRoutes) {
-    registerVersionedRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes, ['v1']);
-  }
-  
-  if (fraudRoutes) {
-    registerVersionedRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes, ['v1']);
-  }
-  
-  if (notificationRoutes) {
-    registerVersionedRoutes(app, 'Notification Service', '/api/notification', notificationRoutes, ['v1']);
-  }
-  
-  if (currencyRoutes) {
-    registerVersionedRoutes(app, 'Currency Service', '/api/currency', currencyRoutes, ['v1']);
-  }
-  
-  if (paymentRoutes) {
-    registerVersionedRoutes(app, 'Payment Service', '/api/payment', paymentRoutes, ['v1']);
-  }
-  
-  if (escrowRoutes) {
-    registerVersionedRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes, ['v1']);
-  }
-  
-  if (errorTrackerRoutes) {
-    registerVersionedRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes, ['v1']);
-  }
-  
-  if (invoiceRoutes) {
-    registerVersionedRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes, ['v1']);
-  }
-  
-  if (businessRoutes) {
-    registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes, ['v1']);
-  }
-  
-  if (contentRoutes) {
-    registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
-  }
-  
-  if (supportRoutes) {
-    registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
-  }
-  
-  if (referralRoutes) {
-    registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
-  }
-  
-  logger.info('All service routes registered with versioning support');
-} catch (err) {
-  logger.error({ err }, 'Failed to register service routes');
-  process.exit(1);
-}
+registerVersionedRoutes(app, 'User Service', '/api/user', userRoutes, ['v1']);
+registerVersionedRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes, ['v1']);
+registerVersionedRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes, ['v1']);
+registerVersionedRoutes(app, 'Notification Service', '/api/notification', notificationRoutes, ['v1']);
+registerVersionedRoutes(app, 'Currency Service', '/api/currency', currencyRoutes, ['v1']);
+registerVersionedRoutes(app, 'Payment Service', '/api/payment', paymentRoutes, ['v1']);
+registerVersionedRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes, ['v1']);
+registerVersionedRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes, ['v1']);
+registerVersionedRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes, ['v1']);
+registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes, ['v1']);
+registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
+registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
+registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
 
+// Fraud service might be optional or handled differently, but importing statically
+registerVersionedRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes, ['v1']);
+
+logger.info('All service routes registered with versioning support');
 // PDF Service Proxy
 // Forward PDF generation requests to the dedicated PDF service
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || 'http://localhost:3005';
@@ -213,17 +100,17 @@ const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || 'http://localhost:3005';
 app.get('/api/pdf/invoice/:id', async (req, res) => {
   const { id } = req.params;
   const origin = req.query.origin as string;
-  
+
   try {
     const url = new URL(`/invoice/${id}`, PDF_SERVICE_URL);
     if (origin) {
       url.searchParams.set('origin', origin);
     }
-    
+
     logger.debug({ url: url.toString() }, 'Proxying PDF request');
-    
+
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       logger.error({ status: response.status, error: errorText }, 'PDF service error');
@@ -232,11 +119,11 @@ app.get('/api/pdf/invoice/:id', async (req, res) => {
         message: errorText,
       });
     }
-    
+
     // Forward headers
     res.setHeader('Content-Type', response.headers.get('content-type') || 'application/pdf');
     res.setHeader('Content-Disposition', response.headers.get('content-disposition') || `attachment; filename="invoice-${id}.pdf"`);
-    
+
     const buffer = Buffer.from(await response.arrayBuffer());
     res.send(buffer);
   } catch (error: any) {
@@ -392,7 +279,7 @@ app.post('/api/webhooks/reloadly', async (req, res) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     const signature = req.headers['x-reloadly-signature'] || req.headers['x-webhook-signature'];
     if (signature) {
       headers['x-reloadly-signature'] = signature as string;
@@ -422,12 +309,12 @@ app.post('/api/webhooks/mailgun', verifyMailgunWebhook, async (req, res) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     // Forward Mailgun signature headers if present
     const signature = req.headers['x-mailgun-signature'];
     const timestamp = req.headers['x-mailgun-timestamp'];
     const token = req.headers['x-mailgun-token'];
-    
+
     if (signature) headers['x-mailgun-signature'] = signature as string;
     if (timestamp) headers['x-mailgun-timestamp'] = timestamp as string;
     if (token) headers['x-mailgun-token'] = token as string;
@@ -439,7 +326,7 @@ app.post('/api/webhooks/mailgun', verifyMailgunWebhook, async (req, res) => {
     const response = await fetch(`${WEBHOOK_SERVICE_URL}/mailgun`, {
       method: 'POST',
       headers,
-      body: contentType.includes('application/x-www-form-urlencoded') 
+      body: contentType.includes('application/x-www-form-urlencoded')
         ? new URLSearchParams(req.body as any).toString()
         : JSON.stringify(req.body),
     });
@@ -475,15 +362,10 @@ app.use(errorHandler);
 // Processes recurring invoices on a schedule when enabled
 if (process.env.ENABLE_RECURRING_SCHEDULER === 'true') {
   try {
-    const { startRecurringInvoiceScheduler } = loadService('./services/invoice/src/scheduler', false);
-    if (startRecurringInvoiceScheduler) {
-      // Run daily (24 hours)
-      const intervalMs = 24 * 60 * 60 * 1000;
-      startRecurringInvoiceScheduler(intervalMs);
-      logger.info({ intervalMs }, 'Recurring invoice scheduler initialized');
-    } else {
-      logger.warn('Recurring invoice scheduler module not found');
-    }
+    // Run daily (24 hours)
+    const intervalMs = 24 * 60 * 60 * 1000;
+    startRecurringInvoiceScheduler(intervalMs);
+    logger.info({ intervalMs }, 'Recurring invoice scheduler initialized');
   } catch (err) {
     logger.error({ err }, 'Failed to initialize recurring invoice scheduler');
   }
