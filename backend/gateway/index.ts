@@ -331,16 +331,23 @@ export function createGateway() {
         });
       }
 
-      // Send test email
+      // Send test email (without template, using raw HTML/text)
       const result = await sendEmail({
         to: testEmail,
         subject: 'Payvost Mailgun Test Email',
-        template: 'test-email',
+        html: `
+          <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>Mailgun Test Email</h2>
+              <p>This is a test email from Payvost to verify Mailgun integration is working.</p>
+              <p><strong>Test Time:</strong> ${new Date().toISOString()}</p>
+              <p><strong>Recipient Email:</strong> ${testEmail}</p>
+              <hr/>
+              <p style="color: #666; font-size: 12px;">This is an automated test message from Payvost.</p>
+            </body>
+          </html>
+        `,
         text: 'This is a test email from Payvost to verify Mailgun integration is working.',
-        variables: {
-          test_time: new Date().toISOString(),
-          recipient_email: testEmail,
-        },
       });
 
       if (!result.success) {
