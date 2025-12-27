@@ -1,5 +1,10 @@
 # Copilot Instructions for Payvost Web
 
+## Important Guidelines
+
+- **Do not create new markdown (.md) files or summary documents unless explicitly asked.**
+- **When creating markdown files, always save them in the `.mdfiles/` folder at the root of the project.**
+
 ## Project Architecture Overview
 
 This is a full-stack fintech application built with Next.js frontend, Express.js microservices backend, and Firebase for auth/functions:
