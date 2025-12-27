@@ -134,8 +134,12 @@ router.post('/invoices/:id/send-reminder', verifyFirebaseToken, async (req: Requ
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    // Get customer email
-    const customerEmail = (invoice as any).toInfo?.email || (invoice as any).toEmail;
+    // Parse toInfo JSON field
+    const toInfo = typeof invoice.toInfo === 'string' 
+      ? JSON.parse(invoice.toInfo) 
+      : invoice.toInfo as any;
+    
+    const customerEmail = toInfo?.email;
     
     if (!customerEmail) {
       return res.status(400).json({ error: 'Customer email not found' });
@@ -147,14 +151,14 @@ router.post('/invoices/:id/send-reminder', verifyFirebaseToken, async (req: Requ
     const reminderPayload = {
       type: 'invoice-reminder',
       email: customerEmail,
-      subject: `Invoice Reminder: ${(invoice as any).invoiceNumber}`,
+      subject: `Invoice Reminder: ${invoice.invoiceNumber}`,
       template: 'invoice-reminder',
       variables: {
-        invoiceNumber: (invoice as any).invoiceNumber,
-        amount: (invoice as any).amount,
-        currency: (invoice as any).currency || 'USD',
-        dueDate: (invoice as any).dueDate,
-        customerName: (invoice as any).toInfo?.name || (invoice as any).toName || 'Valued Customer',
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.grandTotal.toString(),
+        currency: invoice.currency || 'USD',
+        dueDate: invoice.dueDate.toISOString().split('T')[0],
+        customerName: toInfo?.name || 'Valued Customer',
       },
     };
 
