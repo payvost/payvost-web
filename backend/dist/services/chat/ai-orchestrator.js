@@ -7,9 +7,16 @@ exports.AIOrchestrator = void 0;
 const prisma_1 = require("../../common/prisma");
 const logger_1 = require("../../common/logger");
 const openai_1 = __importDefault(require("openai"));
-const openai = new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client only if API key is available
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+    openai = new openai_1.default({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
+}
+else {
+    logger_1.logger.warn('OpenAI API key not configured. AI chat features will be disabled.');
+}
 class AIOrchestrator {
     async processMessage(sessionId, userId, message) {
         try {
@@ -90,6 +97,10 @@ class AIOrchestrator {
     }
     async analyzeMessage(message, context) {
         // Use OpenAI to analyze message intent and sentiment
+        if (!openai) {
+            logger_1.logger.warn('OpenAI not available, using fallback analysis');
+            return this.fallbackAnalysis(message, context);
+        }
         try {
             const completion = await openai.chat.completions.create({
                 model: 'gpt-4o-mini',
@@ -144,6 +155,10 @@ Context: User has ${context.recentTickets?.length || 0} recent tickets.`,
         };
     }
     async generateAIResponse(message, context) {
+        if (!openai) {
+            logger_1.logger.warn('OpenAI not available, returning fallback response');
+            return "I'm currently unable to process AI responses. Please ask to speak with a human agent for assistance.";
+        }
         try {
             const systemPrompt = `You are a friendly and helpful customer support assistant for Payvost, a global remittance service.
 Your goal is to assist users with their questions about the platform.

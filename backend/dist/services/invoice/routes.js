@@ -239,42 +239,66 @@ router.post('/:id/mark-paid', middleware_1.verifyFirebaseToken, async (req, res)
         }
         const invoice = await invoiceService.markAsPaid(id, userId);
         // Serialize response (convert Decimal to numbers, dates to ISO strings)
-        const serializedInvoice = {
-            ...invoice,
-            grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
-                ? parseFloat(invoice.grandTotal.toString())
-                : invoice.grandTotal,
-            taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
-                ? parseFloat(invoice.taxRate.toString())
-                : invoice.taxRate || 0,
-            issueDate: invoice.issueDate instanceof Date
-                ? invoice.issueDate.toISOString()
-                : invoice.issueDate,
-            dueDate: invoice.dueDate instanceof Date
-                ? invoice.dueDate.toISOString()
-                : invoice.dueDate,
-            paidAt: invoice.paidAt instanceof Date
-                ? invoice.paidAt.toISOString()
-                : invoice.paidAt,
-            createdAt: invoice.createdAt instanceof Date
-                ? invoice.createdAt.toISOString()
-                : invoice.createdAt,
-            updatedAt: invoice.updatedAt instanceof Date
-                ? invoice.updatedAt.toISOString()
-                : invoice.updatedAt,
-        };
-        res.json(serializedInvoice);
+        try {
+            const serializedInvoice = {
+                ...invoice,
+                grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
+                    ? parseFloat(invoice.grandTotal.toString())
+                    : invoice.grandTotal,
+                taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
+                    ? parseFloat(invoice.taxRate.toString())
+                    : invoice.taxRate || 0,
+                issueDate: invoice.issueDate instanceof Date
+                    ? invoice.issueDate.toISOString()
+                    : invoice.issueDate,
+                dueDate: invoice.dueDate instanceof Date
+                    ? invoice.dueDate.toISOString()
+                    : invoice.dueDate,
+                paidAt: invoice.paidAt instanceof Date
+                    ? invoice.paidAt.toISOString()
+                    : invoice.paidAt
+                        ? String(invoice.paidAt)
+                        : null,
+                createdAt: invoice.createdAt instanceof Date
+                    ? invoice.createdAt.toISOString()
+                    : invoice.createdAt,
+                updatedAt: invoice.updatedAt instanceof Date
+                    ? invoice.updatedAt.toISOString()
+                    : invoice.updatedAt,
+            };
+            console.log('[POST /invoices/:id/mark-paid] Successfully serialized invoice response');
+            res.json(serializedInvoice);
+        }
+        catch (serializeError) {
+            console.error('[POST /invoices/:id/mark-paid] Error serializing invoice response:', serializeError);
+            console.error('[POST /invoices/:id/mark-paid] Invoice object keys:', Object.keys(invoice || {}));
+            console.error('[POST /invoices/:id/mark-paid] Invoice paidAt type:', typeof invoice?.paidAt);
+            console.error('[POST /invoices/:id/mark-paid] Invoice paidAt value:', invoice?.paidAt);
+            throw new Error(`Failed to serialize invoice response: ${serializeError?.message || 'Unknown serialization error'}`);
+        }
     }
     catch (error) {
-        console.error('Error marking invoice as paid:', error);
-        console.error('Error stack:', error.stack);
+        // Always log full error details (will appear in Render logs)
+        console.error('[POST /invoices/:id/mark-paid] ========== ERROR START ==========');
+        console.error('[POST /invoices/:id/mark-paid] Error marking invoice as paid');
+        console.error('[POST /invoices/:id/mark-paid] Invoice ID:', req.params.id);
+        console.error('[POST /invoices/:id/mark-paid] User ID:', req.user?.uid);
+        console.error('[POST /invoices/:id/mark-paid] Error name:', error?.name);
+        console.error('[POST /invoices/:id/mark-paid] Error message:', error?.message);
+        console.error('[POST /invoices/:id/mark-paid] Error stack:', error?.stack);
+        console.error('[POST /invoices/:id/mark-paid] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error('[POST /invoices/:id/mark-paid] ========== ERROR END ==========');
         if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
-            return res.status(404).json({ error: error.message });
+            return res.status(error.message === 'Unauthorized' ? 403 : 404).json({ error: error.message });
         }
-        res.status(500).json({
+        // Return error message even in production (it's logged above)
+        const errorResponse = {
             error: error.message || 'Internal server error',
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
+        };
+        // Include details in production for debugging (since we're debugging)
+        errorResponse.details = process.env.NODE_ENV === 'development' ? error.stack : `Check Render logs for invoice ${req.params.id}`;
+        errorResponse.invoiceId = req.params.id;
+        res.status(500).json(errorResponse);
     }
 });
 /**

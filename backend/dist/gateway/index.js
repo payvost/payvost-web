@@ -19,6 +19,7 @@ Object.defineProperty(exports, "authLimiter", { enumerable: true, get: function 
 Object.defineProperty(exports, "transactionLimiter", { enumerable: true, get: function () { return rateLimiter_1.transactionLimiter; } });
 const performance_monitor_1 = require("../common/performance-monitor");
 const apm_setup_1 = require("../common/apm-setup");
+const api_versioning_1 = require("./api-versioning");
 // Domain-specific error classes
 class AuthenticationError extends Error {
     constructor(message) {
@@ -146,6 +147,38 @@ function createGateway() {
         const noCorsPaths = ['/health', '/'];
         const isHealthCheck = noCorsPaths.includes(req.path);
         const isSimpleRequest = ['GET', 'HEAD'].includes(req.method);
+        // Helper function to check if IP is internal/localhost
+        const isInternalIP = (ip) => {
+            if (!ip)
+                return false;
+            // Check for localhost IPv4 and IPv6
+            if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') {
+                return true;
+            }
+            // Check for private IP ranges
+            const ipParts = ip.split('.');
+            if (ipParts.length === 4) {
+                const [a, b, c] = ipParts.map(Number);
+                // 10.0.0.0/8
+                if (a === 10)
+                    return true;
+                // 172.16.0.0/12
+                if (a === 172 && b >= 16 && b <= 31)
+                    return true;
+                // 192.168.0.0/16
+                if (a === 192 && b === 168)
+                    return true;
+            }
+            return false;
+        };
+        // Helper function to check if request has valid internal API key
+        const hasValidInternalApiKey = () => {
+            const internalApiKey = process.env.INTERNAL_API_KEY;
+            if (!internalApiKey)
+                return false;
+            const apiKey = req.headers['x-api-key'];
+            return apiKey === internalApiKey;
+        };
         // Create CORS middleware with access to request context
         const corsMiddleware = (0, cors_1.default)({
             origin: (origin, callback) => {
@@ -158,7 +191,17 @@ function createGateway() {
                 if (!origin && (isHealthCheck || isSimpleRequest)) {
                     return callback(null, true);
                 }
-                // In production, require origin for API routes
+                // Allow requests without origin if they come from internal IPs
+                // (server-to-server calls, same-origin requests, Render internal systems)
+                if (!origin && isInternalIP(req.ip || '')) {
+                    return callback(null, true);
+                }
+                // Allow requests without origin if they have a valid internal API key
+                // (authenticated internal service-to-service calls)
+                if (!origin && hasValidInternalApiKey()) {
+                    return callback(null, true);
+                }
+                // In production, require origin for API routes from external sources
                 if (!origin) {
                     return callback(new Error('CORS: Origin header required'));
                 }
@@ -197,6 +240,7 @@ function createGateway() {
     });
     // Root endpoint with API version info
     app.get('/', (req, res) => {
+        const registeredServices = (0, api_versioning_1.getRegisteredServices)();
         res.status(200).json({
             name: 'Payvost API Gateway',
             version: '1.0.0',
@@ -207,6 +251,13 @@ function createGateway() {
                 health: '/health',
                 api: '/api/v1',
             },
+            services: registeredServices.map(service => ({
+                name: service.name,
+                path: service.basePath,
+                versions: service.supportedVersions,
+                status: service.status,
+            })),
+            serviceCount: registeredServices.length,
         });
     });
     // API version info endpoint

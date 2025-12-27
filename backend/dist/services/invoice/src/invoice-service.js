@@ -20,10 +20,46 @@ class InvoiceService {
         return { subtotal, taxAmount, grandTotal };
     }
     /**
+     * Trigger PDF regeneration (async, non-blocking)
+     * Triggers the PDF generation by calling the frontend API
+     * Falls back to direct regeneration if frontend is unavailable
+     */
+    async triggerPdfRegeneration(invoiceId, source) {
+        try {
+            // Try to get the frontend URL from environment
+            let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL;
+            // If no base URL set, log and skip PDF regeneration
+            if (!baseUrl) {
+                console.warn(`[triggerPdfRegeneration] No NEXT_PUBLIC_BASE_URL or BASE_URL set, skipping PDF regeneration for ${invoiceId}`);
+                return;
+            }
+            const pdfGenerationUrl = `${baseUrl}/api/generate-invoice-pdf`;
+            console.log(`[triggerPdfRegeneration] Triggering PDF regeneration for invoice ${invoiceId} (source: ${source}) via ${pdfGenerationUrl}`);
+            const response = await fetch(pdfGenerationUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invoiceId }),
+                signal: AbortSignal.timeout(120000), // 2 minutes timeout
+            });
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => 'Unknown error');
+                console.error(`[triggerPdfRegeneration] PDF generation returned ${response.status}: ${errorText}`);
+            }
+            else {
+                console.log(`[triggerPdfRegeneration] PDF regeneration triggered successfully for invoice ${invoiceId}`);
+            }
+        }
+        catch (error) {
+            console.warn(`[triggerPdfRegeneration] Warning triggering PDF regeneration for invoice ${invoiceId}:`, error?.message);
+            // Don't throw - this is async and non-blocking
+            // In production, PDFs can be regenerated on-demand when downloaded
+        }
+    }
+    /**
      * Create a new invoice
      */
     async createInvoice(input) {
-        const { items, taxRate = 0, status = 'DRAFT', ...rest } = input;
+        const { items, taxRate = 0, status = 'DRAFT', paymentMethod, ...rest } = input;
         // Calculate totals
         const { grandTotal } = this.calculateTotals(items, taxRate);
         // Generate public URL if not draft
@@ -35,7 +71,8 @@ class InvoiceService {
             data: {
                 ...rest,
                 invoiceType: input.invoiceType,
-                paymentMethod: input.paymentMethod,
+                // Ensure the value matches the Prisma enum type
+                paymentMethod: (paymentMethod || 'PAYVOST'),
                 status: status,
                 grandTotal: new library_1.Decimal(grandTotal),
                 taxRate: new library_1.Decimal(taxRate),
@@ -64,6 +101,23 @@ class InvoiceService {
             return null;
         }
         return invoice;
+    }
+    /**
+     * Get all invoices for a user
+     */
+    async getInvoicesByUserId(userId) {
+        const invoices = await this.prisma.invoice.findMany({
+            where: {
+                OR: [
+                    { userId },
+                    { createdBy: userId },
+                ],
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        return invoices;
     }
     /**
      * Get invoice by invoice number
@@ -367,15 +421,43 @@ class InvoiceService {
             isPublic = false;
             publicUrl = null;
         }
+        // Build update data object explicitly to avoid type issues
+        const updateData = {
+            grandTotal,
+            isPublic,
+            publicUrl,
+            updatedAt: new Date(),
+        };
+        // Only include fields that are provided in input
+        if (input.invoiceNumber !== undefined)
+            updateData.invoiceNumber = input.invoiceNumber;
+        if (input.issueDate !== undefined)
+            updateData.issueDate = input.issueDate;
+        if (input.dueDate !== undefined)
+            updateData.dueDate = input.dueDate;
+        if (input.status !== undefined)
+            updateData.status = input.status;
+        if (input.fromInfo !== undefined)
+            updateData.fromInfo = input.fromInfo;
+        if (input.toInfo !== undefined)
+            updateData.toInfo = input.toInfo;
+        if (input.items !== undefined)
+            updateData.items = input.items;
+        if (input.taxRate !== undefined)
+            updateData.taxRate = new library_1.Decimal(Number(input.taxRate));
+        if (input.notes !== undefined)
+            updateData.notes = input.notes;
+        if (input.paymentMethod !== undefined)
+            updateData.paymentMethod = input.paymentMethod;
+        if (input.manualBankDetails !== undefined)
+            updateData.manualBankDetails = input.manualBankDetails;
+        if (input.pdfUrl !== undefined)
+            updateData.pdfUrl = input.pdfUrl;
+        if (input.publicUrl !== undefined)
+            updateData.publicUrl = input.publicUrl;
         const invoice = await this.prisma.invoice.update({
             where: { id },
-            data: {
-                ...input,
-                grandTotal,
-                isPublic,
-                publicUrl,
-                updatedAt: new Date(),
-            },
+            data: updateData,
         });
         return invoice;
     }
@@ -401,78 +483,234 @@ class InvoiceService {
                     updatedAt: new Date(),
                 },
             });
+            // Trigger PDF regeneration (async, non-blocking) to update status in PDF
+            this.triggerPdfRegeneration(id, 'Prisma').catch(error => {
+                console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+                // Don't throw - mark as paid succeeded, PDF regeneration is async
+            });
             return invoice;
         }
         // If not in Prisma, check Firestore businessInvoices collection
         try {
             if (!firebase_admin_1.default.apps.length) {
+                console.error('[markAsPaid] Firebase Admin SDK not initialized');
                 throw new Error('Firebase Admin SDK not initialized');
             }
             const db = firebase_admin_1.default.firestore();
             const docRef = db.collection('businessInvoices').doc(id);
             const firestoreInvoice = await docRef.get();
             if (!firestoreInvoice.exists) {
-                throw new Error('Invoice not found');
+                console.error(`[markAsPaid] Invoice not found in businessInvoices collection: ${id}`);
+                // Try to find by invoiceNumber as fallback
+                const querySnapshot = await db.collection('businessInvoices')
+                    .where('invoiceNumber', '==', id)
+                    .limit(1)
+                    .get();
+                if (querySnapshot.empty) {
+                    throw new Error('Invoice not found');
+                }
+                // Use the found invoice
+                const foundDoc = querySnapshot.docs[0];
+                const foundData = foundDoc.data();
+                if (!foundData) {
+                    throw new Error('Invoice data not found');
+                }
+                // Verify ownership
+                if (foundData.createdBy !== userId) {
+                    console.error(`[markAsPaid] Unauthorized: userId=${userId}, invoice.createdBy=${foundData.createdBy}`);
+                    throw new Error('Unauthorized');
+                }
+                // Update using the found document reference
+                const foundDocRef = foundDoc.ref;
+                await foundDocRef.update({
+                    status: 'Paid',
+                    paidAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+                });
+                // Trigger PDF regeneration (async, non-blocking)
+                this.triggerPdfRegeneration(id, 'Firestore').catch(error => {
+                    console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+                    // Don't throw - mark as paid succeeded, PDF regeneration is async
+                });
+                // Return updated data
+                const updatedDoc = await foundDocRef.get();
+                const updatedData = updatedDoc.data();
+                if (!updatedData) {
+                    throw new Error('Invoice data not found after update');
+                }
+                // Helper to safely convert Firestore Timestamp to Date
+                const toDate = (timestamp) => {
+                    if (!timestamp)
+                        return new Date();
+                    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+                        return timestamp.toDate();
+                    }
+                    if (timestamp instanceof Date) {
+                        return timestamp;
+                    }
+                    if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+                        return new Date(timestamp);
+                    }
+                    return new Date();
+                };
+                try {
+                    const result = {
+                        id: updatedDoc.id,
+                        invoiceNumber: updatedData?.invoiceNumber || '',
+                        invoiceType: 'BUSINESS',
+                        userId: updatedData?.createdBy || '',
+                        businessId: updatedData?.businessId || null,
+                        createdBy: updatedData?.createdBy || '',
+                        issueDate: toDate(updatedData?.issueDate),
+                        dueDate: toDate(updatedData?.dueDate),
+                        status: 'PAID',
+                        currency: updatedData?.currency || 'USD',
+                        grandTotal: new library_1.Decimal(Number(updatedData?.grandTotal || 0)),
+                        taxRate: new library_1.Decimal(Number(updatedData?.taxRate || 0)),
+                        fromInfo: {
+                            name: updatedData?.fromName || '',
+                            address: updatedData?.fromAddress || '',
+                            email: updatedData?.fromEmail || '',
+                        },
+                        toInfo: {
+                            name: updatedData?.toName || '',
+                            address: updatedData?.toAddress || '',
+                            email: updatedData?.toEmail || '',
+                        },
+                        items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+                        paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST'),
+                        manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+                            bankName: updatedData?.manualBankName || '',
+                            accountName: updatedData?.manualAccountName || '',
+                            accountNumber: updatedData?.manualAccountNumber || '',
+                            otherDetails: updatedData?.manualOtherDetails || '',
+                        } : null,
+                        notes: updatedData?.notes || null,
+                        isPublic: updatedData?.isPublic !== false,
+                        publicUrl: updatedData?.publicUrl || null,
+                        pdfUrl: updatedData?.pdfUrl || null,
+                        paidAt: toDate(updatedData?.paidAt),
+                        createdAt: toDate(updatedData?.createdAt),
+                        updatedAt: toDate(updatedData?.updatedAt),
+                    };
+                    console.log('[markAsPaid] Successfully built return object (fallback path) for invoice:', updatedDoc.id);
+                    return result;
+                }
+                catch (buildError) {
+                    console.error('[markAsPaid] Error building return object (fallback path):', buildError);
+                    console.error('[markAsPaid] Build error stack:', buildError?.stack);
+                    throw new Error(`Failed to build invoice response: ${buildError?.message || 'Unknown error'}`);
+                }
             }
             const data = firestoreInvoice.data();
             if (!data) {
+                console.error(`[markAsPaid] Invoice document exists but has no data: ${id}`);
                 throw new Error('Invoice data not found');
             }
             // Verify ownership
             if (data.createdBy !== userId) {
+                console.error(`[markAsPaid] Unauthorized: userId=${userId}, invoice.createdBy=${data.createdBy}`);
                 throw new Error('Unauthorized');
             }
+            // Helper to safely convert Firestore Timestamp to Date
+            const toDate = (timestamp) => {
+                if (!timestamp)
+                    return new Date();
+                if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+                    return timestamp.toDate();
+                }
+                if (timestamp instanceof Date) {
+                    return timestamp;
+                }
+                if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+                    return new Date(timestamp);
+                }
+                return new Date();
+            };
             // Update in Firestore
-            await docRef.update({
-                status: 'Paid',
-                paidAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+            try {
+                await docRef.update({
+                    status: 'Paid',
+                    paidAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase_admin_1.default.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+            catch (updateError) {
+                console.error('[markAsPaid] Firestore update error:', updateError);
+                console.error('[markAsPaid] Update error code:', updateError?.code);
+                console.error('[markAsPaid] Update error message:', updateError?.message);
+                throw new Error(`Failed to update invoice in Firestore: ${updateError?.message || 'Unknown error'}`);
+            }
+            // Trigger PDF regeneration (async, non-blocking)
+            this.triggerPdfRegeneration(id, 'Firestore').catch(error => {
+                console.error('[markAsPaid] Failed to trigger PDF regeneration:', error);
+                // Don't throw - mark as paid succeeded, PDF regeneration is async
             });
             // Return updated data in Prisma format for consistency
+            // Note: serverTimestamp() values are resolved when reading the document
             const updatedDoc = await docRef.get();
             const updatedData = updatedDoc.data();
-            return {
-                id: updatedDoc.id,
-                invoiceNumber: updatedData?.invoiceNumber || '',
-                invoiceType: 'BUSINESS',
-                userId: updatedData?.createdBy || '',
-                businessId: updatedData?.businessId || null,
-                createdBy: updatedData?.createdBy || '',
-                issueDate: updatedData?.issueDate?.toDate ? updatedData.issueDate.toDate() : new Date(updatedData?.issueDate),
-                dueDate: updatedData?.dueDate?.toDate ? updatedData.dueDate.toDate() : new Date(updatedData?.dueDate),
-                status: 'PAID',
-                currency: updatedData?.currency || 'USD',
-                grandTotal: new library_1.Decimal(Number(updatedData?.grandTotal || 0)),
-                taxRate: new library_1.Decimal(Number(updatedData?.taxRate || 0)),
-                fromInfo: {
-                    name: updatedData?.fromName || '',
-                    address: updatedData?.fromAddress || '',
-                    email: updatedData?.fromEmail || '',
-                },
-                toInfo: {
-                    name: updatedData?.toName || '',
-                    address: updatedData?.toAddress || '',
-                    email: updatedData?.toEmail || '',
-                },
-                items: Array.isArray(updatedData?.items) ? updatedData.items : [],
-                paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST'),
-                manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
-                    bankName: updatedData?.manualBankName || '',
-                    accountName: updatedData?.manualAccountName || '',
-                    accountNumber: updatedData?.manualAccountNumber || '',
-                    otherDetails: updatedData?.manualOtherDetails || '',
-                } : null,
-                notes: updatedData?.notes || null,
-                isPublic: updatedData?.isPublic !== false,
-                publicUrl: updatedData?.publicUrl || null,
-                pdfUrl: updatedData?.pdfUrl || null,
-                paidAt: updatedData?.paidAt?.toDate ? updatedData.paidAt.toDate() : new Date(),
-                createdAt: updatedData?.createdAt?.toDate ? updatedData.createdAt.toDate() : new Date(),
-                updatedAt: updatedData?.updatedAt?.toDate ? updatedData.updatedAt.toDate() : new Date(),
-            };
+            if (!updatedData) {
+                console.error('[markAsPaid] Invoice data not found after update, document ID:', updatedDoc.id);
+                throw new Error('Invoice data not found after update');
+            }
+            try {
+                // Build the return object with proper error handling
+                const result = {
+                    id: updatedDoc.id,
+                    invoiceNumber: updatedData?.invoiceNumber || '',
+                    invoiceType: 'BUSINESS',
+                    userId: updatedData?.createdBy || '',
+                    businessId: updatedData?.businessId || null,
+                    createdBy: updatedData?.createdBy || '',
+                    issueDate: toDate(updatedData?.issueDate),
+                    dueDate: toDate(updatedData?.dueDate),
+                    status: 'PAID',
+                    currency: updatedData?.currency || 'USD',
+                    grandTotal: new library_1.Decimal(Number(updatedData?.grandTotal || 0)),
+                    taxRate: new library_1.Decimal(Number(updatedData?.taxRate || 0)),
+                    fromInfo: {
+                        name: updatedData?.fromName || '',
+                        address: updatedData?.fromAddress || '',
+                        email: updatedData?.fromEmail || '',
+                    },
+                    toInfo: {
+                        name: updatedData?.toName || '',
+                        address: updatedData?.toAddress || '',
+                        email: updatedData?.toEmail || '',
+                    },
+                    items: Array.isArray(updatedData?.items) ? updatedData.items : [],
+                    paymentMethod: (updatedData?.paymentMethod?.toUpperCase() || 'PAYVOST'),
+                    manualBankDetails: updatedData?.paymentMethod === 'manual' ? {
+                        bankName: updatedData?.manualBankName || '',
+                        accountName: updatedData?.manualAccountName || '',
+                        accountNumber: updatedData?.manualAccountNumber || '',
+                        otherDetails: updatedData?.manualOtherDetails || '',
+                    } : null,
+                    notes: updatedData?.notes || null,
+                    isPublic: updatedData?.isPublic !== false,
+                    publicUrl: updatedData?.publicUrl || null,
+                    pdfUrl: updatedData?.pdfUrl || null,
+                    paidAt: toDate(updatedData?.paidAt),
+                    createdAt: toDate(updatedData?.createdAt),
+                    updatedAt: toDate(updatedData?.updatedAt),
+                };
+                console.log('[markAsPaid] Successfully built return object for invoice:', updatedDoc.id);
+                return result;
+            }
+            catch (buildError) {
+                console.error('[markAsPaid] Error building return object:', buildError);
+                console.error('[markAsPaid] Build error stack:', buildError?.stack);
+                console.error('[markAsPaid] Updated data keys:', Object.keys(updatedData || {}));
+                throw new Error(`Failed to build invoice response: ${buildError?.message || 'Unknown error'}`);
+            }
         }
         catch (error) {
-            console.error('Error marking Firestore invoice as paid:', error);
+            console.error('[markAsPaid] Error marking Firestore invoice as paid:', error);
+            console.error('[markAsPaid] Invoice ID:', id);
+            console.error('[markAsPaid] User ID:', userId);
+            console.error('[markAsPaid] Error message:', error?.message);
+            console.error('[markAsPaid] Error stack:', error?.stack);
             throw error;
         }
     }
@@ -492,6 +730,7 @@ class InvoiceService {
         await this.prisma.invoice.delete({
             where: { id },
         });
+        return true;
     }
     /**
      * Get invoice statistics

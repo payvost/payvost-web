@@ -5,8 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-// @ts-ignore - Common file is compiled separately to dist/common
-const mailgun_1 = require("../../common/mailgun");
+// Common file is compiled separately to dist/common/mailgun.js by build-common.js
+// Type declarations are in src/common/mailgun.d.ts
+const mailgun_1 = require("./common/mailgun");
 const app = (0, express_1.default)();
 const PORT = process.env.EMAIL_SERVICE_PORT || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';

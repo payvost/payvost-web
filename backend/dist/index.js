@@ -6,9 +6,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // Load environment variables first
+// Try loading from multiple locations to support both root and backend .env files
 const dotenv_1 = require("dotenv");
 const path_1 = __importDefault(require("path"));
-(0, dotenv_1.config)({ path: path_1.default.resolve(__dirname, '.env') });
+const fs_1 = __importDefault(require("fs"));
+// Load both .env files: root first, then backend (backend can override root)
+// This allows shared variables in root .env and service-specific in backend/.env
+const rootEnvPath = path_1.default.resolve(__dirname, '..', '.env');
+const backendEnvPath = path_1.default.resolve(__dirname, '.env');
+// Load root .env first
+if (fs_1.default.existsSync(rootEnvPath)) {
+    (0, dotenv_1.config)({ path: rootEnvPath });
+}
+// Load backend .env second (will override root vars if override: true)
+// Default behavior (override: false) means root vars take precedence
+if (fs_1.default.existsSync(backendEnvPath)) {
+    (0, dotenv_1.config)({ path: backendEnvPath, override: true }); // Backend .env overrides root
+}
 // Validate environment variables before proceeding
 const env_validation_1 = require("./common/env-validation");
 (0, env_validation_1.validateEnvironmentOrExit)();
@@ -415,6 +429,28 @@ app.get('/api/pdf/health', async (_req, res) => {
 });
 // Global error handler (must be last)
 app.use(index_1.errorHandler);
+// Initialize Recurring Invoice Scheduler
+// Processes recurring invoices on a schedule when enabled
+if (process.env.ENABLE_RECURRING_SCHEDULER === 'true') {
+    try {
+        const { startRecurringInvoiceScheduler } = loadService('./services/invoice/src/scheduler', false);
+        if (startRecurringInvoiceScheduler) {
+            // Run daily (24 hours)
+            const intervalMs = 24 * 60 * 60 * 1000;
+            startRecurringInvoiceScheduler(intervalMs);
+            logger_1.logger.info({ intervalMs }, 'Recurring invoice scheduler initialized');
+        }
+        else {
+            logger_1.logger.warn('Recurring invoice scheduler module not found');
+        }
+    }
+    catch (err) {
+        logger_1.logger.error({ err }, 'Failed to initialize recurring invoice scheduler');
+    }
+}
+else {
+    logger_1.logger.debug('Recurring invoice scheduler disabled (set ENABLE_RECURRING_SCHEDULER=true to enable)');
+}
 // Create HTTP server for WebSocket support
 const http_1 = require("http");
 const websocket_server_1 = require("./services/chat/websocket-server");

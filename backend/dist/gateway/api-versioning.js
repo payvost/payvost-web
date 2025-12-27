@@ -6,6 +6,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.extractApiVersion = extractApiVersion;
 exports.createVersionedRouter = createVersionedRouter;
+exports.getRegisteredServices = getRegisteredServices;
 exports.registerVersionedRoutes = registerVersionedRoutes;
 exports.isVersionSupported = isVersionSupported;
 exports.requireVersion = requireVersion;
@@ -44,10 +45,24 @@ function createVersionedRouter(version = 'v1') {
     });
     return router;
 }
+const serviceRegistry = [];
+/**
+ * Get all registered services
+ */
+function getRegisteredServices() {
+    return [...serviceRegistry];
+}
 /**
  * Register routes with versioning support
  */
 function registerVersionedRoutes(app, serviceName, basePath, routes, supportedVersions = ['v1']) {
+    // Register service in registry
+    serviceRegistry.push({
+        name: serviceName,
+        basePath,
+        supportedVersions,
+        status: 'active',
+    });
     // Register for each supported version
     supportedVersions.forEach(version => {
         const versionedPath = `/api/${version}${basePath}`;

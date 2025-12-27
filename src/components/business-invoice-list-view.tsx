@@ -89,11 +89,48 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
         toast({ title: "Copied!", description: "Public invoice link copied to clipboard." });
     };
 
-    const handleSendReminder = (invoice: DocumentData) => {
-        toast({
-            title: "Reminder Sent",
-            description: `An email reminder has been sent to ${invoice.toEmail}.`
-        });
+    const handleSendReminder = async (invoice: DocumentData) => {
+        try {
+            if (!user) {
+                throw new Error('User not authenticated');
+            }
+
+            // Get Firebase ID token
+            const token = await user.getIdToken();
+
+            // Call the notification API to send invoice reminder
+            const response = await fetch(`/api/invoices/${invoice.id}/send-reminder`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                cache: 'no-store',
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'Failed to send invoice reminder';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (e) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
+            toast({
+                title: "Reminder Sent",
+                description: `An email reminder has been sent to ${invoice.toInfo?.email || invoice.toEmail || 'the customer'}.`
+            });
+        } catch (error: any) {
+            console.error('Error sending invoice reminder:', error);
+            toast({
+                title: "Error",
+                description: error.message || "Failed to send invoice reminder.",
+                variant: "destructive"
+            });
+        }
     };
     
     const handleMarkAsPaid = async (invoiceId: string) => {

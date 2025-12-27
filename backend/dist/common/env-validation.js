@@ -12,18 +12,34 @@ exports.validateEnvironmentOrExit = validateEnvironmentOrExit;
 function validateEnvironment() {
     const errors = [];
     const warnings = [];
-    // Required variables
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    // Always required variables
     const required = [
         'DATABASE_URL',
+    ];
+    // Firebase variables - required in production, optional in development
+    const firebaseRequired = [
         'FIREBASE_PROJECT_ID',
         'FIREBASE_PRIVATE_KEY',
         'FIREBASE_CLIENT_EMAIL',
     ];
-    // Check required variables
+    // Check always required variables
     for (const key of required) {
         const value = process.env[key];
         if (!value || value.trim().length === 0) {
             errors.push(`Missing required environment variable: ${key}`);
+        }
+    }
+    // Check Firebase variables - required in production, optional (with warning) in development
+    for (const key of firebaseRequired) {
+        const value = process.env[key];
+        if (!value || value.trim().length === 0) {
+            if (isDevelopment) {
+                warnings.push(`Missing optional environment variable (Firebase features may not work): ${key}`);
+            }
+            else {
+                errors.push(`Missing required environment variable: ${key}`);
+            }
         }
     }
     // Validate DATABASE_URL format

@@ -8,18 +8,29 @@ exports.prisma = void 0;
  */
 const client_1 = require("@prisma/client");
 let prismaInstance;
-if (process.env.NODE_ENV === 'production') {
-    prismaInstance = new client_1.PrismaClient({
-        log: ['error'],
+function createPrismaClient() {
+    return new client_1.PrismaClient({
+        log: process.env.NODE_ENV === 'production' ? ['error'] : ['query', 'error', 'warn'],
+        errorFormat: 'pretty',
     });
+}
+if (process.env.NODE_ENV === 'production') {
+    prismaInstance = createPrismaClient();
 }
 else {
     if (!global.prisma) {
-        global.prisma = new client_1.PrismaClient({
-            log: ['query', 'error', 'warn'],
-        });
+        global.prisma = createPrismaClient();
     }
     prismaInstance = global.prisma;
 }
+// Add connection error handling
+prismaInstance.$connect().catch((error) => {
+    console.error('Prisma connection error:', error);
+    // Don't throw - let Prisma handle reconnection automatically
+});
+// Handle disconnection gracefully
+process.on('beforeExit', async () => {
+    await prismaInstance.$disconnect();
+});
 exports.prisma = prismaInstance;
 exports.default = exports.prisma;
