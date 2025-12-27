@@ -2,7 +2,14 @@ import { PrismaClient } from '@prisma/client';
 import admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { addDays, addWeeks, addMonths, isAfter, isBefore } from 'date-fns';
-import { InvoiceService } from './invoice-service';
+import { InvoiceService, InvoiceRecipient } from './invoice-service';
+
+interface RecipientInfo {
+  name: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+}
 
 interface RecurringInvoice {
   id: string;
@@ -13,12 +20,8 @@ interface RecurringInvoice {
   issueDate: any;
   dueDate: any;
   currency: string;
-  fromName: string;
-  fromAddress: string;
-  fromEmail?: string;
-  toName: string;
-  toEmail: string;
-  toAddress: string;
+  fromInfo: RecipientInfo;
+  toInfo: RecipientInfo;
   items: any[];
   notes?: string;
   taxRate: number;
@@ -155,12 +158,8 @@ export class RecurringInvoiceProcessor {
       issueDate: nextIssueDate,
       dueDate: addDays(nextIssueDate, dueDateDays),
       currency: invoice.currency,
-      fromName: invoice.fromName,
-      fromAddress: invoice.fromAddress,
-      fromEmail: invoice.fromEmail,
-      toName: invoice.toName,
-      toEmail: invoice.toEmail,
-      toAddress: invoice.toAddress,
+      fromInfo: invoice.fromInfo,
+      toInfo: invoice.toInfo,
       items: invoice.items,
       notes: invoice.notes,
       taxRate: invoice.taxRate,
