@@ -98,6 +98,9 @@ model Transfer {
   toAccountId    String
   amount         Decimal         @db.Decimal(20, 8)
   currency       String
+  targetAmount   Decimal?        @db.Decimal(20, 8)
+  targetCurrency String?
+  exchangeRate   Decimal?        @db.Decimal(20, 8)
   status         String
   type           TransactionType
   idempotencyKey String?         @unique

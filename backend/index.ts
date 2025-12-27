@@ -73,7 +73,11 @@ import { extractApiVersion } from './gateway/api-versioning';
 app.use('/api', extractApiVersion);
 
 // Register service routes with versioning support
+import authRoutes from './services/user/routes/authRoutes';
 import { registerVersionedRoutes } from './gateway/api-versioning';
+
+// Register Auth routes (flat structure for legacy compatibility)
+app.use('/api/auth', authRoutes);
 
 registerVersionedRoutes(app, 'User Service', '/api/user', userRoutes, ['v1']);
 registerVersionedRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes, ['v1']);

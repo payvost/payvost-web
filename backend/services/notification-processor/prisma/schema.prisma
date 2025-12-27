@@ -33,7 +33,6 @@ model User {
   // 2FA fields
   twoFactorEnabled     Boolean  @default(false)
   twoFactorMethod      String? // 'email', 'sms', 'authenticator'
-  twoFactorSecret      String? // TOTP secret for authenticator
   twoFactorPhone       String? // Phone number for SMS 2FA
   twoFactorBackupCodes String[] // Array of backup codes
   twoFactorVerified    Boolean  @default(false) // Whether 2FA setup is verified
@@ -97,6 +96,9 @@ model Transfer {
   toAccountId    String
   amount         Decimal         @db.Decimal(20, 8)
   currency       String
+  targetAmount   Decimal?        @db.Decimal(20, 8)
+  targetCurrency String?
+  exchangeRate   Decimal?        @db.Decimal(20, 8)
   status         String
   type           TransactionType
   idempotencyKey String?         @unique

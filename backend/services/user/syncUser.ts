@@ -81,7 +81,7 @@ export async function ensurePrismaUser(firebaseUid: string): Promise<SyncUserRes
       // 2FA fields
       twoFactorEnabled: firestoreData.twoFactorEnabled || false,
       twoFactorMethod: firestoreData.twoFactorMethod || null,
-      twoFactorSecret: firestoreData.twoFactorSecret || null,
+
       twoFactorPhone: firestoreData.twoFactorPhone || null,
       twoFactorBackupCodes: firestoreData.twoFactorBackupCodes || [],
       twoFactorVerified: firestoreData.twoFactorVerified || false,
@@ -129,7 +129,7 @@ export async function syncPrismaUserData(firebaseUid: string): Promise<void> {
         userTier: firestoreData.userTier || 'STANDARD',
         twoFactorEnabled: firestoreData.twoFactorEnabled || false,
         twoFactorMethod: firestoreData.twoFactorMethod || null,
-        twoFactorSecret: firestoreData.twoFactorSecret || null,
+
         twoFactorPhone: firestoreData.twoFactorPhone || null,
         twoFactorBackupCodes: firestoreData.twoFactorBackupCodes || [],
         twoFactorVerified: firestoreData.twoFactorVerified || false,
