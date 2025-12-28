@@ -14,13 +14,47 @@
     "moduleResolution": "node",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "express": [
+        "./node_modules/express"
+      ],
+      "@prisma/client": [
+        "./node_modules/@prisma/client",
+        "../../../node_modules/@prisma/client"
+      ],
+      ".prisma/client": [
+        "./node_modules/.prisma/client",
+        "../../../node_modules/.prisma/client"
+      ],
+      "firebase-admin": [
+        "./node_modules/firebase-admin"
+      ],
+      "jsonwebtoken": [
+        "./node_modules/jsonwebtoken"
+      ],
+      "pino": [
+        "./node_modules/pino"
+      ],
+      "express-rate-limit": [
+        "./node_modules/express-rate-limit"
+      ],
+      "cors": [
+        "./node_modules/cors"
+      ],
+      "*": [
+        "./node_modules/*"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
   },
   "include": [
     "src/**/*",
-    "../../gateway/middleware.ts",
-    "../../gateway/index.ts",
-    "../../gateway/auth-middleware.ts"
+    "../../gateway/**/*.ts",
+    "../../common/**/*.ts"
   ],
   "exclude": [
     "node_modules",
