@@ -112,7 +112,7 @@ export function createGateway() {
   app.use(errorTrackerHandler());
 
   // Security headers (custom minimal replacement for helmet configuration)
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     // Content-Security-Policy (CSP)
     res.setHeader(
       'Content-Security-Policy',
@@ -149,7 +149,7 @@ export function createGateway() {
   });
 
   // CORS - Security: Require explicit origin configuration
-  const allowedOrigins = process.env.FRONTEND_URL 
+  const allowedOrigins = process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',').map(origin => origin.trim())
     : [];
 
@@ -161,7 +161,7 @@ export function createGateway() {
   }
 
   // CORS configuration with conditional origin checking
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     // Health check and monitoring endpoints that don't require strict CORS
     const noCorsPaths = ['/health', '/'];
     const isHealthCheck = noCorsPaths.includes(req.path);
@@ -203,25 +203,25 @@ export function createGateway() {
         if (!origin && process.env.NODE_ENV !== 'production') {
           return callback(null, true);
         }
-        
+
         // Allow requests without origin for health checks and simple GET/HEAD requests
         // (used by load balancers, monitoring tools, etc.)
         if (!origin && (isHealthCheck || isSimpleRequest)) {
           return callback(null, true);
         }
-        
+
         // Allow requests without origin if they come from internal IPs
         // (server-to-server calls, same-origin requests, Render internal systems)
         if (!origin && isInternalIP(req.ip || '')) {
           return callback(null, true);
         }
-        
+
         // Allow requests without origin if they have a valid internal API key
         // (authenticated internal service-to-service calls)
         if (!origin && hasValidInternalApiKey()) {
           return callback(null, true);
         }
-        
+
         // In production, require origin for API routes from external sources
         if (!origin) {
           return callback(new Error('CORS: Origin header required'));
@@ -259,7 +259,7 @@ export function createGateway() {
   app.use(generalLimiter);
 
   // Health check
-  app.get('/health', (req, res) => {
+  app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -268,9 +268,9 @@ export function createGateway() {
   });
 
   // Root endpoint with API version info
-  app.get('/', (req, res) => {
+  app.get('/', (req: Request, res: Response) => {
     const registeredServices = getRegisteredServices();
-    
+
     res.status(200).json({
       name: 'Payvost API Gateway',
       version: '1.0.0',
@@ -292,7 +292,7 @@ export function createGateway() {
   });
 
   // API version info endpoint
-  app.get('/api/versions', (req, res) => {
+  app.get('/services', (req: Request, res: Response) => {
     res.status(200).json({
       currentVersion: 'v1',
       supportedVersions: ['v1'],
@@ -311,7 +311,7 @@ export function createGateway() {
       const testEmail = searchParams.get('email');
 
       if (!testEmail) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Email parameter required',
           usage: 'POST /api/test/mailgun?email=test@example.com',
           headers: { 'Authorization': 'Bearer <firebase_token>' }

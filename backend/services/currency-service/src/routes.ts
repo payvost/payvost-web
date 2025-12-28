@@ -76,7 +76,7 @@ router.get('/supported', (req: Request, res: Response) => {
  */
 router.post('/calculate-fees', verifyFirebaseToken, async (req: Request, res: Response) => {
     try {
-        const authReq = req as unknown as AuthenticatedRequest;
+        const authReq = req as any;
         const { amount, from, to, userTier = 'STANDARD' } = authReq.body;
 
         if (!amount || !from || !to) {
