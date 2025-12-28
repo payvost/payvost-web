@@ -72,7 +72,7 @@ export async function getLatestRates(
         throw new Error(`Fixer API error: ${response.statusText}`);
     }
 
-    const data: FixerResponse = await response.json();
+    const data = await response.json() as FixerResponse;
 
     if (!data.success) {
         throw new Error('Failed to fetch exchange rates from Fixer.io');
@@ -121,7 +121,7 @@ export async function convertCurrency(
         throw new Error(`Fixer API error: ${response.statusText}`);
     }
 
-    const data: FixerConvertResponse = await response.json();
+    const data = await response.json() as FixerConvertResponse;
 
     if (!data.success) {
         throw new Error('Failed to convert currency via Fixer.io');
@@ -166,7 +166,7 @@ export async function getHistoricalRates(
         throw new Error(`Fixer API error: ${response.statusText}`);
     }
 
-    const data: FixerResponse = await response.json();
+    const data = await response.json() as FixerResponse;
 
     if (!data.success) {
         throw new Error('Failed to fetch historical rates from Fixer.io');
