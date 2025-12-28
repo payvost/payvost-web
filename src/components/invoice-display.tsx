@@ -21,8 +21,12 @@ export function InvoiceDisplay({ invoice, showActionButtons = true }: InvoiceDis
   const status = String(invoice.status || 'Draft');
   const statusVar = statusVariant[status] || 'outline';
 
-  const subtotal = (invoice.items || []).reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
-  const taxAmount = Number(invoice.grandTotal) - subtotal;
+  const items = Array.isArray(invoice.items) && invoice.items.length > 0
+    ? invoice.items
+    : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
+
+  const subtotal = items.reduce((acc: number, item: any) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
+  const taxAmount = (invoice.tax !== undefined ? Number(invoice.tax) : (Number(invoice.grandTotal) - subtotal)) || 0;
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
@@ -90,12 +94,12 @@ export function InvoiceDisplay({ invoice, showActionButtons = true }: InvoiceDis
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(invoice.items || []).length === 0 ? (
+          {items.length === 0 ? (
             <TableRow>
               <TableCell colSpan={4} className="h-24 text-center">No items found.</TableCell>
             </TableRow>
           ) : (
-            invoice.items.map((item: any, index: number) => (
+            items.map((item: any, index: number) => (
               <TableRow key={index}>
                 <TableCell className="font-medium">{String(item.description || 'N/A')}</TableCell>
                 <TableCell className="text-center">{Number(item.quantity) || 0}</TableCell>
