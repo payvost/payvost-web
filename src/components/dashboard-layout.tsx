@@ -142,7 +142,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     { href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
     { href: '/dashboard/payments', icon: <Send strokeWidth={2.5} />, label: 'Payments' },
     { href: '/dashboard/transactions', icon: <ArrowRightLeft strokeWidth={2.5} />, label: 'Transactions' },
-    { href: '/dashboard/recipients', icon: <Users strokeWidth={2.5} />, label: 'Address Book' },
     { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallets' },
     { href: '/dashboard/cards', icon: <CreditCard strokeWidth={2.5} />, label: 'Virtual Cards' },
   ];

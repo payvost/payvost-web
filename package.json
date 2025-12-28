@@ -6,7 +6,7 @@
     "genkit:dev": "genkit dev",
     "dev:all": "npm-run-all --parallel dev genkit:dev",
     "dev:client": "next dev --turbopack -p 3000",
-    "dev:server": "cd backend && cross-env PORT=3001 ts-node-dev --prefer-ts-exts --respawn --transpile-only index.ts",
+    "dev:server": "cd backend && cross-env PORT=3001 ts-node-dev --prefer-ts-exts --respawn --transpile-only ./index.ts",
     "dev:pdf": "cd backend/services/pdf && npm run dev",
     "dev:email": "cd backend/services/email && npm run dev",
     "dev:admin-stats": "cd backend/services/admin-stats && npm run dev",

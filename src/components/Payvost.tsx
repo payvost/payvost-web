@@ -68,13 +68,21 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   const [rateTrend, setRateTrend] = useState<'up' | 'down' | 'neutral'>('neutral');
   const [previousRate, setPreviousRate] = useState<number | null>(null);
   const { toast } = useToast();
-  
+
   // Payment ID (user) transfer state
   const [paymentIdRecipient, setPaymentIdRecipient] = useState<UserProfile | null>(null);
   const [paymentIdAmount, setPaymentIdAmount] = useState('');
   const [paymentIdNote, setPaymentIdNote] = useState('');
   const [activeTab, setActiveTab] = useState('user'); // Default to Payment ID tab
-  
+
+  // Bank transfer state
+  const [bankFormCountry, setBankFormCountry] = useState('');
+  const [bankFormBank, setBankFormBank] = useState('');
+  const [bankFormAccountNumber, setBankFormAccountNumber] = useState('');
+  const [bankFormRecipientName, setBankFormRecipientName] = useState('');
+  const [bankFormAmount, setBankFormAmount] = useState('');
+  const [bankFormSaveBeneficiary, setBankFormSaveBeneficiary] = useState(false);
+
   // Fee calculation state
   const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
   const [loadingFees, setLoadingFees] = useState(false);
@@ -99,7 +107,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
             if (userDoc.exists()) {
               const userData = userDoc.data();
               setBeneficiaries(userData.beneficiaries || []);
-              
+
               // Get user country from profile
               if (userData.countryCode) {
                 setUserCountry(userData.countryCode);
@@ -177,7 +185,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         // Ensure rate is a number (convert from string if needed)
         const numericRate = typeof rate === 'string' ? parseFloat(rate) : Number(rate);
         const validRate = !isNaN(numericRate) && isFinite(numericRate) ? numericRate : 0;
-        
+
         // Determine trend
         if (previousRate !== null) {
           if (validRate > previousRate) {
@@ -188,7 +196,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
             setRateTrend('neutral');
           }
         }
-        
+
         setPreviousRate(validRate);
         setExchangeRate(validRate);
       } catch (error) {
@@ -214,7 +222,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     // Ensure exchangeRate is a number
     const numericRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : Number(exchangeRate);
     const validRate = !isNaN(numericRate) && isFinite(numericRate) ? numericRate : 0;
-    
+
     if (!isNaN(amount) && amount > 0 && validRate > 0) {
       const convertedAmount = amount * validRate;
       setRecipientGets(convertedAmount.toFixed(2));
@@ -228,9 +236,9 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     const calculateFees = async () => {
       const amount = parseFloat(sendAmount || paymentIdAmount || '0');
       const isPaymentId = activeTab === 'user' && paymentIdRecipient !== null;
-      
+
       setIsPaymentIdTransfer(isPaymentId);
-      
+
       // Payment ID transfers are free
       if (isPaymentId) {
         setFeeBreakdown({
@@ -324,7 +332,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
         // Get recipient's account in the same currency
         let recipientAccountId: string | undefined;
-        
+
         try {
           // Try to get recipient's account via API
           const response = await fetch(`/api/user/accounts?userId=${paymentIdRecipient.uid}&currency=${fromWallet}`, {
@@ -347,13 +355,13 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         if (!recipientAccountId) {
           const { db } = await import('@/lib/firebase');
           const { doc, getDoc } = await import('firebase/firestore');
-          
+
           const recipientDoc = await getDoc(doc(db, 'users', paymentIdRecipient.uid));
           if (recipientDoc.exists()) {
             const recipientData = recipientDoc.data();
             const recipientWallets = recipientData.wallets || [];
             const recipientWallet = recipientWallets.find((w: any) => w.currency === fromWallet);
-            
+
             if (recipientWallet && recipientWallet.id) {
               recipientAccountId = recipientWallet.id;
             }
@@ -389,7 +397,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         setPaymentIdAmount('');
         setPaymentIdNote('');
         setPaymentIdRecipient(null);
-        
+
         // Refresh wallets
         const updatedAccounts = await walletService.getAccounts();
         setWallets(updatedAccounts);
@@ -399,6 +407,81 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         toast({
           title: 'Transfer Failed',
           description: errorMessage,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Handle bank transfer
+    if (activeTab === 'bank') {
+      if (!fromWallet || !bankFormBank || !bankFormAccountNumber || !bankFormRecipientName || !bankFormAmount || parseFloat(bankFormAmount) <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Please fill in all bank details and enter a valid amount',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const selectedAccount = wallets.find((w) => w.currency === fromWallet);
+        if (!selectedAccount) throw new Error('Selected wallet not found');
+
+        // 1. Perform the transfer (Remittance to bank)
+        const transaction = await transactionService.create({
+          fromAccountId: selectedAccount.id,
+          amount: parseFloat(bankFormAmount),
+          currency: fromWallet,
+          type: 'REMITTANCE',
+          description: `Transfer to ${bankFormRecipientName} (${bankFormBank})`,
+          metadata: {
+            bankName: bankFormBank,
+            accountNumber: bankFormAccountNumber,
+            country: bankFormCountry,
+            recipientName: bankFormRecipientName,
+          },
+        });
+
+        // 2. Save beneficiary if requested
+        if (bankFormSaveBeneficiary && user) {
+          try {
+            const { updateDoc, arrayUnion, doc } = await import('firebase/firestore');
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, {
+              beneficiaries: arrayUnion({
+                id: `ben_${Date.now()}`,
+                name: bankFormRecipientName,
+                bank: bankFormBank,
+                accountNumber: bankFormAccountNumber,
+                accountLast4: bankFormAccountNumber.slice(-4),
+                country: bankFormCountry,
+              })
+            });
+            console.log('Beneficiary saved successfully');
+          } catch (error) {
+            console.error('Failed to save beneficiary:', error);
+            // Don't fail the whole transaction if saving beneficiary fails
+          }
+        }
+
+        toast({
+          title: 'Transfer Successful!',
+          description: `Sent ${bankFormAmount} ${fromWallet} to ${bankFormRecipientName}`,
+        });
+
+        // Reset form and refresh wallets
+        setBankFormAmount('0.00');
+        const updatedAccounts = await walletService.getAccounts();
+        setWallets(updatedAccounts);
+      } catch (error) {
+        console.error('Transfer error:', error);
+        toast({
+          title: 'Transfer Failed',
+          description: error instanceof Error ? error.message : 'Transfer failed. Please try again.',
           variant: 'destructive',
         });
       } finally {
@@ -468,9 +551,11 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   const recipientName =
     activeTab === 'user' && paymentIdRecipient
       ? paymentIdRecipient.fullName || paymentIdRecipient.username || 'User'
-      : beneficiaries.find((b) => b.id === selectedBeneficiary)?.name || 'N/A';
+      : activeTab === 'bank'
+        ? bankFormRecipientName || 'New Bank Recipient'
+        : beneficiaries.find((b) => b.id === selectedBeneficiary)?.name || 'N/A';
 
-  const currentAmount = activeTab === 'user' ? paymentIdAmount : sendAmount;
+  const currentAmount = activeTab === 'user' ? paymentIdAmount : activeTab === 'bank' ? bankFormAmount : sendAmount;
   const feeAmount = feeBreakdown?.feeAmount || '0.00';
   const isFreeTransfer = isPaymentIdTransfer;
 
@@ -510,7 +595,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     isLoading ||
     !!amountError ||
     parseFloat(currentAmount || '0') <= 0 ||
-    (activeTab === 'user' ? !paymentIdRecipient : !selectedBeneficiary);
+    (activeTab === 'user' ? !paymentIdRecipient : activeTab === 'bank' ? !bankFormRecipientName : !selectedBeneficiary);
 
   const currentRate =
     fromWallet && receiveCurrency && exchangeRate != null && typeof exchangeRate === 'number' && !isNaN(exchangeRate) && exchangeRate > 0
@@ -826,7 +911,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
             <div className="space-y-2">
               <Label htmlFor="note">Note / Reference (Optional)</Label>
-              <Input id="note" placeholder="e.g., For school fees" disabled={!isKycVerified}/>
+              <Input id="note" placeholder="e.g., For school fees" disabled={!isKycVerified} />
             </div>
 
             <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
@@ -851,7 +936,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
               {feeBreakdown && parseFloat(feeBreakdown.breakdown.fixedFees) > 0 && (
                 <div className="text-xs text-muted-foreground mt-2">
                   Fee breakdown: ${feeBreakdown.breakdown.fixedFees} fixed
-                  {parseFloat(feeBreakdown.breakdown.percentageFees) > 0 && 
+                  {parseFloat(feeBreakdown.breakdown.percentageFees) > 0 &&
                     ` + ${((parseFloat(feeBreakdown.breakdown.percentageFees) / parseFloat(sendAmount || '1')) * 100).toFixed(2)}%`}
                 </div>
               )}
@@ -872,7 +957,15 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
         <TabsContent value="bank">
           <CardContent className="space-y-4 pt-4">
-            <SendToBankForm />
+            <SendToBankForm
+              onCountryChange={setBankFormCountry}
+              onBankChange={setBankFormBank}
+              onAccountNumberChange={setBankFormAccountNumber}
+              onRecipientNameChange={setBankFormRecipientName}
+              onAmountChange={setBankFormAmount}
+              onSaveBeneficiaryChange={setBankFormSaveBeneficiary}
+              disabled={isLoading || !isKycVerified}
+            />
           </CardContent>
           <CardFooter>
             <PaymentConfirmationDialog
