@@ -17,7 +17,10 @@
     "sourceMap": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../../gateway/middleware.ts",
+    "../../gateway/index.ts",
+    "../../gateway/auth-middleware.ts"
   ],
   "exclude": [
     "node_modules",
