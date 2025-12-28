@@ -15,6 +15,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { recipientService } from '@/services/recipientService';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 
 type Status = 'Completed' | 'Pending' | 'Failed';
@@ -33,17 +36,19 @@ export default function TransactionDetailsPage() {
     const { user } = useAuth();
     const [transaction, setTransaction] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (!user || !id) return;
-        
+
         const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
             if (doc.exists()) {
                 const transactions = doc.data().transactions || [];
                 const foundTx = transactions.find((tx: any) => tx.id === id);
                 setTransaction(foundTx || null);
             } else {
-                 setTransaction(null);
+                setTransaction(null);
             }
             setLoading(false);
         });
@@ -53,32 +58,32 @@ export default function TransactionDetailsPage() {
     }, [user, id]);
 
     if (loading) {
-         return (
+        return (
             <DashboardLayout language={language} setLanguage={setLanguage}>
-                 <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-                    <Skeleton className="h-10 w-64"/>
-                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                    <Skeleton className="h-10 w-64" />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2">
-                             <Skeleton className="h-96 w-full"/>
+                            <Skeleton className="h-96 w-full" />
                         </div>
                         <div className="lg:col-span-1 space-y-6">
-                             <Skeleton className="h-48 w-full"/>
-                             <Skeleton className="h-32 w-full"/>
+                            <Skeleton className="h-48 w-full" />
+                            <Skeleton className="h-32 w-full" />
                         </div>
-                     </div>
-                 </main>
+                    </div>
+                </main>
             </DashboardLayout>
-         )
+        )
     }
 
     if (!transaction) {
-         return (
+        return (
             <DashboardLayout language={language} setLanguage={setLanguage}>
                 <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 items-center justify-center">
-                    <AlertCircle className="h-16 w-16 text-destructive"/>
+                    <AlertCircle className="h-16 w-16 text-destructive" />
                     <h2 className="text-2xl font-bold">Transaction Not Found</h2>
                     <p className="text-muted-foreground">The requested transaction ID could not be found in your records.</p>
-                     <Button asChild>
+                    <Button asChild>
                         <Link href="/dashboard/transactions">Back to Transactions</Link>
                     </Button>
                 </main>
@@ -95,7 +100,7 @@ export default function TransactionDetailsPage() {
             currency: currency,
         }).format(amount);
     }
-    
+
     const financials = {
         sent: { amount: parseFloat(transaction.sendAmount) || 0, currency: transaction.sendCurrency || 'USD' },
         fee: { amount: parseFloat(transaction.fee) || 0, currency: transaction.sendCurrency || 'USD' },
@@ -104,13 +109,43 @@ export default function TransactionDetailsPage() {
         received: { amount: parseFloat(transaction.recipientGets) || 0, currency: transaction.recipientCurrency || 'USD' },
     };
 
+    const handleSaveAsBeneficiary = async () => {
+        if (!transaction) return;
+
+        setIsSaving(true);
+        try {
+            await recipientService.create({
+                name: transaction.recipientName || 'Transaction Recipient',
+                email: transaction.recipientEmail || '',
+                payvostUserId: transaction.toUserId || '',
+                bankName: transaction.bankName || '',
+                accountNumber: transaction.accountNumber || '',
+                swiftCode: transaction.swiftCode || '',
+                currency: transaction.recipientCurrency || 'USD',
+            });
+
+            toast({
+                title: 'Beneficiary Saved',
+                description: `${transaction.recipientName} has been added to your Address Book.`,
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to save beneficiary.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <DashboardLayout language={language} setLanguage={setLanguage}>
             <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                         <Link href="/dashboard/transactions">
-                           <ArrowLeft className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" />
                         </Link>
                     </Button>
                     <h1 className="text-lg font-semibold md:text-2xl">Transaction Details</h1>
@@ -154,7 +189,7 @@ export default function TransactionDetailsPage() {
                                             <dt>Fee</dt>
                                             <dd className="font-mono">{formatCurrency(financials.fee.amount, financials.fee.currency)}</dd>
                                         </div>
-                                         <div className="flex justify-between text-muted-foreground text-sm">
+                                        <div className="flex justify-between text-muted-foreground text-sm">
                                             <dt>Exchange Rate</dt>
                                             <dd className="font-mono">{financials.exchangeRate}</dd>
                                         </div>
@@ -181,12 +216,20 @@ export default function TransactionDetailsPage() {
                                 <Button variant="outline" className="w-full justify-start"><Send className="mr-2 h-4 w-4" /> Send via Email</Button>
                                 <Separator className="my-2" />
                                 <Button variant="secondary" className="w-full justify-start"><Repeat className="mr-2 h-4 w-4" /> Repeat Transaction</Button>
-                                <Button variant="secondary" className="w-full justify-start"><UserPlus className="mr-2 h-4 w-4" /> Save as Beneficiary</Button>
+                                <Button
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={handleSaveAsBeneficiary}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                                    Save as Beneficiary
+                                </Button>
                             </CardContent>
                         </Card>
                         <Card>
                             <CardHeader><CardTitle>Support</CardTitle></CardHeader>
-                             <CardContent className="space-y-2">
+                            <CardContent className="space-y-2">
                                 <Button variant="outline" className="w-full justify-start"><MessageSquareWarning className="mr-2 h-4 w-4" /> Report an Issue</Button>
                                 <Button variant="destructive" className="w-full justify-start"><ShieldQuestion className="mr-2 h-4 w-4" /> Dispute Transaction</Button>
                             </CardContent>

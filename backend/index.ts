@@ -57,6 +57,7 @@ import businessRoutes from './services/business/routes';
 import contentRoutes from './services/content/routes';
 import supportRoutes from './services/support/routes';
 import referralRoutes from './services/referral/routes';
+import recipientRoutes from './services/recipient/routes';
 import { startRecurringInvoiceScheduler } from './services/invoice/src/scheduler';
 
 logger.info('Static service imports loaded');
@@ -92,6 +93,7 @@ registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes
 registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
 registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
 registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
+registerVersionedRoutes(app, 'Recipient Service', '/api/recipient', recipientRoutes, ['v1']);
 
 // Fraud service might be optional or handled differently, but importing statically
 registerVersionedRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes, ['v1']);

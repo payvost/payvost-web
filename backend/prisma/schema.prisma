@@ -53,6 +53,7 @@ model User {
   referrerReferrals Referral[]            @relation("ReferrerReferrals")
   referredAs        Referral?              @relation("ReferredUsers")
   referralRewards   ReferralReward[]
+  recipients        Recipient[]
 }
 
 model Account {
@@ -1237,4 +1238,31 @@ model ReferralCampaign {
   
   @@index([isActive])
   @@index([startDate, endDate])
+}
+
+model Recipient {
+  id             String   @id @default(uuid())
+  userId         String   // The user who saved this recipient
+  user           User     @relation(fields: [userId], references: [id])
+  
+  name           String
+  email          String?
+  phone          String?
+  
+  // For internal transfers (within Payvost)
+  payvostUserId  String?  // Reference to another Payvost user if known
+  
+  // For external / cross-border transfers
+  bankName       String?
+  accountNumber  String?
+  swiftCode      String?
+  currency       String?
+  country        String?
+  
+  type           String   @default("EXTERNAL") // INTERNAL, EXTERNAL
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([payvostUserId])
 }

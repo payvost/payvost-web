@@ -43,11 +43,24 @@ export class TransactionManager {
       return existing;
     }
 
-    // Mock account limits check (since accountLimits table doesn't exist yet)
-    const mockLimits = {
-      dailyLimit: 100000,
-      monthlyLimit: 500000,
+    // 1. Fetch user tier for limits
+    const fromAccountObj = await this.prisma.account.findUnique({
+      where: { id: fromAccountId },
+      select: { user: { select: { userTier: true } } }
+    });
+
+    const userTier = fromAccountObj?.user?.userTier || 'STANDARD';
+
+    // 2. Determine tiered limits
+    const tieredLimits: Record<string, { daily: number; monthly: number }> = {
+      STANDARD: { daily: 1000, monthly: 5000 },
+      VERIFIED: { daily: 5000, monthly: 20000 },
+      PREMIUM: { daily: 20000, monthly: 100000 },
+      GOLD: { daily: 50000, monthly: 250000 },
+      VIP: { daily: 1000000, monthly: 5000000 },
     };
+
+    const limits = tieredLimits[userTier.toUpperCase()] || tieredLimits.STANDARD;
 
     // Calculate daily and monthly totals using Decimal
     const today = new Date();
@@ -66,8 +79,8 @@ export class TransactionManager {
       ? new Decimal(dailyTotal._sum.amount.toString()).plus(amount)
       : new Decimal(amount);
 
-    if (dailySum.greaterThan(mockLimits.dailyLimit)) {
-      throw new Error('Daily transfer limit exceeded');
+    if (dailySum.greaterThan(limits.daily)) {
+      throw new Error(`Daily transfer limit for ${userTier} tier exceeded ($${limits.daily})`);
     }
 
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -84,8 +97,8 @@ export class TransactionManager {
       ? new Decimal(monthlyTotal._sum.amount.toString()).plus(amount)
       : new Decimal(amount);
 
-    if (monthlySum.greaterThan(mockLimits.monthlyLimit)) {
-      throw new Error('Monthly transfer limit exceeded');
+    if (monthlySum.greaterThan(limits.monthly)) {
+      throw new Error(`Monthly transfer limit for ${userTier} tier exceeded ($${limits.monthly})`);
     }
 
     // Execute transfer in transaction
