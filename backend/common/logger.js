@@ -97,3 +97,4 @@ function logError(error, context) {
 function createChildLogger(context) {
     return exports.logger.child(context);
 }
+//# sourceMappingURL=logger.js.map
