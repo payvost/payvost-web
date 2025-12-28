@@ -82,7 +82,56 @@ class TransactionService {
   }
 
   /**
-   * Create a new transaction
+   * Get a transfer quote
+   */
+  async getQuote(data: {
+    fromAccountId: string;
+    toAccountId?: string;
+    toUserId?: string;
+    amount: number;
+    currency: string;
+  }): Promise<any> {
+    try {
+      const response = await apiClient.post<{ quote: any }>(
+        '/api/transaction/quote',
+        data
+      );
+      return response.quote;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to get transfer quote: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Execute transfer with a quote
+   */
+  async executeWithQuote(data: {
+    quote: any;
+    idempotencyKey?: string;
+  }): Promise<Transaction> {
+    try {
+      const idempotencyKey = data.idempotencyKey || this.generateIdempotencyKey();
+      const response = await apiClient.post<{ transfer: Transaction }>(
+        '/api/transaction/execute-with-quote',
+        {
+          quote: data.quote,
+          idempotencyKey,
+        }
+      );
+      return response.transfer;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to execute cached transfer: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new transaction (Legacy/Direct)
    */
   async create(data: CreateTransactionDto): Promise<Transaction> {
     try {
@@ -200,7 +249,7 @@ class TransactionService {
   }> {
     try {
       const transactions = await this.list({ accountId });
-      
+
       return {
         total: transactions.length,
         completed: transactions.filter(t => t.status === 'COMPLETED').length,

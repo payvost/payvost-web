@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import type { LanguagePreference } from '@/types/language';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { Payvost } from '@/components/Payvost';
 import { RecentTransactions } from '@/components/recent-transactions';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ import { WalletOverview } from '@/components/dashboard/WalletOverview';
 import { SpendingBreakdown } from '@/components/dashboard/SpendingBreakdown';
 import { PartnerTransactions } from '@/components/dashboard/PartnerTransactions';
 import { InvoiceOverview } from '@/components/dashboard/InvoiceOverview';
+import { QuickActions } from '@/components/dashboard/QuickActions';
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
     ssr: false,
@@ -161,7 +161,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="lg:col-span-3 space-y-6">
-                            <Payvost />
+                            <QuickActions isKycVerified={isKycVerified} />
                             <AccountCompletion />
                             <InvoiceOverview invoices={invoices} loading={loadingInvoices} isKycVerified={isKycVerified} />
                         </div>

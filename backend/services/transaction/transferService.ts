@@ -34,18 +34,29 @@ export class TransferService {
     async getQuote(params: {
         userId: string;
         fromAccountId: string;
-        toAccountId: string;
+        toAccountId?: string;
+        toUserId?: string;
         amount: number;
         currency: string;
     }): Promise<TransferQuote> {
-        const { fromAccountId, toAccountId, amount, currency } = params;
+        const { fromAccountId, toAccountId, toUserId, amount, currency } = params;
 
         // Fetch accounts
         const fromAccount = await this.prisma.account.findUnique({ where: { id: fromAccountId } });
-        const toAccount = await this.prisma.account.findUnique({ where: { id: toAccountId } });
+
+        let toAccount;
+        if (toAccountId) {
+            toAccount = await this.prisma.account.findUnique({ where: { id: toAccountId } });
+        } else if (toUserId) {
+            // Find recipient's primary account (first one created)
+            toAccount = await this.prisma.account.findFirst({
+                where: { userId: toUserId },
+                orderBy: { createdAt: 'asc' }
+            });
+        }
 
         if (!fromAccount || !toAccount) {
-            throw new Error('Account not found');
+            throw new Error('One or both accounts not found');
         }
 
         if (fromAccount.userId !== params.userId) {
@@ -78,7 +89,7 @@ export class TransferService {
 
         return {
             fromAccountId,
-            toAccountId,
+            toAccountId: toAccount.id,
             amount: sourceAmount,
             currency,
             targetAmount,
