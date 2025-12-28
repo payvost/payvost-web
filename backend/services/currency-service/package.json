@@ -5,7 +5,7 @@
   "main": "dist/services/currency-service/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "npx prisma generate --schema ../../prisma/schema.prisma && tsc",
+    "build": "npx prisma generate --schema ../../prisma/schema.prisma && node -e \"const fs=require('fs'); const path=require('path'); const src=path.resolve('../../../node_modules/.prisma/client'); const dest=path.resolve('node_modules/.prisma/client'); if(fs.existsSync(src)){ if(!fs.existsSync(path.dirname(dest))){fs.mkdirSync(path.dirname(dest),{recursive:true})} if(fs.existsSync(dest)){fs.rmSync(dest,{recursive:true})} fs.cpSync(src,dest,{recursive:true}); console.log('Prisma Client localized'); }\" && tsc",
     "start": "node dist/services/currency-service/src/index.js",
     "typecheck": "tsc --noEmit"
   },
