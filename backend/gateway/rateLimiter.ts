@@ -2,13 +2,13 @@ import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 // Extend Express Request to include rateLimit property
-interface RateLimitedRequest extends Request {
+type RateLimitedRequest = Request & {
   rateLimit?: {
     limit: number;
     remaining: number;
     resetTime: Date;
   };
-}
+};
 
 /**
  * General API rate limiter
@@ -76,10 +76,11 @@ export const createApiKeyLimiter = (maxRequests: number = 100, windowMs: number 
   return rateLimit({
     windowMs,
     max: maxRequests,
-    keyGenerator: (req: RateLimitedRequest) => {
+    keyGenerator: (req: Request) => {
       // Use API key from header if present, otherwise fall back to IP
-      const apiKey = req.headers['x-api-key'] as string;
-      return apiKey || req.ip || 'unknown';
+      const r = req as any;
+      const apiKey = r.headers?.['x-api-key'] as string;
+      return apiKey || r.ip || 'unknown';
     },
     message: 'API rate limit exceeded',
     standardHeaders: true,

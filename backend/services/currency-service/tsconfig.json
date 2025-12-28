@@ -20,13 +20,14 @@
       "express": [
         "./node_modules/express"
       ],
+      "express-serve-static-core": [
+        "./node_modules/@types/express-serve-static-core"
+      ],
       "@prisma/client": [
-        "./node_modules/@prisma/client",
-        "../../../node_modules/@prisma/client"
+        "./node_modules/@prisma/client"
       ],
       ".prisma/client": [
-        "./node_modules/.prisma/client",
-        "../../../node_modules/.prisma/client"
+        "./node_modules/.prisma/client"
       ],
       "firebase-admin": [
         "./node_modules/firebase-admin"
@@ -53,8 +54,16 @@
   },
   "include": [
     "src/**/*",
-    "../../gateway/**/*.ts",
-    "../../common/**/*.ts"
+    "../../gateway/middleware.ts",
+    "../../gateway/index.ts",
+    "../../gateway/auth-middleware.ts",
+    "../../gateway/rateLimiter.ts",
+    "../../gateway/api-versioning.ts",
+    "../../common/logger.ts",
+    "../../common/error-tracker.ts",
+    "../../common/prisma.ts",
+    "../../common/performance-monitor.ts",
+    "../../common/apm-setup.ts"
   ],
   "exclude": [
     "node_modules",

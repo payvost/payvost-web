@@ -7,14 +7,14 @@ import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
 import { logger } from '../common/logger';
 
-export interface AuthenticatedRequest extends Request {
+export type AuthenticatedRequest = Request & {
   user?: {
     uid: string;
     email?: string;
     role?: string;
     kycStatus?: string;
   };
-}
+};
 
 /**
  * Verify Firebase ID token or session cookie
@@ -27,12 +27,12 @@ export async function verifyFirebaseToken(
 ): Promise<void> {
   try {
     let decodedToken: admin.auth.DecodedIdToken;
-    
+
     // Try to get token from Authorization header first
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      
+
       if (token && token.trim().length > 0) {
         // Verify Firebase ID token
         decodedToken = await admin.auth().verifyIdToken(token);
@@ -47,7 +47,7 @@ export async function verifyFirebaseToken(
       // Try to get session cookie from cookies
       const cookies = req.headers.cookie || '';
       const sessionCookieMatch = cookies.match(/(?:^|;\s*)(?:writer_session|session|support_session)=([^;]*)/);
-      
+
       if (sessionCookieMatch && sessionCookieMatch[1]) {
         const sessionCookie = sessionCookieMatch[1];
         try {
@@ -69,7 +69,7 @@ export async function verifyFirebaseToken(
         return;
       }
     }
-    
+
     // Fetch user data from Firestore for additional context
     let userData: any = {};
     try {
@@ -90,7 +90,7 @@ export async function verifyFirebaseToken(
     next();
   } catch (error: any) {
     logger.warn({ error: error.message }, 'Firebase token verification failed');
-    
+
     if (error.code === 'auth/id-token-expired' || error.code === 'auth/session-cookie-expired') {
       res.status(401).json({
         error: 'Token expired',
@@ -98,7 +98,7 @@ export async function verifyFirebaseToken(
       });
       return;
     }
-    
+
     if (error.code === 'auth/argument-error' || error.code === 'auth/invalid-id-token') {
       res.status(401).json({
         error: 'Invalid token',
@@ -106,7 +106,7 @@ export async function verifyFirebaseToken(
       });
       return;
     }
-    
+
     res.status(401).json({
       error: 'Authentication failed',
       message: 'Unable to verify your identity. Please log in again.'
@@ -187,7 +187,7 @@ export async function optionalAuth(
     }
 
     const decodedToken = await admin.auth().verifyIdToken(token);
-    
+
     const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
     const userData = userDoc.data() || {};
 
@@ -200,7 +200,7 @@ export async function optionalAuth(
   } catch (error) {
     // Ignore auth errors for optional auth
   }
-  
+
   next();
 }
 
