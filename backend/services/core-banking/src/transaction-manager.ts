@@ -21,6 +21,9 @@ export class TransactionManager {
     toAccountId: string;
     amount: number;
     currency: string;
+    targetAmount?: number;
+    targetCurrency?: string;
+    exchangeRate?: number;
     description?: string;
     idempotencyKey?: string;
     userId?: string;
@@ -59,7 +62,7 @@ export class TransactionManager {
       _sum: { amount: true },
     });
 
-    const dailySum = dailyTotal._sum.amount 
+    const dailySum = dailyTotal._sum.amount
       ? new Decimal(dailyTotal._sum.amount.toString()).plus(amount)
       : new Decimal(amount);
 
@@ -102,8 +105,19 @@ export class TransactionManager {
         throw new Error('One or both accounts not found');
       }
 
-      if (fromAccount.currency !== currency || toAccount.currency !== currency) {
-        throw new Error('Currency mismatch');
+      // If currency mismatch, ensure we have targetAmount and exchangeRate
+      if (fromAccount.currency !== currency) {
+        throw new Error('Source account currency mismatch with transfer currency');
+      }
+
+      const isCrossCurrency = fromAccount.currency !== toAccount.currency;
+
+      if (isCrossCurrency && (!params.targetAmount || !params.exchangeRate)) {
+        throw new Error('Cross-currency transfer requires targetAmount and exchangeRate');
+      }
+
+      if (!isCrossCurrency && toAccount.currency !== currency) {
+        throw new Error('Destination account currency mismatch');
       }
 
       const fromBalance = new Decimal(fromAccount.balance.toString());
@@ -113,15 +127,21 @@ export class TransactionManager {
 
       // Calculate new balances
       const fromNewBalance = fromBalance.minus(amount);
-      const toNewBalance = new Decimal(toAccount.balance.toString()).plus(amount);
 
-      // Create transfer record including required `type` field
+      // For cross-currency, use targetAmount for destination
+      const creditAmount = isCrossCurrency ? new Decimal(params.targetAmount!) : new Decimal(amount);
+      const toNewBalance = new Decimal(toAccount.balance.toString()).plus(creditAmount);
+
+      // Create transfer record including required `type` field and cross-border fields
       const transfer = await tx.transfer.create({
         data: {
           fromAccountId,
           toAccountId,
           amount: new PrismaDecimal(amount),
           currency,
+          targetAmount: params.targetAmount ? new PrismaDecimal(params.targetAmount) : null,
+          targetCurrency: isCrossCurrency ? toAccount.currency : null,
+          exchangeRate: params.exchangeRate ? new PrismaDecimal(params.exchangeRate) : null,
           status: 'COMPLETED',
           type: 'INTERNAL_TRANSFER',
           description: description || 'Transfer',
@@ -129,7 +149,7 @@ export class TransactionManager {
         },
       });
 
-      // Update account balances - Remove 'lastTransactionAt' field
+      // Update account balances
       await tx.account.update({
         where: { id: fromAccountId },
         data: {
@@ -140,11 +160,11 @@ export class TransactionManager {
       await tx.account.update({
         where: { id: toAccountId },
         data: {
-          balance: { increment: new PrismaDecimal(amount) },
+          balance: { increment: new PrismaDecimal(creditAmount.toString()) },
         },
       });
 
-      // Create ledger entries - Remove 'transferId' field
+      // Create ledger entries
       await tx.ledgerEntry.createMany({
         data: [
           {
@@ -152,14 +172,14 @@ export class TransactionManager {
             amount: new PrismaDecimal(-amount),
             balanceAfter: new PrismaDecimal(fromNewBalance.toString()),
             type: 'DEBIT',
-            description: `Transfer to ${toAccountId}`,
+            description: `Transfer to ${toAccountId}${isCrossCurrency ? ` (${params.targetCurrency})` : ''}`,
           },
           {
             accountId: toAccountId,
-            amount: new PrismaDecimal(amount),
+            amount: new PrismaDecimal(creditAmount.toString()),
             balanceAfter: new PrismaDecimal(toNewBalance.toString()),
             type: 'CREDIT',
-            description: `Transfer from ${fromAccountId}`,
+            description: `Transfer from ${fromAccountId}${isCrossCurrency ? ` (${currency})` : ''}`,
           },
         ],
       });
@@ -184,7 +204,7 @@ export class TransactionManager {
           where: { id: toAccountId },
           select: { userId: true },
         });
-        
+
         if (toAccount?.userId) {
           // Import and call referral hook asynchronously (don't block transaction)
           // This will be processed in the background

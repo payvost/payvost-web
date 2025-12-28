@@ -8,87 +8,146 @@ import { validateRequest, transactionSchemas } from '../../common/validation-sch
 import { logFinancialTransaction, AuditAction } from '../../common/audit-logger';
 import Decimal from 'decimal.js';
 import { prisma } from '../../common/prisma';
+import { TransferService } from './transferService';
 
 const router = Router();
 const transactionManager = new TransactionManager(prisma);
 const feeEngine = new FeeEngine(prisma);
+const transferService = new TransferService(prisma);
+
+/**
+ * POST /api/transaction/quote
+ * Get a transfer quote (includes fees and exchange rates)
+ */
+router.post('/quote',
+  verifyFirebaseToken,
+  validateRequest(transactionSchemas.getQuote),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      const quote = await transferService.getQuote({
+        userId: userId!,
+        ...req.body
+      });
+      res.status(200).json({ quote });
+    } catch (error: any) {
+      console.error('Error getting transfer quote:', error);
+      res.status(400).json({ error: error.message || 'Failed to get quote' });
+    }
+  }
+);
+
+/**
+ * POST /api/transaction/execute-with-quote
+ * Execute transfer using a previously obtained quote
+ */
+router.post('/execute-with-quote',
+  verifyFirebaseToken,
+  requireKYC,
+  transactionLimiter,
+  validateRequest(transactionSchemas.executeWithQuote),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.uid;
+      const { quote, idempotencyKey } = req.body;
+
+      const transfer = await transferService.executeTransferWithQuote(
+        userId!,
+        quote,
+        idempotencyKey,
+        {
+          userId,
+          accountId: quote.fromAccountId,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          correlationId: req.headers['x-correlation-id'] as string,
+        }
+      );
+
+      res.status(201).json({ transfer });
+    } catch (error: any) {
+      console.error('Error executing transfer with quote:', error);
+      res.status(400).json({ error: error.message || 'Failed to execute transfer' });
+    }
+  }
+);
 
 /**
  * POST /api/transaction/transfer
  * Execute a transfer between accounts
  * REQUIRES: idempotencyKey to prevent duplicate transactions
  */
-router.post('/transfer', 
-  verifyFirebaseToken, 
-  requireKYC, 
+router.post('/transfer',
+  verifyFirebaseToken,
+  requireKYC,
   transactionLimiter,
   validateRequest(transactionSchemas.createTransfer),
   async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const userId = req.user?.uid;
-    const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = req.body;
+    try {
+      const userId = req.user?.uid;
+      const { fromAccountId, toAccountId, amount, currency, description, idempotencyKey } = req.body;
 
-    // Verify the from account belongs to the authenticated user
-    const fromAccount = await prisma.account.findFirst({
-      where: { id: fromAccountId, userId },
-    });
+      // Verify the from account belongs to the authenticated user
+      const fromAccount = await prisma.account.findFirst({
+        where: { id: fromAccountId, userId },
+      });
 
-    if (!fromAccount) {
-      return res.status(404).json({ error: 'Source account not found or unauthorized' });
-    }
-
-    // Log transfer initiation
-    await logFinancialTransaction(
-      AuditAction.TRANSFER_INITIATED,
-      'pending',
-      fromAccountId,
-      userId!,
-      amount.toString(),
-      currency,
-      description || 'Transfer',
-      {
-        userId,
-        accountId: fromAccountId,
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
-        correlationId: req.headers['x-correlation-id'] as string,
+      if (!fromAccount) {
+        return res.status(404).json({ error: 'Source account not found or unauthorized' });
       }
-    );
 
-    // Execute the transfer
-    const transfer = await transactionManager.executeTransfer({
-      fromAccountId,
-      toAccountId,
-      amount: parseFloat(amount),
-      currency,
-      description,
-      idempotencyKey,
-      userId,
-      auditContext: {
+      // Log transfer initiation
+      await logFinancialTransaction(
+        AuditAction.TRANSFER_INITIATED,
+        'pending',
+        fromAccountId,
+        userId!,
+        amount.toString(),
+        currency,
+        description || 'Transfer',
+        {
+          userId,
+          accountId: fromAccountId,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          correlationId: req.headers['x-correlation-id'] as string,
+        }
+      );
+
+      // Execute the transfer
+      const transfer = await transactionManager.executeTransfer({
+        fromAccountId,
+        toAccountId,
+        amount: parseFloat(amount),
+        currency,
+        description,
+        idempotencyKey,
         userId,
-        accountId: fromAccountId,
-        transactionId: 'pending',
-        ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
-        correlationId: req.headers['x-correlation-id'] as string,
-      },
-    });
+        auditContext: {
+          userId,
+          accountId: fromAccountId,
+          transactionId: 'pending',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+          correlationId: req.headers['x-correlation-id'] as string,
+        },
+      });
 
-    res.status(201).json({ transfer });
-  } catch (error: any) {
-    console.error('Error executing transfer:', error);
-    
-    if (error.message.includes('limit exceeded')) {
-      return res.status(400).json({ error: error.message });
-    }
-    
-    if (error.message.includes('Insufficient balance')) {
-      return res.status(400).json({ error: error.message });
-    }
+      res.status(201).json({ transfer });
+    } catch (error: any) {
+      console.error('Error executing transfer:', error);
 
-    res.status(500).json({ error: error.message || 'Failed to execute transfer' });
-  }
-});
+      if (error.message.includes('limit exceeded')) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      if (error.message.includes('Insufficient balance')) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.status(500).json({ error: error.message || 'Failed to execute transfer' });
+    }
+  });
 
 /**
  * GET /api/transaction/transfers
@@ -213,36 +272,36 @@ router.get('/transfers/:id', verifyFirebaseToken, async (req: AuthenticatedReque
  * POST /api/transaction/calculate-fees
  * Calculate fees for a potential transfer
  */
-router.post('/calculate-fees', 
+router.post('/calculate-fees',
   verifyFirebaseToken,
   validateRequest(transactionSchemas.calculateFees),
   async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { amount, currency, transactionType, fromCountry, toCountry, userTier } = req.body;
+    try {
+      const { amount, currency, transactionType, fromCountry, toCountry, userTier } = req.body;
 
-    const feeCalculation = await feeEngine.calculateFees({
-      amount: new Decimal(amount),
-      currency,
-      transactionType,
-      fromCountry: fromCountry || 'US',
-      toCountry: toCountry || 'US',
-      userTier,
-    });
+      const feeCalculation = await feeEngine.calculateFees({
+        amount: new Decimal(amount),
+        currency,
+        transactionType,
+        fromCountry: fromCountry || 'US',
+        toCountry: toCountry || 'US',
+        userTier,
+      });
 
-    res.status(200).json({
-      feeAmount: feeCalculation.feeAmount.toString(),
-      breakdown: {
-        fixedFees: feeCalculation.breakdown.fixedFees.toString(),
-        percentageFees: feeCalculation.breakdown.percentageFees.toString(),
-        discounts: feeCalculation.breakdown.discounts.toString(),
-        total: feeCalculation.breakdown.total.toString(),
-      },
-      appliedRules: feeCalculation.appliedRules,
-    });
-  } catch (error: any) {
-    console.error('Error calculating fees:', error);
-    res.status(500).json({ error: error.message || 'Failed to calculate fees' });
-  }
-});
+      res.status(200).json({
+        feeAmount: feeCalculation.feeAmount.toString(),
+        breakdown: {
+          fixedFees: feeCalculation.breakdown.fixedFees.toString(),
+          percentageFees: feeCalculation.breakdown.percentageFees.toString(),
+          discounts: feeCalculation.breakdown.discounts.toString(),
+          total: feeCalculation.breakdown.total.toString(),
+        },
+        appliedRules: feeCalculation.appliedRules,
+      });
+    } catch (error: any) {
+      console.error('Error calculating fees:', error);
+      res.status(500).json({ error: error.message || 'Failed to calculate fees' });
+    }
+  });
 
 export default router;
