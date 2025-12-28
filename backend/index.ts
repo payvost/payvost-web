@@ -48,7 +48,7 @@ import walletRoutes from './services/wallet/routes';
 import transactionRoutes from './services/transaction/routes';
 import fraudRoutes from './services/fraud/routes';
 import notificationRoutes from './services/notification/routes';
-import currencyRoutes from './services/currency/routes';
+import currencyRoutes from './services/currency-service/src/routes';
 import paymentRoutes from './services/payment/src/routes';
 import escrowRoutes from './services/escrow/routes';
 import errorTrackerRoutes from './services/error-tracker/routes';

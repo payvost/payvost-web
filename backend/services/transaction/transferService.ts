@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import Decimal from 'decimal.js';
-import { currencyService } from '../currency/currencyService';
+import { currencyService } from '../currency-service/src/currencyService';
 import { TransactionManager } from '../core-banking/src/transaction-manager';
 import { FeeEngine, TransactionType } from '../core-banking/src/fee-engine';
 import { AuditLogContext } from '../../common/audit-logger';
