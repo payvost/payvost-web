@@ -1,131 +1,140 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+
+// Register a font that supports currency symbols (including Naira)
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOmCnqEu92Fr1Mu4mxP.ttf' },
+    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOlCnqEu92Fr1MmWUlfBBc9.ttf', fontWeight: 'bold' }
+  ]
+});
 
 const styles = StyleSheet.create({
-  page: { 
-    padding: 40, 
-    fontFamily: 'Helvetica', 
-    fontSize: 10, 
+  page: {
+    padding: 40,
+    fontFamily: 'Roboto',
+    fontSize: 10,
     color: '#1e293b',
     backgroundColor: '#ffffff'
   },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 35, 
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 35,
     paddingBottom: 20,
     borderBottomWidth: 2,
     borderBottomColor: '#2563eb',
     borderBottomStyle: 'solid'
   },
   headerLeft: { flexDirection: 'column' },
-  title: { 
-    fontSize: 32, 
-    fontWeight: 'bold', 
-    color: '#2563eb', 
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#2563eb',
     marginBottom: 6,
     letterSpacing: 1
   },
-  invoiceNumber: { 
-    fontSize: 12, 
+  invoiceNumber: {
+    fontSize: 12,
     color: '#64748b',
     fontWeight: 'normal'
   },
-  statusBadge: { 
-    padding: '8 16', 
-    borderRadius: 20, 
-    fontSize: 10, 
+  statusBadge: {
+    padding: '8 16',
+    borderRadius: 20,
+    fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5
   },
-  statusPaid: { 
-    backgroundColor: '#dcfce7', 
+  statusPaid: {
+    backgroundColor: '#dcfce7',
     color: '#16a34a',
     border: '1 solid #86efac'
   },
-  statusPending: { 
-    backgroundColor: '#fef3c7', 
+  statusPending: {
+    backgroundColor: '#fef3c7',
     color: '#f59e0b',
     border: '1 solid #fcd34d'
   },
-  statusOverdue: { 
-    backgroundColor: '#fee2e2', 
+  statusOverdue: {
+    backgroundColor: '#fee2e2',
     color: '#dc2626',
     border: '1 solid #fca5a5'
   },
-  section: { 
-    flexDirection: 'row', 
+  section: {
+    flexDirection: 'row',
     marginBottom: 30,
     gap: 20
   },
-  column: { 
-    flex: 1, 
+  column: {
+    flex: 1,
     paddingRight: 15,
     backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 8
   },
-  columnRight: { 
-    flex: 1, 
+  columnRight: {
+    flex: 1,
     alignItems: 'flex-end',
     backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 8
   },
-  sectionHeader: { 
-    fontSize: 11, 
-    fontWeight: 'bold', 
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: 'bold',
     marginBottom: 10,
     color: '#2563eb',
     textTransform: 'uppercase',
     letterSpacing: 0.5
   },
-  text: { 
-    fontSize: 10, 
+  text: {
+    fontSize: 10,
     marginBottom: 4,
     color: '#334155',
     lineHeight: 1.4
   },
-  mutedText: { 
-    fontSize: 9, 
-    color: '#64748b', 
+  mutedText: {
+    fontSize: 9,
+    color: '#64748b',
     marginBottom: 3,
     lineHeight: 1.3
   },
-  table: { 
-    marginTop: 25, 
+  table: {
+    marginTop: 25,
     marginBottom: 25,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 8,
     overflow: 'hidden'
   },
-  tableHeader: { 
-    flexDirection: 'row', 
-    backgroundColor: '#2563eb', 
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#2563eb',
     padding: 12,
     borderBottomWidth: 0
   },
-  tableRow: { 
-    flexDirection: 'row', 
-    padding: 12, 
-    borderBottomWidth: 1, 
+  tableRow: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     backgroundColor: '#ffffff'
   },
   tableRowAlt: {
     backgroundColor: '#f8fafc'
   },
-  tableColHeader: { 
-    fontSize: 10, 
-    fontWeight: 'bold', 
+  tableColHeader: {
+    fontSize: 10,
+    fontWeight: 'bold',
     color: '#ffffff',
     textTransform: 'uppercase',
     letterSpacing: 0.5
   },
-  tableCol: { 
+  tableCol: {
     fontSize: 10,
     color: '#334155'
   },
@@ -133,12 +142,12 @@ const styles = StyleSheet.create({
   tableColQty: { width: '13%', textAlign: 'center' },
   tableColPrice: { width: '13%', textAlign: 'right' },
   tableColTotal: { width: '14%', textAlign: 'right', fontWeight: 'bold' },
-  totalsSection: { 
-    flexDirection: 'row', 
-    justifyContent: 'flex-end', 
-    marginTop: 25 
+  totalsSection: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 25
   },
-  totalsBox: { 
+  totalsBox: {
     width: 240,
     backgroundColor: '#f8fafc',
     padding: 20,
@@ -146,14 +155,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0'
   },
-  totalRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8, 
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
     fontSize: 10,
     paddingVertical: 4
   },
-  totalLabel: { 
+  totalLabel: {
     color: '#64748b',
     fontSize: 10
   },
@@ -162,17 +171,17 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
     fontSize: 10
   },
-  grandTotalRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginTop: 12, 
-    paddingTop: 12, 
-    borderTopWidth: 2, 
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 2,
     borderTopColor: '#2563eb',
     paddingVertical: 8
   },
-  grandTotalText: { 
-    fontSize: 14, 
+  grandTotalText: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#1e293b'
   },
@@ -181,7 +190,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2563eb'
   },
-  notesSection: { 
+  notesSection: {
     marginTop: 30,
     padding: 16,
     backgroundColor: '#fef3c7',
@@ -189,17 +198,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#f59e0b'
   },
-  notesHeader: { 
-    fontSize: 11, 
-    fontWeight: 'bold', 
+  notesHeader: {
+    fontSize: 11,
+    fontWeight: 'bold',
     marginBottom: 8,
     color: '#92400e',
     textTransform: 'uppercase',
     letterSpacing: 0.5
   },
-  notesText: { 
-    fontSize: 9, 
-    color: '#78350f', 
+  notesText: {
+    fontSize: 9,
+    color: '#78350f',
     lineHeight: 1.5
   },
   footer: {
@@ -219,16 +228,16 @@ const styles = StyleSheet.create({
 const formatCurrency = (amount: number, currency: string) => {
   const num = Number(amount);
   if (isNaN(num)) return '0.00';
-  
+
   const formattedAmount = num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  
+
   const currencyMap: Record<string, string> = {
     'USD': `$ ${formattedAmount}`,
     'EUR': `€ ${formattedAmount}`,
     'GBP': `£ ${formattedAmount}`,
     'NGN': `₦ ${formattedAmount}`,
   };
-  
+
   return currencyMap[currency] || `${currency} ${formattedAmount}`;
 };
 
@@ -281,10 +290,10 @@ interface InvoiceDocumentProps {
 }
 
 const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
-  const items = Array.isArray(invoice.items) && invoice.items.length > 0 
-    ? invoice.items 
+  const items = Array.isArray(invoice.items) && invoice.items.length > 0
+    ? invoice.items
     : [{ description: invoice.description || 'Item', quantity: 1, price: invoice.amount || invoice.grandTotal || 0 }];
-  
+
   const subtotal = items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.price) || 0), 0);
   const taxRate = Number(invoice.taxRate || 0);
   const tax = invoice.tax !== undefined ? Number(invoice.tax) : (subtotal * (taxRate / 100));
@@ -292,11 +301,11 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
   const grandTotal = invoice.grandTotal || (subtotal + tax - discount);
   const currency = invoice.currency || 'USD';
   const status = invoice.status || 'Pending';
-  const statusStyle = status === 'Paid' || status === 'PAID' 
-    ? styles.statusPaid 
-    : status === 'Overdue' || status === 'OVERDUE' 
-    ? styles.statusOverdue 
-    : styles.statusPending;
+  const statusStyle = status === 'Paid' || status === 'PAID'
+    ? styles.statusPaid
+    : status === 'Overdue' || status === 'OVERDUE'
+      ? styles.statusOverdue
+      : styles.statusPending;
 
   return (
     <Document>
@@ -344,7 +353,7 @@ const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice }) => {
             const total = qty * price;
             const isAlt = index % 2 === 1;
             return (
-              <View key={index} style={[styles.tableRow, isAlt && styles.tableRowAlt]}>
+              <View key={index} style={[styles.tableRow, isAlt ? styles.tableRowAlt : {}]}>
                 <Text style={[styles.tableCol, styles.tableColDesc]}>{item.description || 'Item'}</Text>
                 <Text style={[styles.tableCol, styles.tableColQty]}>{qty}</Text>
                 <Text style={[styles.tableCol, styles.tableColPrice]}>{formatCurrency(price, currency)}</Text>
