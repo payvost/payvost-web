@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { InvoiceService } from './src/invoice-service';
+import { InvoiceService, InvoiceRecipient } from './src/invoice-service';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { prisma } from '../../common/prisma';
 import admin from '../../firebase';
@@ -63,7 +63,7 @@ router.get('/business', verifyFirebaseToken, async (req: AuthenticatedRequest, r
     }
 
     const { businessId, status, limit, offset } = req.query;
-    
+
     if (!businessId) {
       return res.status(400).json({ error: 'businessId is required' });
     }
@@ -95,7 +95,7 @@ router.get('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: R
     const userId = req.user?.uid;
 
     const invoice = await invoiceService.getInvoiceById(id, userId);
-    
+
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
     }
@@ -116,32 +116,32 @@ router.get('/public/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     console.log(`[Public Invoice] Fetching invoice: ${id}`);
-    
+
     let invoice;
     try {
       invoice = await invoiceService.getPublicInvoice(id);
     } catch (serviceError: any) {
       console.error('[Public Invoice] Service error:', serviceError);
       console.error('[Public Invoice] Service error stack:', serviceError?.stack);
-      
+
       // If it's a Firebase initialization error, return a more helpful message
-      if (serviceError?.message?.includes('not initialized') || 
-          serviceError?.message?.includes('not available')) {
-        return res.status(503).json({ 
+      if (serviceError?.message?.includes('not initialized') ||
+        serviceError?.message?.includes('not available')) {
+        return res.status(503).json({
           error: 'Service temporarily unavailable',
           details: 'Database service is not properly configured'
         });
       }
-      
+
       // Re-throw to be caught by outer catch
       throw serviceError;
     }
-    
+
     if (!invoice) {
       console.log(`[Public Invoice] Invoice not found: ${id}`);
       return res.status(404).json({ error: 'Invoice not found or not public' });
     }
-    
+
     console.log(`[Public Invoice] Invoice found: ${id}, type: ${invoice.invoiceType}`);
 
     // Try to fetch business profile if businessId exists
@@ -149,13 +149,13 @@ router.get('/public/:id', async (req: Request, res: Response) => {
     if (invoice.businessId) {
       try {
         const db = admin.firestore();
-        
+
         // Query users collection for business profile
         const usersSnapshot = await db.collection('users')
           .where('businessProfile.id', '==', invoice.businessId)
           .limit(1)
           .get();
-        
+
         if (!usersSnapshot.empty) {
           const userData = usersSnapshot.docs[0].data();
           businessProfile = userData.businessProfile || null;
@@ -194,7 +194,7 @@ router.get('/public/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error getting public invoice:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message || 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
@@ -261,7 +261,7 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
     }
 
     const invoice = await invoiceService.markAsPaid(id, userId);
-    
+
     // Serialize response (convert Decimal to numbers, dates to ISO strings)
     try {
       const serializedInvoice = {
@@ -290,7 +290,7 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
           ? invoice.updatedAt.toISOString()
           : invoice.updatedAt,
       };
-      
+
       console.log('[POST /invoices/:id/mark-paid] Successfully serialized invoice response');
       res.json(serializedInvoice);
     } catch (serializeError: any) {
@@ -311,20 +311,20 @@ router.post('/:id/mark-paid', verifyFirebaseToken, async (req: AuthenticatedRequ
     console.error('[POST /invoices/:id/mark-paid] Error stack:', error?.stack);
     console.error('[POST /invoices/:id/mark-paid] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     console.error('[POST /invoices/:id/mark-paid] ========== ERROR END ==========');
-    
+
     if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
       return res.status(error.message === 'Unauthorized' ? 403 : 404).json({ error: error.message });
     }
-    
+
     // Return error message even in production (it's logged above)
-    const errorResponse: any = { 
+    const errorResponse: any = {
       error: error.message || 'Internal server error',
     };
-    
+
     // Include details in production for debugging (since we're debugging)
     errorResponse.details = process.env.NODE_ENV === 'development' ? error.stack : `Check Render logs for invoice ${req.params.id}`;
     errorResponse.invoiceId = req.params.id;
-    
+
     res.status(500).json(errorResponse);
   }
 });
@@ -371,14 +371,15 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
     }
 
     // Extract customer email
-    const customerEmail = invoice.toInfo?.email || invoice.toEmail;
+    const toInfo = invoice.toInfo as unknown as InvoiceRecipient;
+    const customerEmail = toInfo?.email;
     if (!customerEmail) {
       return res.status(400).json({ error: 'Customer email not found on invoice' });
     }
 
     // Call notification service to send reminder
     const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
-    
+
     try {
       const notificationResponse = await fetch(`${NOTIFICATION_SERVICE_URL}/send`, {
         method: 'POST',
@@ -395,7 +396,7 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
             amount: parseFloat(invoice.grandTotal?.toString() || '0'),
             currency: invoice.currency || 'USD',
             dueDate: invoice.dueDate instanceof Date ? invoice.dueDate.toISOString().split('T')[0] : invoice.dueDate,
-            customerName: invoice.toInfo?.name || 'Valued Customer',
+            customerName: (invoice.toInfo as unknown as InvoiceRecipient)?.name || 'Valued Customer',
           },
         }),
       });
@@ -403,7 +404,7 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
       if (!notificationResponse.ok) {
         const errorData = await notificationResponse.text();
         console.error('[send-reminder] Notification service error:', errorData);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: 'Failed to send reminder email',
           details: process.env.NODE_ENV === 'development' ? errorData : undefined
         });
@@ -418,7 +419,7 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
       });
     } catch (notificationError: any) {
       console.error('[send-reminder] Error calling notification service:', notificationError);
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Failed to send reminder email',
         details: process.env.NODE_ENV === 'development' ? notificationError.message : undefined
       });
