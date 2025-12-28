@@ -10,10 +10,9 @@ const targetDir = path.resolve(__dirname, '../node_modules/.prisma/client');
 
 // Try multiple possible source locations
 const possibleSources = [
-  path.resolve(__dirname, '../../../node_modules/.prisma/client'), // project root
-  path.resolve(__dirname, '../../node_modules/.prisma/client'), // backend root (if generated there)
-  path.resolve(process.cwd(), 'node_modules/.prisma/client'), // cwd root
-  path.resolve(__dirname, '../../../../node_modules/.prisma/client'), // alternative path
+  path.resolve(__dirname, '../../node_modules/.prisma/client'), // project root (if backend is in a subfolder)
+  path.resolve(__dirname, '../../../node_modules/.prisma/client'), // alternative project root
+  path.resolve(process.cwd(), '../node_modules/.prisma/client'), // parent of cwd
 ];
 
 // Ensure target directory exists
@@ -62,22 +61,22 @@ function copyRecursiveSync(src, dest) {
 
 try {
   console.log(`[Prisma Copy] Copying Prisma Client to ${targetDir}`);
-  
+
   const targetParent = path.dirname(targetDir);
   if (!fs.existsSync(targetParent)) {
     fs.mkdirSync(targetParent, { recursive: true });
   }
-  
+
   if (fs.existsSync(targetDir)) {
     fs.rmSync(targetDir, { recursive: true, force: true });
   }
-  
+
   copyRecursiveSync(actualSourceDir, targetDir);
-  
+
   if (!fs.existsSync(path.join(targetDir, 'index.js'))) {
     throw new Error('Copy verification failed: index.js not found');
   }
-  
+
   console.log('[Prisma Copy] Prisma Client copied successfully');
 } catch (error) {
   console.error('[Prisma Copy] Error copying:', error.message);

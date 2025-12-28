@@ -9,21 +9,25 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "typeRoots": ["../node_modules/@types", "node_modules/@types"]
+    "typeRoots": [
+      "../node_modules/@types",
+      "node_modules/@types"
+    ]
   },
   "include": [
     "index.ts",
     "firebase.ts",
     "services/**/*",
     "gateway/**/*",
-    "common/**/*"
+    "common/**/*",
+    "prisma/seed.ts"
   ],
-    "exclude": [
-      "node_modules",
-      "dist",
-      "services/pdf/**/*",
-      "services/notification-processor/**/*"
-    ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "services/pdf/**/*",
+    "services/notification-processor/**/*"
+  ],
   "ts-node": {
     "esm": false,
     "preferTsExts": true,
