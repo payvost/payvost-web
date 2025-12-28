@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { transactionService } from '@/services/transactionService';
 import { userService, UserProfile } from '@/services/userService';
+import { recipientService, Recipient } from '@/services/recipientService';
 import { useToast } from '@/hooks/use-toast';
 
 export interface TransferState {
     step: 'recipient' | 'amount' | 'quote' | 'success' | 'error';
-    recipient: UserProfile | null;
+    recipient: UserProfile | Recipient | null;
     amount: number;
     currency: string;
     fromAccountId: string;
@@ -30,13 +31,18 @@ export function useTransfer() {
     });
 
     const [recipients, setRecipients] = useState<UserProfile[]>([]);
+    const [savedRecipients, setSavedRecipients] = useState<Recipient[]>([]);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
 
     const fetchRecipients = useCallback(async () => {
         setLoadingRecipients(true);
         try {
-            const users = await userService.listUsers();
+            const [users, saved] = await Promise.all([
+                userService.listUsers(),
+                recipientService.list()
+            ]);
             setRecipients(users);
+            setSavedRecipients(saved);
         } catch (err: any) {
             console.error('Failed to fetch recipients:', err);
             toast({
@@ -49,7 +55,7 @@ export function useTransfer() {
         }
     }, [toast]);
 
-    const selectRecipient = (recipient: UserProfile) => {
+    const selectRecipient = (recipient: UserProfile | Recipient) => {
         setState(prev => ({ ...prev, recipient, step: 'amount' }));
     };
 
@@ -75,9 +81,13 @@ export function useTransfer() {
             // Wait, listUsers gave us the info. But we need their account ID.
             // I'll add a check for receiver accounts.
 
+            const recipientId = 'uid' in state.recipient
+                ? state.recipient.uid
+                : (state.recipient.payvostUserId || state.recipient.id);
+
             const quote = await transactionService.getQuote({
                 fromAccountId: state.fromAccountId,
-                toUserId: state.recipient.uid,                // OR we need to fetch accounts. Let's check TransactionManager.
+                toUserId: recipientId,
                 amount: state.amount,
                 currency: state.currency,
             });
@@ -143,6 +153,7 @@ export function useTransfer() {
     return {
         ...state,
         recipients,
+        savedRecipients,
         loadingRecipients,
         fetchRecipients,
         selectRecipient,

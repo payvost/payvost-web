@@ -24,7 +24,12 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
         }
     }, [transfer.step, transfer.fetchRecipients]);
 
-    const filteredRecipients = transfer.recipients.filter(r =>
+    const filteredSaved = transfer.savedRecipients.filter(r =>
+        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredUsers = transfer.recipients.filter(r =>
         r.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -65,33 +70,67 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                         {transfer.loadingRecipients ? (
                             <div className="flex justify-center py-8">
                                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                             </div>
-                        ) : filteredRecipients.length > 0 ? (
-                            filteredRecipients.map(r => (
-                                <div
-                                    key={r.uid}
-                                    onClick={() => transfer.selectRecipient(r)}
-                                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent cursor-pointer transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <Avatar>
-                                            <AvatarImage src={r.photoURL} />
-                                            <AvatarFallback>{r.fullName?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{r.fullName}</p>
-                                            <p className="text-xs text-muted-foreground">{r.email}</p>
-                                        </div>
+                        ) : (filteredSaved.length > 0 || filteredUsers.length > 0) ? (
+                            <>
+                                {filteredSaved.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Saved Beneficiaries</p>
+                                        {filteredSaved.map(r => (
+                                            <div
+                                                key={r.id}
+                                                onClick={() => transfer.selectRecipient(r)}
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent cursor-pointer transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                                        {r.name[0].toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium">{r.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{r.email || r.bankName || 'Saved Beneficiary'}</p>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                        ))}
                                     </div>
-                                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                            ))
+                                )}
+
+                                {filteredUsers.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4">Payvost Users</p>
+                                        {filteredUsers.map(r => (
+                                            <div
+                                                key={r.uid}
+                                                onClick={() => transfer.selectRecipient(r)}
+                                                className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent cursor-pointer transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar>
+                                                        <AvatarImage src={r.photoURL} />
+                                                        <AvatarFallback>{r.fullName?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <p className="font-medium">{r.fullName}</p>
+                                                        <p className="text-xs text-muted-foreground">{r.email}</p>
+                                                    </div>
+                                                </div>
+                                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
                         ) : (
-                            <p className="text-center py-8 text-muted-foreground text-sm">No recipients found</p>
+                            <div className="text-center py-12 flex flex-col items-center gap-2">
+                                <Users className="h-8 w-8 text-muted-foreground/50" />
+                                <p className="text-muted-foreground text-sm">No recipients found</p>
+                            </div>
                         )}
                     </div>
                 </CardContent>
@@ -111,7 +150,7 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
                         </Button>
                     </div>
                     <CardTitle>Enter Amount</CardTitle>
-                    <CardDescription>Sending to {transfer.recipient?.fullName}</CardDescription>
+                    <CardDescription>Sending to {'name' in (transfer.recipient || {}) ? (transfer.recipient as any).name : (transfer.recipient as any).fullName}</CardDescription>
                 </CardHeader>
                 <CardContent className="px-0 space-y-6">
                     <form onSubmit={handleAmountSubmit} className="space-y-4">
@@ -207,7 +246,7 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
                     <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                         <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
                         <p className="text-xs text-blue-400">
-                            This quote is valid for 5 minutes. The funds will be transferred instantly to {transfer.recipient?.fullName}'s primary wallet.
+                            This quote is valid for 5 minutes. The funds will be transferred instantly to {'name' in (transfer.recipient || {}) ? (transfer.recipient as any).name : (transfer.recipient as any).fullName}'s primary wallet.
                         </p>
                     </div>
                 </CardContent>
@@ -230,7 +269,7 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
                     <div className="space-y-2">
                         <CardTitle className="text-2xl">Transfer Successful!</CardTitle>
                         <p className="text-muted-foreground">
-                            You've sent {formatCurrency(transfer.quote?.targetAmount, transfer.quote?.targetCurrency)} to {transfer.recipient?.fullName}.
+                            You've sent {formatCurrency(transfer.quote?.targetAmount, transfer.quote?.targetCurrency)} to {'name' in (transfer.recipient || {}) ? (transfer.recipient as any).name : (transfer.recipient as any).fullName}.
                         </p>
                     </div>
                     <div className="w-full space-y-2">

@@ -83,3 +83,10 @@ export type {
 // User Service
 export { userService } from './userService';
 export type { UserProfile } from './userService';
+
+// Recipient Service
+export { recipientService } from './recipientService';
+export type {
+  Recipient,
+  CreateRecipientDto,
+} from './recipientService';

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search, Gift } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search, Gift, Users } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { TooltipProvider } from './ui/tooltip';
@@ -71,8 +71,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     mainEl.addEventListener('scroll', handleScroll, { passive: true });
     return () => mainEl.removeEventListener('scroll', handleScroll);
   }, []);
-  
-   useEffect(() => {
+
+  useEffect(() => {
     if (!user) return;
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
@@ -90,14 +90,14 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   const handleLogout = async () => {
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    
+
     try {
       // Try to sign out from Firebase if online
       if (isOnline) {
         try {
           await Promise.race([
             signOut(auth),
-            new Promise((_, reject) => 
+            new Promise((_, reject) =>
               setTimeout(() => reject(new Error('Sign out timeout')), 5000)
             )
           ]);
@@ -106,16 +106,16 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
           // Continue with local logout even if Firebase signOut fails
         }
       }
-      
+
       // Always clear local session and redirect, even if offline or Firebase signOut fails
       // This ensures the user is logged out locally
       toast({
         title: "Logged Out",
-        description: isOnline 
+        description: isOnline
           ? "You have been successfully logged out."
           : "You have been logged out. Please reconnect to complete the logout process.",
       });
-      
+
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -142,10 +142,11 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     { href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
     { href: '/dashboard/payments', icon: <Send strokeWidth={2.5} />, label: 'Payments' },
     { href: '/dashboard/transactions', icon: <ArrowRightLeft strokeWidth={2.5} />, label: 'Transactions' },
+    { href: '/dashboard/recipients', icon: <Users strokeWidth={2.5} />, label: 'Address Book' },
     { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallets' },
     { href: '/dashboard/cards', icon: <CreditCard strokeWidth={2.5} />, label: 'Virtual Cards' },
   ];
-  
+
   const collectPaymentItems = [
     { href: '/dashboard/request-payment', icon: <HandCoins strokeWidth={2.5} />, label: 'Request' },
     { href: '/dashboard/dispute', icon: <ShieldAlert strokeWidth={2.5} />, label: 'Dispute Center' },
@@ -155,7 +156,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   const isActive = (href: string) => {
     // Exact match for parent routes, prefix match for others.
     if (href === '/dashboard') {
-        return pathname === href;
+      return pathname === href;
     }
     return pathname.startsWith(href);
   }
@@ -164,138 +165,138 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     <ProtectRoute>
       <SidebarProvider style={{ "--sidebar-width": "12rem" } as React.CSSProperties}>
         <TooltipProvider>
-        <Sidebar>
-          <SidebarHeader className="h-12 lg:h-[52px] flex items-center justify-start px-4 border-b">
-            <Link href="/" className="flex items-center">
-              <Icons.logo className="h-8" />
-            </Link>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Main</SidebarGroupLabel>
-              <SidebarMenu>
+          <Sidebar>
+            <SidebarHeader className="h-12 lg:h-[52px] flex items-center justify-start px-4 border-b">
+              <Link href="/" className="flex items-center">
+                <Icons.logo className="h-8" />
+              </Link>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Main</SidebarGroupLabel>
+                <SidebarMenu>
                   {mainNavItems.map(item => (
-                      <SidebarMenuItem key={item.href}>
-                          <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                              <Link href={item.href}>
-                                  {item.icon}
-                                  {item.label}
-                              </Link>
-                          </SidebarMenuButton>
-                      </SidebarMenuItem>
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                        <Link href={item.href}>
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   ))}
-              </SidebarMenu>
-            </SidebarGroup>
-            <SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarGroup>
                 <SidebarGroupLabel>Collect Payment</SidebarGroupLabel>
-                 <SidebarMenu>
-                    {collectPaymentItems.map(item => (
-                        <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton asChild isActive={isActive(item.href)} disabled={item.comingSoon}>
-                                <Link href={item.href} className="flex items-center gap-2">
-                                    {item.icon}
-                                    <span className="flex items-center gap-1.5">
-                                        {item.label}
-                                        {item.isNew && <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">New</Badge>}
-                                    </span>
-                                    {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                 </SidebarMenu>
-                 </SidebarGroup>
-                 <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-                    <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
-                    <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
-                    <Button size="sm" className="w-full" asChild>
-                      <Link href="/dashboard/get-started">Get Started</Link>
-                    </Button>
-                 </div>
-          </SidebarContent>
-           <SidebarFooter className="p-2 mt-auto space-y-2">
-            <SidebarGroup>
-              <SidebarGroupLabel>Rewards</SidebarGroupLabel>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive('/dashboard/referrals')}>
-                    <Link href="/dashboard/referrals">
-                      <Gift strokeWidth={2.5} />
-                      <span className="group-data-[collapsible=icon]:hidden">Referrals</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
-            <SidebarMenu className="w-full">
+                <SidebarMenu>
+                  {collectPaymentItems.map(item => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={isActive(item.href)} disabled={item.comingSoon}>
+                        <Link href={item.href} className="flex items-center gap-2">
+                          {item.icon}
+                          <span className="flex items-center gap-1.5">
+                            {item.label}
+                            {item.isNew && <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">New</Badge>}
+                          </span>
+                          {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+              <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
+                <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
+                <Button size="sm" className="w-full" asChild>
+                  <Link href="/dashboard/get-started">Get Started</Link>
+                </Button>
+              </div>
+            </SidebarContent>
+            <SidebarFooter className="p-2 mt-auto space-y-2">
+              <SidebarGroup>
+                <SidebarGroupLabel>Rewards</SidebarGroupLabel>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive('/dashboard/referrals')}>
+                      <Link href="/dashboard/referrals">
+                        <Gift strokeWidth={2.5} />
+                        <span className="group-data-[collapsible=icon]:hidden">Referrals</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroup>
+              <SidebarMenu className="w-full">
                 <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
-                    <SidebarMenuItem className="w-full">
-                        <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
-                            <Link href="/dashboard/settings">
-                                <Settings />
-                                <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="default" className="justify-start gap-2" onClick={handleLogout} tooltip="Logout">
-                            <LogOut />
-                            <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
+                  <SidebarMenuItem className="w-full">
+                    <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
+                      <Link href="/dashboard/settings">
+                        <Settings />
+                        <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton size="default" className="justify-start gap-2" onClick={handleLogout} tooltip="Logout">
+                      <LogOut />
+                      <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </div>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset ref={mainContentRef}>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
+          <SidebarInset ref={mainContentRef}>
             <header className={cn(
               "sticky top-0 z-30 flex h-14 items-center gap-4 bg-background/95 px-4 backdrop-blur-sm transition-all lg:h-[60px] lg:px-6",
               scrolled && "border-b shadow-sm"
-              )}>
-                <SidebarTrigger className="md:hidden" />
-                <div className="w-full flex-1">
-                  <div className="relative md:w-full md:max-w-sm">
-                    <div className="md:hidden">
-                       <Sheet>
-                        <SheetTrigger asChild>
-                          <Button variant="outline" size="icon">
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent side="top">
-                          <SheetHeader>
-                            <SheetTitle>Search</SheetTitle>
-                          </SheetHeader>
-                          <div className="mt-4">
-                              <DashboardSearch />
-                          </div>
-                        </SheetContent>
-                      </Sheet>
-                    </div>
-                    <div className="hidden md:block">
-                        <DashboardSearch />
-                    </div>
+            )}>
+              <SidebarTrigger className="md:hidden" />
+              <div className="w-full flex-1">
+                <div className="relative md:w-full md:max-w-sm">
+                  <div className="md:hidden">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="top">
+                        <SheetHeader>
+                          <SheetTitle>Search</SheetTitle>
+                        </SheetHeader>
+                        <div className="mt-4">
+                          <DashboardSearch />
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+                  <div className="hidden md:block">
+                    <DashboardSearch />
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
-                    <QuickActionsDropdown />
-                    {isBusinessApproved && <DashboardSwitcher />}
-                    <Button variant="ghost" size="icon" asChild>
-                    <Link href="/dashboard/support">
-                        <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
-                        <span className="sr-only">Support</span>
-                    </Link>
-                    </Button>
-                    <ThemeSwitcher />
-                    <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
-                    <NotificationDropdown context="personal" />
-                    <UserNav user={user} />
-                </div>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <QuickActionsDropdown />
+                {isBusinessApproved && <DashboardSwitcher />}
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/dashboard/support">
+                    <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
+                    <span className="sr-only">Support</span>
+                  </Link>
+                </Button>
+                <ThemeSwitcher />
+                <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
+                <NotificationDropdown context="personal" />
+                <UserNav user={user} />
+              </div>
             </header>
             <ErrorBoundary>
-                {children}
+              {children}
             </ErrorBoundary>
-        </SidebarInset>
+          </SidebarInset>
         </TooltipProvider>
       </SidebarProvider>
     </ProtectRoute>

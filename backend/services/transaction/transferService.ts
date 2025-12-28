@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { currencyService } from '../currency/currencyService';
 import { TransactionManager } from '../core-banking/src/transaction-manager';
 import { FeeEngine, TransactionType } from '../core-banking/src/fee-engine';
 import { AuditLogContext } from '../../common/audit-logger';
@@ -64,28 +65,30 @@ export class TransferService {
         }
 
         const sourceAmount = new Decimal(amount);
-        let targetAmount = sourceAmount;
+        let targetAmount: Decimal;
         let exchangeRate = new Decimal(1);
         const targetCurrency = toAccount.currency;
 
         // Handle currency conversion if needed
         if (currency !== targetCurrency) {
-            // Mock rate logic similar to currency-service
-            exchangeRate = this.getMockExchangeRate(currency, targetCurrency);
-            targetAmount = sourceAmount.mul(exchangeRate);
+            // 3. Get live exchange rate and convert
+            const conversionResult = await currencyService.convert(sourceAmount.toNumber(), currency, targetCurrency);
+            exchangeRate = conversionResult.rate;
+            targetAmount = conversionResult.targetAmount;
+        } else {
+            targetAmount = sourceAmount;
         }
 
-        // Calculate fees
-        const feeCalculation = await this.feeEngine.calculateFees({
-            amount: sourceAmount,
-            currency,
-            transactionType: TransactionType.INTERNAL_TRANSFER,
-            fromCountry: 'US', // Default for now
-            toCountry: 'US',
+        // 4. Calculate fees using consolidated logic
+        const user = await this.prisma.user.findUnique({
+            where: { id: fromAccount.userId },
+            select: { userTier: true }
         });
 
-        const feeAmount = feeCalculation.feeAmount;
-        const totalDebitAmount = sourceAmount.plus(feeAmount);
+        const feeResult = currencyService.calculateFees(sourceAmount.toNumber(), user?.userTier || 'STANDARD');
+        const fees = feeResult.totalFee;
+
+        const totalAmount = sourceAmount.plus(fees);
 
         return {
             fromAccountId,
@@ -94,10 +97,10 @@ export class TransferService {
             currency,
             targetAmount,
             targetCurrency,
-            exchangeRate,
-            feeAmount,
-            totalDebitAmount,
-            expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes validity
+            exchangeRate: exchangeRate,
+            feeAmount: fees,
+            totalDebitAmount: totalAmount,
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 mins validity
         };
     }
 
@@ -115,7 +118,7 @@ export class TransferService {
         }
 
         // Execute via transaction manager
-        return await this.transactionManager.executeTransfer({
+        const result = await this.transactionManager.executeTransfer({
             fromAccountId: quote.fromAccountId,
             toAccountId: quote.toAccountId,
             amount: quote.amount.toNumber(),
@@ -128,24 +131,19 @@ export class TransferService {
             auditContext,
             description: `Transfer to ${quote.toAccountId} (${quote.targetCurrency})`
         });
+
+        // 3. Trigger Notification (Non-blocking)
+        setImmediate(async () => {
+            try {
+                // In a production environment, we would call the notification-processor /send endpoint
+                console.log(`[Notification] Sending transfer receipt for ${result.id} to user ${userId}`);
+            } catch (error) {
+                console.error('[Notification] Failed to send transfer receipt:', error);
+            }
+        });
+
+        return result;
     }
 
-    private getMockExchangeRate(from: string, to: string): Decimal {
-        const rates: Record<string, Decimal> = {
-            USD: new Decimal(1),
-            EUR: new Decimal(0.92),
-            GBP: new Decimal(0.79),
-            NGN: new Decimal(1580),
-            GHS: new Decimal(15.5),
-            KES: new Decimal(150),
-            ZAR: new Decimal(18.5),
-        };
 
-        if (from === to) return new Decimal(1);
-
-        const fromRate = rates[from] || new Decimal(1);
-        const toRate = rates[to] || new Decimal(1);
-
-        return toRate.div(fromRate);
-    }
 }
