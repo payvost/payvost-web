@@ -75,11 +75,11 @@ export async function getLatestRates(
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = await response.json().catch(() => ({})) as any;
         throw new Error(error.message || `OpenExchangeRates API error: ${response.statusText}`);
     }
 
-    const data: OXRResponse = await response.json();
+    const data = await response.json() as OXRResponse;
 
     // Convert rates to Decimal for precision
     const rates: { [key: string]: Decimal } = {};
@@ -168,11 +168,11 @@ export async function getHistoricalRates(
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = await response.json().catch(() => ({})) as any;
         throw new Error(error.message || `OpenExchangeRates API error: ${response.statusText}`);
     }
 
-    const data: OXRHistoricalResponse = await response.json();
+    const data = await response.json() as OXRHistoricalResponse;
 
     // Convert rates to Decimal for precision
     const rates: { [key: string]: Decimal } = {};
@@ -222,11 +222,11 @@ export async function getTimeSeriesRates(
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = await response.json().catch(() => ({})) as any;
         throw new Error(error.message || `OpenExchangeRates API error: ${response.statusText}`);
     }
 
-    const data: OXRTimeSeriesResponse = await response.json();
+    const data = await response.json() as OXRTimeSeriesResponse;
 
     // Convert rates to Decimal for precision
     const timeSeries: { [date: string]: { [currency: string]: Decimal } } = {};
@@ -255,11 +255,11 @@ export async function getSupportedCurrencies(): Promise<{ [code: string]: string
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = await response.json().catch(() => ({})) as any;
         throw new Error(error.message || `OpenExchangeRates API error: ${response.statusText}`);
     }
 
-    const currencies: { [code: string]: string } = await response.json();
+    const currencies = await response.json() as { [code: string]: string };
     return currencies;
 }
 
@@ -277,7 +277,7 @@ export async function getUsageStats(): Promise<any> {
     const response = await fetch(url.toString());
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
+        const error = await response.json().catch(() => ({})) as any;
         throw new Error(error.message || `OpenExchangeRates API error: ${response.statusText}`);
     }
 

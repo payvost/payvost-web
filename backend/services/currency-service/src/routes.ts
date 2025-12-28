@@ -74,9 +74,10 @@ router.get('/supported', (req: Request, res: Response) => {
  * POST /api/currency/calculate-fees
  * Calculate currency conversion fees
  */
-router.post('/calculate-fees', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/calculate-fees', verifyFirebaseToken, async (req: Request, res: Response) => {
     try {
-        const { amount, from, to, userTier = 'STANDARD' } = req.body;
+        const authReq = req as unknown as AuthenticatedRequest;
+        const { amount, from, to, userTier = 'STANDARD' } = authReq.body;
 
         if (!amount || !from || !to) {
             throw new ValidationError('amount, from, and to are required');
