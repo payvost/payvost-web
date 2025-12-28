@@ -83,7 +83,8 @@ export const transactionSchemas = {
 
   getQuote: z.object({
     fromAccountId: z.string().uuid('Invalid fromAccountId format'),
-    toAccountId: z.string().uuid('Invalid toAccountId format'),
+    toAccountId: z.string().uuid('Invalid toAccountId format').optional(),
+    toUserId: z.string().optional(),
     amount: commonSchemas.amount,
     currency: commonSchemas.currency,
   }),
