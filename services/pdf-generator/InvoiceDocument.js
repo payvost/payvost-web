@@ -467,7 +467,7 @@ const InvoiceDocument = ({ invoice }) => {
         // Header
         React.createElement(View, { style: activeStyles.header },
           React.createElement(View, { style: { flexDirection: 'column', flex: 1 } },
-            React.createElement(Text, { style: activeStyles.title }, 'INVOICE'),
+            logoUrl ? React.createElement(Image, { src: logoUrl, style: { width: 120, height: 40, objectFit: 'contain' } }) : React.createElement(Text, { style: activeStyles.title }, 'INVOICE'),
             React.createElement(Text, { style: activeStyles.invoiceNumber }, `Invoice # ${invoice.invoiceNumber || invoice.id || 'INV-XXXX'}`)
           ),
           React.createElement(View, { style: [baseStyles.statusBadge, statusStyle] },
@@ -610,7 +610,7 @@ const InvoiceDocument = ({ invoice }) => {
         React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-        isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
+        isOverdue && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
         isDueSoon && !isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
       ),
 
