@@ -211,11 +211,11 @@ export class ComplianceManager {
     const [fromAccount, toAccount] = await Promise.all([
       this.prisma.account.findUnique({
         where: { id: fromAccountId },
-        include: { user: true }
+        include: { User: true }
       }),
       this.prisma.account.findUnique({
         where: { id: toAccountId },
-        include: { user: true }
+        include: { User: true }
       })
     ]);
 
@@ -223,8 +223,8 @@ export class ComplianceManager {
     // In real implementation, this would check against actual sanctions databases
     const sanctionedCountries = ['KP', 'IR', 'CU', 'SY'];
     // If country is missing, treat as not sanctioned
-    const fromCountry = (fromAccount?.user as any)?.country || '';
-    const toCountry = (toAccount?.user as any)?.country || '';
+    const fromCountry = (fromAccount?.User as any)?.country || '';
+    const toCountry = (toAccount?.User as any)?.country || '';
     return sanctionedCountries.includes(fromCountry) ||
       sanctionedCountries.includes(toCountry);
   }

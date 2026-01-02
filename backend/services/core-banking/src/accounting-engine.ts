@@ -25,8 +25,8 @@ export class AccountingEngine {
           }
         },
         include: {
-          fromAccount: true,
-          toAccount: true
+          Account_Transfer_fromAccountIdToAccount: true,
+          Account_Transfer_toAccountIdToAccount: true
         }
       }),
 
@@ -39,7 +39,7 @@ export class AccountingEngine {
           }
         },
         include: {
-          account: true
+          Account: true
         }
       })
     ]);
@@ -73,7 +73,7 @@ export class AccountingEngine {
   async reconcileAccounts(): Promise<any> {
     const accounts = await this.prisma.account.findMany({
       include: {
-        ledgerEntries: true
+        LedgerEntry: true
       }
     });
 
@@ -81,7 +81,7 @@ export class AccountingEngine {
 
     for (const account of accounts) {
       // Calculate balance from ledger entries
-      const calculatedBalance = account.ledgerEntries.reduce(
+      const calculatedBalance = account.LedgerEntry.reduce(
         (sum: number, entry: any) => sum + Number(entry.amount),
         0
       );
@@ -110,7 +110,7 @@ export class AccountingEngine {
   async generateTrialBalance(): Promise<any> {
     const accounts = await this.prisma.account.findMany({
       include: {
-        ledgerEntries: {
+        LedgerEntry: {
           orderBy: {
             createdAt: 'desc'
           }

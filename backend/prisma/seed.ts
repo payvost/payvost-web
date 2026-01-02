@@ -46,6 +46,7 @@ async function main() {
             country: 'US',
             userTier: 'STANDARD',
             twoFactorEnabled: false,
+            updatedAt: new Date(),
         },
     });
     console.log('✅ User seeded:', user.email);
@@ -62,6 +63,7 @@ async function main() {
                 currency: 'USD',
                 balance: 5000.00,
                 type: 'PERSONAL',
+                updatedAt: new Date(),
             },
         });
         console.log('✅ USD Account created');
@@ -80,6 +82,7 @@ async function main() {
                 currency: 'NGN',
                 balance: 250000.00,
                 type: 'PERSONAL',
+                updatedAt: new Date(),
             },
         });
         console.log('✅ NGN Account created');

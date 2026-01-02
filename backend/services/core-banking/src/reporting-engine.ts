@@ -125,7 +125,7 @@ export class ReportingEngine {
     const [account, transactions, ledgerEntries] = await Promise.all([
       this.prisma.account.findUnique({
         where: { id: accountId },
-        include: { user: true }
+        include: { User: true }
       }),
       this.prisma.transfer.findMany({
         where: {
@@ -180,7 +180,7 @@ export class ReportingEngine {
       accountInfo: {
         accountId: account.id,
         currency: account.currency,
-        accountHolder: account.user.name,
+        accountHolder: account.User.name,
         accountType: 'PERSONAL' // Default until type field is added
       },
       balances: {

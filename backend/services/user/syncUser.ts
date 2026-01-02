@@ -85,6 +85,7 @@ export async function ensurePrismaUser(firebaseUid: string): Promise<SyncUserRes
       twoFactorPhone: firestoreData.twoFactorPhone || null,
       twoFactorBackupCodes: firestoreData.twoFactorBackupCodes || [],
       twoFactorVerified: firestoreData.twoFactorVerified || false,
+      updatedAt: new Date(),
     };
 
     // Create Prisma User
