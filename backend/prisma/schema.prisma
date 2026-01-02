@@ -10,14 +10,14 @@ datasource db {
 }
 
 model Account {
-  id                                       String            @id
+  id                                       String            @id @default(cuid())
   userId                                   String
   currency                                 String
   balance                                  Decimal           @default(0) @db.Decimal(20, 8)
   type                                     String            @default("PERSONAL")
   rapydWalletId                            String?
   createdAt                                DateTime          @default(now())
-  updatedAt                                DateTime
+  updatedAt                                DateTime          @updatedAt
   User                                     User              @relation(fields: [userId], references: [id])
   AccountActivity                          AccountActivity[]
   AppliedFee                               AppliedFee[]
@@ -31,7 +31,7 @@ model Account {
 }
 
 model AccountActivity {
-  id        String   @id
+  id        String   @id @default(cuid())
   accountId String
   userId    String
   action    String
@@ -46,7 +46,7 @@ model AccountActivity {
 }
 
 model AppliedFee {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   transactionId       String
   accountId           String
   amount              Decimal               @db.Decimal(20, 8)
@@ -61,7 +61,7 @@ model AppliedFee {
 }
 
 model AppliedRuleInstance {
-  id             String     @id
+  id             String     @id @default(cuid())
   appliedFeeId   String
   feeRuleId      String
   amount         Decimal    @db.Decimal(20, 8)
@@ -75,7 +75,7 @@ model AppliedRuleInstance {
 }
 
 model ChatEvent {
-  id          String        @id
+  id          String        @id @default(cuid())
   sessionId   String
   eventType   ChatEventType
   metadata    Json?
@@ -88,7 +88,7 @@ model ChatEvent {
 }
 
 model ChatMessage {
-  id          String      @id
+  id          String      @id @default(cuid())
   sessionId   String
   senderId    String
   content     String
@@ -100,7 +100,7 @@ model ChatMessage {
   readBy      String?
   reactions   Json?
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime    @updatedAt
   ChatSession ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
@@ -111,7 +111,7 @@ model ChatMessage {
 }
 
 model ChatSession {
-  id               String        @id
+  id               String        @id @default(cuid())
   customerId       String
   agentId          String?
   status           ChatStatus    @default(WAITING)
@@ -138,7 +138,7 @@ model ChatSession {
 }
 
 model ComplianceAlert {
-  id          String   @id
+  id          String   @id @default(cuid())
   type        String
   severity    String
   status      String   @default("PENDING")
@@ -146,11 +146,11 @@ model ComplianceAlert {
   description String
   metadata    Json?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 }
 
 model Content {
-  id              String           @id
+  id              String           @id @default(cuid())
   title           String
   slug            String           @unique
   contentType     ContentType
@@ -180,7 +180,7 @@ model Content {
   allowComments   Boolean          @default(false)
   language        String           @default("en")
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime         @updatedAt
   ContentComment  ContentComment[]
   ContentMedia    ContentMedia[]
   ContentVersion  ContentVersion[]
@@ -194,7 +194,7 @@ model Content {
 }
 
 model ContentComment {
-  id         String   @id
+  id         String   @id @default(cuid())
   contentId  String
   authorId   String
   authorName String
@@ -209,7 +209,7 @@ model ContentComment {
 }
 
 model ContentMedia {
-  id         String   @id
+  id         String   @id @default(cuid())
   contentId  String?
   fileName   String
   fileUrl    String
@@ -226,7 +226,7 @@ model ContentMedia {
 }
 
 model ContentVersion {
-  id         String   @id
+  id         String   @id @default(cuid())
   contentId  String
   version    Int
   title      String
@@ -242,7 +242,7 @@ model ContentVersion {
 }
 
 model Dispute {
-  id              String             @id
+  id              String             @id @default(cuid())
   escrowId        String
   raisedBy        String
   raisedByRole    EscrowPartyRole
@@ -258,7 +258,7 @@ model Dispute {
   releaseAmount   Decimal?           @db.Decimal(20, 8)
   respondByDate   DateTime?
   createdAt       DateTime           @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime           @updatedAt
   Escrow          Escrow             @relation(fields: [escrowId], references: [id], onDelete: Cascade)
   DisputeEvidence DisputeEvidence[]
   DisputeMessage  DisputeMessage[]
@@ -269,7 +269,7 @@ model Dispute {
 }
 
 model DisputeEvidence {
-  id          String   @id
+  id          String   @id @default(cuid())
   disputeId   String
   uploadedBy  String
   fileUrl     String
@@ -284,7 +284,7 @@ model DisputeEvidence {
 }
 
 model DisputeMessage {
-  id         String          @id
+  id         String          @id @default(cuid())
   disputeId  String
   senderId   String
   senderRole EscrowPartyRole
@@ -297,7 +297,7 @@ model DisputeMessage {
 }
 
 model ErrorLog {
-  id              String        @id
+  id              String        @id @default(cuid())
   message         String
   errorType       String
   severity        ErrorSeverity @default(MEDIUM)
@@ -320,7 +320,7 @@ model ErrorLog {
   resolvedAt      DateTime?
   resolutionNotes String?
   createdAt       DateTime      @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime      @updatedAt
 
   @@index([correlationId])
   @@index([createdAt])
@@ -331,7 +331,7 @@ model ErrorLog {
 }
 
 model Escrow {
-  id                 String              @id
+  id                 String              @id @default(cuid())
   title              String
   description        String?
   status             EscrowStatus        @default(DRAFT)
@@ -341,7 +341,7 @@ model Escrow {
   platformFeePercent Decimal             @default(2.5) @db.Decimal(5, 2)
   escrowAccountId    String?
   createdAt          DateTime            @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime            @updatedAt
   acceptedAt         DateTime?
   fundedAt           DateTime?
   completedAt        DateTime?
@@ -361,7 +361,7 @@ model Escrow {
 }
 
 model EscrowActivity {
-  id              String           @id
+  id              String           @id @default(cuid())
   escrowId        String
   milestoneId     String?
   type            String
@@ -378,7 +378,7 @@ model EscrowActivity {
 }
 
 model EscrowDocument {
-  id          String   @id
+  id          String   @id @default(cuid())
   escrowId    String
   title       String
   description String?
@@ -394,7 +394,7 @@ model EscrowDocument {
 }
 
 model EscrowParty {
-  id          String          @id
+  id          String          @id @default(cuid())
   escrowId    String
   userId      String?
   role        EscrowPartyRole
@@ -411,7 +411,7 @@ model EscrowParty {
 }
 
 model EscrowTransaction {
-  id           String     @id
+  id           String     @id @default(cuid())
   escrowId     String
   milestoneId  String?
   type         String
@@ -436,7 +436,7 @@ model EscrowTransaction {
 }
 
 model ExternalTransaction {
-  id                    String                    @id
+  id                    String                    @id @default(cuid())
   userId                String
   accountId             String?
   provider              ExternalProvider
@@ -451,7 +451,7 @@ model ExternalTransaction {
   webhookReceived       Boolean                   @default(false)
   webhookData           Json?
   createdAt             DateTime                  @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime                  @updatedAt
   completedAt           DateTime?
 
   @@index([accountId])
@@ -462,7 +462,7 @@ model ExternalTransaction {
 }
 
 model FeeRule {
-  id                  String                @id
+  id                  String                @id @default(cuid())
   name                String
   description         String?
   feeType             FeeType
@@ -475,12 +475,12 @@ model FeeRule {
   country             String?
   isActive            Boolean               @default(true)
   createdAt           DateTime              @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime              @updatedAt
   AppliedRuleInstance AppliedRuleInstance[]
 }
 
 model Invoice {
-  id                String        @id
+  id                String        @id @default(cuid())
   invoiceNumber     String        @unique
   invoiceType       InvoiceType   @default(USER)
   userId            String
@@ -502,7 +502,7 @@ model Invoice {
   publicUrl         String?
   pdfUrl            String?
   createdAt         DateTime      @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime      @updatedAt
   paidAt            DateTime?
 
   @@index([businessId])
@@ -516,7 +516,7 @@ model Invoice {
 }
 
 model KnowledgeBaseArticle {
-  id                                          String        @id
+  id                                          String        @id @default(cuid())
   title                                       String
   content                                     String
   slug                                        String        @unique
@@ -530,7 +530,7 @@ model KnowledgeBaseArticle {
   updatedById                                 String?
   publishedAt                                 DateTime?
   createdAt                                   DateTime      @default(now())
-  updatedAt                                   DateTime
+  updatedAt                                   DateTime      @updatedAt
   User_KnowledgeBaseArticle_createdByIdToUser User          @relation("KnowledgeBaseArticle_createdByIdToUser", fields: [createdById], references: [id])
   User_KnowledgeBaseArticle_updatedByIdToUser User?         @relation("KnowledgeBaseArticle_updatedByIdToUser", fields: [updatedById], references: [id])
 
@@ -540,7 +540,7 @@ model KnowledgeBaseArticle {
 }
 
 model LedgerEntry {
-  id           String   @id
+  id           String   @id @default(cuid())
   accountId    String
   amount       Decimal  @db.Decimal(20, 8)
   balanceAfter Decimal  @db.Decimal(20, 8)
@@ -554,7 +554,7 @@ model LedgerEntry {
 }
 
 model Milestone {
-  id                     String              @id
+  id                     String              @id @default(cuid())
   escrowId               String
   order                  Int
   title                  String
@@ -573,7 +573,7 @@ model Milestone {
   deliverableSubmittedAt DateTime?
   autoReleaseDate        DateTime?
   createdAt              DateTime            @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime            @updatedAt
   EscrowActivity         EscrowActivity[]
   EscrowTransaction      EscrowTransaction[]
   Escrow                 Escrow              @relation(fields: [escrowId], references: [id], onDelete: Cascade)
@@ -583,7 +583,7 @@ model Milestone {
 }
 
 model RateAlert {
-  id               String    @id
+  id               String    @id @default(cuid())
   sourceCurrency   String
   targetCurrency   String
   targetRate       Decimal
@@ -596,7 +596,7 @@ model RateAlert {
 }
 
 model Recipient {
-  id            String   @id
+  id            String   @id @default(cuid())
   userId        String
   name          String
   email         String?
@@ -609,7 +609,7 @@ model Recipient {
   country       String?
   type          String   @default("EXTERNAL")
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
   User          User     @relation(fields: [userId], references: [id])
 
   @@index([payvostUserId])
@@ -617,7 +617,7 @@ model Recipient {
 }
 
 model Referral {
-  id                             String           @id
+  id                             String           @id @default(cuid())
   referrerId                     String
   referredId                     String           @unique
   referralCodeId                 String
@@ -627,7 +627,7 @@ model Referral {
   referredKycStatus              String?
   firstTransactionAt             DateTime?
   createdAt                      DateTime         @default(now())
-  updatedAt                      DateTime
+  updatedAt                      DateTime         @updatedAt
   Referral                       Referral?        @relation("ReferralToReferral", fields: [parentReferralId], references: [id])
   other_Referral                 Referral[]       @relation("ReferralToReferral")
   ReferralCode                   ReferralCode     @relation(fields: [referralCodeId], references: [id])
@@ -643,7 +643,7 @@ model Referral {
 }
 
 model ReferralCampaign {
-  id                   String    @id
+  id                   String    @id @default(cuid())
   name                 String
   description          String?
   isActive             Boolean   @default(true)
@@ -663,14 +663,14 @@ model ReferralCampaign {
   startDate            DateTime
   endDate              DateTime?
   createdAt            DateTime  @default(now())
-  updatedAt            DateTime
+  updatedAt            DateTime  @updatedAt
 
   @@index([isActive])
   @@index([startDate, endDate])
 }
 
 model ReferralCode {
-  id         String     @id
+  id         String     @id @default(cuid())
   userId     String     @unique
   code       String     @unique
   isActive   Boolean    @default(true)
@@ -685,7 +685,7 @@ model ReferralCode {
 }
 
 model ReferralReward {
-  id              String               @id
+  id              String               @id @default(cuid())
   referralId      String
   userId          String
   rewardType      ReferralRewardType
@@ -702,7 +702,7 @@ model ReferralReward {
   approvedAt      DateTime?
   cancelledReason String?
   createdAt       DateTime             @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime             @updatedAt
   expiresAt       DateTime?
   Account         Account?             @relation(fields: [accountId], references: [id])
   Referral        Referral             @relation(fields: [referralId], references: [id])
@@ -717,21 +717,21 @@ model ReferralReward {
 }
 
 model SavedReply {
-  id         String   @id
+  id         String   @id @default(cuid())
   title      String
   content    String
   category   String?
   createdBy  String
   usageCount Int      @default(0)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime
+  updatedAt  DateTime @updatedAt
 
   @@index([category])
   @@index([createdBy])
 }
 
 model ServiceHealthCheck {
-  id           String        @id
+  id           String        @id @default(cuid())
   serviceName  String
   status       ServiceStatus
   responseTime Int?
@@ -748,7 +748,7 @@ model ServiceHealthCheck {
 }
 
 model SupportTicket {
-  id                                    String             @id
+  id                                    String             @id @default(cuid())
   ticketNumber                          String             @unique
   subject                               String
   description                           String
@@ -765,7 +765,7 @@ model SupportTicket {
   resolvedAt                            DateTime?
   closedAt                              DateTime?
   createdAt                             DateTime           @default(now())
-  updatedAt                             DateTime
+  updatedAt                             DateTime           @updatedAt
   User_SupportTicket_assignedToIdToUser User?              @relation("SupportTicket_assignedToIdToUser", fields: [assignedToId], references: [id])
   User_SupportTicket_createdByIdToUser  User?              @relation("SupportTicket_createdByIdToUser", fields: [createdById], references: [id])
   User_SupportTicket_customerIdToUser   User               @relation("SupportTicket_customerIdToUser", fields: [customerId], references: [id])
@@ -780,7 +780,7 @@ model SupportTicket {
 }
 
 model SystemIncident {
-  id               String           @id
+  id               String           @id @default(cuid())
   title            String
   description      String
   status           IncidentStatus   @default(INVESTIGATING)
@@ -790,7 +790,7 @@ model SystemIncident {
   resolvedAt       DateTime?
   metadata         Json?
   createdAt        DateTime         @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime         @updatedAt
 
   @@index([severity])
   @@index([startedAt])
@@ -799,7 +799,7 @@ model SystemIncident {
 }
 
 model TicketAttachment {
-  id            String        @id
+  id            String        @id @default(cuid())
   ticketId      String
   fileName      String
   fileUrl       String
@@ -815,7 +815,7 @@ model TicketAttachment {
 }
 
 model TicketMessage {
-  id            String        @id
+  id            String        @id @default(cuid())
   ticketId      String
   authorId      String
   content       String
@@ -831,7 +831,7 @@ model TicketMessage {
 }
 
 model Transfer {
-  id                                      String          @id
+  id                                      String          @id @default(cuid())
   fromAccountId                           String
   toAccountId                             String
   amount                                  Decimal         @db.Decimal(20, 8)
