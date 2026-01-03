@@ -490,7 +490,7 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, { style: activeStyles.sectionHeader }, 'Invoice Details'),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-          overdueInfo && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
+          overdueInfo && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
         ),
 
         // Billing Information (side by side with more space)
@@ -610,8 +610,8 @@ const InvoiceDocument = ({ invoice }) => {
         React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-        isOverdue && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⚠️ Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}`),
-        isDueSoon && !isOverdue && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
+        overdueInfo && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo),
+        isDueSoon && !isOverdue && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
       ),
 
       React.createElement(View, { style: baseStyles.section },
