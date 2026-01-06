@@ -2,13 +2,14 @@ const React = require('react');
 const { Document, Page, Text, View, StyleSheet, Image, Font } = require('@react-pdf/renderer');
 
 // Register a font that supports currency symbols (including Naira)
+const path = require('path');
 Font.register({
   family: 'Noto Sans',
   fonts: [
-    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Regular.ttf' },
-    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 'bold' },
-    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 600 },
-    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 700 }
+    { src: path.join(__dirname, 'fonts', 'NotoSans-Regular.ttf') },
+    { src: path.join(__dirname, 'fonts', 'NotoSans-Bold.ttf'), fontWeight: 'bold' },
+    { src: path.join(__dirname, 'fonts', 'NotoSans-Bold.ttf'), fontWeight: 600 },
+    { src: path.join(__dirname, 'fonts', 'NotoSans-Bold.ttf'), fontWeight: 700 }
   ]
 });
 
