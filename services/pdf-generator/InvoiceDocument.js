@@ -5,10 +5,10 @@ const { Document, Page, Text, View, StyleSheet, Image, Font } = require('@react-
 Font.register({
   family: 'Noto Sans',
   fonts: [
-    { src: 'https://raw.githubusercontent.com/openmaptiles/fonts/master/fonts/noto-sans/NotoSans-Regular.ttf' },
-    { src: 'https://raw.githubusercontent.com/openmaptiles/fonts/master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 'bold' },
-    { src: 'https://raw.githubusercontent.com/openmaptiles/fonts/master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 600 },
-    { src: 'https://raw.githubusercontent.com/openmaptiles/fonts/master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 700 }
+    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Regular.ttf' },
+    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 'bold' },
+    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 600 },
+    { src: 'https://cdn.jsdelivr.net/gh/openmaptiles/fonts@master/fonts/noto-sans/NotoSans-Bold.ttf', fontWeight: 700 }
   ]
 });
 
