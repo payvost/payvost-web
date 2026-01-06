@@ -404,10 +404,8 @@ const InvoiceDocument = ({ invoice }) => {
   // Detect if this is a business invoice
   const isBusinessInvoice = !!(invoice.businessId || invoice.invoiceType === 'BUSINESS' || invoice.collection === 'businessInvoices');
 
-  // Get template selection (from invoiceSettings or businessProfile.invoiceSettings)
-  const invoiceTemplate = invoice.invoiceSettings?.invoiceTemplate ||
-    invoice.businessProfile?.invoiceSettings?.invoiceTemplate ||
-    (isBusinessInvoice ? 'default' : null);
+  // Get template selection (Always enforce default "Simple & Clean")
+  const invoiceTemplate = isBusinessInvoice ? 'default' : null;
 
   // Get business profile data
   const businessProfile = invoice.businessProfile || {};

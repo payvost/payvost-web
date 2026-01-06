@@ -22,11 +22,11 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 
 const invoiceSettingsSchema = z.object({
-  defaultFooter: z.string().optional(),
-  enableTax: z.boolean(),
-  defaultTaxRate: z.preprocess((val) => (val === '' ? 0 : Number(val)), z.number().min(0, 'Tax rate cannot be negative').optional()),
-  autoInvoiceForRecurring: z.boolean(),
-  invoiceTemplate: z.enum(['default', 'classic', 'professional']).optional(),
+    defaultFooter: z.string().optional(),
+    enableTax: z.boolean(),
+    defaultTaxRate: z.preprocess((val) => (val === '' ? 0 : Number(val)), z.number().min(0, 'Tax rate cannot be negative').optional()),
+    autoInvoiceForRecurring: z.boolean(),
+    invoiceTemplate: z.enum(['default', 'classic', 'professional']).optional(),
 });
 
 type InvoiceFormValues = z.infer<typeof invoiceSettingsSchema>;
@@ -87,7 +87,7 @@ export function BusinessInvoiceSettings() {
                 toast({ title: 'File too large', description: 'Logo should be less than 2MB.', variant: 'destructive' });
                 return;
             }
-            if(!file.type.startsWith('image/')) {
+            if (!file.type.startsWith('image/')) {
                 toast({ title: 'Invalid File Type', description: 'Please upload a PNG or JPG file.', variant: 'destructive' });
                 return;
             }
@@ -96,7 +96,7 @@ export function BusinessInvoiceSettings() {
         }
     };
 
-     const handleSaveLogo = async () => {
+    const handleSaveLogo = async () => {
         if (!user || !logoFile) return;
 
         setIsSavingLogo(true);
@@ -109,7 +109,7 @@ export function BusinessInvoiceSettings() {
             await updateDoc(userDocRef, {
                 'businessProfile.invoiceLogoUrl': downloadURL
             });
-            
+
             toast({ title: 'Logo Updated', description: 'Your new invoice logo has been saved.' });
             setLogoFile(null);
         } catch (error) {
@@ -126,8 +126,8 @@ export function BusinessInvoiceSettings() {
 
         try {
             const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, { 
-                'businessProfile.invoiceSettings': data 
+            await updateDoc(userDocRef, {
+                'businessProfile.invoiceSettings': data
             });
 
             toast({
@@ -155,26 +155,26 @@ export function BusinessInvoiceSettings() {
                     <CardDescription>Customize the look and feel of your invoices. Your branding will appear on all invoices sent to customers.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                     <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label>Business Logo</Label>
                         <div className="flex items-center gap-6 p-4 border rounded-lg">
-                             <Avatar className="h-20 w-20 rounded-md">
+                            <Avatar className="h-20 w-20 rounded-md">
                                 <AvatarImage src={logoPreview || undefined} className="object-contain" />
                                 <AvatarFallback className="rounded-md">Logo</AvatarFallback>
                             </Avatar>
-                             <div className="flex-1">
+                            <div className="flex-1">
                                 <h4 className="font-semibold">Upload your invoice logo</h4>
                                 <Label htmlFor="logo-upload" className="inline-flex items-center justify-center h-9 px-4 py-2 mt-2 text-sm font-medium transition-colors bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 cursor-pointer">
                                     <UploadCloud className="mr-2 h-4 w-4" />
                                     {logoFile ? 'Change Logo' : 'Upload Logo'}
                                 </Label>
-                                <input id="logo-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg"/>
+                                <input id="logo-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg" />
                                 <p className="text-xs text-muted-foreground mt-2">PNG or JPG, max 2MB. Recommended: 300x150px.</p>
                                 {logoFile && (
                                     <div className="mt-2 flex items-center gap-2">
                                         <p className="text-xs font-medium truncate">{logoFile.name}</p>
                                         <Button size="sm" onClick={handleSaveLogo} disabled={isSavingLogo}>
-                                             {isSavingLogo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            {isSavingLogo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Save Logo
                                         </Button>
                                     </div>
@@ -183,75 +183,60 @@ export function BusinessInvoiceSettings() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="invoiceTemplate">Invoice Template Style</Label>
-                        <select 
-                            id="invoiceTemplate" 
-                            {...register('invoiceTemplate')} 
-                            className="w-full p-2 border rounded-md bg-background"
-                        >
-                            <option value="default">Default - Simple & Clean</option>
-                            <option value="classic">Classic - Structured & Business-Oriented</option>
-                            <option value="professional">Professional - Premium Stripe-Style</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground">
-                            Choose your preferred invoice template. Default is recommended for universal use.
-                        </p>
-                    </div>
-                     <div className="space-y-2">
                         <Label htmlFor="defaultFooter">Default Invoice Footer</Label>
-                        <Textarea id="defaultFooter" {...register('defaultFooter')} rows={3} placeholder="e.g., Thank you for your payment."/>
+                        <Textarea id="defaultFooter" {...register('defaultFooter')} rows={3} placeholder="e.g., Thank you for your payment." />
                     </div>
                 </CardContent>
             </Card>
-            
+
             <Card>
-                 <CardHeader>
+                <CardHeader>
                     <CardTitle>Tax Configuration</CardTitle>
                     <CardDescription>Manage tax settings for your invoices.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                             <Label htmlFor="enableTax" className="text-base font-semibold">Enable Tax Collection</Label>
-                             <p className="text-sm text-muted-foreground">Automatically add tax to your invoices.</p>
+                            <Label htmlFor="enableTax" className="text-base font-semibold">Enable Tax Collection</Label>
+                            <p className="text-sm text-muted-foreground">Automatically add tax to your invoices.</p>
                         </div>
-                        <Controller name="enableTax" control={control} render={({field}) => (<Switch id="enableTax" checked={field.value} onCheckedChange={field.onChange} />)} />
+                        <Controller name="enableTax" control={control} render={({ field }) => (<Switch id="enableTax" checked={field.value} onCheckedChange={field.onChange} />)} />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
                         <div className="relative">
-                            <Input id="defaultTaxRate" type="number" step="0.01" {...register('defaultTaxRate')} placeholder="8.5" className="pl-8"/>
-                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                            <Input id="defaultTaxRate" type="number" step="0.01" {...register('defaultTaxRate')} placeholder="8.5" className="pl-8" />
+                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         </div>
-                         {errors.defaultTaxRate && <p className="text-sm text-destructive">{errors.defaultTaxRate.message}</p>}
+                        {errors.defaultTaxRate && <p className="text-sm text-destructive">{errors.defaultTaxRate.message}</p>}
                     </div>
                 </CardContent>
             </Card>
-            
+
             <Card>
-                 <CardHeader>
+                <CardHeader>
                     <CardTitle>Automation &amp; Integrations</CardTitle>
                     <CardDescription>Connect with other services and automate your workflow.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                     <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                             <Label htmlFor="autoInvoiceForRecurring" className="text-base font-semibold">Auto-Invoicing</Label>
-                             <p className="text-sm text-muted-foreground">Automatically generate and send invoices for recurring payments.</p>
+                            <Label htmlFor="autoInvoiceForRecurring" className="text-base font-semibold">Auto-Invoicing</Label>
+                            <p className="text-sm text-muted-foreground">Automatically generate and send invoices for recurring payments.</p>
                         </div>
-                        <Controller name="autoInvoiceForRecurring" control={control} render={({field}) => (<Switch id="autoInvoiceForRecurring" checked={field.value} onCheckedChange={field.onChange} />)} />
+                        <Controller name="autoInvoiceForRecurring" control={control} render={({ field }) => (<Switch id="autoInvoiceForRecurring" checked={field.value} onCheckedChange={field.onChange} />)} />
                     </div>
-                     <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                             <Label className="text-base font-semibold">QuickBooks</Label>
-                             <p className="text-sm text-muted-foreground">Sync your invoices and payments with QuickBooks.</p>
+                            <Label className="text-base font-semibold">QuickBooks</Label>
+                            <p className="text-sm text-muted-foreground">Sync your invoices and payments with QuickBooks.</p>
                         </div>
                         <Button variant="outline">Connect</Button>
                     </div>
-                     <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
                         <div className="space-y-0.5">
-                             <Label className="text-base font-semibold">Xero</Label>
-                             <p className="text-sm text-muted-foreground">Sync your invoices and payments with Xero.</p>
+                            <Label className="text-base font-semibold">Xero</Label>
+                            <p className="text-sm text-muted-foreground">Sync your invoices and payments with Xero.</p>
                         </div>
                         <Button variant="outline">Connect</Button>
                     </div>
@@ -265,12 +250,12 @@ export function BusinessInvoiceSettings() {
                 <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Saving...
                         </>
                     ) : (
                         <>
-                            <Save className="mr-2 h-4 w-4"/>
+                            <Save className="mr-2 h-4 w-4" />
                             Save Invoice Settings
                         </>
                     )}
