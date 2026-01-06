@@ -2,13 +2,14 @@ const React = require('react');
 const { Document, Page, Text, View, StyleSheet, Image, Font } = require('@react-pdf/renderer');
 
 // Register a font that supports currency symbols (including Naira)
+// Register a font that supports currency symbols (including Naira)
 Font.register({
-  family: 'Roboto',
+  family: 'Noto Sans',
   fonts: [
-    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOmCnqEu92Fr1Mu4mxP.ttf' },
-    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOlCnqEu92Fr1MmWUlfBBc9.ttf', fontWeight: 'bold' },
-    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOlCnqEu92Fr1MmWUlfBBc9.ttf', fontWeight: 600 },
-    { src: 'https://fonts.gstatic.com/s/roboto/v20/KFOlCnqEu92Fr1MmWUlfBBc9.ttf', fontWeight: 700 }
+    { src: 'https://fonts.gstatic.com/s/notosans/v27/o-0IIpQlx3QUlC5A4PNr5TRG.ttf' },
+    { src: 'https://fonts.gstatic.com/s/notosans/v27/o-0NIpQlx3QUlC5A4PNjXhFVZjyB.ttf', fontWeight: 'bold' },
+    { src: 'https://fonts.gstatic.com/s/notosans/v27/o-0NIpQlx3QUlC5A4PNjXhFVZjyB.ttf', fontWeight: 600 },
+    { src: 'https://fonts.gstatic.com/s/notosans/v27/o-0NIpQlx3QUlC5A4PNjXhFVZjyB.ttf', fontWeight: 700 }
   ]
 });
 
@@ -16,7 +17,7 @@ Font.register({
 const baseStyles = StyleSheet.create({
   page: {
     padding: 30,
-    fontFamily: 'Roboto',
+    fontFamily: 'Noto Sans',
     fontSize: 10,
     color: '#1e293b',
     backgroundColor: '#ffffff'
@@ -303,7 +304,7 @@ const baseStyles = StyleSheet.create({
 // Business invoice template styles
 const businessStyles = {
   default: StyleSheet.create({
-    page: { padding: 25, fontFamily: 'Roboto', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
+    page: { padding: 25, fontFamily: 'Noto Sans', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
     header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
     title: { fontSize: 28, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 2 },
     invoiceNumber: { fontSize: 12, color: '#6E6E73' },
@@ -321,7 +322,7 @@ const businessStyles = {
     grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 8, marginTop: 5, borderTopWidth: 2, borderTopColor: '#E5E5E5', fontSize: 16, fontWeight: 'bold' }
   }),
   classic: StyleSheet.create({
-    page: { padding: 25, fontFamily: 'Roboto', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#1D1D1F' },
+    page: { padding: 25, fontFamily: 'Noto Sans', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#1D1D1F' },
     header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, paddingBottom: 15, borderBottomWidth: 2, borderBottomColor: '#1D1D1F' },
     title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 3 },
     invoiceNumber: { fontSize: 14, color: '#6E6E73' },
@@ -339,7 +340,7 @@ const businessStyles = {
     grandTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, marginTop: 5, borderTopWidth: 2, borderTopColor: '#1D1D1F', fontSize: 18, fontWeight: 'bold' }
   }),
   professional: StyleSheet.create({
-    page: { padding: 25, fontFamily: 'Roboto', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
+    page: { padding: 25, fontFamily: 'Noto Sans', fontSize: 10, color: '#1D1D1F', backgroundColor: '#ffffff' },
     brandHeader: { padding: 15, borderBottomWidth: 4, borderBottomColor: '#0066FF', marginBottom: 15 },
     header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
     title: { fontSize: 32, fontWeight: 'bold', color: '#1D1D1F', marginBottom: 3, letterSpacing: -0.5 },
@@ -452,7 +453,12 @@ const InvoiceDocument = ({ invoice }) => {
   const daysUntilDue = getDueDateInfo();
   const isOverdue = daysUntilDue !== null && daysUntilDue < 0;
   const isDueSoon = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
-  const overdueInfo = isOverdue ? `Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}` : null;
+
+  // Robust check for paid status
+  const normalizedStatus = String(status).trim().toUpperCase();
+  const isPaid = normalizedStatus === 'PAID';
+
+  const overdueInfo = (isOverdue && !isPaid) ? `Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) !== 1 ? 's' : ''}` : null;
   const amountInWords = numberToWords(grandTotal, currency);
 
   // Render business invoice with template
@@ -490,7 +496,7 @@ const InvoiceDocument = ({ invoice }) => {
           React.createElement(Text, { style: activeStyles.sectionHeader }, 'Invoice Details'),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
           React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-          overdueInfo && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
+          overdueInfo && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo)
         ),
 
         // Billing Information (side by side with more space)
@@ -610,8 +616,8 @@ const InvoiceDocument = ({ invoice }) => {
         React.createElement(Text, { style: baseStyles.sectionHeader }, 'Invoice Details'),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 6, fontWeight: '600' } }, `Issue Date: ${formatDate(invoice.issueDate || invoice.createdAt)}`),
         React.createElement(Text, { style: { fontSize: 10, color: '#334155', marginBottom: 0, fontWeight: '600' } }, `Due Date: ${formatDate(invoice.dueDate)}`),
-        overdueInfo && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo),
-        isDueSoon && !isOverdue && status.toUpperCase() !== 'PAID' && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
+        overdueInfo && React.createElement(Text, { style: { fontSize: 10, color: '#dc2626', marginBottom: 0, fontWeight: 'bold' } }, overdueInfo),
+        isDueSoon && !isOverdue && !isPaid && React.createElement(Text, { style: { fontSize: 10, color: '#f59e0b', marginBottom: 0, fontWeight: 'bold', marginTop: 6 } }, `⏰ Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}`)
       ),
 
       React.createElement(View, { style: baseStyles.section },
