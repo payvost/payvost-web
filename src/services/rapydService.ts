@@ -243,6 +243,43 @@ export interface Payout {
 }
 
 /**
+ * Card Issuing types
+ */
+export interface CreateIssuedCardRequest {
+  ewallet: string;
+  card_program: string;
+  country: string;
+  currency: string;
+  card_type?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface IssuedCard {
+  id: string;
+  status?: string;
+  card_status?: string;
+  last4?: string;
+  last_4?: string;
+  pan_last_4?: string;
+  expiration_date?: string;
+  expiry_date?: string;
+  exp_date?: string;
+  expiration_month?: string | number;
+  expiration_year?: string | number;
+  masked_number?: string;
+  card_number?: string;
+  cvv?: string;
+  [key: string]: any;
+}
+
+export interface UpdateIssuedCardStatusRequest {
+  card: string;
+  status: 'block' | 'unblock';
+}
+
+/**
  * Virtual Account types
  */
 export interface CreateVirtualAccountRequest {
@@ -760,6 +797,76 @@ class RapydService {
     } catch (error) {
       throw new RapydError(
         `Failed to transfer between wallets: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Card Issuing =============
+
+  /**
+   * Create an issued card
+   */
+  async createIssuedCard(cardData: CreateIssuedCardRequest): Promise<IssuedCard> {
+    try {
+      return await this.request<IssuedCard>(
+        'POST',
+        PAYMENT_GATEWAYS.RAPYD.ISSUED_CARDS,
+        cardData
+      );
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create issued card: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Get issued card by ID
+   */
+  async getIssuedCard(cardId: string): Promise<IssuedCard> {
+    try {
+      const endpoint = replaceUrlParams(
+        PAYMENT_GATEWAYS.RAPYD.CARD_BY_ID,
+        { cardId }
+      );
+      return await this.request<IssuedCard>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get issued card: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Activate issued card
+   */
+  async activateIssuedCard(cardId: string): Promise<IssuedCard> {
+    try {
+      const endpoint = replaceUrlParams(
+        PAYMENT_GATEWAYS.RAPYD.ACTIVATE_CARD,
+        { cardId }
+      );
+      return await this.request<IssuedCard>('POST', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to activate issued card: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Update issued card status (block/unblock)
+   */
+  async updateIssuedCardStatus(payload: UpdateIssuedCardStatusRequest): Promise<IssuedCard> {
+    try {
+      return await this.request<IssuedCard>(
+        'POST',
+        PAYMENT_GATEWAYS.RAPYD.UPDATE_CARD_STATUS,
+        payload
+      );
+    } catch (error) {
+      throw new RapydError(
+        `Failed to update issued card status: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

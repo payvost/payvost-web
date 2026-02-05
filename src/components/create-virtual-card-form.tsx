@@ -12,7 +12,7 @@ import { Button } from './ui/button';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { cn } from '@/lib/utils';
-import type { VirtualCardData } from '@/types/virtual-card';
+import type { CreateVirtualCardInput } from '@/types/virtual-card';
 import { DollarSign } from 'lucide-react';
 import { Separator } from './ui/separator';
 
@@ -41,7 +41,7 @@ const themes = [
 ];
 
 interface CreateVirtualCardFormProps {
-    onSubmit: (data: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions' | 'last4' | 'expiry' | 'cvv'>) => void;
+    onSubmit: (data: CreateVirtualCardInput) => void;
     onCancel: () => void;
     isKycVerified: boolean;
 }

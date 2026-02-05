@@ -112,9 +112,10 @@ const columns: ColumnDef<VirtualCardData>[] = [
 interface CardsTableProps {
   data: VirtualCardData[];
   onRowClick: (card: VirtualCardData) => void;
+  onToggleStatus?: (card: VirtualCardData) => void;
 }
 
-export function CardsTable({ data, onRowClick }: CardsTableProps) {
+export function CardsTable({ data, onRowClick, onToggleStatus }: CardsTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
@@ -219,8 +220,11 @@ export function CardsTable({ data, onRowClick }: CardsTableProps) {
                     <ContextMenuItem onClick={() => navigator.clipboard.writeText(row.original.last4)}>
                       Copy Card Number
                     </ContextMenuItem>
-                    <ContextMenuItem disabled={row.original.status === 'terminated'}>
-                      {row.original.status === 'active' ? 'Freeze Card' : 'Activate Card'}
+                    <ContextMenuItem
+                      disabled={row.original.status === 'terminated'}
+                      onClick={() => onToggleStatus?.(row.original)}
+                    >
+                      {row.original.status === 'active' ? 'Freeze Card' : 'Unfreeze Card'}
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>

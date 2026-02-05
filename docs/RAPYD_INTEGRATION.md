@@ -62,7 +62,24 @@ Add the following to your `.env.local` or `.env` file:
 RAPYD_ACCESS_KEY=your_access_key_here
 RAPYD_SECRET_KEY=your_secret_key_here
 RAPYD_ENV=sandbox  # or 'production'
+RAPYD_CARD_PROGRAM_ID=your_card_program_id
+RAPYD_ISSUING_COUNTRY=US
+RAPYD_ISSUING_CURRENCY=USD
+RAPYD_ISSUING_CARD_TYPE=virtual
 ```
+
+### Card Issuing Operations
+
+The card issuing workflow now includes:
+- Secure reveal endpoint for PAN/CVV (server-side only)
+- Freeze/unfreeze actions wired to Rapyd
+- A sync job to reconcile Rapyd card status
+
+API routes:
+- `POST /api/cards/:id/reveal` - Fetches PAN/CVV securely (requires user auth)
+- `PATCH /api/cards/:id/status` - Freeze/unfreeze (`action: freeze | unfreeze`)
+- `POST /api/cards/sync` - Sync current user's cards
+- `POST /api/cards/sync?scope=all` - Admin-only sync across all users
 
 ### Integration Configuration
 

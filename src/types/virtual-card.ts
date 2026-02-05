@@ -22,15 +22,26 @@ export interface VirtualCardData {
     cardLabel: string;
     last4: string;
     cardType: CardType;
-    expiry: string;
-    cvv: string;
+    expiry?: string;
+    cvv?: string;
     balance: number;
     currency: string;
     theme: CardTheme;
     status: CardStatus;
-    fullNumber: string;
+    fullNumber?: string;
+    maskedNumber?: string;
     transactions: CardTransaction[];
     spendingLimit?: SpendingLimit;
     cardModel: CardModel;
     availableCredit?: number;
+    provider?: 'RAPYD';
+    providerCardId?: string;
+}
+
+export interface CreateVirtualCardInput {
+    cardLabel: string;
+    cardModel: CardModel;
+    cardType: CardType;
+    theme: CardTheme;
+    spendingLimit?: SpendingLimit;
 }

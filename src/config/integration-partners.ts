@@ -239,6 +239,7 @@ export const PAYMENT_GATEWAYS = {
     ISSUED_CARDS: '/v1/issuing/cards',
     CARD_BY_ID: '/v1/issuing/cards/:cardId',
     ACTIVATE_CARD: '/v1/issuing/cards/:cardId/activate',
+    UPDATE_CARD_STATUS: '/v1/issuing/cards/status',
     
     // FX
     RATES: '/v1/rates/daily',
@@ -417,6 +418,10 @@ export const ENV_VARIABLES = {
   RAPYD_ACCESS_KEY: process.env.RAPYD_ACCESS_KEY,
   RAPYD_SECRET_KEY: process.env.RAPYD_SECRET_KEY,
   RAPYD_ENV: process.env.RAPYD_ENV || 'sandbox', // 'sandbox' | 'production'
+  RAPYD_CARD_PROGRAM_ID: process.env.RAPYD_CARD_PROGRAM_ID,
+  RAPYD_ISSUING_COUNTRY: process.env.RAPYD_ISSUING_COUNTRY,
+  RAPYD_ISSUING_CURRENCY: process.env.RAPYD_ISSUING_CURRENCY,
+  RAPYD_ISSUING_CARD_TYPE: process.env.RAPYD_ISSUING_CARD_TYPE || 'virtual',
   
   // Email
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,

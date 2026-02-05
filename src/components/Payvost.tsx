@@ -32,8 +32,10 @@ import { TransferPageSkeleton } from '@/components/skeletons/transfer-page-skele
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { isKycVerified as isKycVerifiedStatus } from '@/types/kyc';
 
 interface FeeBreakdown {
   feeAmount: string;
@@ -137,6 +139,27 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
     fetchData();
   }, [user, authLoading, fromWallet]);
+
+  // Subscribe to KYC status for gating payment actions
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsKycVerified(false);
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        setIsKycVerified(false);
+        return;
+      }
+      const data = snapshot.data();
+      setIsKycVerified(isKycVerifiedStatus(data?.kycStatus));
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading]);
 
   // Handle initial beneficiary selection from beneficiaries card
   useEffect(() => {
@@ -617,6 +640,22 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
           Choose a recipient and send money in just a few clicks.
         </CardDescription>
       </CardHeader>
+      {!isKycVerified && (
+        <CardContent className="pt-0">
+          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+            <AlertDescription className="flex flex-col gap-3 text-sm text-amber-900 dark:text-amber-100">
+              <span>
+                Payments are locked until your identity is verified. Complete KYC to unlock transfers and bill payments.
+              </span>
+              <div>
+                <Button asChild size="sm">
+                  <Link href="/dashboard/get-started/verify">Complete KYC</Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      )}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <CardContent className="pb-0">
           <TabsList className="inline-flex w-auto gap-1">

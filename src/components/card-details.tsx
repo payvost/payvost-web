@@ -18,9 +18,10 @@ import { Progress } from './ui/progress';
 
 interface CardDetailsProps {
     card: VirtualCardData;
+    onToggleStatus?: (card: VirtualCardData) => void;
 }
 
-export function CardDetails({ card }: CardDetailsProps) {
+export function CardDetails({ card, onToggleStatus }: CardDetailsProps) {
     const isCredit = card.cardModel === 'credit';
     const spent = card.transactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
     const limit = card.spendingLimit?.amount ?? 0;
@@ -41,14 +42,16 @@ export function CardDetails({ card }: CardDetailsProps) {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-1 space-y-6">
-                <VirtualCard card={card} />
+                <VirtualCard card={card} onToggleStatus={onToggleStatus} />
                 <Card>
                     <CardHeader>
                         <CardTitle>Card Actions</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
                         <Button variant="outline"><DollarSign className="mr-2 h-4 w-4"/> {isCredit ? 'Pay Bill' : 'Top Up'}</Button>
-                        <Button variant="outline"><Snowflake className="mr-2 h-4 w-4"/> Freeze</Button>
+                        <Button variant="outline" onClick={() => onToggleStatus?.(card)}>
+                          <Snowflake className="mr-2 h-4 w-4"/> {card.status === 'active' ? 'Freeze' : 'Unfreeze'}
+                        </Button>
                         <Button variant="outline"><Settings className="mr-2 h-4 w-4"/> Settings</Button>
                         <Button variant="outline"><FileDown className="mr-2 h-4 w-4"/> Statement</Button>
                     </CardContent>

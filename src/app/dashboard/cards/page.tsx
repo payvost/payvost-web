@@ -5,16 +5,17 @@ import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { PlusCircle, ArrowLeft } from 'lucide-react';
 import { CreateVirtualCardForm } from '@/components/create-virtual-card-form';
 import { CardsTable } from '@/components/cards-table';
 import { CardDetails } from '@/components/card-details';
-import type { VirtualCardData } from '@/types/virtual-card';
+import type { CreateVirtualCardInput, VirtualCardData } from '@/types/virtual-card';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchCards, createCard, updateCardStatus } from '@/services/cardsService';
 
 
 type View = 'list' | 'details' | 'create';
@@ -30,71 +31,114 @@ export default function VirtualCardsPage() {
   const [isKycVerified, setIsKycVerified] = useState(false);
 
 
-   useEffect(() => {
+  useEffect(() => {
     if (!user) {
-      if (!authLoading) setLoadingCards(false);
+      if (!authLoading) {
+        setLoadingCards(false);
+        setCards([]);
+      }
       return;
     }
 
-  const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot: DocumentSnapshot<DocumentData>) => {
-    if (snapshot.exists()) {
-      const data = snapshot.data() ?? {};
-            setCards(data.cards || []);
-            const status = data.kycStatus;
-            setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
-        }
-        setLoadingCards(false);
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snapshot: DocumentSnapshot<DocumentData>) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() ?? {};
+        const status = data.kycStatus;
+        setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
+      }
     });
 
     return () => unsub();
   }, [user, authLoading]);
 
-  const handleCardCreated = async (newCardData: Omit<VirtualCardData, 'id' | 'balance' | 'currency' | 'status' | 'fullNumber' | 'transactions' | 'last4' | 'expiry' | 'cvv'>) => {
-    if (!user) {
-        toast({ title: "Not Authenticated", description: "You must be logged in to create a card.", variant: "destructive" });
-        return;
-    }
-    
-    const newCard: VirtualCardData = {
-        ...newCardData,
-        id: `vc_${Date.now()}`,
-        last4: Math.floor(1000 + Math.random() * 9000).toString(),
-        expiry: `${String(Math.floor(1 + Math.random() * 12)).padStart(2, '0')}/${new Date().getFullYear() % 100 + 3}`,
-        cvv: Math.floor(100 + Math.random() * 900).toString(),
-        balance: 0,
-        currency: 'USD',
-        status: 'active',
-        fullNumber: `4${Math.floor(100 + Math.random() * 900)} ${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)} ${Math.floor(1000 + Math.random() * 9000)}`.substring(0,19),
-        transactions: [],
+  useEffect(() => {
+    if (!user || authLoading) return;
+
+    let cancelled = false;
+    const loadCards = async () => {
+      setLoadingCards(true);
+      try {
+        const response = await fetchCards();
+        if (!cancelled) {
+          setCards(response.cards || []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error fetching cards:', error);
+          toast({
+            title: 'Error',
+            description: 'Could not load cards. Please try again.',
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        if (!cancelled) setLoadingCards(false);
+      }
     };
-    
-     if (newCard.cardModel === 'credit') {
-        newCard.availableCredit = newCard.spendingLimit?.amount || 5000; // Default credit limit
+
+    void loadCards();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading, toast]);
+
+  const handleCardCreated = async (newCardData: CreateVirtualCardInput) => {
+    if (!user) {
+      toast({ title: 'Not Authenticated', description: 'You must be logged in to create a card.', variant: 'destructive' });
+      return;
     }
 
     try {
-        const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, {
-            cards: arrayUnion(newCard)
-        });
-        toast({
-            title: "Virtual Card Issued!",
-            description: `A new ${newCard.cardModel} card "${newCard.cardLabel}" has been issued.`,
-        });
-        setView('list');
+      const response = await createCard(newCardData);
+      const created = response.card;
+      setCards((prev) => [created, ...prev]);
+      toast({
+        title: 'Virtual Card Issued!',
+        description: `A new ${created.cardModel} card "${created.cardLabel}" has been issued.`,
+      });
+      setView('list');
     } catch (error) {
-        console.error("Error creating card:", error);
-        toast({
-            title: "Error",
-            description: "Could not create the virtual card. Please try again.",
-            variant: "destructive"
-        });
+      console.error('Error creating card:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not create the virtual card. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   const handleViewDetails = (card: VirtualCardData) => {
     setSelectedCard(card);
     setView('details');
+  };
+
+  const handleToggleStatus = async (card: VirtualCardData) => {
+    if (!user) {
+      toast({ title: 'Not Authenticated', description: 'You must be logged in to update a card.', variant: 'destructive' });
+      return;
+    }
+
+    const action = card.status === 'active' ? 'freeze' : 'unfreeze';
+    try {
+      const response = await updateCardStatus(card.id, action);
+      setCards((prev) =>
+        prev.map((c) => (c.id === card.id ? { ...c, status: response.status } : c))
+      );
+      if (selectedCard?.id === card.id) {
+        setSelectedCard({ ...card, status: response.status });
+      }
+      toast({
+        title: action === 'freeze' ? 'Card Frozen' : 'Card Unfrozen',
+        description: `Card status updated to ${response.status}.`,
+      });
+    } catch (error) {
+      console.error('Error updating card status:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not update card status. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const renderContent = () => {
@@ -106,10 +150,10 @@ export default function VirtualCardsPage() {
       case 'create':
         return <CreateVirtualCardForm onSubmit={handleCardCreated} onCancel={() => setView('list')} isKycVerified={isKycVerified} />;
       case 'details':
-        return selectedCard ? <CardDetails card={selectedCard} /> : null;
+        return selectedCard ? <CardDetails card={selectedCard} onToggleStatus={handleToggleStatus} /> : null;
       case 'list':
       default:
-        return <CardsTable data={cards} onRowClick={handleViewDetails} />;
+        return <CardsTable data={cards} onRowClick={handleViewDetails} onToggleStatus={handleToggleStatus} />;
     }
   };
 

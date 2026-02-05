@@ -68,6 +68,9 @@ export type {
   VirtualAccount,
   CreateWalletRequest,
   Wallet,
+  CreateIssuedCardRequest,
+  IssuedCard,
+  UpdateIssuedCardStatusRequest,
 } from './rapydService';
 
 // External Transaction Service
