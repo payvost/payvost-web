@@ -249,7 +249,7 @@ export async function fundMilestone(
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const milestone = await tx.milestone.findUnique({
       where: { id: input.milestoneId },
-      include: { escrow: true },
+      include: { Escrow: true },
     });
 
     if (!milestone) throw new Error('Milestone not found');
@@ -281,7 +281,7 @@ export async function fundMilestone(
         milestoneId: input.milestoneId,
         type: 'FUNDING',
         amount: new Decimal(amount.toString()),
-        currency: milestone.escrow.currency,
+        currency: milestone.Escrow.currency,
         status: 'COMPLETED',
         accountId: input.accountId,
         processedBy: userId,
@@ -296,14 +296,14 @@ export async function fundMilestone(
         escrowId,
         milestoneId: input.milestoneId,
         type: 'MILESTONE_FUNDED',
-        description: `Milestone "${milestone.title}" funded with ${amount} ${milestone.escrow.currency}`,
+        description: `Milestone "${milestone.title}" funded with ${amount} ${milestone.Escrow.currency}`,
         performedBy: userId,
         performedByRole: EscrowPartyRoleEnum.BUYER as EscrowPartyRole,
       },
     });
 
     // Check if escrow should transition to FUNDED
-    if (milestone.escrow.status === EscrowStatusEnum.AWAITING_FUNDING) {
+    if (milestone.Escrow.status === EscrowStatusEnum.AWAITING_FUNDING) {
       const firstMilestone = await tx.milestone.findFirst({
         where: { escrowId, order: 1 },
       });
@@ -380,7 +380,7 @@ export async function releaseMilestone(
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const milestone = await tx.milestone.findUnique({
       where: { id: input.milestoneId },
-      include: { escrow: true },
+      include: { Escrow: true },
     });
 
     if (!milestone) throw new Error('Milestone not found');
@@ -406,7 +406,7 @@ export async function releaseMilestone(
         milestoneId: input.milestoneId,
         type: 'RELEASE',
         amount: milestone.amount,
-        currency: milestone.escrow.currency,
+        currency: milestone.Escrow.currency,
         status: 'COMPLETED',
         processedBy: userId,
         processedAt: new Date(),
@@ -516,7 +516,7 @@ export async function resolveDispute(
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const dispute = await tx.dispute.findUnique({
       where: { id: input.disputeId },
-      include: { escrow: true },
+      include: { Escrow: true },
     });
 
     if (!dispute) throw new Error('Dispute not found');
@@ -601,15 +601,15 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
   const escrow = await prisma.escrow.findUnique({
     where: { id: escrowId },
     include: {
-      parties: true,
-      milestones: {
+      EscrowParty: true,
+      Milestone: {
         orderBy: { order: 'asc' },
       },
-      activities: {
+      EscrowActivity: {
         orderBy: { createdAt: 'desc' },
         take: 20,
       },
-      disputes: {
+      Dispute: {
         orderBy: { createdAt: 'desc' },
       },
     },
@@ -617,9 +617,9 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
 
   if (!escrow) throw new Error('Escrow not found');
 
-  const buyer = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.BUYER);
-  const seller = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.SELLER);
-  const mediator = escrow.parties.find((p: any) => p.role === EscrowPartyRoleEnum.MEDIATOR);
+  const buyer = escrow.EscrowParty.find((p: any) => p.role === EscrowPartyRoleEnum.BUYER);
+  const seller = escrow.EscrowParty.find((p: any) => p.role === EscrowPartyRoleEnum.SELLER);
+  const mediator = escrow.EscrowParty.find((p: any) => p.role === EscrowPartyRoleEnum.MEDIATOR);
 
   return {
     id: escrow.id,
@@ -655,7 +655,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
           acceptedAt: mediator.acceptedAt || undefined,
         }
       : undefined,
-    milestones: escrow.milestones.map((m: any) => ({
+    milestones: escrow.Milestone.map((m: any) => ({
       id: m.id,
       title: m.title,
       description: m.description || undefined,
@@ -666,7 +666,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
       deliverableSubmitted: m.deliverableSubmitted,
       deliverableUrl: m.deliverableUrl || undefined,
     })),
-    activities: escrow.activities.map((a: any) => ({
+    activities: escrow.EscrowActivity.map((a: any) => ({
       id: a.id,
       type: a.type,
       description: a.description,
@@ -674,7 +674,7 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
       performedByRole: a.performedByRole || undefined,
       createdAt: a.createdAt,
     })),
-    disputes: escrow.disputes.map((d: any) => ({
+    disputes: escrow.Dispute.map((d: any) => ({
       id: d.id,
       reason: d.reason,
       description: d.description,
@@ -695,22 +695,32 @@ export async function getEscrowDetails(escrowId: string): Promise<EscrowDetails>
  * Get user's escrows
  */
 export async function getUserEscrows(userId: string, userEmail: string) {
-  return await prisma.escrow.findMany({
+  const escrows = await prisma.escrow.findMany({
     where: {
-      parties: {
+      EscrowParty: {
         some: {
           OR: [{ userId }, { email: userEmail }],
         },
       },
     },
     include: {
-      parties: true,
-      milestones: true,
-      disputes: {
+      EscrowParty: true,
+      Milestone: true,
+      Dispute: {
         where: { status: { in: ['OPEN', 'UNDER_REVIEW', 'AWAITING_DECISION'] } },
       },
     },
     orderBy: { createdAt: 'desc' },
+  });
+
+  return escrows.map((escrow: any) => {
+    const { EscrowParty, Milestone, Dispute, ...rest } = escrow;
+    return {
+      ...rest,
+      parties: EscrowParty,
+      milestones: Milestone,
+      disputes: Dispute,
+    };
   });
 }
 

@@ -13,7 +13,7 @@ export default function RegisterPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Create an Account</CardTitle>
             <CardDescription>
-              Complete the steps below to set up your secure account.
+              Complete 3 short steps below to set up your secure account.
             </CardDescription>
           </CardHeader>
           <CardContent>

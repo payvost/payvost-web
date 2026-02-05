@@ -69,7 +69,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
 
     const recentTransactions = await prisma.transfer.findMany({
       where: {
-        toAccount: {
+        Account_Transfer_toAccountIdToAccount: {
           userId,
         },
         createdAt: {
@@ -77,7 +77,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
         },
       },
       select: {
-        fromAccount: {
+        Account_Transfer_fromAccountIdToAccount: {
           select: {
             userId: true,
           },
@@ -89,7 +89,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     const newCustomers = recentTransactions.length;
     const previousWeekCustomers = await prisma.transfer.findMany({
       where: {
-        toAccount: {
+        Account_Transfer_toAccountIdToAccount: {
           userId,
         },
         createdAt: {
@@ -98,7 +98,7 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
         },
       },
       select: {
-        fromAccount: {
+        Account_Transfer_fromAccountIdToAccount: {
           select: {
             userId: true,
           },
@@ -113,13 +113,13 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     const recentTxs = await prisma.transfer.findMany({
       where: {
         OR: [
-          { fromAccount: { userId } },
-          { toAccount: { userId } },
+          { Account_Transfer_fromAccountIdToAccount: { userId } },
+          { Account_Transfer_toAccountIdToAccount: { userId } },
         ],
       },
       include: {
-        fromAccount: true,
-        toAccount: true,
+        Account_Transfer_fromAccountIdToAccount: true,
+        Account_Transfer_toAccountIdToAccount: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -129,9 +129,9 @@ router.get('/dashboard', verifyFirebaseToken, async (req: AuthenticatedRequest, 
 
     const recentTransactionsData = recentTxs.map((tx: any) => ({
       id: tx.id,
-      type: tx.toAccount.userId === userId ? 'Credit' : 'Debit',
+      type: tx.Account_Transfer_toAccountIdToAccount.userId === userId ? 'Credit' : 'Debit',
       description: tx.description || `${tx.type} Transaction`,
-      amount: tx.toAccount.userId === userId ? Number(tx.amount) : -Number(tx.amount),
+      amount: tx.Account_Transfer_toAccountIdToAccount.userId === userId ? Number(tx.amount) : -Number(tx.amount),
       date: tx.createdAt.toISOString(),
       status: tx.status === 'COMPLETED' ? 'Completed' : tx.status === 'PENDING' ? 'Pending' : 'Failed',
       currency: tx.currency,
@@ -170,8 +170,8 @@ router.get('/transactions', verifyFirebaseToken, async (req: AuthenticatedReques
 
     const where: any = {
       OR: [
-        { fromAccount: { userId } },
-        { toAccount: { userId } },
+        { Account_Transfer_fromAccountIdToAccount: { userId } },
+        { Account_Transfer_toAccountIdToAccount: { userId } },
       ],
     };
 
@@ -189,8 +189,8 @@ router.get('/transactions', verifyFirebaseToken, async (req: AuthenticatedReques
     const transactions = await prisma.transfer.findMany({
       where,
       include: {
-        fromAccount: true,
-        toAccount: true,
+        Account_Transfer_fromAccountIdToAccount: true,
+        Account_Transfer_toAccountIdToAccount: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -201,9 +201,9 @@ router.get('/transactions', verifyFirebaseToken, async (req: AuthenticatedReques
 
     const formattedTransactions = transactions.map((tx: any) => ({
       id: tx.id,
-      type: tx.toAccount.userId === userId ? 'Credit' : 'Debit',
+      type: tx.Account_Transfer_toAccountIdToAccount.userId === userId ? 'Credit' : 'Debit',
       description: tx.description || `${tx.type} Transaction`,
-      amount: tx.toAccount.userId === userId ? Number(tx.amount) : -Number(tx.amount),
+      amount: tx.Account_Transfer_toAccountIdToAccount.userId === userId ? Number(tx.amount) : -Number(tx.amount),
       date: tx.createdAt.toISOString(),
       status: tx.status === 'COMPLETED' ? 'Completed' : tx.status === 'PENDING' ? 'Pending' : 'Failed',
       currency: tx.currency,

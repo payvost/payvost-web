@@ -169,7 +169,7 @@ router.get('/accounts/:id', verifyFirebaseToken, async (req: AuthenticatedReques
     const account = await prisma.account.findFirst({
       where: { id, userId },
       include: {
-        ledgerEntries: {
+        LedgerEntry: {
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
@@ -180,7 +180,13 @@ router.get('/accounts/:id', verifyFirebaseToken, async (req: AuthenticatedReques
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    res.status(200).json({ account });
+    const { LedgerEntry, ...rest } = account as any;
+    const normalizedAccount = {
+      ...rest,
+      ledgerEntries: LedgerEntry,
+    };
+
+    res.status(200).json({ account: normalizedAccount });
   } catch (error: any) {
     console.error('Error fetching account:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch account' });

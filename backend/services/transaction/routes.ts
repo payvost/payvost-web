@@ -15,6 +15,41 @@ const transactionManager = new TransactionManager(prisma);
 const feeEngine = new FeeEngine(prisma);
 const transferService = new TransferService(prisma);
 
+function mapTransfer(transfer: any) {
+  if (!transfer) return transfer;
+
+  const {
+    Account_Transfer_fromAccountIdToAccount,
+    Account_Transfer_toAccountIdToAccount,
+    AppliedFee,
+    ...rest
+  } = transfer;
+
+  const appliedFees = AppliedFee
+    ? AppliedFee.map((fee: any) => {
+        const { AppliedRuleInstance, ...feeRest } = fee;
+        const appliedRules = AppliedRuleInstance
+          ? AppliedRuleInstance.map((rule: any) => {
+              const { FeeRule, ...ruleRest } = rule;
+              return { ...ruleRest, feeRule: FeeRule };
+            })
+          : AppliedRuleInstance;
+
+        return {
+          ...feeRest,
+          appliedRules,
+        };
+      })
+    : AppliedFee;
+
+  return {
+    ...rest,
+    fromAccount: Account_Transfer_fromAccountIdToAccount,
+    toAccount: Account_Transfer_toAccountIdToAccount,
+    appliedFees,
+  };
+}
+
 /**
  * POST /api/transaction/quote
  * Get a transfer quote (includes fees and exchange rates)
@@ -181,14 +216,14 @@ router.get('/transfers', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     const transfers = await prisma.transfer.findMany({
       where,
       include: {
-        fromAccount: {
+        Account_Transfer_fromAccountIdToAccount: {
           select: {
             id: true,
             currency: true,
             type: true,
           },
         },
-        toAccount: {
+        Account_Transfer_toAccountIdToAccount: {
           select: {
             id: true,
             currency: true,
@@ -204,7 +239,7 @@ router.get('/transfers', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     const total = await prisma.transfer.count({ where });
 
     res.status(200).json({
-      transfers,
+      transfers: transfers.map((transfer: any) => mapTransfer(transfer)),
       pagination: {
         total,
         limit: parseInt(limit as string),
@@ -243,13 +278,13 @@ router.get('/transfers/:id', verifyFirebaseToken, async (req: AuthenticatedReque
         ],
       },
       include: {
-        fromAccount: true,
-        toAccount: true,
-        appliedFees: {
+        Account_Transfer_fromAccountIdToAccount: true,
+        Account_Transfer_toAccountIdToAccount: true,
+        AppliedFee: {
           include: {
-            appliedRules: {
+            AppliedRuleInstance: {
               include: {
-                feeRule: true,
+                FeeRule: true,
               },
             },
           },
@@ -261,7 +296,7 @@ router.get('/transfers/:id', verifyFirebaseToken, async (req: AuthenticatedReque
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
-    res.status(200).json({ transfer });
+    res.status(200).json({ transfer: mapTransfer(transfer) });
   } catch (error: any) {
     console.error('Error fetching transfer:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch transfer' });

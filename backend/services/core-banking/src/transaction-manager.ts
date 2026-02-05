@@ -46,10 +46,10 @@ export class TransactionManager {
     // 1. Fetch user tier for limits
     const fromAccountObj = await this.prisma.account.findUnique({
       where: { id: fromAccountId },
-      select: { user: { select: { userTier: true } } }
+      select: { User: { select: { userTier: true } } }
     });
 
-    const userTier = fromAccountObj?.user?.userTier || 'STANDARD';
+    const userTier = fromAccountObj?.User?.userTier || 'STANDARD';
 
     // 2. Determine tiered limits
     const tieredLimits: Record<string, { daily: number; monthly: number }> = {

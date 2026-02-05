@@ -164,13 +164,18 @@ type FormValues = z.infer<typeof registrationSchema>;
 const steps = [
   {
     id: 1,
-    name: 'Personal & Address',
-    fields: ['firstName', 'middleName', 'lastName', 'username', 'email', 'phone', 'password', 'confirmPassword', 'dateOfBirth', 'country', 'photo', 'street', 'city', 'state', 'zip'],
+    name: 'Account Details',
+    fields: ['firstName', 'middleName', 'lastName', 'username', 'email', 'countryCode', 'phone', 'password', 'confirmPassword', 'referralCode'],
   },
   {
     id: 2,
+    name: 'Profile & Address',
+    fields: ['photo', 'dateOfBirth', 'country', 'state', 'city', 'zip', 'street'],
+  },
+  {
+    id: 3,
     name: 'Identity Verification',
-    fields: ['idType', 'idNumber', 'agreeTerms'],
+    fields: ['idType', 'idNumber', 'agreeTerms', ...KYC_DYNAMIC_FIELD_NAMES],
   },
 ];
 
@@ -275,7 +280,10 @@ export function RegistrationForm() {
         if (parsed.zip) setValue('zip', parsed.zip, { shouldDirty: false });
         if (parsed.dateOfBirth) setValue('dateOfBirth', new Date(parsed.dateOfBirth), { shouldDirty: false });
         if (parsed.agreeTerms) setValue('agreeTerms', parsed.agreeTerms, { shouldDirty: false });
-        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+        if (typeof parsed.currentStep === 'number') {
+          const safeStep = Math.min(Math.max(parsed.currentStep, 0), steps.length - 1);
+          setCurrentStep(safeStep);
+        }
       }
     } catch (e) {
       // Ignore localStorage errors
@@ -870,7 +878,7 @@ export function RegistrationForm() {
   
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     // Mark all steps as validated before submission
-    setValidatedSteps(new Set([0, 1]));
+    setValidatedSteps(new Set(steps.map((_, index) => index)));
     
     setIsLoading(true);
 
@@ -1242,35 +1250,7 @@ export function RegistrationForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         {currentStep === 0 && (
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold">Step 1: Personal & Address Information</h3>
-             <div className="flex items-center gap-4 pb-2">
-                <Avatar className="h-20 w-20 flex-shrink-0">
-                    <AvatarImage src={previewImage || undefined} alt="Profile picture preview" />
-                    <AvatarFallback>{firstName && lastName ? getInitials(firstName, lastName, middleName) : 'PIC'}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-2">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
-                                <UploadCloud className="mr-2 h-4 w-4" /> Set Profile Photo
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
-                                <UploadCloud className="mr-2 h-4 w-4" /> Upload a file
-                            </DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => {
-                               startCamera();
-                             }}>
-                                <Camera className="mr-2 h-4 w-4" /> Take a selfie
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoChange} disabled={isLoading} />
-                    <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
-                     {shouldShowError('photo') && errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
-                </div>
-            </div>
+            <h3 className="text-lg font-semibold">Step 1: Account Details</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
@@ -1437,6 +1417,40 @@ export function RegistrationForm() {
                 }}
               />
               <p className="text-xs text-muted-foreground">Have a referral code? Enter it here to get rewards!</p>
+            </div>
+          </div>
+        )}
+
+        {currentStep === 1 && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">Step 2: Profile & Address</h3>
+             <div className="flex items-center gap-4 pb-2">
+                <Avatar className="h-20 w-20 flex-shrink-0">
+                    <AvatarImage src={previewImage || undefined} alt="Profile picture preview" />
+                    <AvatarFallback>{firstName && lastName ? getInitials(firstName, lastName, middleName) : 'PIC'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
+                                <UploadCloud className="mr-2 h-4 w-4" /> Set Profile Photo
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => document.getElementById('photo-upload')?.click()}>
+                                <UploadCloud className="mr-2 h-4 w-4" /> Upload a file
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => {
+                               startCamera();
+                             }}>
+                                <Camera className="mr-2 h-4 w-4" /> Take a selfie
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <input id="photo-upload" type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoChange} disabled={isLoading} />
+                    <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+                     {shouldShowError('photo') && errors.photo && <p className="text-sm text-destructive">{String(errors.photo.message)}</p>}
+                </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1617,9 +1631,9 @@ export function RegistrationForm() {
           </div>
         )}
 
-        {currentStep === 1 && (
+        {currentStep === 2 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Step 2: Identity Verification</h3>
+            <h3 className="text-lg font-semibold">Step 3: Identity Verification</h3>
 
             <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">

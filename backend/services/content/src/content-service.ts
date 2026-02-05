@@ -77,6 +77,18 @@ export interface ContentFilters {
 export class ContentService {
   constructor(private prisma: PrismaClient) {}
 
+  private mapContentRelations(content: any) {
+    if (!content) return content;
+
+    const { ContentVersion, ContentMedia, ...rest } = content;
+
+    return {
+      ...rest,
+      versions: ContentVersion,
+      media: ContentMedia,
+    };
+  }
+
   /**
    * Generate a URL-friendly slug from title
    */
@@ -164,7 +176,7 @@ export class ContentService {
         likeCount: 0,
       },
       include: {
-        versions: {
+        ContentVersion: {
           orderBy: { version: 'desc' },
           take: 1,
         },
@@ -184,7 +196,7 @@ export class ContentService {
       },
     });
 
-    return content;
+    return this.mapContentRelations(content);
   }
 
   /**
@@ -194,11 +206,11 @@ export class ContentService {
     const content = await this.prisma.content.findUnique({
       where: { id },
       include: {
-        versions: {
+        ContentVersion: {
           orderBy: { version: 'desc' },
           take: 10,
         },
-        media: {
+        ContentMedia: {
           orderBy: { createdAt: 'desc' },
         },
       },
@@ -214,7 +226,7 @@ export class ContentService {
       }
     }
 
-    return content;
+    return this.mapContentRelations(content);
   }
 
   /**
@@ -224,11 +236,11 @@ export class ContentService {
     return await this.prisma.content.findUnique({
       where: { slug },
       include: {
-        media: {
+        ContentMedia: {
           orderBy: { createdAt: 'desc' },
         },
       },
-    });
+    }).then((result) => this.mapContentRelations(result));
   }
 
   /**
@@ -278,7 +290,7 @@ export class ContentService {
         take: limit,
         skip: offset,
         include: {
-          media: {
+          ContentMedia: {
             take: 1,
             orderBy: { createdAt: 'desc' },
           },
@@ -288,7 +300,7 @@ export class ContentService {
     ]);
 
     return {
-      items,
+      items: items.map((item) => this.mapContentRelations(item)),
       pagination: {
         total,
         limit,

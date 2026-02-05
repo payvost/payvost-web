@@ -76,21 +76,21 @@ export async function createTicket(
       status: 'OPEN',
     },
     include: {
-      customer: {
+      User_SupportTicket_customerIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      assignedTo: {
+      User_SupportTicket_assignedToIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      createdBy: {
+      User_SupportTicket_createdByIdToUser: {
         select: {
           id: true,
           email: true,
@@ -99,14 +99,14 @@ export async function createTicket(
       },
       _count: {
         select: {
-          messages: true,
-          attachments: true,
+          TicketMessage: true,
+          TicketAttachment: true,
         },
       },
     },
   });
 
-  return ticket;
+  return mapTicketRelations(ticket);
 }
 
 /**
@@ -116,31 +116,31 @@ export async function getTicketById(ticketId: string) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
     include: {
-      customer: {
+      User_SupportTicket_customerIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      assignedTo: {
+      User_SupportTicket_assignedToIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      createdBy: {
+      User_SupportTicket_createdByIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      messages: {
+      TicketMessage: {
         orderBy: { createdAt: 'asc' },
         include: {
-          author: {
+          User: {
             select: {
               id: true,
               email: true,
@@ -149,10 +149,10 @@ export async function getTicketById(ticketId: string) {
           },
         },
       },
-      attachments: {
+      TicketAttachment: {
         orderBy: { createdAt: 'asc' },
         include: {
-          uploadedBy: {
+          User: {
             select: {
               id: true,
               email: true,
@@ -163,8 +163,8 @@ export async function getTicketById(ticketId: string) {
       },
       _count: {
         select: {
-          messages: true,
-          attachments: true,
+          TicketMessage: true,
+          TicketAttachment: true,
         },
       },
     },
@@ -174,7 +174,7 @@ export async function getTicketById(ticketId: string) {
     throw new ValidationError('Ticket not found');
   }
 
-  return ticket;
+  return mapTicketRelations(ticket);
 }
 
 /**
@@ -251,21 +251,21 @@ export async function listTickets(filters: TicketFilters = {}) {
       take: limit,
       orderBy,
       include: {
-        customer: {
+        User_SupportTicket_customerIdToUser: {
           select: {
             id: true,
             email: true,
             name: true,
           },
         },
-        assignedTo: {
+        User_SupportTicket_assignedToIdToUser: {
           select: {
             id: true,
             email: true,
             name: true,
           },
         },
-        createdBy: {
+        User_SupportTicket_createdByIdToUser: {
           select: {
             id: true,
             email: true,
@@ -274,8 +274,8 @@ export async function listTickets(filters: TicketFilters = {}) {
         },
         _count: {
           select: {
-            messages: true,
-            attachments: true,
+            TicketMessage: true,
+            TicketAttachment: true,
           },
         },
       },
@@ -284,7 +284,7 @@ export async function listTickets(filters: TicketFilters = {}) {
   ]);
 
   return {
-    tickets,
+    tickets: tickets.map((ticket: any) => mapTicketRelations(ticket)),
     pagination: {
       total,
       page,
@@ -325,21 +325,21 @@ export async function updateTicket(
     where: { id: ticketId },
     data: updateData,
     include: {
-      customer: {
+      User_SupportTicket_customerIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      assignedTo: {
+      User_SupportTicket_assignedToIdToUser: {
         select: {
           id: true,
           email: true,
           name: true,
         },
       },
-      createdBy: {
+      User_SupportTicket_createdByIdToUser: {
         select: {
           id: true,
           email: true,
@@ -349,7 +349,7 @@ export async function updateTicket(
     },
   });
 
-  return ticket;
+  return mapTicketRelations(ticket);
 }
 
 /**
@@ -378,7 +378,7 @@ export async function addMessage(
       type: input.type,
     },
     include: {
-      author: {
+      User: {
         select: {
           id: true,
           email: true,
@@ -402,7 +402,7 @@ export async function addMessage(
     data: { updatedAt: new Date() },
   });
 
-  return message;
+  return mapTicketMessage(message);
 }
 
 /**
@@ -478,6 +478,85 @@ export interface ChatFilters {
   limit?: number;
 }
 
+function mapTicketMessage(message: any) {
+  if (!message) return message;
+  const { User, ...rest } = message;
+  return {
+    ...rest,
+    author: User,
+  };
+}
+
+function mapTicketAttachment(attachment: any) {
+  if (!attachment) return attachment;
+  const { User, ...rest } = attachment;
+  return {
+    ...rest,
+    uploadedBy: User,
+  };
+}
+
+function mapTicketRelations(ticket: any) {
+  if (!ticket) return ticket;
+
+  const {
+    User_SupportTicket_customerIdToUser,
+    User_SupportTicket_assignedToIdToUser,
+    User_SupportTicket_createdByIdToUser,
+    TicketMessage,
+    TicketAttachment,
+    _count,
+    ...rest
+  } = ticket;
+
+  let mappedCount = _count;
+  if (_count) {
+    const { TicketMessage: messageCount, TicketAttachment: attachmentCount, ...countRest } = _count;
+    mappedCount = {
+      ...countRest,
+      messages: messageCount,
+      attachments: attachmentCount,
+    };
+  }
+
+  return {
+    ...rest,
+    customer: User_SupportTicket_customerIdToUser,
+    assignedTo: User_SupportTicket_assignedToIdToUser,
+    createdBy: User_SupportTicket_createdByIdToUser,
+    messages: TicketMessage ? TicketMessage.map(mapTicketMessage) : TicketMessage,
+    attachments: TicketAttachment ? TicketAttachment.map(mapTicketAttachment) : TicketAttachment,
+    _count: mappedCount,
+  };
+}
+
+function mapChatMessage(message: any) {
+  if (!message) return message;
+  const { ChatSession, ...rest } = message;
+  return ChatSession ? { ...rest, session: ChatSession } : rest;
+}
+
+function mapChatSession(session: any) {
+  if (!session) return session;
+
+  const { ChatMessage, _count, ...rest } = session;
+
+  let mappedCount = _count;
+  if (_count) {
+    const { ChatMessage: messageCount, ...countRest } = _count;
+    mappedCount = {
+      ...countRest,
+      messages: messageCount,
+    };
+  }
+
+  return {
+    ...rest,
+    messages: ChatMessage ? ChatMessage.map(mapChatMessage) : ChatMessage,
+    _count: mappedCount,
+  };
+}
+
 /**
  * Create a new chat session
  */
@@ -492,14 +571,14 @@ export async function createChatSession(
       status: agentId ? 'ACTIVE' : 'WAITING',
     },
     include: {
-      messages: {
+      ChatMessage: {
         orderBy: { createdAt: 'asc' },
         take: 50,
       },
     },
   });
 
-  return session;
+  return mapChatSession(session);
 }
 
 /**
@@ -509,10 +588,10 @@ export async function getChatSessionById(sessionId: string) {
   const session = await prisma.chatSession.findUnique({
     where: { id: sessionId },
     include: {
-      messages: {
+      ChatMessage: {
         orderBy: { createdAt: 'asc' },
         include: {
-          session: {
+          ChatSession: {
             select: {
               id: true,
               customerId: true,
@@ -528,7 +607,7 @@ export async function getChatSessionById(sessionId: string) {
     throw new ValidationError('Chat session not found');
   }
 
-  return session;
+  return mapChatSession(session);
 }
 
 /**
@@ -570,13 +649,13 @@ export async function listChatSessions(filters: ChatFilters = {}) {
       take: limit,
       orderBy: { startedAt: 'desc' },
       include: {
-        messages: {
+        ChatMessage: {
           orderBy: { createdAt: 'desc' },
           take: 1, // Get last message
         },
         _count: {
           select: {
-            messages: true,
+            ChatMessage: true,
           },
         },
       },
@@ -585,7 +664,7 @@ export async function listChatSessions(filters: ChatFilters = {}) {
   ]);
 
   return {
-    sessions,
+    sessions: sessions.map((session: any) => mapChatSession(session)),
     pagination: {
       total,
       page,
@@ -605,19 +684,19 @@ export async function getChatQueue() {
     },
     orderBy: { startedAt: 'asc' },
     include: {
-      messages: {
+      ChatMessage: {
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
       _count: {
         select: {
-          messages: true,
+          ChatMessage: true,
         },
       },
     },
   });
 
-  return waiting;
+  return waiting.map((session: any) => mapChatSession(session));
 }
 
 /**
@@ -634,13 +713,13 @@ export async function assignChatSession(
       status: 'ACTIVE',
     },
     include: {
-      messages: {
+      ChatMessage: {
         orderBy: { createdAt: 'asc' },
       },
     },
   });
 
-  return session;
+  return mapChatSession(session);
 }
 
 /**

@@ -195,7 +195,7 @@ async function calculateAccountRiskScore(accountId: string): Promise<{
 
   const account = await prisma.account.findUnique({
     where: { id: accountId },
-    include: { user: true },
+    include: { User: true },
   });
 
   if (!account) {
@@ -212,7 +212,7 @@ async function calculateAccountRiskScore(accountId: string): Promise<{
   }
 
   // Check KYC status
-  if (account.user.kycStatus !== 'verified') {
+  if (account.User.kycStatus !== 'verified') {
     score += 30;
     factors.push('KYC not verified');
   }

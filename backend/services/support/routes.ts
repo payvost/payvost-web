@@ -329,7 +329,7 @@ router.get('/chat/sessions/active', verifyFirebaseToken, async (req: Authenticat
       },
       orderBy: { startedAt: 'desc' },
       include: {
-        messages: {
+        ChatMessage: {
           orderBy: { createdAt: 'asc' },
           take: 100,
         },
@@ -340,7 +340,13 @@ router.get('/chat/sessions/active', verifyFirebaseToken, async (req: Authenticat
       return res.status(404).json({ error: 'No active session found' });
     }
 
-    res.json({ sessionId: session.id, session });
+    const { ChatMessage, ...rest } = session as any;
+    const normalizedSession = {
+      ...rest,
+      messages: ChatMessage,
+    };
+
+    res.json({ sessionId: normalizedSession.id, session: normalizedSession });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch active session' });
   }

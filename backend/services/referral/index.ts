@@ -59,7 +59,7 @@ export class ReferralService {
       // Find referral code
       const codeRecord = await prisma.referralCode.findUnique({
         where: { code: referralCode },
-        include: { user: true },
+        include: { User: true },
       });
 
       if (!codeRecord || !codeRecord.isActive) {
@@ -186,7 +186,7 @@ export class ReferralService {
   ): Promise<void> {
     const referral = await prisma.referral.findUnique({
       where: { referredId: userId },
-      include: { referralCode: { include: { user: true } } },
+      include: { ReferralCode: { include: { User: true } } },
     });
 
     if (!referral || referral.firstTransactionAt) {
@@ -260,7 +260,7 @@ export class ReferralService {
     try {
       const reward = await prisma.referralReward.findUnique({
         where: { id: rewardId },
-        include: { referral: true },
+        include: { Referral: true },
       });
 
       if (!reward || reward.status !== 'PENDING') {
@@ -359,7 +359,7 @@ export class ReferralService {
       prisma.referral.findMany({
         where: { referrerId: userId, isActive: true },
         include: {
-          referred: {
+          User_Referral_referredIdToUser: {
             select: {
               id: true,
               email: true,
@@ -398,9 +398,9 @@ export class ReferralService {
       totalEarned: totalEarned._sum.amount || new Decimal(0),
       referrals: referrals.map((r: any) => ({
         id: r.id,
-        referredUser: r.referred,
+        referredUser: r.User_Referral_referredIdToUser,
         joinedAt: r.createdAt,
-        kycStatus: r.referred.kycStatus,
+        kycStatus: r.User_Referral_referredIdToUser.kycStatus,
         firstTransactionAt: r.firstTransactionAt,
       })),
     };
@@ -427,7 +427,7 @@ export class ReferralService {
   async validateReferralCode(code: string): Promise<{ valid: boolean; error?: string }> {
     const codeRecord = await prisma.referralCode.findUnique({
       where: { code },
-      include: { user: true },
+      include: { User: true },
     });
 
     if (!codeRecord) {
@@ -775,8 +775,8 @@ export class ReferralService {
         createdAt: dateFilter,
       },
       include: {
-        referralCode: true,
-        rewards: true,
+        ReferralCode: true,
+        ReferralReward: true,
       },
     });
 
