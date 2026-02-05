@@ -73,7 +73,13 @@ let perf: Performance | null = null;
 
 if (typeof window !== "undefined") {
   try {
+    const enablePerfAuto = process.env.NEXT_PUBLIC_ENABLE_PERF_AUTO === 'true';
     perf = getPerformance(app);
+    if (!enablePerfAuto) {
+      // Disable auto web-vitals + network instrumentation to avoid invalid attribute errors
+      // from long Tailwind class selectors in web-vitals attribution.
+      perf.instrumentationEnabled = false;
+    }
     console.log("✅ Firebase Performance Monitoring initialized");
   } catch (err) {
     console.warn("⚠️ Firebase Performance Monitoring not available:", err);

@@ -619,7 +619,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
       </CardHeader>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <CardContent className="pb-0">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="inline-flex w-auto gap-1">
             <TabsTrigger value="user" className="relative">
               <AtSign className="mr-2 h-4 w-4" />
               Payment ID
