@@ -48,8 +48,9 @@ export default function PublicInvoicePage() {
   const { toast } = useToast();
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
-  // Check if this page is being rendered for PDF generation
-  const isRenderForPdf = searchParams.get('pdf') === '1' || searchParams.get('print') === '1';
+  // Check if this page is being rendered for print/PDF generation
+  const isRenderForPdf = searchParams.get('pdf') === '1' || searchParams.get('print') === '1' || searchParams.get('download') === '1';
+  const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('download') === '1';
 
   // Use backend API instead of Cloud Functions
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -250,84 +251,35 @@ export default function PublicInvoicePage() {
     fetchInvoice();
   }, [id]);
 
-  // Download invoice PDF
+  // Download invoice PDF (uses print layout for consistent styling)
   const handleDownloadInvoice = () => {
     if (!id) return;
-
-    // Use Vercel serverless function for PDF generation
-    const downloadUrl = `/api/pdf/invoice/${id}`;
-    
-    // Show loading toast
+    const downloadUrl = `/invoice/${id}?print=1&download=1`;
+    window.open(downloadUrl, '_blank');
     toast({
       title: "Preparing Download",
-      description: "Generating your invoice PDF...",
+      description: "A print-optimized view will open. Choose “Save as PDF” in the print dialog.",
     });
-
-    // Attempt download with error handling
-    fetch(downloadUrl)
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          
-          // Check if it's the billing/service unavailable error
-          if (errorText.includes('not available yet') || errorText.includes('try again in 30 seconds')) {
-            toast({
-              title: "Service Temporarily Unavailable",
-              description: "The PDF generation service is currently unavailable. Please try again later or contact support.",
-              variant: "destructive",
-            });
-          } else if (errorText.includes('not configured')) {
-            toast({
-              title: "Configuration Error",
-              description: "The PDF service is not properly configured. Please contact support.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Download Failed",
-              description: `Unable to generate PDF. ${errorText}`,
-              variant: "destructive",
-            });
-          }
-          throw new Error(errorText);
-        }
-        return response.blob();
-      })
-      .then((blob) => {
-        // Create download link
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `invoice-${id}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        toast({
-          title: "Download Complete",
-          description: "Your invoice has been downloaded successfully.",
-        });
-      })
-      .catch((error) => {
-        console.error('[Invoice Download] Error:', error);
-        // Error toast already shown above
-      });
   };
 
-  // Print invoice PDF
+  // Print invoice using the on-page print layout
   const handlePrint = () => {
     if (!id) return;
-    
-    // Open PDF in new window for printing
-    const pdfUrl = `/api/pdf/invoice/${id}`;
-    window.open(pdfUrl, '_blank');
-    
+    const printUrl = `/invoice/${id}?print=1`;
+    window.open(printUrl, '_blank');
     toast({
-      title: "Opening PDF",
-      description: "The invoice PDF will open in a new window. Use the print button in the PDF viewer.",
+      title: "Opening Print View",
+      description: "A print-optimized invoice will open in a new tab.",
     });
   };
+
+  useEffect(() => {
+    if (!shouldAutoPrint) return;
+    const timer = setTimeout(() => {
+      window.print();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [shouldAutoPrint]);
 
   // Pay Now button handler
   const handlePayNow = () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot, DocumentData, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
@@ -34,11 +34,13 @@ export default function InvoiceDetailsPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const id = params.id as string;
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('download') === '1';
 
     useEffect(() => {
         if (!id) return;
@@ -113,52 +115,31 @@ export default function InvoiceDetailsPage() {
 
     const handleDownloadInvoice = () => {
         if (!id) return;
-        const downloadUrl = `/api/pdf/invoice/${id}`;
+        const downloadUrl = `/dashboard/request-payment/invoice/${id}?print=1&download=1`;
+        window.open(downloadUrl, '_blank');
         toast({
             title: "Preparing Download",
-            description: "Generating your invoice PDF...",
+            description: "A print-optimized view will open. Choose “Save as PDF” in the print dialog.",
         });
-        fetch(downloadUrl)
-            .then(async (response) => {
-                if (!response.ok) {
-                    const errorText = await response.text().catch(() => 'Unknown error');
-                    toast({
-                        title: "Download Failed",
-                        description: `Unable to generate PDF. ${errorText}`,
-                        variant: "destructive",
-                    });
-                    throw new Error(errorText);
-                }
-                return response.blob();
-            })
-            .then((blob) => {
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = `invoice-${id}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                toast({
-                    title: "Download Complete",
-                    description: "Your invoice has been downloaded successfully.",
-                });
-            })
-            .catch((error) => {
-                console.error('[Invoice Download] Error:', error);
-            });
     };
 
     const handlePrint = () => {
         if (!id) return;
-        const pdfUrl = `/api/pdf/invoice/${id}`;
-        window.open(pdfUrl, '_blank');
+        const printUrl = `/dashboard/request-payment/invoice/${id}?print=1`;
+        window.open(printUrl, '_blank');
         toast({
-            title: "Opening PDF",
-            description: "The invoice PDF will open in a new window.",
+            title: "Opening Print View",
+            description: "A print-optimized invoice will open in a new tab.",
         });
     };
+
+    useEffect(() => {
+        if (!shouldAutoPrint) return;
+        const timer = setTimeout(() => {
+            window.print();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [shouldAutoPrint]);
 
     const formatCurrency = (amount: number, currency: string) => {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
