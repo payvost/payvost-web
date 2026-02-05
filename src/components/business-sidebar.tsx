@@ -124,7 +124,7 @@ export function BusinessSidebar() {
             </div>
           </button>
         </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[calc(14rem-1rem)]">
+      <DropdownMenuContent align="start" className="w-[calc(var(--sidebar-width)-1rem)]">
         <DropdownMenuItem asChild>
           <Link href="/business/settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />

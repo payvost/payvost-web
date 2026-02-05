@@ -249,12 +249,12 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
           </Sidebar>
           <SidebarInset ref={mainContentRef}>
             <header className={cn(
-              "sticky top-0 z-30 flex h-14 items-center gap-4 bg-background/95 px-4 backdrop-blur-sm transition-all lg:h-[60px] lg:px-6",
+              "sticky top-0 z-30 flex h-auto min-h-14 flex-wrap items-center gap-2 bg-background/95 px-3 py-2 backdrop-blur-sm transition-all sm:gap-3 sm:px-4 lg:h-[60px] lg:flex-nowrap lg:px-6",
               scrolled && "border-b shadow-sm"
             )}>
               <SidebarTrigger className="md:hidden" />
-              <div className="w-full flex-1">
-                <div className="relative md:w-full md:max-w-sm">
+              <div className="w-full flex-1 order-2 md:order-none">
+                <div className="relative w-full md:max-w-sm">
                   <div className="md:hidden">
                     <Sheet>
                       <SheetTrigger asChild>
@@ -277,7 +277,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                   </div>
                 </div>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
                 <QuickActionsDropdown />
                 {isBusinessApproved && <DashboardSwitcher />}
                 <Button variant="ghost" size="icon" asChild>

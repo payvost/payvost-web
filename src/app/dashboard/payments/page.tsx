@@ -521,9 +521,9 @@ function PaymentsPageContent() {
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
-      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
         <div className="flex items-center">
-          <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
+          <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Payments</h1>
         </div>
         <EnhancedTabs 
           value={activeTab}
@@ -569,7 +569,7 @@ function PaymentsPageContent() {
         >
 
           <TabsContent value="remittances" className="animate-in fade-in-50">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
                 <div className="lg:col-span-2">
                     <Payvost initialBeneficiaryId={selectedBeneficiaryId} />
                 </div>
@@ -584,7 +584,7 @@ function PaymentsPageContent() {
           </TabsContent>
 
           <TabsContent value="bill-payment" className="animate-in fade-in-50">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <SavedBillTemplates
                   onSelectTemplate={(template) => {
@@ -603,14 +603,14 @@ function PaymentsPageContent() {
                 />
                 <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <CardTitle>Bill Payment</CardTitle>
                         <CardDescription>Pay for airtime, data, electricity, and more.</CardDescription>
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="flex items-center gap-2">
+                            <Button variant="outline" className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-center">
                                 <Image src={`/flag/${currentBillerData.flag}.png`} alt={billCountry} width={20} height={20} className="rounded-full object-cover" />
                                 <span>{billCountry}</span>
                                 <ChevronDown className="h-4 w-4" />
@@ -627,7 +627,7 @@ function PaymentsPageContent() {
                     </DropdownMenu>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 sm:space-y-5">
                 <div className="space-y-2">
                     <Label htmlFor="bill-category">Select Category</Label>
                     <Select onValueChange={setBillCategory} value={billCategory}>
@@ -722,7 +722,7 @@ function PaymentsPageContent() {
                   />
                 )}
                 <div className="space-y-2 pt-2 border-t">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
                       id="recurring"
@@ -757,7 +757,7 @@ function PaymentsPageContent() {
                   transactionDetails={billPaymentDetails}
                   isLoading={isLoading}
                 >
-                  <Button disabled={isLoading}>Pay Bill</Button>
+                  <Button disabled={isLoading} className="w-full sm:w-auto">Pay Bill</Button>
                 </PaymentConfirmationDialog>
               </CardFooter>
             </Card>
@@ -775,10 +775,10 @@ function PaymentsPageContent() {
                 <CardDescription>Send money to multiple recipients at once by uploading a file.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="p-8 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center">
+                <div className="p-6 sm:p-8 border-2 border-dashed border-muted-foreground/50 rounded-lg text-center">
                     <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
                     <p className="mt-4 text-sm text-muted-foreground">Drag and drop your CSV file here or click to upload.</p>
-                    <Button variant="outline" className="mt-4">
+                    <Button variant="outline" className="mt-4 w-full sm:w-auto">
                         Upload File
                     </Button>
                 </div>
@@ -789,7 +789,7 @@ function PaymentsPageContent() {
                  </div>
               </CardContent>
                <CardFooter>
-                    <Button>Process Bulk Transfer</Button>
+                    <Button className="w-full sm:w-auto">Process Bulk Transfer</Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -804,7 +804,7 @@ function PaymentsPageContent() {
                 <p className="text-center text-muted-foreground py-12">You have no scheduled transfers.</p>
               </CardContent>
               <CardFooter>
-                <Button>Schedule New Transfer</Button>
+                <Button className="w-full sm:w-auto">Schedule New Transfer</Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -825,7 +825,7 @@ function PaymentsPageContent() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>Add Participant</Button>
+                <Button className="w-full sm:w-auto">Add Participant</Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -842,13 +842,13 @@ function PaymentsPageContent() {
                      <p className="text-muted-foreground">Loading gift cards...</p>
                    </div>
                  ) : giftCardProducts.length > 0 ? (
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                       {giftCardProducts.map((product) => (
-                          <Card key={product.productId} className="flex flex-col items-center justify-center p-4 cursor-pointer hover:border-primary transition-colors">
+                          <Card key={product.productId} className="flex flex-col items-center justify-center p-4 sm:p-5 cursor-pointer hover:border-primary transition-colors">
                               {product.logoUrls && product.logoUrls.length > 0 ? (
-                                <img src={product.logoUrls[0]} alt={product.productName} className="h-16 w-auto object-contain rounded-md" />
+                                <img src={product.logoUrls[0]} alt={product.productName} className="h-14 sm:h-16 w-auto object-contain rounded-md" />
                               ) : (
-                                <div className="h-16 w-20 bg-muted rounded-md flex items-center justify-center">
+                                <div className="h-14 sm:h-16 w-20 bg-muted rounded-md flex items-center justify-center">
                                   <Gift className="h-8 w-8 text-muted-foreground" />
                                 </div>
                               )}
@@ -876,9 +876,9 @@ export default function PaymentsPage() {
   return (
     <Suspense fallback={
       <DashboardLayout language="en" setLanguage={() => {}}>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
           <div className="flex items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">Payments</h1>
+            <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Payments</h1>
           </div>
           <div className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">Loading...</p>

@@ -86,8 +86,8 @@ export default function BusinessDashboardPage() {
             setDashboardData(data);
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-            
+            let fallbackSucceeded = false;
+
             // Fallback to Firestore if API fails
             try {
                 console.warn('API call failed, falling back to Firestore for business dashboard');
@@ -166,9 +166,10 @@ export default function BusinessDashboardPage() {
                     accountBalanceChangePercent: 0,
                     recentTransactions,
                 });
+                fallbackSucceeded = true;
                 
                 console.log('Successfully loaded dashboard data from Firestore fallback');
-                } catch (firestoreError) {
+            } catch (firestoreError) {
                 console.error('Firestore fallback also failed, using empty data:', firestoreError);
                 // Final fallback to minimal data - try to get business profile name from user doc
                 let accountName = 'Business Account';
@@ -197,6 +198,13 @@ export default function BusinessDashboardPage() {
                     accountBalanceChangePercent: 0,
                     recentTransactions: [],
                 });
+                fallbackSucceeded = true;
+            }
+            
+            if (!fallbackSucceeded) {
+                setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+            } else {
+                setError(null);
             }
         } finally {
             setLoadingData(false);

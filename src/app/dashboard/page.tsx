@@ -84,8 +84,8 @@ export default function DashboardPage() {
     return (
         <LayoutComponent language={language} setLanguage={setLanguage}>
             <ErrorBoundary>
-                <div className="flex-1 space-y-4 p-8 pt-6">
-                    <Breadcrumb>
+                <div className="flex-1 space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
+                    <Breadcrumb className="hidden sm:block">
                         <BreadcrumbList>
                             <BreadcrumbItem>
                                 <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
@@ -96,9 +96,9 @@ export default function DashboardPage() {
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {greeting?.icon}
-                        <h1 className="text-lg font-semibold md:text-2xl">
+                        <h1 className="text-base font-semibold sm:text-lg md:text-2xl">
                             {greeting?.text}, {firstName}!
                         </h1>
                     </div>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                         onWalletCreated={refreshWallets}
                     />
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 mt-8">
+                    <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-7 mt-6 sm:mt-8">
                         <div className="lg:col-span-4 space-y-6">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">

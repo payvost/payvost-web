@@ -1,207 +1,85 @@
+﻿'use client';
 
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, PanelLeft, LifeBuoy, Command, Settings, ChevronDown, Puzzle } from 'lucide-react';
+import { LifeBuoy, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
 import { UserNav } from '@/components/user-nav';
 import { useAuth } from '@/hooks/use-auth';
-import { Icons } from './icons';
-import { ScrollArea } from './ui/scroll-area';
 import { ThemeSwitcher } from './theme-switcher';
-import { usePathname } from 'next/navigation';
-import { 
-  mainNavItems, 
-  financialsItems, 
-  customersItems
-} from './business-sidebar';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { NotificationDropdown } from './notification-dropdown';
-import { Separator } from './ui/separator';
-import { SidebarProvider, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from './ui/sidebar';
-import { Card } from './ui/card';
 import { cn } from '@/lib/utils';
+import { SidebarTrigger } from './ui/sidebar';
+import { DashboardSearch } from './dashboard-search';
+import { QuickActionsDropdown } from './quick-actions-dropdown';
 
-export function BusinessHeader() {
-    const { user } = useAuth();
-    const pathname = usePathname();
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    
-    useEffect(() => {
-        if (!user) return;
-        const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-            if (doc.exists()) {
-                setLogoUrl(doc.data().businessProfile?.logoUrl);
-            }
-        });
-        return () => unsub();
-    }, [user]);
+interface BusinessHeaderProps {
+  scrolled?: boolean;
+}
 
-    const isActive = (href: string) => {
-        if (href === '/business') return pathname === href;
-        return pathname.startsWith(href);
-    };
-    
-    const renderNav = () => (
-      <>
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarMenu>
-            {mainNavItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
+export function BusinessHeader({ scrolled = false }: BusinessHeaderProps) {
+  const { user } = useAuth();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Financials</SidebarGroupLabel>
-          <SidebarMenu>
-            {financialsItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setLogoUrl(docSnap.data().businessProfile?.logoUrl || null);
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Customers</SidebarGroupLabel>
-          <SidebarMenu>
-            {customersItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                  <Link href={item.href}>
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-      </>
-    );
-
-    return (
-        <header className="fixed top-0 left-0 sm:left-14 md:left-[14rem] right-0 z-40 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
-          {/* Mobile Menu */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0 md:hidden">
-                <PanelLeft className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0 w-[14rem] bg-sidebar text-sidebar-foreground">
-                <SheetHeader className="p-0">
-                  <SheetTitle className="sr-only">Business Sidebar</SheetTitle>
+  return (
+    <header
+      className={cn(
+        'sticky top-0 z-30 flex h-auto min-h-14 flex-wrap items-center gap-2 bg-background/95 px-3 py-2 backdrop-blur-sm transition-all sm:gap-3 sm:px-4 lg:h-[60px] lg:flex-nowrap lg:px-6',
+        scrolled && 'border-b shadow-sm'
+      )}
+    >
+      <SidebarTrigger className="md:hidden" />
+      <div className="w-full flex-1 order-2 md:order-none">
+        <div className="relative w-full md:max-w-sm">
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="top">
+                <SheetHeader>
+                  <SheetTitle>Search</SheetTitle>
                 </SheetHeader>
-                <SidebarProvider>
-                  {/* Business Header Card */}
-                  <div className="px-2 py-2 border-b">
-                    <Card className="p-2">
-                      <div className="flex flex-col gap-2">
-                        {/* BU and Business Name */}
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
-                            <span className="text-xs font-medium">BU</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium truncate">
-                                Business
-                              </span>
-                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Not Available Status */}
-                        <div className="flex items-center justify-center">
-                          <div className="rounded px-1.5 py-0.5 text-[10px] font-normal bg-muted text-muted-foreground">
-                            Not Available
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                 <ScrollArea className="flex-1">
-                   <div className="p-2">{renderNav()}</div>
-                 </ScrollArea>
-                 <div className="mt-auto border-t p-2">
-                   <SidebarMenu className="w-full">
-                     <div className="flex items-center justify-start">
-                       <SidebarMenuItem className="w-full">
-                         <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
-                           <Link href="/business/settings">
-                             <Settings />
-                             <span>Settings</span>
-                           </Link>
-                         </SidebarMenuButton>
-                       </SidebarMenuItem>
-                       <SidebarMenuItem>
-                         <SidebarMenuButton size="default" className="justify-start gap-2" tooltip="Developer">
-                           <Puzzle />
-                           <span>Developer</span>
-                         </SidebarMenuButton>
-                       </SidebarMenuItem>
-                     </div>
-                   </SidebarMenu>
-                 </div>
-                </SidebarProvider>
-            </SheetContent>
-          </Sheet>
-
-          {/* Search Bar */}
-          <div className="flex-1 max-w-xl">
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search dashboard, transactions, customers..."
-                  className="h-9 w-full pl-9 pr-9 bg-muted/50 border-muted focus-visible:ring-2 focus-visible:ring-ring"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-muted-foreground">
-                  <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
-                  </kbd>
+                <div className="mt-4">
+                  <DashboardSearch />
                 </div>
-              </div>
-            </form>
+              </SheetContent>
+            </Sheet>
           </div>
-
-          {/* Right Actions */}
-          <div className="ml-auto flex items-center gap-1">
-            <DashboardSwitcher />
-            <Separator orientation="vertical" className="h-6" />
-            <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
-              <Link href="/business/support">
-                <LifeBuoy className="h-4 w-4" />
-                <span className="sr-only">Support</span>
-              </Link>
-            </Button>
-            <ThemeSwitcher />
-            <NotificationDropdown context="business" />
-            <UserNav user={user} businessLogoUrl={logoUrl} />
+          <div className="hidden md:block">
+            <DashboardSearch />
           </div>
-        </header>
-    )
+        </div>
+      </div>
+      <div className="ml-auto flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
+        <QuickActionsDropdown />
+        <DashboardSwitcher />
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/business/support">
+            <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
+            <span className="sr-only">Support</span>
+          </Link>
+        </Button>
+        <ThemeSwitcher />
+        <NotificationDropdown context="business" />
+        <UserNav user={user} businessLogoUrl={logoUrl} />
+      </div>
+    </header>
+  );
 }
