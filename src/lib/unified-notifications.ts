@@ -82,6 +82,61 @@ export interface NotificationPayload {
   context?: 'personal' | 'business';
 }
 
+type NotificationPreferences = {
+  push?: boolean;
+  email?: boolean;
+  sms?: boolean;
+  transactionAlerts?: boolean;
+  marketingEmails?: boolean;
+  securityAlerts?: boolean;
+  lowBalanceAlerts?: boolean;
+  largeTransactionAlerts?: boolean;
+};
+
+function isMarketingNotification(payload: NotificationPayload): boolean {
+  return (
+    payload.type === 'announcement' ||
+    payload.type === 'general' ||
+    payload.data?.marketing === 'true' ||
+    payload.data?.category === 'marketing'
+  );
+}
+
+function isLargeTransaction(payload: NotificationPayload): boolean {
+  return payload.type === 'transaction' && payload.data?.alertType === 'large_transaction';
+}
+
+function isLowBalanceNotification(payload: NotificationPayload): boolean {
+  return (
+    payload.type === 'wallet' &&
+    (payload.data?.alertType === 'low_balance' || payload.data?.alertType === 'threshold_reached')
+  );
+}
+
+function shouldSendForType(preferences: NotificationPreferences, payload: NotificationPayload): boolean {
+  if (isMarketingNotification(payload)) {
+    return preferences.marketingEmails === true;
+  }
+
+  if (payload.type === 'security') {
+    return preferences.securityAlerts !== false;
+  }
+
+  if (isLowBalanceNotification(payload)) {
+    return preferences.lowBalanceAlerts !== false;
+  }
+
+  if (isLargeTransaction(payload)) {
+    return preferences.largeTransactionAlerts !== false;
+  }
+
+  if (payload.type === 'transaction' || payload.type === 'payment' || payload.type === 'bill') {
+    return preferences.transactionAlerts !== false;
+  }
+
+  return true;
+}
+
 /**
  * Send notification via all channels
  * This is the main function to use throughout your app
@@ -109,8 +164,17 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
       return results;
     }
 
+    const preferences: NotificationPreferences = userData.preferences || {};
+    const allowedByType = shouldSendForType(preferences, payload);
+
+    if (!allowedByType) {
+      results.push = { success: false, error: 'Notification disabled by user preferences' };
+      results.email = { success: false, error: 'Notification disabled by user preferences' };
+      results.inApp = { success: false, error: 'Notification disabled by user preferences' };
+    }
+
     // 1. Send Push Notification (FCM)
-    if (userData.fcmToken && userData.preferences?.push !== false) {
+    if (allowedByType && userData.fcmToken && preferences.push !== false) {
       try {
         const pushResult = await sendPushNotification({
           token: userData.fcmToken,
@@ -132,7 +196,7 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
     }
 
     // 2. Send Email
-    if (userData.email && userData.preferences?.email !== false) {
+    if (allowedByType && userData.email && preferences.email !== false) {
       try {
         // Use a valid template or skip email if template is invalid
         const validTemplate = emailTemplate && isValidTemplate(emailTemplate);
@@ -160,27 +224,46 @@ export async function sendUnifiedNotification(payload: NotificationPayload): Pro
     }
 
     // 3. Create In-App Notification (store in user's notifications subcollection)
-    try {
-      await addDoc(collection(db, 'users', userId, 'notifications'), {
-        userId,
-        title,
-        description: body,
-        message: body,
-        type: mapTypeToIcon(type),
-        icon: getIconForType(type),
-        context: context,
-        read: false,
-        date: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        href: clickAction || '/dashboard/notifications',
-        link: clickAction || '/dashboard/notifications',
-        data: data || {},
-      });
+    if (allowedByType) {
+      try {
+        await addDoc(collection(db, 'users', userId, 'notifications'), {
+          userId,
+          title,
+          description: body,
+          message: body,
+          type: mapTypeToIcon(type),
+          icon: getIconForType(type),
+          context: context,
+          read: false,
+          date: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          href: clickAction || '/dashboard/notifications',
+          link: clickAction || '/dashboard/notifications',
+          data: data || {},
+        });
 
-      results.inApp = { success: true };
-    } catch (error: any) {
-      console.error('Error creating in-app notification:', error);
-      results.inApp = { success: false, error: error.message };
+        results.inApp = { success: true };
+      } catch (error: any) {
+        console.error('Error creating in-app notification:', error);
+        results.inApp = { success: false, error: error.message };
+      }
+    } else {
+      results.inApp = { success: false, error: 'Notification disabled by user preferences' };
+    }
+
+    // 4. Send SMS (optional)
+    if (allowedByType && preferences.sms === true) {
+      const phoneNumber = userData.phone || userData.phoneNumber;
+      if (phoneNumber) {
+        try {
+          await notificationService.sendSMS({
+            to: phoneNumber,
+            message: `${title}\n${body}`,
+          });
+        } catch (error: any) {
+          console.error('Error sending SMS notification:', error);
+        }
+      }
     }
   } catch (error: any) {
     console.error('Error in sendUnifiedNotification:', error);
@@ -955,7 +1038,7 @@ export async function getUserNotificationPreferences(userId: string): Promise<{
     return {
       push: userData.preferences?.push !== false,
       email: userData.preferences?.email !== false,
-      sms: userData.preferences?.sms !== false,
+      sms: userData.preferences?.sms === true,
       transactionAlerts: userData.preferences?.transactionAlerts !== false,
       marketingEmails: userData.preferences?.marketingEmails === true,
       securityAlerts: userData.preferences?.securityAlerts !== false,

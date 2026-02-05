@@ -41,7 +41,12 @@ export default function BusinessTransactionsPage() {
                 if (typeFilter !== 'all') params.append('type', typeFilter);
                 if (searchQuery) params.append('search', searchQuery);
 
-                const response = await fetch(`/api/business/transactions?${params.toString()}`);
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/business/transactions?${params.toString()}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
                 
                 if (!response.ok) {
                     throw new Error('Failed to fetch transactions');
