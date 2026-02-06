@@ -13,10 +13,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader showLogin={false} />
       <main className="flex-1 flex items-center justify-center px-4 py-10 lg:px-8">
-        <div className="w-full max-w-7xl">
+        <div className="w-full max-w-none">
           <div className="grid w-full items-stretch gap-8 lg:grid-cols-2">
             {/* Left: Brand / Value */}
-            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 md:justify-self-center md:w-full md:max-w-2xl lg:max-w-none lg:w-11/12 flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
+            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 w-full flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="flex items-center gap-3">
                 <div className="relative h-10 w-10 overflow-hidden rounded-xl border bg-background">
                   <Image
@@ -89,7 +89,7 @@ export default function LoginPage() {
             </section>
 
             {/* Right: Form */}
-            <Card className="w-full max-w-md justify-self-center bg-card/80 shadow-[0_20px_70px_-35px_rgba(2,6,23,0.45)] ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-1/2 lg:max-w-none animate-in fade-in zoom-in-95 duration-700">
+            <Card className="w-full justify-self-center bg-card/80 shadow-none ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-11/12 lg:justify-self-center animate-in fade-in zoom-in-95 duration-700">
               <CardHeader className="pb-4">
                 <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Sign in</CardTitle>
                 <CardDescription className="text-sm sm:text-base">

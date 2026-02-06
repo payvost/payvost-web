@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, getMultiFactorResolver, type MultiFactorResolver } from 'firebase/auth';
+import { signInWithEmailAndPassword, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, getMultiFactorResolver, type MultiFactorResolver, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showMfaDialog, setShowMfaDialog] = useState(false);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
@@ -51,6 +52,131 @@ export function LoginForm() {
     // Prevent open-redirects: only allow relative internal paths.
     if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
     return null;
+  };
+
+  const handleMfaRequired = async (error: any) => {
+    if (error?.code !== 'auth/multi-factor-auth-required') return false;
+
+    // Try to get resolver from error - try direct access first, then getMultiFactorResolver.
+    let resolver: MultiFactorResolver | null = null;
+    if (error?.resolver) {
+      resolver = error.resolver;
+    } else {
+      try {
+        resolver = getMultiFactorResolver(auth, error);
+      } catch (resolverError: any) {
+        console.error('Failed to get MFA resolver:', resolverError);
+        throw {
+          code: 'auth/multi-factor-auth-required',
+          message: 'Multi-factor authentication is enabled on this account. Please complete verification, or contact support for assistance.'
+        };
+      }
+    }
+
+    if (!resolver?.hints || !Array.isArray(resolver.hints) || resolver.hints.length === 0) {
+      throw { code: 'auth/multi-factor-auth-required', message: 'No MFA factors found' };
+    }
+
+    const selectedHint = resolver.hints[0];
+
+    if (selectedHint.factorId === TotpMultiFactorGenerator.FACTOR_ID) {
+      setMfaMethod('totp');
+      setMfaResolver(resolver);
+      setShowMfaDialog(true);
+      return true;
+    }
+
+    if (selectedHint.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
+      setMfaMethod('sms');
+      setMfaResolver(resolver);
+
+      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+      setRecaptchaVerifier(verifier);
+
+      try {
+        const phoneInfo = selectedHint as any;
+        const phoneNumber = phoneInfo.phoneNumber || phoneInfo.phone || (phoneInfo as any).displayName;
+
+        if (!phoneNumber) throw new Error('Phone number not found in MFA hint');
+        if (!resolver.session) throw new Error('MFA resolver session is missing');
+
+        const phoneAuthProvider = new PhoneAuthProvider(auth);
+        const verificationId = await phoneAuthProvider.verifyPhoneNumber(
+          { phoneNumber, session: resolver.session },
+          verifier
+        );
+        setSmsVerificationId(verificationId);
+        setShowMfaDialog(true);
+        return true;
+      } catch (smsError: any) {
+        console.error('SMS send error:', smsError);
+        try { verifier.clear(); } catch (e) {}
+        throw { code: 'auth/sms-send-failed', message: 'Failed to send SMS code. Please try again.' };
+      }
+    }
+
+    throw { code: 'auth/unsupported-mfa', message: 'Unsupported MFA method' };
+  };
+
+  const finalizeLogin = async (user: any) => {
+    // Track login event (non-blocking)
+    try {
+      const idToken = await user.getIdToken();
+      await axios.post('/api/auth/track-login', { idToken }).catch(() => {});
+    } catch (trackError) {
+      console.warn('Failed to track login:', trackError);
+    }
+
+    toast({
+      title: "Login Successful",
+      description: "Welcome back! Redirecting...",
+    });
+
+    router.push(getSafeRedirect() ?? '/dashboard');
+  };
+
+  const signInWithGoogle = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      await finalizeLogin(result.user);
+    } catch (error: any) {
+      try {
+        const handled = await handleMfaRequired(error);
+        if (handled) return;
+      } catch (mfaError: any) {
+        error = mfaError;
+      }
+
+      console.error('Google login error details:', {
+        code: error?.code,
+        message: error?.message,
+        error,
+      });
+
+      let errorMessage = "An unknown error occurred.";
+      let errorTitle = "Login Failed";
+
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Sign-in was cancelled.";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Popup was blocked by the browser. Please allow popups and try again.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
@@ -77,164 +203,16 @@ export function LoginForm() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailToUse, data.password);
       } catch (error: any) {
-        // If MFA is required, extract resolver and show dialog
-        if (error?.code === 'auth/multi-factor-auth-required') {
-          // Try to get resolver from error - try direct access first, then getMultiFactorResolver
-          let resolver: MultiFactorResolver | null = null;
-          
-          // First, try direct access (works in some Firebase versions)
-          if (error.resolver) {
-            resolver = error.resolver;
-          } else {
-            // Fallback: use getMultiFactorResolver (for Firebase v9+)
-            // Ensure we're passing the original Firebase error object
-            try {
-              // Verify the error is a proper Firebase error with the correct code
-              if (error && 
-                  typeof error === 'object' && 
-                  error.code === 'auth/multi-factor-auth-required' &&
-                  (error.name === 'FirebaseError' || error.constructor?.name === 'FirebaseError')) {
-                // Pass the original error object directly to getMultiFactorResolver
-                resolver = getMultiFactorResolver(auth, error);
-              } else {
-                // If error structure is wrong, log it and throw helpful message
-                console.error('Error object does not match expected FirebaseError structure:', {
-                  hasCode: 'code' in error,
-                  code: error?.code,
-                  hasName: 'name' in error,
-                  name: error?.name,
-                  constructorName: error?.constructor?.name,
-                  errorType: typeof error,
-                });
-                throw new Error('Error object does not have expected FirebaseError structure');
-              }
-            } catch (resolverError: any) {
-              console.error('Failed to get MFA resolver:', resolverError);
-              console.error('Original error structure:', {
-                code: error?.code,
-                message: error?.message,
-                name: error?.name,
-                constructorName: error?.constructor?.name,
-                hasResolver: !!error?.resolver,
-                errorType: typeof error,
-                errorKeys: error ? Object.keys(error) : [],
-                isFirebaseError: error?.name === 'FirebaseError' || error?.constructor?.name === 'FirebaseError',
-                errorString: JSON.stringify(error, Object.getOwnPropertyNames(error), 2).substring(0, 500),
-              });
-              // If both methods fail, show helpful error asking user to disable MFA
-              setIsLoading(false);
-              throw { 
-                code: 'auth/multi-factor-auth-required', 
-                message: 'Multi-factor authentication is enabled on this account. To log in, please temporarily disable MFA in your account settings, or contact support for assistance.' 
-              };
-            }
-          }
-          
-          // Check if resolver exists and has hints
-          if (!resolver) {
-            console.error('MFA resolver is missing from error:', error);
-            setIsLoading(false);
-            throw { 
-              code: 'auth/multi-factor-auth-required', 
-              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
-            };
-          }
-          
-          if (!resolver.hints || !Array.isArray(resolver.hints)) {
-            console.error('MFA resolver hints are missing or invalid:', resolver);
-            throw { 
-              code: 'auth/multi-factor-auth-required', 
-              message: 'Multi-factor authentication is enabled on this account. Please disable MFA in your account settings or contact support.' 
-            };
-          }
-          
-          const hints = resolver.hints;
-          
-          if (hints.length === 0) {
-            throw { code: 'auth/multi-factor-auth-required', message: 'No MFA factors found' };
-          }
-          
-          const selectedHint = hints[0];
-          
-          // Determine MFA method
-          if (selectedHint.factorId === TotpMultiFactorGenerator.FACTOR_ID) {
-            setMfaMethod('totp');
-            setMfaResolver(resolver);
-            setShowMfaDialog(true);
-            setIsLoading(false);
-            return; // Don't throw error, show dialog instead
-          } else if (selectedHint.factorId === PhoneMultiFactorGenerator.FACTOR_ID) {
-            setMfaMethod('sms');
-            setMfaResolver(resolver);
-            // Initialize reCAPTCHA for SMS
-            const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-              size: 'invisible',
-            });
-            setRecaptchaVerifier(verifier);
-            // Send SMS code using resolver's session
-            try {
-              const phoneInfo = selectedHint as any;
-              const phoneNumber = phoneInfo.phoneNumber || phoneInfo.phone || (phoneInfo as any).displayName;
-              
-              if (!phoneNumber) {
-                throw new Error('Phone number not found in MFA hint');
-              }
-              
-              // Use resolver's session for SMS verification during sign-in
-              if (!resolver.session) {
-                throw new Error('MFA resolver session is missing');
-              }
-              
-              const phoneAuthProvider = new PhoneAuthProvider(auth);
-              const phoneInfoOptions = {
-                phoneNumber,
-                session: resolver.session,
-              };
-              
-              const verificationId = await phoneAuthProvider.verifyPhoneNumber(
-                phoneInfoOptions,
-                verifier
-              );
-              setSmsVerificationId(verificationId);
-              setShowMfaDialog(true);
-              setIsLoading(false);
-              return;
-            } catch (smsError: any) {
-              console.error('SMS send error:', smsError);
-              // Clean up reCAPTCHA on error
-              try {
-                verifier.clear();
-              } catch (e) {
-                // Ignore cleanup errors
-              }
-              throw { code: 'auth/sms-send-failed', message: 'Failed to send SMS code. Please try again.' };
-            }
-          } else {
-            throw { code: 'auth/unsupported-mfa', message: 'Unsupported MFA method' };
-          }
+        const handled = await handleMfaRequired(error);
+        if (handled) {
+          setIsLoading(false);
+          return;
         }
         throw error;
       }
 
       const user = userCredential.user;
-
-      // Track login event (non-blocking)
-      try {
-        const idToken = await user.getIdToken();
-        await axios.post('/api/auth/track-login', { idToken }).catch(() => {
-          // Non-critical, continue even if tracking fails
-        });
-      } catch (trackError) {
-        console.warn('Failed to track login:', trackError);
-      }
-
-      // Success - go directly to dashboard
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! Redirecting...",
-      });
-      
-      router.push(getSafeRedirect() ?? '/dashboard');
+      await finalizeLogin(user);
     } catch (error: any) {
       // Log error details for debugging
       console.error('Login error details:', {
@@ -359,6 +337,33 @@ export function LoginForm() {
 
   return (
     <div className="grid gap-6">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={signInWithGoogle}
+        disabled={isLoading || isGoogleLoading || mfaVerifying}
+      >
+        {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (
+          <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.222 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.009 6.053 29.238 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.009 6.053 29.238 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.135 0 9.835-1.971 13.389-5.183l-6.185-5.238C29.18 35.091 26.715 36 24 36c-5.201 0-9.62-3.318-11.283-7.946l-6.52 5.02C9.505 39.556 16.227 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.793 2.206-2.231 4.083-4.099 5.579l.003-.002 6.185 5.238C36.956 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+          </svg>
+        )}
+        Sign in with Google
+      </Button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">or</span>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4">
           <div className="grid gap-2">
@@ -392,7 +397,7 @@ export function LoginForm() {
             </div>
              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign in
           </Button>
