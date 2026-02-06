@@ -12,10 +12,10 @@ const SNAPSHOT_CACHE_TTL_SECONDS = parseInt(process.env.FX_SNAPSHOT_CACHE_TTL_SE
 
 const LATEST_SNAPSHOT_KEY = 'fx:latest_snapshot_id';
 
-type RatesMap = Record<string, number | string>;
+type RatesMap = Record<string, Decimal.Value>;
 
-function toDecimal(value: number | string): Decimal {
-  return value instanceof Decimal ? value : new Decimal(value);
+function toDecimal(value: Decimal.Value): Decimal {
+  return Decimal.isDecimal(value) ? value : new Decimal(value);
 }
 
 function percentChange(current: Decimal, previous: Decimal): Decimal {
