@@ -31,6 +31,8 @@ export function formatCurrency(amount: number | string, currency: string = 'USD'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency.toUpperCase(),
+    // Prefer real symbols (e.g. ₦, GH₵) over ISO codes (e.g. NGN, GHS) for consistency in UI.
+    currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numAmount);

@@ -12,19 +12,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader showLogin={false} />
-      <main className="relative flex-1 overflow-hidden">
-        {/* Backdrop */}
-        <div aria-hidden className="absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(1200px_circle_at_20%_15%,hsl(var(--primary)_/_0.20),transparent_55%),radial-gradient(900px_circle_at_90%_20%,rgba(16,185,129,0.18),transparent_55%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]" />
-          <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(15,23,42,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.18)_1px,transparent_1px)] [background-size:72px_72px]" />
-          <div className="absolute -left-40 top-24 h-[28rem] w-[28rem] rounded-full bg-emerald-500/20 blur-3xl animate-auth-float" />
-          <div className="absolute -right-48 -top-24 h-[34rem] w-[34rem] rounded-full bg-sky-500/20 blur-3xl animate-auth-float-2" />
-        </div>
-
-        <div className="relative mx-auto flex w-full max-w-6xl flex-1 items-center px-4 py-10 lg:px-8">
+      <main className="flex-1 flex items-center justify-center px-4 py-10 lg:px-8">
+        <div className="w-full max-w-7xl">
           <div className="grid w-full items-stretch gap-8 lg:grid-cols-2">
             {/* Left: Brand / Value */}
-            <section className="relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 animate-in fade-in slide-in-from-left-4 duration-700">
+            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 md:justify-self-center md:w-full md:max-w-2xl lg:max-w-none lg:w-4/5 animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="flex items-center gap-3">
                 <div className="relative h-10 w-10 overflow-hidden rounded-xl border bg-background">
                   <Image
@@ -97,11 +89,11 @@ export default function LoginPage() {
             </section>
 
             {/* Right: Form */}
-            <Card className="w-full max-w-md justify-self-center bg-card/80 shadow-[0_20px_70px_-35px_rgba(2,6,23,0.45)] ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 animate-in fade-in zoom-in-95 duration-700">
+            <Card className="w-full max-w-md justify-self-center bg-card/80 shadow-[0_20px_70px_-35px_rgba(2,6,23,0.45)] ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-1/2 lg:max-w-none animate-in fade-in zoom-in-95 duration-700">
               <CardHeader className="pb-4">
                 <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Sign in</CardTitle>
                 <CardDescription className="text-sm sm:text-base">
-                  Use your email or username. If your account has MFA enabled, we’ll ask for your verification code.
+                  Use your email or username. If your account has MFA enabled, we'll ask for your verification code.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -111,7 +103,7 @@ export default function LoginPage() {
 
                 <div className="mt-6 rounded-xl border bg-background/50 p-4">
                   <p className="text-xs text-muted-foreground">
-                    Tip: Use a password manager. It’s the easiest way to stay secure and avoid lockouts.
+                    Tip: Use a password manager. It's the easiest way to stay secure and avoid lockouts.
                   </p>
                 </div>
               </CardContent>

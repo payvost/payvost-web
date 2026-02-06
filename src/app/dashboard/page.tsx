@@ -101,6 +101,7 @@ export default function DashboardPage() {
         new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency || primaryWallet?.currency || primaryCurrency || 'USD',
+            currencyDisplay: 'narrowSymbol',
             maximumFractionDigits: Math.abs(value) >= 1000 ? 0 : 2
         }).format(Number.isFinite(value) ? value : 0);
 

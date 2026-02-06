@@ -73,6 +73,7 @@ export function RecentTransactions() {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
+        currencyDisplay: 'narrowSymbol',
     }).format(numericAmount);
   };
 

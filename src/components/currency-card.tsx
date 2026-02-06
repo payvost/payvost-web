@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Send, ArrowDownLeft, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { abbreviateNumber } from '@/lib/utils';
 
 interface CurrencyCardProps {
   currency: string;
@@ -30,10 +29,18 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
   const normalizedBalance = typeof balance === 'number' ? balance : parseFloat(String(balance));
   const formattedBalance =
     normalizedBalance >= 100000
-      ? `${abbreviateNumber(normalizedBalance)} ${currency}`
+      ? new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency,
+          currencyDisplay: 'narrowSymbol',
+          notation: 'compact',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 1,
+        }).format(normalizedBalance || 0)
       : new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency,
+          currencyDisplay: 'narrowSymbol',
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }).format(normalizedBalance || 0);
@@ -98,4 +105,3 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
     </Card>
   );
 }
-
