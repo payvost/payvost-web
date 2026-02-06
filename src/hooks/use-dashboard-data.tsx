@@ -1,7 +1,7 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { externalTransactionService, walletService } from '@/services';
+import { walletService } from '@/services';
 import type { Account } from '@/services';
 import { db } from '@/lib/firebase';
 import { errorEmitter } from '@/lib/error-emitter';
@@ -29,6 +29,14 @@ const defaultSpendingData: SpendingItem[] = [
     { category: 'Bill Payments', amount: 0, total: 1, icon: <Smartphone className="h-5 w-5 text-primary" /> },
 ];
 
+type DashboardTransaction = {
+    createdAt?: Timestamp;
+    date?: string;
+    type?: string;
+    sendAmount?: string;
+    amount?: string;
+};
+
 export function useDashboardData() {
     const { user, loading: authLoading } = useAuth();
     const [wallets, setWallets] = useState<Account[]>([]);
@@ -41,11 +49,10 @@ export function useDashboardData() {
     const [loadingInvoices, setLoadingInvoices] = useState(true);
     const [disputes, setDisputes] = useState<DocumentData[]>([]);
     const [loadingDisputes, setLoadingDisputes] = useState(true);
-    const [externalTxStats, setExternalTxStats] = useState({ total: 0, completed: 0, pending: 0, failed: 0, totalAmount: 0 });
     const [needsPin, setNeedsPin] = useState(false);
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
-    const processTransactionsForSpending = (transactions: any[]) => {
+    const processTransactionsForSpending = (transactions: DashboardTransaction[]) => {
         const now = new Date();
         const thisMonth = now.getMonth();
         const thisYear = now.getFullYear();
@@ -71,7 +78,7 @@ export function useDashboardData() {
         setSpendingData(newSpendingData);
     }
 
-    const processTransactionsForChart = (transactions: any[]): MonthlyData[] => {
+    const processTransactionsForChart = (transactions: DashboardTransaction[]): MonthlyData[] => {
         const now = new Date();
         const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -85,7 +92,7 @@ export function useDashboardData() {
             monthlyData[monthKey] = { income: 0, expense: 0 };
         }
 
-        transactions.forEach(tx => {
+        transactions.forEach((tx) => {
             const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.date);
             if (txDate >= sixMonthsAgo) {
                 const monthKey = `${txDate.getFullYear()}-${txDate.getMonth()}`;
@@ -110,24 +117,6 @@ export function useDashboardData() {
 
         return chartData;
     };
-
-    // Fetch external transaction statistics
-    useEffect(() => {
-        if (!user) return;
-
-        const fetchExternalStats = async () => {
-            try {
-                const stats = await externalTransactionService.getStats(user.uid);
-                setExternalTxStats(stats as { total: number; completed: number; pending: number; failed: number; totalAmount: number });
-            } catch (error) {
-                console.error('Failed to fetch external transaction stats:', error);
-            }
-        };
-
-        fetchExternalStats();
-        const interval = setInterval(fetchExternalStats, 30000);
-        return () => clearInterval(interval);
-    }, [user]);
 
     // Fetch wallets
     const fetchWallets = async () => {
@@ -226,7 +215,7 @@ export function useDashboardData() {
                 }
             }
         },
-            (error) => {
+            () => {
                 const permissionError = new FirestorePermissionError({
                     path: userDocRef.path,
                     operation: 'get',
@@ -286,7 +275,6 @@ export function useDashboardData() {
         loadingInvoices,
         disputes,
         loadingDisputes,
-        externalTxStats,
         needsPin,
         pinDialogOpen,
         setPinDialogOpen,

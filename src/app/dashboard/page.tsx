@@ -22,9 +22,9 @@ import Link from 'next/link';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { WalletOverview } from '@/components/dashboard/WalletOverview';
 import { SpendingBreakdown } from '@/components/dashboard/SpendingBreakdown';
-import { PartnerTransactions } from '@/components/dashboard/PartnerTransactions';
 import { InvoiceOverview } from '@/components/dashboard/InvoiceOverview';
 import { QuickActions } from '@/components/dashboard/QuickActions';
+import { DisputeOverview } from '@/components/dashboard/DisputeOverview';
 
 const TransactionChart = dynamic(() => import('@/components/transaction-chart').then(mod => mod.TransactionChart), {
     ssr: false,
@@ -60,7 +60,8 @@ export default function DashboardPage() {
         hasTransactionData,
         invoices,
         loadingInvoices,
-        externalTxStats,
+        disputes,
+        loadingDisputes,
         pinDialogOpen,
         setPinDialogOpen,
         refreshWallets,
@@ -105,10 +106,23 @@ export default function DashboardPage() {
         return chartData.slice(Math.max(chartData.length - months, 0));
     }, [chartData, filter]);
 
+    const openDisputesCount = useMemo(() => {
+        let openCount = 0;
+        for (const d of disputes) {
+            const raw = (d?.status ?? d?.state ?? d?.resolution ?? '').toString().toLowerCase();
+            const isResolved =
+                raw.includes('resolved') ||
+                raw.includes('closed') ||
+                raw.includes('won') ||
+                raw.includes('lost');
+            if (!isResolved) openCount += 1;
+        }
+        return openCount;
+    }, [disputes]);
+
     const incomeTotal = filteredChartData.reduce((sum, item) => sum + item.income, 0);
     const expenseTotal = filteredChartData.reduce((sum, item) => sum + item.expense, 0);
     const netFlow = incomeTotal - expenseTotal;
-    const partnerSuccess = externalTxStats.total > 0 ? Math.round((externalTxStats.completed / externalTxStats.total) * 100) : 0;
 
     if (isLoading) {
         return (
@@ -143,7 +157,7 @@ export default function DashboardPage() {
                                         <span>{greeting?.text}, {firstName}</span>
                                     </div>
                                     <h1 className="text-2xl sm:text-3xl font-semibold">Your money at a glance</h1>
-                                    <p className="text-sm text-white/70">Real activity pulled from your wallets, invoices, and partner rails.</p>
+                                    <p className="text-sm text-white/70">Real activity pulled from your wallets, invoices, and transfers.</p>
                                     <div className="flex flex-wrap gap-2 pt-2">
                                         <Button asChild size="sm" variant="secondary" className="bg-white text-slate-900 hover:bg-white/90">
                                             <Link href="/dashboard/payments" className="flex items-center gap-2">
@@ -204,9 +218,9 @@ export default function DashboardPage() {
                                     icon={<ArrowDownRight className="h-4 w-4" />}
                                 />
                                 <StatTile
-                                    label="Partner success"
-                                    value={`${partnerSuccess}%`}
-                                    hint={`${externalTxStats.total} total · ${externalTxStats.failed} failed`}
+                                    label="Disputes open"
+                                    value={`${openDisputesCount}`}
+                                    hint={openDisputesCount > 0 ? "Needs attention" : "All clear"}
                                 />
                             </div>
                         </div>
@@ -272,7 +286,7 @@ export default function DashboardPage() {
                             <AccountCompletion />
                             <InvoiceOverview invoices={invoices} loading={loadingInvoices} isKycVerified={isKycVerified} />
                             <SpendingBreakdown spendingData={spendingData} hasTransactionData={hasTransactionData} />
-                            <PartnerTransactions stats={externalTxStats} />
+                            <DisputeOverview disputes={disputes} loading={loadingDisputes} />
                         </div>
                     </div>
                 </div>
