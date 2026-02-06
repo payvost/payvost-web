@@ -381,7 +381,7 @@ function PaymentLinkTab() {
   );
 }
 
-export default function RequestPaymentPageContent() {
+function RequestPaymentPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'payment-link';
@@ -516,6 +516,24 @@ export default function RequestPaymentPageContent() {
         </EnhancedTabs>
       </main>
     </DashboardLayout>
+  );
+}
+
+export default function RequestPaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout language="en" setLanguage={() => {}}>
+          <main className="flex flex-1 flex-col w-full">
+            <div className="container mx-auto px-4 md:px-6 max-w-7xl py-12">
+              <Skeleton className="h-96 w-full" />
+            </div>
+          </main>
+        </DashboardLayout>
+      }
+    >
+      <RequestPaymentPageContent />
+    </Suspense>
   );
 }
 

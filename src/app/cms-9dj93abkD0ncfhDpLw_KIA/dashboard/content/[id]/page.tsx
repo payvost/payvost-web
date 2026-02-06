@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { contentService, CreateContentInput, UpdateContentInput } from '@/services/contentService';
 
-export default function ContentEditPage() {
+function ContentEditPageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -362,6 +362,20 @@ export default function ContentEditPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function ContentEditPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      }
+    >
+      <ContentEditPageContent />
+    </Suspense>
   );
 }
 

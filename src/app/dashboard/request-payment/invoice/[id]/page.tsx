@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot, DocumentData, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-export default function InvoiceDetailsPage() {
+function InvoiceDetailsPageContent() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
     const params = useParams();
     const router = useRouter();
@@ -302,5 +302,19 @@ export default function InvoiceDetailsPage() {
             </main>
         </DashboardLayout>
     );
+}
+
+export default function InvoiceDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      }
+    >
+      <InvoiceDetailsPageContent />
+    </Suspense>
+  );
 }
 

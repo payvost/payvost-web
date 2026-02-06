@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QRCodeDialog } from '@/components/qr-code-dialog';
 
-export default function PaymentPage() {
+function PaymentPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
@@ -336,5 +336,19 @@ export default function PaymentPage() {
         title="Payment Link QR Code"
       />
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      }
+    >
+      <PaymentPageContent />
+    </Suspense>
   );
 }

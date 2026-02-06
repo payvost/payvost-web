@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/site-header';
 import Image from 'next/image';
 import { Globe2, ShieldCheck, Zap } from 'lucide-react';
+import { Suspense } from 'react';
 
 export default function LoginPage() {
   return (
@@ -104,7 +105,9 @@ export default function LoginPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <LoginForm />
+                <Suspense fallback={<div className="py-8 text-sm text-muted-foreground">Loading...</div>}>
+                  <LoginForm />
+                </Suspense>
 
                 <div className="mt-6 rounded-xl border bg-background/50 p-4">
                   <p className="text-xs text-muted-foreground">

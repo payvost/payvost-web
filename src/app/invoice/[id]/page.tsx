@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DocumentData } from 'firebase/firestore';
 import StripeCheckout from '@/components/StripeCheckout';
@@ -35,7 +35,7 @@ const currencySymbols: { [key: string]: string } = {
   NGN: '₦',
 };
 
-export default function PublicInvoicePage() {
+function PublicInvoicePageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
@@ -606,5 +606,19 @@ export default function PublicInvoicePage() {
       </main>
     </div>
     </>
+  );
+}
+
+export default function PublicInvoicePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading invoice...</div>
+        </div>
+      }
+    >
+      <PublicInvoicePageContent />
+    </Suspense>
   );
 }
