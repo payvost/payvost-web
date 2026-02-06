@@ -49,7 +49,8 @@ export default function PublicInvoicePage() {
   const [isManualPaymentDialogOpen, setIsManualPaymentDialogOpen] = useState(false);
 
   // Check if this page is being rendered for print/PDF generation
-  const isRenderForPdf = searchParams.get('pdf') === '1' || searchParams.get('print') === '1' || searchParams.get('download') === '1';
+  const [forcePrintLayout, setForcePrintLayout] = useState(false);
+  const isRenderForPdf = forcePrintLayout || searchParams.get('pdf') === '1' || searchParams.get('print') === '1' || searchParams.get('download') === '1';
   const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('download') === '1';
 
   // Use backend API instead of Cloud Functions
@@ -254,8 +255,8 @@ export default function PublicInvoicePage() {
   // Download invoice PDF (uses print layout for consistent styling)
   const handleDownloadInvoice = () => {
     if (!id) return;
-    const downloadUrl = `/invoice/${id}?print=1&download=1`;
-    window.open(downloadUrl, '_blank');
+    setForcePrintLayout(true);
+    setTimeout(() => window.print(), 200);
     toast({
       title: "Preparing Download",
       description: "A print-optimized view will open. Choose “Save as PDF” in the print dialog.",
@@ -265,11 +266,11 @@ export default function PublicInvoicePage() {
   // Print invoice using the on-page print layout
   const handlePrint = () => {
     if (!id) return;
-    const printUrl = `/invoice/${id}?print=1`;
-    window.open(printUrl, '_blank');
+    setForcePrintLayout(true);
+    setTimeout(() => window.print(), 200);
     toast({
       title: "Opening Print View",
-      description: "A print-optimized invoice will open in a new tab.",
+      description: "Opening the print dialog.",
     });
   };
 

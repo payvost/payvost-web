@@ -40,6 +40,7 @@ export default function InvoiceDetailsPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [forcePrintLayout, setForcePrintLayout] = useState(false);
     const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('download') === '1';
 
     useEffect(() => {
@@ -113,10 +114,25 @@ export default function InvoiceDetailsPage() {
         }
     };
 
+    const buildPublicPrintUrl = (baseUrl: string, params: Record<string, string>) => {
+        const url = baseUrl.startsWith('http') ? new URL(baseUrl) : new URL(baseUrl, window.location.origin);
+        Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+        return url.toString();
+    };
+
+    const getPreferredPrintUrl = (params: Record<string, string>) => {
+        if (!id) return null;
+        const publicBase = invoice?.publicUrl || (invoice?.isPublic ? `/invoice/${id}` : null);
+        if (publicBase) {
+            return buildPublicPrintUrl(publicBase, params);
+        }
+        return buildPublicPrintUrl(`/dashboard/request-payment/invoice/${id}`, params);
+    };
+
     const handleDownloadInvoice = () => {
         if (!id) return;
-        const downloadUrl = `/dashboard/request-payment/invoice/${id}?print=1&download=1`;
-        window.open(downloadUrl, '_blank');
+        setForcePrintLayout(true);
+        setTimeout(() => window.print(), 200);
         toast({
             title: "Preparing Download",
             description: "A print-optimized view will open. Choose “Save as PDF” in the print dialog.",
@@ -125,11 +141,11 @@ export default function InvoiceDetailsPage() {
 
     const handlePrint = () => {
         if (!id) return;
-        const printUrl = `/dashboard/request-payment/invoice/${id}?print=1`;
-        window.open(printUrl, '_blank');
+        setForcePrintLayout(true);
+        setTimeout(() => window.print(), 200);
         toast({
             title: "Opening Print View",
-            description: "A print-optimized invoice will open in a new tab.",
+            description: "Opening the print dialog.",
         });
     };
 

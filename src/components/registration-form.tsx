@@ -193,6 +193,8 @@ export function RegistrationForm() {
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [newlyCreatedUserId, setNewlyCreatedUserId] = useState<string | null>(null);
   const [validatedSteps, setValidatedSteps] = useState<Set<number>>(new Set());
@@ -332,6 +334,7 @@ export function RegistrationForm() {
 
   // Real-time username availability (debounced)
   const usernameValue = watch('username');
+  const emailValue = watch('email');
   const countryValue = watch('country');
   const stateValue = watch('state');
   const cityValue = watch('city');
@@ -387,6 +390,32 @@ export function RegistrationForm() {
     const t = setTimeout(check, 400);
     return () => { active = false; clearTimeout(t); };
   }, [usernameValue]);
+
+  // Real-time email availability (debounced)
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      const email = (emailValue || '').trim().toLowerCase();
+      if (!email || email.length < 5 || !email.includes('@')) {
+        setEmailAvailable(null);
+        return;
+      }
+      setCheckingEmail(true);
+      try {
+        const q = fsQuery(fsCollection(db, 'users'), fsWhere('email', '==', email), fsLimit(1));
+        const snap = await fsGetDocs(q);
+        if (!active) return;
+        setEmailAvailable(snap.empty);
+      } catch {
+        if (!active) return;
+        setEmailAvailable(null);
+      } finally {
+        if (active) setCheckingEmail(false);
+      }
+    };
+    const t = setTimeout(check, 500);
+    return () => { active = false; clearTimeout(t); };
+  }, [emailValue]);
 
   const applyDetectedCountry = useCallback((isoCode: string) => {
     if (!isoCode) return;
@@ -850,7 +879,14 @@ export function RegistrationForm() {
     // Mark this step as validated
     setValidatedSteps((prev) => new Set(prev).add(currentStep));
 
-    if (!output) return;
+    if (!output) {
+      toast({
+        title: 'Check required fields',
+        description: 'Please fix the highlighted fields to continue.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Ensure username still available before proceeding past step containing username
     if (steps[currentStep].fields.includes('username')) {
@@ -862,6 +898,29 @@ export function RegistrationForm() {
       if (usernameAvailable === false) {
         toast({ title: 'Username unavailable', description: 'Please choose a different username.', variant: 'destructive' });
         return;
+      }
+    }
+
+    // Check email availability before proceeding past step containing email
+    if (steps[currentStep].fields.includes('email')) {
+      const email = (getValues('email') || '').trim().toLowerCase();
+      if (email) {
+        try {
+          const q = fsQuery(fsCollection(db, 'users'), fsWhere('email', '==', email), fsLimit(1));
+          const snap = await fsGetDocs(q);
+          if (!snap.empty) {
+            setError('email', { type: 'manual', message: 'Email already registered. Please log in or use a different email.' });
+            toast({ title: 'Email already registered', description: 'Please log in or use a different email.', variant: 'destructive' });
+            return;
+          }
+        } catch {
+          toast({
+            title: 'Email check failed',
+            description: 'We could not verify your email right now. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
     }
 
@@ -1273,7 +1332,41 @@ export function RegistrationForm() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" {...register('email')} placeholder="Enter your email address" disabled={isLoading} />
+                    <div className="relative">
+                      <Input
+                        id="email"
+                        type="email"
+                        {...register('email', {
+                          onChange: () => clearErrors('email'),
+                        })}
+                        placeholder="Enter your email address"
+                        disabled={isLoading}
+                        className="pr-8"
+                      />
+                      {emailValue && !checkingEmail && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {emailAvailable === false ? (
+                            <X className="h-4 w-4 text-destructive" />
+                          ) : emailAvailable === true ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : null}
+                        </div>
+                      )}
+                      {checkingEmail && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs h-4">
+                      {checkingEmail && <span className="text-muted-foreground">Checking email availability…</span>}
+                      {!checkingEmail && emailValue && emailAvailable === true && (
+                        <span className="text-green-600">Email available</span>
+                      )}
+                      {!checkingEmail && emailValue && emailAvailable === false && (
+                        <span className="text-destructive">Email already registered</span>
+                      )}
+                    </div>
                     {shouldShowError('email') && errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                 </div>
             </div>

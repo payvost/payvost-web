@@ -185,14 +185,16 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
   useEffect(() => {
     const selectedWallet = wallets.find((w) => w.currency === fromWallet);
-    const amount = parseFloat(sendAmount || paymentIdAmount || '0');
+    const amountString =
+      activeTab === 'bank' ? bankFormAmount : activeTab === 'user' ? paymentIdAmount : sendAmount;
+    const amount = parseFloat(amountString || '0');
 
     if (selectedWallet && !isNaN(amount) && amount > selectedWallet.balance) {
       setAmountError('Insufficient balance.');
     } else {
       setAmountError('');
     }
-  }, [sendAmount, paymentIdAmount, fromWallet, wallets]);
+  }, [sendAmount, paymentIdAmount, bankFormAmount, activeTab, fromWallet, wallets]);
 
   // Fetch exchange rate when currencies change
   useEffect(() => {
@@ -241,7 +243,9 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
   // Calculate recipient amount when send amount or rate changes
   useEffect(() => {
-    const amount = parseFloat(sendAmount || paymentIdAmount || '0');
+    const amountString =
+      activeTab === 'bank' ? bankFormAmount : activeTab === 'user' ? paymentIdAmount : sendAmount;
+    const amount = parseFloat(amountString || '0');
     // Ensure exchangeRate is a number
     const numericRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : Number(exchangeRate);
     const validRate = !isNaN(numericRate) && isFinite(numericRate) ? numericRate : 0;
@@ -252,12 +256,14 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     } else {
       setRecipientGets('0.00');
     }
-  }, [sendAmount, paymentIdAmount, exchangeRate]);
+  }, [sendAmount, paymentIdAmount, bankFormAmount, activeTab, exchangeRate]);
 
   // Calculate fees when amount or transfer type changes
   useEffect(() => {
     const calculateFees = async () => {
-      const amount = parseFloat(sendAmount || paymentIdAmount || '0');
+      const amountString =
+        activeTab === 'bank' ? bankFormAmount : activeTab === 'user' ? paymentIdAmount : sendAmount;
+      const amount = parseFloat(amountString || '0');
       const isPaymentId = activeTab === 'user' && paymentIdRecipient !== null;
 
       setIsPaymentIdTransfer(isPaymentId);
@@ -332,7 +338,7 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     };
 
     calculateFees();
-  }, [sendAmount, paymentIdAmount, fromWallet, activeTab, paymentIdRecipient, user]);
+  }, [sendAmount, paymentIdAmount, bankFormAmount, fromWallet, activeTab, paymentIdRecipient, user]);
 
   const handleSendMoney = async () => {
     // Handle Payment ID transfer
@@ -997,7 +1003,20 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         <TabsContent value="bank">
           <CardContent className="space-y-4 pt-4">
             <SendToBankForm
-              onCountryChange={setBankFormCountry}
+              onCountryChange={(countryCode) => {
+                setBankFormCountry(countryCode);
+                const bankCountryMap: Record<string, { country: string; currency: string }> = {
+                  USA: { country: 'US', currency: 'USD' },
+                  NGA: { country: 'NG', currency: 'NGN' },
+                  GBR: { country: 'GB', currency: 'GBP' },
+                  GHA: { country: 'GH', currency: 'GHS' },
+                };
+                const mapped = bankCountryMap[countryCode];
+                if (mapped) {
+                  setRecipientCountry(mapped.country);
+                  setReceiveCurrency(mapped.currency);
+                }
+              }}
               onBankChange={setBankFormBank}
               onAccountNumberChange={setBankFormAccountNumber}
               onRecipientNameChange={setBankFormRecipientName}
