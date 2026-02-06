@@ -158,15 +158,16 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   return (
     <ProtectRoute>
-      <SidebarProvider style={{ '--sidebar-width': '16rem' } as React.CSSProperties}>
+      <SidebarProvider
+        style={{ '--sidebar-width': '16rem' } as React.CSSProperties}
+        className="relative before:content-[''] before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-[var(--app-header-height)] before:h-px before:bg-border/40 before:z-40"
+      >
         <Sidebar variant="inset" collapsible="icon">
-          <SidebarHeader className="h-14 lg:h-[60px] px-3 py-2 border-b border-border/40">
-            <div className="flex items-center justify-between gap-2 px-1">
-              <Link href="/" className="flex items-center gap-2 min-w-0">
-                <Icons.logo className="h-7 shrink-0" />
-              </Link>
-              <SidebarTrigger className="hidden md:inline-flex opacity-70 hover:opacity-100" />
-            </div>
+          <SidebarHeader className="h-[var(--app-header-height)] flex-row items-center justify-between gap-2 p-0 px-3">
+            <Link href="/" className="flex items-center gap-2 min-w-0">
+              <Icons.logo className="h-8 shrink-0" />
+            </Link>
+            <SidebarTrigger className="hidden md:inline-flex opacity-70 hover:opacity-100" />
           </SidebarHeader>
 
           <SidebarContent>

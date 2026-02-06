@@ -41,41 +41,41 @@ export function DashboardHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-2 bg-background/85 px-3 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-4 lg:min-h-[60px] lg:flex-nowrap lg:px-6',
-        'border-b border-border/40',
+        'sticky top-0 z-30 flex h-[var(--app-header-height)] items-center gap-2 bg-background/85 px-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-4 lg:px-6',
+        'rounded-b-lg',
         scrolled && 'shadow-sm'
       )}
     >
       <SidebarTrigger className="md:hidden" />
 
       {/* Search */}
-      <div className="w-full flex-1 order-2 md:order-none">
-        <div className="relative w-full md:max-w-sm">
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Search">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="top">
-                <SheetHeader>
-                  <SheetTitle>Search</SheetTitle>
-                </SheetHeader>
-                <div className="mt-4">
-                  <DashboardSearch />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-          <div className="hidden md:block">
-            <DashboardSearch />
-          </div>
+      <div className="flex min-w-0 flex-1 items-center">
+        <div className="hidden w-full md:block md:max-w-sm">
+          <DashboardSearch />
         </div>
       </div>
 
       {/* Right actions */}
-      <div className="ml-auto flex w-full flex-wrap items-center gap-1.5 sm:gap-2 md:w-auto md:flex-nowrap md:justify-end">
+      <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+        {/* Mobile search */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Search">
+                <Search className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="top">
+              <SheetHeader>
+                <SheetTitle>Search</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <DashboardSearch />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <QuickActionsDropdown />
         {rightSlot}
         <Button variant="ghost" size="icon" asChild aria-label="Support">
@@ -91,4 +91,3 @@ export function DashboardHeader({
     </header>
   );
 }
-

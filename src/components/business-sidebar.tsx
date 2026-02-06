@@ -98,8 +98,8 @@ export function BusinessSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="h-14 lg:h-[60px] px-3 py-2 border-b border-border/40">
-        <div className="flex items-center justify-between gap-2 px-1">
+      <SidebarHeader className="h-[var(--app-header-height)] flex-row items-center justify-between gap-2 p-0 px-3">
+        <div className="flex w-full items-center justify-between gap-2">
           <Link
             href="/business/settings"
             className="flex h-full items-center gap-2 rounded-md px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground min-w-0 flex-1"

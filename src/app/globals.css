@@ -31,6 +31,8 @@
     --chart-5: 215 50% 70%;
     /* Global UI corner radius: 10px */
     --radius: 0.625rem;
+    /* Shared header height token (matches Tailwind `h-14`) */
+    --app-header-height: 3.5rem;
     --sidebar-background: 215 100% 98%;
     --sidebar-foreground: 215 100% 15%;
     --sidebar-primary: 215 100% 22%;
@@ -66,6 +68,7 @@
     --chart-3: 160 60% 45%;
     --chart-4: 30 80% 55%;
     --chart-5: 280 65% 60%;
+    --app-header-height: 3.5rem;
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 40% 90%;

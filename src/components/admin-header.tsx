@@ -133,7 +133,7 @@ export function AdminHeader() {
 
 
     return (
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:h-[60px] sticky top-0 z-40 lg:px-6">
+        <header className="flex h-[var(--app-header-height)] items-center gap-4 border-b bg-background px-4 sticky top-0 z-40 lg:px-6 rounded-b-lg">
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -149,7 +149,7 @@ export function AdminHeader() {
               <SheetHeader className="p-0">
                   <SheetTitle className="sr-only">Sidebar Menu</SheetTitle>
               </SheetHeader>
-              <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+              <div className="flex h-[var(--app-header-height)] items-center border-b px-4 lg:px-6">
                  <Link href="/" className="flex items-center gap-2 font-semibold">
                    <Icons.logo className="h-8" />
                  </Link>

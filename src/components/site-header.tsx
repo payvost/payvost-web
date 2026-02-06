@@ -452,7 +452,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
     
     return (
         <>
-            <header className="sticky top-0 z-50 px-4 lg:px-6 h-14 flex items-center justify-between bg-background/95 border-b rounded-b-md">
+            <header className="sticky top-0 z-50 px-4 lg:px-6 h-[var(--app-header-height)] flex items-center justify-between bg-background/95 border-b rounded-b-lg">
             <Link href="/" className="flex items-center justify-start">
                 <Icons.logo className="h-8" />
             </Link>
