@@ -1,4 +1,6 @@
 // src/components/icons.tsx
+'use client';
+
 import { LogoComponent } from './logo-dynamic';
 
 export const Icons = {

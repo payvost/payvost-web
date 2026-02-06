@@ -1,56 +1,51 @@
 'use client';
 
 import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 
-export function LogoComponent(props: Omit<React.ComponentProps<typeof Image>, 'src' | 'alt'>) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+type LogoProps = Omit<React.ComponentProps<typeof Image>, "src" | "alt" | "width" | "height"> & {
+  className?: string;
+  style?: React.CSSProperties;
+};
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Use light logo as default during SSR to avoid hydration mismatch
-  const logoSrc = mounted && resolvedTheme === 'dark' ? '/Payvost White.png' : '/payvost.png';
-  
-  // Different logos have different dimensions, use the larger one for better quality
-  const dimensions = logoSrc.includes('White') ? { width: 678, height: 184 } : { width: 441, height: 114 };
-  
-  // Use fixed aspect ratio to prevent layout shift when switching between logos
-  // Light: 441/114 ≈ 3.868, Dark: 678/184 ≈ 3.685, use average ~3.77 for consistency
+export function LogoComponent(props: LogoProps) {
+  // Keep a stable box; let CSS `dark:` decide which asset is visible.
+  // This avoids a mount-time src swap (often perceived as a "bulge" on load/reload).
   const FIXED_ASPECT_RATIO = 3.77;
 
-  const { className, style, ...rest } = props as {
-    className?: string;
-    style?: React.CSSProperties;
-  } & Omit<React.ComponentProps<typeof Image>, 'src' | 'alt' | 'className' | 'style'>;
+  const { className, style, priority, ...rest } = props;
 
   return (
-    <div 
+    <span
       className={className}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        width: 'auto',
+        display: "inline-flex",
+        alignItems: "center",
+        width: "auto",
         aspectRatio: `${FIXED_ASPECT_RATIO}`,
-        ...style,
+        ...(style ?? {}),
       }}
     >
       <Image
-        src={logoSrc}
+        src="/payvost.png"
         alt="Payvost Logo"
-        width={dimensions.width}
-        height={dimensions.height}
-        className="h-full w-auto object-contain"
-        style={{
-          height: '100%',
-          width: 'auto',
-          objectFit: 'contain',
-        }}
+        width={678}
+        height={184}
+        priority={priority ?? true}
+        className="h-full w-auto object-contain dark:hidden"
+        style={{ height: "100%", width: "auto", objectFit: "contain" }}
         {...rest}
       />
-    </div>
+      <Image
+        src="/Payvost White.png"
+        alt="Payvost Logo"
+        width={678}
+        height={184}
+        priority={priority ?? true}
+        className="hidden h-full w-auto object-contain dark:block"
+        style={{ height: "100%", width: "auto", objectFit: "contain" }}
+        {...rest}
+      />
+    </span>
   );
 }
+

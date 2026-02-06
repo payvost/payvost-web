@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
-import { Inter } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { UnifiedConsentBanner } from '@/components/unified-consent-banner';
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -14,6 +14,11 @@ import { StructuredData } from '@/components/structured-data';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
 });
 
 import { siteUrl } from '@/lib/constants';
@@ -139,7 +144,8 @@ export default function RootLayout({
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
-          inter.variable
+          inter.variable,
+          spaceGrotesk.variable
         )}
         suppressHydrationWarning
       >

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,6 +29,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +44,14 @@ export function LoginForm() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema)
   });
+
+  const getSafeRedirect = () => {
+    const raw = searchParams.get('redirect');
+    if (!raw) return null;
+    // Prevent open-redirects: only allow relative internal paths.
+    if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+    return null;
+  };
 
   const onSubmit: SubmitHandler<LoginValues> = async (data) => {
     setIsLoading(true);
@@ -222,13 +231,13 @@ export function LoginForm() {
       // Success - go directly to dashboard
       toast({
         title: "Login Successful",
-        description: "Welcome back! Redirecting to dashboard...",
+        description: "Welcome back! Redirecting...",
       });
       
-      router.push('/dashboard');
+      router.push(getSafeRedirect() ?? '/dashboard');
     } catch (error: any) {
       // Log error details for debugging
-      console.error('❌ Login error details:', {
+      console.error('Login error details:', {
         code: error?.code,
         message: error?.message,
         error: error,
@@ -315,7 +324,7 @@ export function LoginForm() {
       // Success
       toast({
         title: "Login Successful",
-        description: "Welcome back! Redirecting to dashboard...",
+        description: "Welcome back! Redirecting...",
       });
       
       setShowMfaDialog(false);
@@ -334,7 +343,7 @@ export function LoginForm() {
         setRecaptchaVerifier(null);
       }
       
-      router.push('/dashboard');
+      router.push(getSafeRedirect() ?? '/dashboard');
     } catch (error: any) {
       console.error('MFA verification error:', error);
       toast({
@@ -385,7 +394,7 @@ export function LoginForm() {
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Login
+            Sign in
           </Button>
         </div>
       </form>
