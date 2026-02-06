@@ -30,7 +30,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { WalletsPageSkeleton } from '@/components/skeletons/wallets-page-skeleton';
-import { walletService, currencyService, type Account } from '@/services';
+import { walletService, currencyService, externalTransactionService, type Account } from '@/services';
 import { getFlagCode, getCurrencyName } from '@/utils/currency-meta';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -40,11 +40,28 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { SUPPORTED_COUNTRIES } from '@/config/kyc-config';
 
+type RecentTransaction = {
+  id: string;
+  type: string;
+  recipientName?: string;
+  description?: string;
+  amount?: string;
+  sendAmount?: string;
+  sendCurrency?: string;
+  currency?: string;
+  status?: string;
+  date: string;
+  provider?: string;
+  source?: 'firebase' | 'external';
+};
+
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [wallets, setWallets] = useState<Account[]>([]);
   const { user, loading: authLoading } = useAuth();
   const [loadingWallets, setLoadingWallets] = useState(true);
+  const [transactions, setTransactions] = useState<RecentTransaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [homeCurrency, setHomeCurrency] = useState<string | null>(null);
   const [rates, setRates] = useState<Record<string, number>>({});
@@ -130,6 +147,118 @@ export default function WalletsPage() {
     fetchRates();
   }, []);
 
+  // Fetch recent transactions for the "Recent Activity" section
+  useEffect(() => {
+    if (!user) {
+      setTransactions([]);
+      setLoadingTransactions(false);
+      return;
+    }
+
+    const formatTransactionType = (type: string): string => {
+      const typeMap: Record<string, string> = {
+        AIRTIME_TOPUP: 'Airtime Top-up',
+        DATA_BUNDLE: 'Data Bundle',
+        GIFT_CARD: 'Gift Card',
+        BILL_PAYMENT: 'Bill Payment',
+        PAYMENT: 'Payment',
+        PAYOUT: 'Payout',
+        VIRTUAL_ACCOUNT_DEPOSIT: 'Deposit',
+        WALLET_TRANSFER: 'Transfer',
+        CARD_ISSUANCE: 'Card Issuance',
+      };
+      return typeMap[type] || type;
+    };
+
+    const formatStatus = (status: string): string => {
+      const statusMap: Record<string, string> = {
+        PENDING: 'Pending',
+        PROCESSING: 'Pending',
+        COMPLETED: 'Completed',
+        FAILED: 'Failed',
+        CANCELLED: 'Failed',
+        REFUNDED: 'Refunded',
+      };
+      return statusMap[status] || status;
+    };
+
+    setLoadingTransactions(true);
+
+    const unsub = onSnapshot(doc(db, 'users', user.uid), async (docSnap) => {
+      try {
+        const firebaseRaw = docSnap.exists() ? (docSnap.data().transactions || []) : [];
+        const firebaseTransactions: RecentTransaction[] = (Array.isArray(firebaseRaw) ? firebaseRaw : []).map(
+          (tx: any, idx: number) => {
+            const date = (tx?.date ?? tx?.createdAt ?? tx?.updatedAt ?? new Date().toISOString()).toString();
+            const id =
+              typeof tx?.id === 'string' && tx.id
+                ? tx.id
+                : `${user.uid}:${date}:${idx}`;
+
+            return {
+              id,
+              type: typeof tx?.type === 'string' && tx.type ? tx.type : 'Transaction',
+              recipientName: typeof tx?.recipientName === 'string' ? tx.recipientName : undefined,
+              description: typeof tx?.description === 'string' ? tx.description : undefined,
+              amount: tx?.amount != null ? String(tx.amount) : undefined,
+              sendAmount: tx?.sendAmount != null ? String(tx.sendAmount) : undefined,
+              sendCurrency:
+                typeof tx?.sendCurrency === 'string'
+                  ? tx.sendCurrency
+                  : typeof tx?.currency === 'string'
+                    ? tx.currency
+                    : undefined,
+              currency: typeof tx?.currency === 'string' ? tx.currency : undefined,
+              status: typeof tx?.status === 'string' ? tx.status : undefined,
+              date,
+              source: 'firebase',
+            };
+          },
+        );
+
+        let externalTransactions: RecentTransaction[] = [];
+        try {
+          const externalTxs = (await externalTransactionService.getByUser(user.uid, { limit: 10 })) as any;
+          const list = Array.isArray(externalTxs) ? externalTxs : (externalTxs?.transactions ?? externalTxs?.data ?? []);
+
+          externalTransactions = (Array.isArray(list) ? list : []).map((tx: any) => ({
+            id: String(tx.id),
+            type: formatTransactionType(String(tx.type ?? 'Transaction')),
+            recipientName:
+              tx?.recipientDetails?.billerName ||
+              tx?.recipientDetails?.productName ||
+              tx?.recipientDetails?.phone ||
+              undefined,
+            description: typeof tx?.description === 'string' ? tx.description : undefined,
+            amount: tx?.amount != null ? String(tx.amount) : undefined,
+            sendAmount: tx?.amount != null ? String(tx.amount) : undefined,
+            sendCurrency: typeof tx?.currency === 'string' ? tx.currency : undefined,
+            currency: typeof tx?.currency === 'string' ? tx.currency : undefined,
+            status: tx?.status != null ? formatStatus(String(tx.status)) : undefined,
+            date: (tx?.createdAt ?? new Date().toISOString()).toString(),
+            provider: typeof tx?.provider === 'string' ? tx.provider : undefined,
+            source: 'external',
+          }));
+        } catch (error) {
+          console.error('Failed to fetch external transactions:', error);
+        }
+
+        const all = [...firebaseTransactions, ...externalTransactions]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 10);
+
+        setTransactions(all);
+      } catch (error) {
+        console.error('Error fetching recent activity:', error);
+        setTransactions([]);
+      } finally {
+        setLoadingTransactions(false);
+      }
+    });
+
+    return () => unsub();
+  }, [user]);
+
   const totalBalanceUSD = wallets.reduce((acc, wallet) => {
     const rate = rates[wallet.currency] || 0;
     return acc + (wallet.balance * rate);
@@ -158,7 +287,11 @@ export default function WalletsPage() {
     // Refresh wallets after creation
     try {
       const accounts = await walletService.getAccounts();
-      setWallets(accounts);
+      const normalizedAccounts = accounts.map(account => ({
+        ...account,
+        balance: typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance,
+      }));
+      setWallets(normalizedAccounts);
       toast({
         title: 'Success',
         description: 'Wallet created successfully!',
@@ -330,37 +463,42 @@ export default function WalletsPage() {
             </div>
              <div className="lg:col-span-1">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                        <CardDescription>Latest transactions across all your wallets.</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                        {transactions.length > 0 ? (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
+                     <CardHeader>
+                         <CardTitle>Recent Activity</CardTitle>
+                         <CardDescription>Latest transactions across all your wallets.</CardDescription>
+                     </CardHeader>
+                      <CardContent>
+                        {loadingTransactions ? (
+                          <p className="text-sm text-muted-foreground">Loading activity...</p>
+                        ) : transactions.length > 0 ? (
+                             <Table>
+                                 <TableHeader>
+                                     <TableRow>
+                                         <TableHead>Date</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {transactions.map(tx => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell className="text-muted-foreground text-xs">{new Date(tx.date).toLocaleDateString()}</TableCell>
-                                            <TableCell>
-                                                <div className="font-medium">{tx.recipientName || tx.description}</div>
-                                                <div className="text-xs text-muted-foreground">{tx.type}</div>
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                <span className={tx.type === 'inflow' ? 'text-green-500' : 'text-destructive'}>
-                                                    {formatCurrency(parseFloat(tx.sendAmount || tx.amount), tx.sendCurrency || tx.currency)}
-                                                </span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                     {transactions.map(tx => (
+                                         <TableRow key={tx.id}>
+                                             <TableCell className="text-muted-foreground text-xs">{new Date(tx.date).toLocaleDateString()}</TableCell>
+                                             <TableCell>
+                                                 <div className="font-medium">{tx.recipientName || tx.description}</div>
+                                                 <div className="text-xs text-muted-foreground">{tx.type}</div>
+                                             </TableCell>
+                                             <TableCell className="text-right font-mono">
+                                                 <span className={tx.type === 'inflow' ? 'text-green-500' : 'text-destructive'}>
+                                                    {formatCurrency(
+                                                      Number.parseFloat(String(tx.sendAmount ?? tx.amount ?? '0')) || 0,
+                                                      tx.sendCurrency || tx.currency || 'USD'
+                                                    )}
+                                                 </span>
+                                             </TableCell>
+                                         </TableRow>
+                                     ))}
+                                 </TableBody>
+                             </Table>
                         ) : (
                             <EmptyState
                                 icon={<ArrowRightLeft className="h-8 w-8" />}
