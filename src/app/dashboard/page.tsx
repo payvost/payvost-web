@@ -55,6 +55,8 @@ export default function DashboardPage() {
         wallets,
         loadingWallets,
         isKycVerified,
+        homeCurrency,
+        defaultWalletCurrency,
         chartData,
         spendingData,
         hasTransactionData,
@@ -83,15 +85,22 @@ export default function DashboardPage() {
 
     const isLoading = authLoading || loadingWallets;
 
+    const primaryCurrency = defaultWalletCurrency || homeCurrency || null;
+
     const primaryWallet = useMemo(() => {
         if (!wallets || wallets.length === 0) return null;
-        return [...wallets].sort((a, b) => (Number(b.balance || 0) - Number(a.balance || 0)))[0];
-    }, [wallets]);
+        if (primaryCurrency) {
+            const match = wallets.find((w) => w.currency === primaryCurrency);
+            if (match) return match;
+        }
+        // Stable fallback: first wallet by currency code (avoid "random" changes when balances are equal).
+        return [...wallets].sort((a, b) => a.currency.localeCompare(b.currency))[0];
+    }, [wallets, primaryCurrency]);
 
     const formatMoney = (value: number, currency?: string) =>
         new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: currency || primaryWallet?.currency || 'USD',
+            currency: currency || primaryWallet?.currency || primaryCurrency || 'USD',
             maximumFractionDigits: Math.abs(value) >= 1000 ? 0 : 2
         }).format(Number.isFinite(value) ? value : 0);
 
@@ -173,7 +182,7 @@ export default function DashboardPage() {
 
                                 <div className="rounded-lg border border-white/15 bg-white/5 p-4 min-w-[260px] space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs uppercase tracking-wide text-white/60">Top wallet</p>
+                                        <p className="text-xs uppercase tracking-wide text-white/60">Primary wallet</p>
                                         <Badge variant="secondary" className="text-xs bg-white/15 border-white/10 text-white">
                                             {wallets.length} wallets
                                         </Badge>
@@ -197,6 +206,37 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {wallets.length > 0 && (
+                                <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <p className="text-xs uppercase tracking-wide text-white/60">Wallets</p>
+                                        <Button asChild size="sm" variant="ghost" className="h-8 text-white/80 hover:bg-white/10 hover:text-white">
+                                            <Link href="/dashboard/wallets">Manage</Link>
+                                        </Button>
+                                    </div>
+                                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                                        {wallets
+                                            .slice()
+                                            .sort((a, b) => a.currency.localeCompare(b.currency))
+                                            .map((w) => (
+                                                <div
+                                                    key={w.currency}
+                                                    className={`shrink-0 rounded-full border px-3 py-1 text-sm ${
+                                                        w.currency === primaryCurrency
+                                                            ? 'border-white/30 bg-white/15 text-white'
+                                                            : 'border-white/10 bg-white/5 text-white/80'
+                                                    }`}
+                                                >
+                                                    <span className="font-semibold">{w.currency}</span>
+                                                    <span className="ml-2 font-mono text-xs">
+                                                        {formatMoney(Number(w.balance || 0), w.currency)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <StatTile
@@ -243,6 +283,7 @@ export default function DashboardPage() {
                         loading={loadingWallets}
                         isKycVerified={isKycVerified}
                         onWalletCreated={refreshWallets}
+                        requiredCurrencyFirst={homeCurrency}
                     />
 
                     <div className="grid gap-6 lg:grid-cols-12">

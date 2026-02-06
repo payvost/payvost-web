@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
@@ -45,6 +47,7 @@ import {
 } from '@/config/kyc-config';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { walletService, WalletServiceError } from '@/services';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -1115,6 +1118,7 @@ export function RegistrationForm() {
       // Use merge to prevent overwriting if API already created basic doc
       const userDocRef = doc(db, "users", user.uid);
       const resolvedCountry = selectedCountryOption ?? countryOptions.find((option) => option.iso2 === data.country) ?? null;
+      const homeCurrency = resolvedCountry?.currency || 'USD';
       const locationPayload: Record<string, unknown> = {
         addressLine1: data.street,
         city: data.city,
@@ -1147,6 +1151,8 @@ export function RegistrationForm() {
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
         country: data.country,
         countryName: resolvedCountry?.name ?? '',
+        homeCurrency,
+        defaultWalletCurrency: homeCurrency,
         street: data.street,
         city: data.city,
         state: data.state,
@@ -1190,6 +1196,18 @@ export function RegistrationForm() {
       };
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });
+
+      // 6b. Create the user's home currency wallet immediately after sign-up.
+      // If it already exists (for example in a retry), ignore the conflict.
+      try {
+        await walletService.createAccount({ currency: homeCurrency, type: 'PERSONAL' });
+      } catch (walletError: unknown) {
+        if (walletError instanceof WalletServiceError && walletError.statusCode === 409) {
+          // Wallet already exists.
+        } else {
+          console.error('Failed to create home currency wallet:', walletError);
+        }
+      }
 
       // 7. Send email verification using Firebase's built-in method
       try {

@@ -17,9 +17,10 @@ interface WalletOverviewProps {
     loading: boolean;
     isKycVerified: boolean;
     onWalletCreated: () => void;
+    requiredCurrencyFirst?: string | null;
 }
 
-export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreated }: WalletOverviewProps) {
+export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreated, requiredCurrencyFirst }: WalletOverviewProps) {
     const [api, setApi] = React.useState<CarouselApi>();
     const [current, setCurrent] = React.useState(0);
     const [count, setCount] = React.useState(0);
@@ -46,7 +47,13 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
                         Spin up a currency wallet to start sending, receiving, and holding funds securely.
                     </CardDescription>
                 </div>
-                <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                <CreateWalletDialog
+                    onWalletCreated={onWalletCreated}
+                    disabled={!isKycVerified}
+                    existingWallets={wallets}
+                    requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
+                    enforceRequiredCurrencyFirst={true}
+                >
                     <Button size="default" disabled={!isKycVerified} className="w-full sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" /> Create wallet
                     </Button>
@@ -93,7 +100,13 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
                                 <CardDescription className="text-xs">Add more currencies to hold.</CardDescription>
                             </div>
                         </div>
-                        <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                        <CreateWalletDialog
+                            onWalletCreated={onWalletCreated}
+                            disabled={!isKycVerified}
+                            existingWallets={wallets}
+                            requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
+                            enforceRequiredCurrencyFirst={true}
+                        >
                             <Button size="sm" variant="outline" className="w-full mt-4" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button>
                         </CreateWalletDialog>
                     </Card>
@@ -131,7 +144,13 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
                         <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                         <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
                         <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
-                        <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                        <CreateWalletDialog
+                            onWalletCreated={onWalletCreated}
+                            disabled={!isKycVerified}
+                            existingWallets={wallets}
+                            requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
+                            enforceRequiredCurrencyFirst={true}
+                        >
                             <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4" /> Add New Wallet</Button>
                         </CreateWalletDialog>
                     </CardContent>
@@ -154,7 +173,13 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
                     <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                         {wallets.length} active
                     </Badge>
-                    <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                    <CreateWalletDialog
+                        onWalletCreated={onWalletCreated}
+                        disabled={!isKycVerified}
+                        existingWallets={wallets}
+                        requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
+                        enforceRequiredCurrencyFirst={true}
+                    >
                         <Button size="sm" variant="outline" disabled={!isKycVerified}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Add wallet
                         </Button>

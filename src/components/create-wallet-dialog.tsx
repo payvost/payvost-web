@@ -22,6 +22,8 @@ interface CreateWalletDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   existingWallets?: Account[];
+  requiredCurrencyFirst?: string;
+  enforceRequiredCurrencyFirst?: boolean;
 }
 
 const createWalletSchema = z.object({
@@ -41,7 +43,16 @@ const availableCurrencies = [
   { currency: 'GHS', name: 'Ghanaian Cedi', flag: 'gh' },
 ];
 
-export function CreateWalletDialog({ children, onWalletCreated, disabled = false, open: controlledOpen, onOpenChange, existingWallets = [] }: CreateWalletDialogProps) {
+export function CreateWalletDialog({
+  children,
+  onWalletCreated,
+  disabled = false,
+  open: controlledOpen,
+  onOpenChange,
+  existingWallets = [],
+  requiredCurrencyFirst,
+  enforceRequiredCurrencyFirst = true,
+}: CreateWalletDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -51,9 +62,15 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
 
   // Filter out currencies that user already has wallets for
   const existingCurrencies = new Set(existingWallets.map(w => w.currency));
-  const availableCurrenciesFiltered = availableCurrencies.filter(
-    c => !existingCurrencies.has(c.currency)
-  );
+  const requiredCurrency = requiredCurrencyFirst;
+  const hasRequiredCurrency = requiredCurrency ? existingCurrencies.has(requiredCurrency) : true;
+
+  const availableCurrenciesFiltered = (() => {
+    const base = availableCurrencies.filter((c) => !existingCurrencies.has(c.currency));
+    if (!requiredCurrency || !enforceRequiredCurrencyFirst) return base;
+    if (hasRequiredCurrency) return base;
+    return base.filter((c) => c.currency === requiredCurrency);
+  })();
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(createWalletSchema),
@@ -160,6 +177,11 @@ export function CreateWalletDialog({ children, onWalletCreated, disabled = false
                             Add a new wallet to hold, send, and receive a different currency.
                         </DialogDescription>
                     </DialogHeader>
+                    {!hasRequiredCurrency && requiredCurrency && enforceRequiredCurrencyFirst && (
+                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            Create your {requiredCurrency} wallet first. This is your home currency wallet and is required before you add others.
+                        </div>
+                    )}
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="currency">Select Currency</Label>

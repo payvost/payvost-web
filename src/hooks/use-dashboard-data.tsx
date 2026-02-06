@@ -9,6 +9,7 @@ import { FirestorePermissionError } from '@/lib/errors';
 import { doc, onSnapshot, Timestamp, collection, query, orderBy, limit, where, addDoc, serverTimestamp, DocumentData, updateDoc, getDocs } from 'firebase/firestore';
 import { ArrowRightLeft, Smartphone } from 'lucide-react';
 import React from 'react';
+import { SUPPORTED_COUNTRIES } from '@/config/kyc-config';
 
 export interface MonthlyData {
     month: string;
@@ -42,6 +43,8 @@ export function useDashboardData() {
     const [wallets, setWallets] = useState<Account[]>([]);
     const [loadingWallets, setLoadingWallets] = useState(true);
     const [isKycVerified, setIsKycVerified] = useState(false);
+    const [homeCurrency, setHomeCurrency] = useState<string | null>(null);
+    const [defaultWalletCurrency, setDefaultWalletCurrency] = useState<string | null>(null);
     const [chartData, setChartData] = useState<MonthlyData[]>([]);
     const [spendingData, setSpendingData] = useState<SpendingItem[]>(defaultSpendingData);
     const [hasTransactionData, setHasTransactionData] = useState(false);
@@ -160,6 +163,19 @@ export function useDashboardData() {
                 const newBusinessStatus = data.businessProfile?.status;
                 const welcomeNotificationSent = data.welcomeNotificationSent || {};
 
+                const inferredHomeCurrency = (() => {
+                    if (typeof data.homeCurrency === 'string' && data.homeCurrency) return data.homeCurrency;
+                    if (typeof data.country === 'string' && data.country) {
+                        return SUPPORTED_COUNTRIES.find((c) => c.iso2 === data.country)?.currency ?? null;
+                    }
+                    return null;
+                })();
+
+                setHomeCurrency(inferredHomeCurrency);
+                setDefaultWalletCurrency(
+                    (typeof data.defaultWalletCurrency === 'string' && data.defaultWalletCurrency) ? data.defaultWalletCurrency : inferredHomeCurrency
+                );
+
                 // Welcome notification logic for Personal
                 if (normalizedKycStatus === 'verified' && !welcomeNotificationSent.personal && user.displayName) {
                     try {
@@ -268,6 +284,8 @@ export function useDashboardData() {
         wallets,
         loadingWallets,
         isKycVerified,
+        homeCurrency,
+        defaultWalletCurrency,
         chartData,
         spendingData,
         hasTransactionData,

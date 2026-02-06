@@ -13,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
   Bell,
@@ -20,13 +21,10 @@ import {
   MessageSquare,
   ArrowRight,
   ShieldCheck,
-  CreditCard,
-  Percent,
   Users,
   Building,
   Briefcase,
   Sun,
-  Moon,
   Type,
   Contrast,
   Globe,
@@ -47,8 +45,9 @@ import { TwoFactorSettings } from '@/components/two-factor-settings';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { reload } from 'firebase/auth';
 import { getUserNotificationPreferences, updateNotificationPreferences } from '@/lib/unified-notifications';
+import { walletService, type Account } from '@/services';
+import { SUPPORTED_COUNTRIES } from '@/config/kyc-config';
 import { 
   Wallet, 
   AlertCircle, 
@@ -59,11 +58,25 @@ import {
 export default function SettingsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user, loading: authLoading } = useAuth();
-  const [businessProfile, setBusinessProfile] = useState<any>(null);
+  type BusinessProfile = {
+    status?: string;
+    logoUrl?: string;
+    legalName?: string;
+    name?: string;
+    industry?: string;
+    businessType?: string;
+    website?: string;
+  };
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [loadingBusiness, setLoadingBusiness] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
   const [savingPreferences, setSavingPreferences] = useState(false);
+  const [wallets, setWallets] = useState<Account[]>([]);
+  const [loadingWallets, setLoadingWallets] = useState(true);
+  const [homeCurrency, setHomeCurrency] = useState<string | null>(null);
+  const [defaultWalletCurrency, setDefaultWalletCurrency] = useState<string | null>(null);
+  const [savingDefaultWallet, setSavingDefaultWallet] = useState(false);
   const [notificationPreferences, setNotificationPreferences] = useState({
     push: true,
     email: true,
@@ -75,6 +88,32 @@ export default function SettingsPage() {
     largeTransactionAlerts: true,
   });
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!user) {
+      setLoadingWallets(false);
+      return;
+    }
+
+    const loadWallets = async () => {
+      try {
+        setLoadingWallets(true);
+        const accounts = await walletService.getAccounts();
+        const normalized = accounts.map((a) => ({
+          ...a,
+          balance: typeof a.balance === 'string' ? parseFloat(a.balance) : a.balance,
+        }));
+        setWallets(normalized);
+      } catch (error) {
+        console.error('Failed to load wallets:', error);
+        setWallets([]);
+      } finally {
+        setLoadingWallets(false);
+      }
+    };
+
+    loadWallets();
+  }, [user]);
 
   useEffect(() => {
     if (!user || authLoading) {
@@ -111,6 +150,18 @@ export default function SettingsPage() {
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
         const userData = doc.data();
+        const inferredHomeCurrency =
+          typeof userData.homeCurrency === 'string' && userData.homeCurrency
+            ? userData.homeCurrency
+            : (typeof userData.country === 'string'
+                ? (SUPPORTED_COUNTRIES.find((c) => c.iso2 === userData.country)?.currency ?? null)
+                : null);
+        setHomeCurrency(inferredHomeCurrency);
+        setDefaultWalletCurrency(
+          typeof userData.defaultWalletCurrency === 'string' && userData.defaultWalletCurrency
+            ? userData.defaultWalletCurrency
+            : inferredHomeCurrency
+        );
         const profile = userData.businessProfile;
         if (profile && (profile.status === 'approved' || profile.status === 'Approved')) {
           setBusinessProfile(profile);
@@ -152,6 +203,42 @@ export default function SettingsPage() {
     };
   }, [user, authLoading]);
 
+  const handleDefaultWalletChange = async (currency: string) => {
+    if (!user) return;
+
+    // Only allow choosing a wallet the user already has.
+    const exists = wallets.some((w) => w.currency === currency);
+    if (!exists) {
+      toast({
+        title: 'Wallet not found',
+        description: 'Create the wallet first, then set it as default.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSavingDefaultWallet(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        defaultWalletCurrency: currency,
+      });
+      setDefaultWalletCurrency(currency);
+      toast({
+        title: 'Default wallet updated',
+        description: `${currency} is now your default wallet.`,
+      });
+    } catch (error) {
+      console.error('Failed to update default wallet currency:', error);
+      toast({
+        title: 'Update failed',
+        description: 'Could not update your default wallet. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingDefaultWallet(false);
+    }
+  };
+
   const handleResendEmailVerification = async () => {
     if (!user || !user.email) return;
     
@@ -175,11 +262,12 @@ export default function SettingsPage() {
         title: 'Verification email sent',
         description: 'Please check your email and click the verification link.',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send verification email:', error);
+      const message = error instanceof Error ? error.message : 'Failed to send verification email. Please try again.';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send verification email. Please try again.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -202,11 +290,12 @@ export default function SettingsPage() {
       } else {
         throw new Error('Failed to save preferences');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving notification preferences:', error);
+      const message = error instanceof Error ? error.message : 'Failed to save notification preferences. Please try again.';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save notification preferences. Please try again.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -240,6 +329,54 @@ export default function SettingsPage() {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
+
+            {/* Wallet Preferences */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Wallet Preferences</CardTitle>
+                <CardDescription>Choose which wallet the dashboard uses by default.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-muted-foreground">Home Currency</Label>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Your home currency wallet</p>
+                      <p className="text-xs text-muted-foreground">
+                        {homeCurrency ? `${homeCurrency} is your sign-up currency.` : 'We will use your sign-up country currency as home.'}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">{homeCurrency || 'Auto'}</Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="default-wallet">Default Wallet</Label>
+                  <Select
+                    value={defaultWalletCurrency || ''}
+                    onValueChange={handleDefaultWalletChange}
+                    disabled={loadingWallets || savingDefaultWallet || wallets.length === 0}
+                  >
+                    <SelectTrigger id="default-wallet">
+                      <SelectValue placeholder={loadingWallets ? 'Loading wallets...' : 'Select a wallet currency'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets
+                        .slice()
+                        .sort((a, b) => a.currency.localeCompare(b.currency))
+                        .map((w) => (
+                          <SelectItem key={w.currency} value={w.currency}>
+                            {w.currency}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This controls which wallet shows as “Primary wallet” on the dashboard. You can change it anytime.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
             
             {/* Notification Preferences */}
             <Card>

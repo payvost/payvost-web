@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, ArrowRight, DollarSign, Send, ArrowDownLeft, Repeat, ArrowRightLeft } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Send, ArrowDownLeft, Repeat, ArrowRightLeft } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -29,24 +29,24 @@ import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { Skeleton } from '@/components/ui/skeleton';
 import { WalletsPageSkeleton } from '@/components/skeletons/wallets-page-skeleton';
 import { walletService, currencyService, type Account } from '@/services';
-import { getCurrencyMeta, getFlagCode, getCurrencyName } from '@/utils/currency-meta';
+import { getFlagCode, getCurrencyName } from '@/utils/currency-meta';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { EmptyState } from '@/components/empty-state';
 import { Wallet } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { SUPPORTED_COUNTRIES } from '@/config/kyc-config';
 
 export default function WalletsPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [wallets, setWallets] = useState<Account[]>([]);
   const { user, loading: authLoading } = useAuth();
   const [loadingWallets, setLoadingWallets] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [isKycVerified, setIsKycVerified] = useState(false);
+  const [homeCurrency, setHomeCurrency] = useState<string | null>(null);
   const [rates, setRates] = useState<Record<string, number>>({});
   const [createWalletDialogOpen, setCreateWalletDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -61,6 +61,13 @@ export default function WalletsPage() {
         const data = doc.data();
         const status = data.kycStatus;
         setIsKycVerified(typeof status === 'string' && status.toLowerCase() === 'verified');
+        const inferredHomeCurrency =
+          typeof data.homeCurrency === 'string' && data.homeCurrency
+            ? data.homeCurrency
+            : (typeof data.country === 'string'
+                ? (SUPPORTED_COUNTRIES.find((c) => c.iso2 === data.country)?.currency ?? null)
+                : null);
+        setHomeCurrency(inferredHomeCurrency);
       }
     });
 
@@ -187,6 +194,8 @@ export default function WalletsPage() {
             onWalletCreated={handleWalletCreated} 
             disabled={!isKycVerified}
             existingWallets={wallets}
+            requiredCurrencyFirst={homeCurrency ?? undefined}
+            enforceRequiredCurrencyFirst={true}
           >
             <Button disabled={!isKycVerified}>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -239,6 +248,8 @@ export default function WalletsPage() {
                     open={createWalletDialogOpen}
                     onOpenChange={setCreateWalletDialogOpen}
                     existingWallets={wallets}
+                    requiredCurrencyFirst={homeCurrency ?? undefined}
+                    enforceRequiredCurrencyFirst={true}
                 />
             </>
         ) : (
