@@ -2,12 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import currencyRoutes from './routes';
 import { currencyService } from './currencyService';
+import { initRedis } from '../../../common/redis';
 
 const app = express();
 const PORT = process.env.CURRENCY_SERVICE_PORT || 3010;
 
 app.use(cors());
 app.use(express.json());
+initRedis();
 
 // Health check
 app.get('/health', (req, res) => {

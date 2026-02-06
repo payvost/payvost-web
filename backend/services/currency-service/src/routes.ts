@@ -3,6 +3,7 @@ import { verifyFirebaseToken, optionalAuth, AuthenticatedRequest } from '../../.
 import { ValidationError } from '../../../gateway/index';
 import Decimal from 'decimal.js';
 import { currencyService } from './currencyService';
+import { rateSnapshotService } from './rateSnapshotService';
 
 const router = Router();
 
@@ -68,6 +69,34 @@ router.get('/supported', (req: Request, res: Response) => {
             symbol: code,
         })),
     });
+});
+
+/**
+ * GET /admin/fx/snapshots/latest
+ * Get latest accepted FX snapshot
+ */
+router.get('/admin/fx/snapshots/latest', verifyFirebaseToken, async (req: Request, res: Response) => {
+    try {
+        const snapshot = await rateSnapshotService.getLatestAcceptedSnapshot();
+        res.status(200).json({ snapshot });
+    } catch (error: any) {
+        console.error('Error fetching latest FX snapshot:', error);
+        res.status(500).json({ error: error.message || 'Failed to fetch latest snapshot' });
+    }
+});
+
+/**
+ * POST /admin/fx/snapshots/refresh
+ * Force fetch + persist a new FX snapshot
+ */
+router.post('/admin/fx/snapshots/refresh', verifyFirebaseToken, async (req: Request, res: Response) => {
+    try {
+        const result = await rateSnapshotService.ingestLatestSnapshot();
+        res.status(200).json({ result });
+    } catch (error: any) {
+        console.error('Error refreshing FX snapshot:', error);
+        res.status(500).json({ error: error.message || 'Failed to refresh snapshot' });
+    }
 });
 
 /**

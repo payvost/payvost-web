@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
   try {
     const { idToken } = await request.json();
 
+    console.log('[track-login] request received', { hasIdToken: !!idToken });
+
     if (!idToken) {
       return NextResponse.json(
         { error: 'ID token is required' },
@@ -23,6 +25,8 @@ export async function POST(request: NextRequest) {
     // Verify the ID token
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const uid = decodedToken.uid;
+
+    console.log('[track-login] token verified', { uid });
 
     // Extract IP address from request headers
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -69,6 +73,8 @@ export async function POST(request: NextRequest) {
     const userRef = adminDb.collection('users').doc(uid);
     const userDoc = await userRef.get();
     const userData = userDoc.data();
+
+    console.log('[track-login] user lookup', { uid, hasEmail: !!userData?.email });
 
     // Update user document in Firestore
     const now = new Date();

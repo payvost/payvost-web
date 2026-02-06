@@ -595,6 +595,60 @@ model RateAlert {
   createdAt        DateTime  @default(now())
 }
 
+enum FxSnapshotStatus {
+  ACCEPTED
+  REJECTED
+}
+
+enum FxQuoteStatus {
+  CREATED
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model FxRateSnapshot {
+  id                String            @id @default(cuid())
+  provider          String
+  baseCurrency      String
+  providerTimestamp DateTime
+  fetchedAt         DateTime          @default(now())
+  ratesJson         Json
+  status            FxSnapshotStatus  @default(ACCEPTED)
+  rejectReason      String?
+  createdAt         DateTime          @default(now())
+  FxQuote           FxQuote[]
+
+  @@index([provider, status])
+  @@index([fetchedAt])
+}
+
+model FxQuote {
+  id              String        @id @default(cuid())
+  userId          String
+  fromAccountId   String
+  toAccountId     String
+  fromCurrency    String
+  toCurrency      String
+  fromAmount      Decimal       @db.Decimal(20, 8)
+  toAmount        Decimal       @db.Decimal(20, 8)
+  rateSnapshotId  String
+  midRate         Decimal       @db.Decimal(20, 8)
+  feeTotal        Decimal       @db.Decimal(20, 8)
+  feeBreakdownJson Json
+  expiresAt       DateTime
+  status          FxQuoteStatus @default(CREATED)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  acceptedAt      DateTime?
+  cancelledAt     DateTime?
+  FxRateSnapshot  FxRateSnapshot @relation(fields: [rateSnapshotId], references: [id])
+
+  @@index([userId])
+  @@index([rateSnapshotId])
+  @@index([status, expiresAt])
+}
+
 model Recipient {
   id            String   @id @default(cuid())
   userId        String

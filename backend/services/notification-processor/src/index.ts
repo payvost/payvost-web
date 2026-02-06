@@ -293,6 +293,19 @@ app.post('/notify/invoice', async (req: NotifyRequest, res: Response) => {
   }
 });
 
+// Debug-only: echoes payload to verify request routing
+app.post('/notify/test', (req: NotifyRequest, res: Response) => {
+  res.json({
+    success: true,
+    receivedAt: new Date().toISOString(),
+    body: req.body || {},
+    headers: {
+      'content-type': req.headers['content-type'],
+      'user-agent': req.headers['user-agent'],
+    },
+  });
+});
+
 // Send notification endpoint
 app.post('/send', async (req: Request, res: Response) => {
   try {
