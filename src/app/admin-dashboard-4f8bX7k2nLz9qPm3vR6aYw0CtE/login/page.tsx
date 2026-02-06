@@ -1,4 +1,6 @@
 
+'use client';
+
 import { AdminLoginForm } from '@/components/admin-login-form';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';

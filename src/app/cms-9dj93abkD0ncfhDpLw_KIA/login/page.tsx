@@ -1,3 +1,5 @@
+'use client';
+
 import { WriterLoginForm } from '@/components/writer-login-form';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';

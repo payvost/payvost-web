@@ -1,3 +1,5 @@
+'use client';
+
 import { HrLoginForm } from '@/components/hr-login-form';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
