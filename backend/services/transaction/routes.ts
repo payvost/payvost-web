@@ -84,15 +84,24 @@ router.post('/execute-with-quote',
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.uid;
-      const { quote, idempotencyKey } = req.body;
+      const { quote, quoteId, idempotencyKey } = req.body;
+
+      let resolvedQuote = quote;
+      let auditAccountId = quote?.fromAccountId;
+
+      if (quoteId) {
+        resolvedQuote = { id: quoteId };
+        const storedQuote = await prisma.fxQuote.findUnique({ where: { id: quoteId } });
+        auditAccountId = storedQuote?.fromAccountId;
+      }
 
       const transfer = await transferService.executeTransferWithQuote(
         userId!,
-        quote,
+        resolvedQuote,
         idempotencyKey,
         {
           userId,
-          accountId: quote.fromAccountId,
+          accountId: auditAccountId,
           ipAddress: req.ip,
           userAgent: req.headers['user-agent'],
           correlationId: req.headers['x-correlation-id'] as string,

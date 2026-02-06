@@ -90,7 +90,9 @@ export const transactionSchemas = {
   }),
 
   executeWithQuote: z.object({
+    quoteId: z.string().uuid().optional(),
     quote: z.object({
+      id: z.string().uuid().optional(),
       fromAccountId: z.string().uuid(),
       toAccountId: z.string().uuid(),
       amount: z.number(),
@@ -100,8 +102,11 @@ export const transactionSchemas = {
       exchangeRate: z.number(),
       feeAmount: z.number(),
       totalDebitAmount: z.number(),
-    }),
+    }).optional(),
     idempotencyKey: commonSchemas.idempotencyKey,
+  }).refine((data) => data.quoteId || data.quote, {
+    message: 'quoteId or quote is required',
+    path: ['quoteId'],
   }),
 
   getTransfers: z.object({
