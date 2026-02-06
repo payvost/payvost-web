@@ -16,7 +16,7 @@ export default function LoginPage() {
         <div className="w-full max-w-7xl">
           <div className="grid w-full items-stretch gap-8 lg:grid-cols-2">
             {/* Left: Brand / Value */}
-            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 md:justify-self-center md:w-full md:max-w-2xl lg:max-w-none lg:w-4/5 animate-in fade-in slide-in-from-left-4 duration-700">
+            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 md:justify-self-center md:w-full md:max-w-2xl lg:max-w-none lg:w-11/12 flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
               <div className="flex items-center gap-3">
                 <div className="relative h-10 w-10 overflow-hidden rounded-xl border bg-background">
                   <Image
@@ -81,7 +81,7 @@ export default function LoginPage() {
                 </li>
               </ul>
 
-              <div className="mt-8 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <div className="mt-auto pt-8 flex flex-wrap items-center justify-start gap-2 text-xs text-muted-foreground">
                 <Badge variant="outline" className="bg-background/60">Encrypted in transit</Badge>
                 <Badge variant="outline" className="bg-background/60">Session protected</Badge>
                 <Badge variant="outline" className="bg-background/60">Privacy controls</Badge>

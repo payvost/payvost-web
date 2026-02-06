@@ -41,7 +41,7 @@ export function DashboardHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex h-[var(--app-header-height)] items-center gap-2 bg-background/85 px-3 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-4 lg:px-6',
+        'sticky top-0 z-30 flex h-[var(--app-header-height)] items-center gap-2 bg-background/85 px-3 pb-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-4 lg:px-6',
         'rounded-b-lg',
         scrolled && 'shadow-sm'
       )}
