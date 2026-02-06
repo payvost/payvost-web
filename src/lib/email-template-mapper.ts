@@ -1,8 +1,9 @@
 /**
  * Email Template Mapper
- * Maps frontend template names (underscore) to Mailgun template names (hyphen)
- * This allows the unified notification system to work with both frontend templates
- * and backend Mailgun templates seamlessly.
+ * Maps frontend template ids (underscore) to Mailgun stored template names.
+ *
+ * Note: For payvost.com the Mailgun templates are currently human-readable names with spaces
+ * (e.g. "login notification template"), not the hyphenated ids.
  */
 
 import type { EmailTemplate } from '@/services/notificationService';
@@ -10,13 +11,13 @@ import type { EmailTemplate } from '@/services/notificationService';
 /**
  * Maps frontend template names to Mailgun template names
  * Frontend uses underscores (e.g., 'login_alert')
- * Mailgun uses hyphens (e.g., 'login-notification')
+ * Mailgun uses stored template names (e.g., 'login notification template')
  */
 export function mapToMailgunTemplate(frontendTemplate: EmailTemplate): string {
   const templateMap: Record<EmailTemplate, string> = {
     // Transaction templates
-    transaction_success: 'transaction-success',
-    transaction_failed: 'transaction-failed',
+    transaction_success: 'transaction success template',
+    transaction_failed: 'transaction_failed', // missing in Mailgun: create "transaction failed template" if needed
     
     // Bill payment templates
     bill_payment_success: 'bill-payment-success',
@@ -27,22 +28,22 @@ export function mapToMailgunTemplate(frontendTemplate: EmailTemplate): string {
     airtime_topup_success: 'airtime-topup-success',
     
     // KYC templates
-    kyc_verified: 'kyc-approved',
-    kyc_rejected: 'kyc-rejected',
+    kyc_verified: 'kyc approved template',
+    kyc_rejected: 'kyc_rejected', // missing in Mailgun: create "kyc rejected template" if needed
     
     // Account templates
     account_welcome: 'account-welcome',
     password_reset: 'password-reset',
-    login_alert: 'login-notification',
+    login_alert: 'login notification template',
     
     // Transaction types
     withdrawal_request: 'withdrawal-request',
     deposit_received: 'deposit-received',
     
     // Invoice templates
-    invoice_generated: 'invoice-generated',
-    invoice_reminder: 'invoice-reminder',
-    invoice_paid: 'invoice-paid',
+    invoice_generated: 'invoice generated template',
+    invoice_reminder: 'invoice reminder template',
+    invoice_paid: 'invoice_paid', // missing in Mailgun: create "invoice paid template" if needed
   };
 
   return templateMap[frontendTemplate] || frontendTemplate;
@@ -53,22 +54,19 @@ export function mapToMailgunTemplate(frontendTemplate: EmailTemplate): string {
  */
 export function mapFromMailgunTemplate(mailgunTemplate: string): EmailTemplate | null {
   const reverseMap: Record<string, EmailTemplate> = {
-    'transaction-success': 'transaction_success',
-    'transaction-failed': 'transaction_failed',
+    'transaction success template': 'transaction_success',
     'bill-payment-success': 'bill_payment_success',
     'bill-payment-failed': 'bill_payment_failed',
     'gift-card-delivered': 'gift_card_delivered',
     'airtime-topup-success': 'airtime_topup_success',
-    'kyc-approved': 'kyc_verified',
-    'kyc-rejected': 'kyc_rejected',
+    'kyc approved template': 'kyc_verified',
     'account-welcome': 'account_welcome',
     'password-reset': 'password_reset',
-    'login-notification': 'login_alert',
+    'login notification template': 'login_alert',
     'withdrawal-request': 'withdrawal_request',
     'deposit-received': 'deposit_received',
-    'invoice-generated': 'invoice_generated',
-    'invoice-reminder': 'invoice_reminder',
-    'invoice-paid': 'invoice_paid',
+    'invoice generated template': 'invoice_generated',
+    'invoice reminder template': 'invoice_reminder',
   };
 
   return reverseMap[mailgunTemplate] || null;

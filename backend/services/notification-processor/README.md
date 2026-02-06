@@ -69,7 +69,7 @@ Send a notification email.
   "type": "invoice_reminder",
   "email": "customer@example.com",
   "subject": "Payment Reminder",
-  "template": "invoice-reminder",
+  "template": "invoice reminder template",
   "variables": {
     "customerName": "John Doe",
     "invoiceNumber": "INV-001",

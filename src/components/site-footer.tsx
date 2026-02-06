@@ -19,6 +19,11 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) return error.message;
+    return "Something went wrong. Please try again later.";
+  };
+
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -71,11 +76,11 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
       } else {
         throw new Error(data.error || 'Subscription failed');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Newsletter subscription error:', error);
       toast({
         title: "Subscription failed",
-        description: error.message || "Something went wrong. Please try again later.",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -406,12 +411,10 @@ export function SiteFooter({ variant = 'default' }: FooterProps) {
                   Our registered office is at 651N Broad Street, Delaware US.
                 </p>
                 <p>
-                  Certain financial and payment services on Payvost are provided by Rapyd Financial Network (Europe) Limited ("Rapyd"),
-                  authorised and regulated by the Financial Conduct Authority (FCA) under the Electronic Money Regulations 2011
-                  (Firm Reference Number 900769).
+                  Certain financial and payment services on Payvost are provided by regulated third-party providers.
                 </p>
                 <p>
-                  By using Payvost's services, you are signing up for services from Rapyd via Payvost's platform.
+                  By using Payvost&apos;s services, you are agreeing to receive those services via Payvost&apos;s platform.
                 </p>
                 <p>
                   Payvost does not directly provide electronic money services.

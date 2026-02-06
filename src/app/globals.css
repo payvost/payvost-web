@@ -29,7 +29,8 @@
     --chart-3: 215 70% 50%;
     --chart-4: 215 60% 60%;
     --chart-5: 215 50% 70%;
-    --radius: 0.5rem;
+    /* Global UI corner radius: 10px */
+    --radius: 0.625rem;
     --sidebar-background: 215 100% 98%;
     --sidebar-foreground: 215 100% 15%;
     --sidebar-primary: 215 100% 22%;

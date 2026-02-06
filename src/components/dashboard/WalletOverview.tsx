@@ -38,7 +38,7 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
     const showCreateWalletCTA = wallets.length < 4;
 
     const EmptyState = () => (
-        <div className="w-full rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center">
+        <div className="w-full rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center">
             <div className="mx-auto max-w-xl space-y-4">
                 <div className="space-y-1">
                     <CardTitle className="text-xl font-semibold">Create your first wallet</CardTitle>

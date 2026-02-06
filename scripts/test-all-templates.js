@@ -16,7 +16,7 @@ const templates = [
   {
     name: 'invoice-reminder',
     subject: 'Invoice Reminder: INV-2025-001',
-    template: 'invoice-reminder',
+    template: 'invoice reminder template',
     variables: {
       invoiceNumber: 'INV-2025-001',
       amount: '1000.00',

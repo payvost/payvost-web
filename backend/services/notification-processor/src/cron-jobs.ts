@@ -67,7 +67,7 @@ export async function invoiceReminderCronJob() {
         await sendEmailViaMailgun({
           to: customerEmail,
           subject: `Payment Reminder: Invoice ${invoice.invoiceNumber} is due soon`,
-          template: 'invoice-reminder',
+          template: 'invoice reminder template',
           variables: {
             customerName,
             invoiceNumber: invoice.invoiceNumber,

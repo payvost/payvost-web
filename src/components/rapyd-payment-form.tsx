@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Loader2, CreditCard, Globe } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { externalTransactionService, walletService, apiClient } from '@/services';
 
 interface PaymentMethod {
@@ -22,6 +22,28 @@ interface PaymentMethod {
   status: number;
 }
 
+type WalletAccount = {
+  id?: string;
+  currency: string;
+  balance?: number | string;
+};
+
+type ExternalTransaction = {
+  id: string;
+};
+
+type ProviderPayment = {
+  id?: string;
+  status?: string;
+  redirect_url?: string;
+  payment_method_data?: { redirect_url?: string };
+};
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Something went wrong. Please try again.';
+}
+
 export function RapydPaymentForm() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,7 +55,7 @@ export function RapydPaymentForm() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingMethods, setLoadingMethods] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [wallets, setWallets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<WalletAccount[]>([]);
 
   // Load wallets
   useEffect(() => {
@@ -71,11 +93,11 @@ export function RapydPaymentForm() {
           );
           setPaymentMethods(activeMethods);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to load payment methods:', error);
         toast({
           title: 'Failed to load payment methods',
-          description: error.message || 'Please try again later',
+          description: getErrorMessage(error),
           variant: 'destructive',
         });
       } finally {
@@ -115,12 +137,12 @@ export function RapydPaymentForm() {
     }
 
     setIsCreating(true);
-    let transactionRecord: any = null;
+    let transactionRecord: ExternalTransaction | null = null;
     let accountId: string | null = null;
 
     try {
       // Get user's wallet for the currency
-      const matchingAccount = wallets.find(acc => acc.currency === currency);
+      const matchingAccount = wallets.find((acc) => acc.currency === currency);
       if (matchingAccount) {
         accountId = matchingAccount.id;
       }
@@ -142,12 +164,12 @@ export function RapydPaymentForm() {
         metadata: {
           timestamp: Date.now(),
         },
-      }) as { transaction: any };
+      }) as { transaction: ExternalTransaction };
 
       transactionRecord = createResponse.transaction;
 
-      // Create payment via Rapyd API
-      const paymentResponse = await apiClient.post<{ ok: boolean; payment: any }>(
+      // Create payment via payment provider API
+      const paymentResponse = await apiClient.post<{ ok: boolean; payment?: ProviderPayment; error?: string }>(
         '/api/rapyd/payments/create',
         {
           amount: paymentAmount,
@@ -188,7 +210,7 @@ export function RapydPaymentForm() {
           description: `Payment ID: ${payment.id}. Please complete the payment using the provided instructions.`,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Payment creation error:', error);
       
       // Update transaction status to failed
@@ -196,16 +218,16 @@ export function RapydPaymentForm() {
         try {
           await externalTransactionService.update(transactionRecord.id, {
             status: 'FAILED',
-            errorMessage: error.message || 'Payment creation failed',
+            errorMessage: getErrorMessage(error),
           });
-        } catch (updateError) {
+        } catch (updateError: unknown) {
           console.error('Failed to update transaction:', updateError);
         }
       }
 
       toast({
         title: 'Payment Failed',
-        description: error.message || 'Failed to create payment. Please try again.',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -218,10 +240,10 @@ export function RapydPaymentForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Create Payment with Rapyd
+          Create payment
         </CardTitle>
         <CardDescription>
-          Accept payments from customers worldwide using 900+ payment methods
+          Accept payments from customers worldwide using local methods.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

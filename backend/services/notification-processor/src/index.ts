@@ -31,30 +31,35 @@ function buildTemplateAndSubject(kind: string, payload: Record<string, any>) {
   switch (kind) {
     case 'login': {
       return {
-        template: 'login-notification',
+        // Matches existing Mailgun stored template name in this account
+        template: 'login notification template',
         subject: subjectOverride || 'New login to your Payvost account',
       };
     }
     case 'kyc': {
       const status = payload.status === 'approved' ? 'approved' : 'rejected';
+      if (status !== 'approved') {
+        throw new Error('Missing Mailgun template: kyc rejected template');
+      }
       return {
-        template: status === 'approved' ? 'kyc-approved' : 'kyc-rejected',
-        subject: subjectOverride || (status === 'approved' ? 'KYC Approved' : 'KYC Rejected'),
+        // Matches existing Mailgun stored template name in this account
+        template: 'kyc approved template',
+        subject: subjectOverride || 'KYC Approved',
       };
     }
     case 'business': {
-      const status = payload.status === 'approved' ? 'approved' : 'rejected';
-      return {
-        template: status === 'approved' ? 'business-approved' : 'business-rejected',
-        subject: subjectOverride || (status === 'approved' ? 'Business Approved' : 'Business Review Complete'),
-      };
+      throw new Error('Missing Mailgun templates: business approved template, business rejected template');
     }
     case 'transaction': {
       const status = payload.status || 'initiated';
-      const template =
-        status === 'success' ? 'transaction-success' :
-        status === 'failed' ? 'transaction-failed' :
-        'transaction-initiated';
+      if (status !== 'success') {
+        throw new Error(
+          status === 'failed'
+            ? 'Missing Mailgun template: transaction failed template'
+            : 'Missing Mailgun template: transaction initiated template'
+        );
+      }
+      const template = 'transaction success template';
       const subject =
         status === 'success' ? 'Transaction Successful' :
         status === 'failed' ? 'Transaction Failed' :
@@ -62,17 +67,15 @@ function buildTemplateAndSubject(kind: string, payload: Record<string, any>) {
       return { template, subject: subjectOverride || subject };
     }
     case 'payment-link': {
-      return {
-        template: 'payment-link',
-        subject: subjectOverride || 'Payment Link Created',
-      };
+      throw new Error('Missing Mailgun template: payment link template');
     }
     case 'invoice': {
       const type = payload.type || 'generated';
+      if (!['generated', 'reminder'].includes(type)) {
+        throw new Error('Missing Mailgun template: invoice paid template');
+      }
       const template =
-        type === 'paid' ? 'invoice-paid' :
-        type === 'reminder' ? 'invoice-reminder' :
-        'invoice-generated';
+        type === 'reminder' ? 'invoice reminder template' : 'invoice generated template';
       const subject =
         type === 'paid' ? 'Invoice Paid' :
         type === 'reminder' ? 'Invoice Reminder' :
@@ -82,6 +85,22 @@ function buildTemplateAndSubject(kind: string, payload: Record<string, any>) {
     default:
       return { template: payload.template || 'general', subject: subjectOverride || 'Notification' };
   }
+}
+
+function mapLegacyTemplateName(input?: string): string | undefined {
+  if (!input) return undefined;
+
+  const legacyMap: Record<string, string> = {
+    'login-notification': 'login notification template',
+    'kyc-approved': 'kyc approved template',
+    'transaction-success': 'transaction success template',
+    'invoice-generated': 'invoice generated template',
+    'invoice-reminder': 'invoice reminder template',
+    'daily-rate-summary': 'daily rate summary email template',
+    'rate-alert': 'rate alert email template',
+  };
+
+  return legacyMap[input] || input;
 }
 
 // Health check endpoint
@@ -322,7 +341,7 @@ app.post('/send', async (req: Request, res: Response) => {
     const result = await sendEmailViaMailgun({
       to: email,
       subject,
-      template: template || type,
+      template: mapLegacyTemplateName(template || type) || 'login notification template',
       variables: variables || {},
     });
 

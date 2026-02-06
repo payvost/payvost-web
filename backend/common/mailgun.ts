@@ -273,7 +273,7 @@ export function generateRateAlertEmailHTML(params: {
 
 /**
  * Send rate alert email using Mailgun template
- * Template name: 'rate-alert' (create this template in Mailgun dashboard)
+ * Template name: 'rate alert email template' (Mailgun stored template name)
  * 
  * Required template variables:
  * - sourceCurrency: Source currency code (e.g., USD)
@@ -308,7 +308,7 @@ export async function sendRateAlertEmail(
       to,
       subject,
       text: textContent,
-      template: 'rate-alert', // Mailgun template name
+      template: 'rate alert email template', // Mailgun stored template name
       variables: {
         sourceCurrency: htmlParams.sourceCurrency,
         targetCurrency: htmlParams.targetCurrency,

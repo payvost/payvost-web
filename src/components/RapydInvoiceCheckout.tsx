@@ -29,14 +29,20 @@ interface RapydInvoiceCheckoutProps {
   onPaymentSuccess?: () => void;
 }
 
-export function RapydInvoiceCheckout({
-  invoiceId,
-  amount,
-  currency,
-  customerEmail,
-  customerName,
-  onPaymentSuccess
-}: RapydInvoiceCheckoutProps) {
+type ProviderPayment = {
+  id?: string;
+  redirect_url?: string;
+  payment_method_data?: { redirect_url?: string };
+  instructions?: unknown;
+};
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return 'Something went wrong. Please try again.';
+}
+
+export function RapydInvoiceCheckout(props: RapydInvoiceCheckoutProps) {
+  const { invoiceId, amount, currency, customerEmail, customerName } = props;
   const { toast } = useToast();
   const [country, setCountry] = useState('US');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
@@ -62,11 +68,11 @@ export function RapydInvoiceCheckout({
           );
           setPaymentMethods(activeMethods);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to load payment methods:', error);
         toast({
           title: 'Failed to load payment methods',
-          description: error.message || 'Please try again later',
+          description: getErrorMessage(error),
           variant: 'destructive',
         });
       } finally {
@@ -88,7 +94,7 @@ export function RapydInvoiceCheckout({
 
     setIsProcessing(true);
     try {
-      const response = await apiClient.post<{ ok: boolean; payment: any }>(
+      const response = await apiClient.post<{ ok: boolean; payment?: ProviderPayment; error?: string }>(
         '/api/rapyd/payments/create',
         {
           amount,
@@ -130,11 +136,11 @@ export function RapydInvoiceCheckout({
       } else {
         throw new Error(response.error || 'Failed to create payment');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Payment creation error:', error);
       toast({
         title: 'Payment Failed',
-        description: error.message || 'Failed to create payment. Please try again.',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -155,14 +161,14 @@ export function RapydInvoiceCheckout({
     if (currencyToCountry[currency] && !country) {
       setCountry(currencyToCountry[currency]);
     }
-  }, [currency]);
+  }, [currency, country]);
 
   return (
     <Card className="border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Globe className="h-5 w-5" />
-          Pay with Rapyd
+          Pay online
         </CardTitle>
         <CardDescription>
           Select a payment method to complete your invoice payment. 900+ payment methods available.
@@ -253,7 +259,7 @@ export function RapydInvoiceCheckout({
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          Secure payment powered by Rapyd. Supports cards, bank transfers, mobile money, and more.
+          Secure payment powered by our payment provider. Supports cards, bank transfers, mobile money, and more.
         </p>
       </CardContent>
     </Card>

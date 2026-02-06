@@ -278,7 +278,7 @@ async function sendDailyRateEmail(user: { email: string; name?: string | null; c
     const result = await sendEmail({
       to: user.email,
       subject: `📊 Daily FX Rate Summary - ${date}`,
-      template: 'daily-rate-summary', // Mailgun template name
+      template: 'daily rate summary email template', // Mailgun stored template name
       variables: {
         userName: user.name || '',
         date: date,

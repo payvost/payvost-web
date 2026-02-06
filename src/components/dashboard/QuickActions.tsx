@@ -13,7 +13,7 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
 
     const actions = [
         {
-            label: 'Send money',
+            label: 'Send',
             icon: <ArrowUpRight className="h-4 w-4" />,
             color: 'from-primary/20 via-primary/10 to-primary/5 text-primary',
             onClick: () => setOpen(true),
@@ -26,7 +26,7 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
             href: '/dashboard/request-payment',
         },
         {
-            label: 'Swap/Pay bills',
+            label: 'Pay bills',
             icon: <RefreshCw className="h-4 w-4" />,
             color: 'from-orange-500/20 via-orange-500/10 to-orange-500/5 text-orange-600',
             href: '/dashboard/payments',
@@ -43,36 +43,51 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
         <Card className="border-muted-foreground/15 shadow-sm">
             <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Quick actions</CardTitle>
-                <CardDescription className="text-xs">Stripe-style shortcuts that stay in sync with your account state.</CardDescription>
+                <CardDescription className="text-xs">Shortcuts to your most common flows.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                     {actions.map((action) => {
-                        const button = (
+                        const content = (
+                            <>
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white/60 text-slate-900">
+                                    {action.icon}
+                                </span>
+                                <div className="min-w-0 flex-1 text-left">
+                                    <p className="truncate text-sm font-semibold">{action.label}</p>
+                                    <p className="hidden sm:block truncate text-[11px] text-muted-foreground">
+                                        Uses your live balance.
+                                    </p>
+                                </div>
+                            </>
+                        );
+
+                        if (action.href) {
+                            return (
+                                <Button
+                                    key={action.label}
+                                    asChild
+                                    variant="secondary"
+                                    className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg bg-gradient-to-br p-3 ${action.color}`}
+                                    disabled={!isKycVerified}
+                                >
+                                    <Link href={action.href} className="flex w-full min-w-0 items-center gap-3">
+                                        {content}
+                                    </Link>
+                                </Button>
+                            );
+                        }
+
+                        return (
                             <Button
                                 key={action.label}
                                 variant="secondary"
-                                size="lg"
-                                className={`justify-start gap-3 rounded-xl bg-gradient-to-br ${action.color}`}
+                                className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg bg-gradient-to-br p-3 ${action.color}`}
                                 onClick={action.onClick}
                                 disabled={!isKycVerified}
                             >
-                                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/60 text-slate-900">
-                                    {action.icon}
-                                </span>
-                                <div className="text-left">
-                                    <p className="text-sm font-semibold">{action.label}</p>
-                                    <p className="text-[11px] text-muted-foreground">Runs immediately with your live balances.</p>
-                                </div>
+                                {content}
                             </Button>
-                        );
-
-                        return action.href ? (
-                            <Link key={action.label} href={action.href}>
-                                {button}
-                            </Link>
-                        ) : (
-                            button
                         );
                     })}
                 </div>

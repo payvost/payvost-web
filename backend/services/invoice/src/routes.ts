@@ -152,7 +152,7 @@ router.post('/invoices/:id/send-reminder', verifyFirebaseToken, async (req: Requ
       type: 'invoice-reminder',
       email: customerEmail,
       subject: `Invoice Reminder: ${invoice.invoiceNumber}`,
-      template: 'invoice-reminder',
+      template: 'invoice reminder template',
       variables: {
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.grandTotal.toString(),
