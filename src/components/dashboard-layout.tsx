@@ -10,24 +10,19 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
-  SidebarTrigger,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuBadge,
   SidebarInset,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
-import { UserNav } from '@/components/user-nav';
-import { Home, ArrowRightLeft, Settings, LogOut, Send, Wallet, CreditCard, HelpCircle, HandCoins, ShieldCheck, Ticket, ShieldAlert, Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Search, Gift, Users } from 'lucide-react';
+import { Home, ArrowRightLeft, Settings, Send, Wallet, CreditCard, HandCoins, ShieldCheck, ShieldAlert, Gift } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
-import { TooltipProvider } from './ui/tooltip';
 import { Button } from './ui/button';
-import { NotificationDropdown } from './notification-dropdown';
 import { auth, db } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -35,13 +30,10 @@ import { ProtectRoute, useAuth } from '@/hooks/use-auth';
 import useAutoLogout from '@/hooks/use-auto-logout';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
-import { Input } from './ui/input';
-import { ThemeSwitcher } from './theme-switcher';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from './ui/sheet';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { QuickActionsDropdown } from './quick-actions-dropdown';
-import { DashboardSearch } from './dashboard-search';
+import { DashboardHeader } from '@/components/dashboard-header';
 
 
 interface DashboardLayoutProps {
@@ -138,19 +130,22 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     enabled: Boolean(user),
   });
 
-  const mainNavItems = [
-    { href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' },
+  const overviewItems = [{ href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' }];
+
+  const moneyItems = [
+    { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallet' },
     { href: '/dashboard/payments', icon: <Send strokeWidth={2.5} />, label: 'Payments' },
     { href: '/dashboard/transactions', icon: <ArrowRightLeft strokeWidth={2.5} />, label: 'Transactions' },
-    { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallets' },
     { href: '/dashboard/cards', icon: <CreditCard strokeWidth={2.5} />, label: 'Virtual Cards' },
   ];
 
-  const collectPaymentItems = [
-    { href: '/dashboard/request-payment', icon: <HandCoins strokeWidth={2.5} />, label: 'Request' },
-    { href: '/dashboard/dispute', icon: <ShieldAlert strokeWidth={2.5} />, label: 'Dispute Center' },
-    { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', comingSoon: false, isNew: true },
+  const getPaidAndProtectionItems = [
+    { href: '/dashboard/request-payment', icon: <HandCoins strokeWidth={2.5} />, label: 'Requests' },
+    { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', isNew: true },
+    { href: '/dashboard/dispute', icon: <ShieldAlert strokeWidth={2.5} />, label: 'Disputes' },
   ];
+
+  const perksItems = [{ href: '/dashboard/referrals', icon: <Gift strokeWidth={2.5} />, label: 'Referrals' }];
 
   const isActive = (href: string) => {
     // Exact match for parent routes, prefix match for others.
@@ -162,141 +157,132 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   return (
     <ProtectRoute>
-      <SidebarProvider style={{ "--sidebar-width": "12rem" } as React.CSSProperties}>
-        <TooltipProvider>
-          <Sidebar>
-            <SidebarHeader className="h-12 lg:h-[52px] flex items-center justify-start px-4 border-b">
-              <Link href="/" className="flex items-center">
-                <Icons.logo className="h-8" />
+      <SidebarProvider style={{ '--sidebar-width': '16rem' } as React.CSSProperties}>
+        <Sidebar variant="inset" collapsible="icon">
+          <SidebarHeader className="h-14 px-2 py-2 border-b border-sidebar-border/60">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <Link href="/" className="flex items-center gap-2 min-w-0">
+                <Icons.logo className="h-7 shrink-0" />
+                <span className="text-sm font-semibold tracking-tight truncate group-data-[collapsible=icon]:hidden">
+                  Payvost
+                </span>
               </Link>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupLabel>Main</SidebarGroupLabel>
-                <SidebarMenu>
-                  {mainNavItems.map(item => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive(item.href)}>
-                        <Link href={item.href}>
-                          {item.icon}
-                          {item.label}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroup>
-              <SidebarGroup>
-                <SidebarGroupLabel>Collect Payment</SidebarGroupLabel>
-                <SidebarMenu>
-                  {collectPaymentItems.map(item => (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive(item.href)} disabled={item.comingSoon}>
-                        <Link href={item.href} className="flex items-center gap-2">
-                          {item.icon}
-                          <span className="flex items-center gap-1.5">
-                            {item.label}
-                            {item.isNew && <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">New</Badge>}
-                          </span>
-                          {item.comingSoon && <SidebarMenuBadge className="bg-secondary text-secondary-foreground">Soon</SidebarMenuBadge>}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroup>
-              <div className="mt-4 mx-2 p-3 rounded-lg bg-sidebar-accent/50 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-                <p className="text-xs font-semibold">Are you a Business Owner, Startup Founder or Venture Capitalist?</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">Have access to our comprehensive suite of tools.</p>
-                <Button size="sm" className="w-full" asChild>
-                  <Link href="/dashboard/get-started">Get Started</Link>
-                </Button>
-              </div>
-            </SidebarContent>
-            <SidebarFooter className="p-2 mt-auto space-y-2">
-              <SidebarGroup>
-                <SidebarGroupLabel>Rewards</SidebarGroupLabel>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive('/dashboard/referrals')}>
-                      <Link href="/dashboard/referrals">
-                        <Gift strokeWidth={2.5} />
-                        <span className="group-data-[collapsible=icon]:hidden">Referrals</span>
+            </div>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Overview</SidebarGroupLabel>
+              <SidebarMenu>
+                {overviewItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                      <Link href={item.href}>
+                        {item.icon}
+                        <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroup>
-              <SidebarMenu className="w-full">
-                <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center">
-                  <SidebarMenuItem className="w-full">
-                    <SidebarMenuButton asChild size="default" className="w-full justify-start gap-2" tooltip="Settings">
-                      <Link href="/dashboard/settings">
-                        <Settings />
-                        <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton size="default" className="justify-start gap-2" onClick={handleLogout} tooltip="Logout">
-                      <LogOut />
-                      <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </div>
+                ))}
               </SidebarMenu>
-            </SidebarFooter>
-          </Sidebar>
-          <SidebarInset ref={mainContentRef}>
-            <header className={cn(
-              "sticky top-0 z-30 flex h-auto min-h-14 flex-wrap items-center gap-2 bg-background/95 px-3 py-2 backdrop-blur-sm transition-all sm:gap-3 sm:px-4 lg:h-[60px] lg:flex-nowrap lg:px-6",
-              scrolled && "border-b shadow-sm"
-            )}>
-              <SidebarTrigger className="md:hidden" />
-              <div className="w-full flex-1 order-2 md:order-none">
-                <div className="relative w-full md:max-w-sm">
-                  <div className="md:hidden">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" size="icon">
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent side="top">
-                        <SheetHeader>
-                          <SheetTitle>Search</SheetTitle>
-                        </SheetHeader>
-                        <div className="mt-4">
-                          <DashboardSearch />
-                        </div>
-                      </SheetContent>
-                    </Sheet>
-                  </div>
-                  <div className="hidden md:block">
-                    <DashboardSearch />
-                  </div>
-                </div>
-              </div>
-              <div className="ml-auto flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
-                <QuickActionsDropdown />
-                {isBusinessApproved && <DashboardSwitcher />}
-                <Button variant="ghost" size="icon" asChild>
-                  <Link href="/dashboard/support">
-                    <LifeBuoy className="h-[1.2rem] w-[1.2rem]" />
-                    <span className="sr-only">Support</span>
-                  </Link>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Money</SidebarGroupLabel>
+              <SidebarMenu>
+                {moneyItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                      <Link href={item.href}>
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Requests & Protection</SidebarGroupLabel>
+              <SidebarMenu>
+                {getPaidAndProtectionItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                      <Link href={item.href} className="flex items-center gap-2">
+                        {item.icon}
+                        <span className="flex items-center gap-1.5">
+                          {item.label}
+                          {item.isNew && (
+                            <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">
+                              New
+                            </Badge>
+                          )}
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Perks</SidebarGroupLabel>
+              <SidebarMenu>
+                {perksItems.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                      <Link href={item.href}>
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+
+            {!isBusinessApproved && (
+              <div className="mt-2 mx-2 p-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
+                <p className="text-xs font-semibold">Need business tools?</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-3">
+                  Invoicing, payouts, customers, and more.
+                </p>
+                <Button size="sm" className="w-full" asChild>
+                  <Link href="/dashboard/get-started">Get started</Link>
                 </Button>
-                <ThemeSwitcher />
-                <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
-                <NotificationDropdown context="personal" />
-                <UserNav user={user} />
               </div>
-            </header>
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </SidebarInset>
-        </TooltipProvider>
+            )}
+          </SidebarContent>
+
+          <SidebarFooter className="p-2 border-t border-sidebar-border/60">
+            <SidebarMenu className="w-full">
+              <SidebarMenuItem className="w-full">
+                <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')} tooltip="Settings">
+                  <Link href="/dashboard/settings">
+                    <Settings strokeWidth={2.5} />
+                    <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset ref={mainContentRef}>
+          <DashboardHeader
+            context="personal"
+            user={user}
+            scrolled={scrolled}
+            rightSlot={
+              <>
+                {isBusinessApproved && <DashboardSwitcher />}
+                <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
+              </>
+            }
+          />
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </SidebarInset>
       </SidebarProvider>
     </ProtectRoute>
   );

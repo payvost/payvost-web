@@ -15,8 +15,25 @@ export function initRedis(): Redis | null {
   }
 
   try {
-    redisClient = new Redis(redisUrl, {
+    const defaultMaxRetryAttempts = process.env.NODE_ENV === 'production' ? 50 : 10;
+    const parsedMaxRetryAttempts = Number(process.env.REDIS_MAX_RETRY_ATTEMPTS);
+    const maxRetryAttempts =
+      Number.isFinite(parsedMaxRetryAttempts) && parsedMaxRetryAttempts >= 0
+        ? parsedMaxRetryAttempts
+        : defaultMaxRetryAttempts;
+
+    const client = new Redis(redisUrl, {
       retryStrategy: (times: number) => {
+        // If the hostname doesn't exist (ENOTFOUND), retrying forever just spams logs.
+        if (times > maxRetryAttempts) {
+          logger.error(
+            { attempt: times, maxRetryAttempts },
+            'Redis connection retry limit reached; giving up'
+          );
+          if (redisClient === client) redisClient = null;
+          return null; // Stop reconnecting.
+        }
+
         const delay = Math.min(times * 50, 2000);
         logger.warn({ delay, attempt: times }, 'Redis connection retry');
         return delay;
@@ -26,29 +43,36 @@ export function initRedis(): Redis | null {
       lazyConnect: true,
     });
 
-    redisClient.on('connect', () => {
+    redisClient = client;
+
+    client.on('connect', () => {
       logger.info('Redis client connected');
     });
 
-    redisClient.on('ready', () => {
+    client.on('ready', () => {
       logger.info('Redis client ready');
     });
 
-    redisClient.on('error', (error: Error) => {
+    client.on('error', (error: Error) => {
       logger.error({ err: error }, 'Redis client error');
     });
 
-    redisClient.on('close', () => {
+    client.on('close', () => {
       logger.warn('Redis client connection closed');
     });
 
     // Connect to Redis
-    redisClient.connect().catch((error: Error) => {
+    client.connect().catch((error: Error) => {
       logger.error({ err: error }, 'Failed to connect to Redis');
-      redisClient = null;
+      try {
+        client.disconnect();
+      } catch {
+        // Ignore: disconnect is best-effort.
+      }
+      if (redisClient === client) redisClient = null;
     });
 
-    return redisClient;
+    return client;
   } catch (error) {
     logger.error({ err: error }, 'Failed to initialize Redis');
     return null;
@@ -66,22 +90,17 @@ export function getRedis(): Redis | null {
  * Cache helper functions
  */
 export class CacheService {
-  private client: Redis | null;
-
-  constructor() {
-    this.client = getRedis();
-  }
-
   /**
    * Get value from cache
    */
   async get<T>(key: string): Promise<T | null> {
-    if (!this.client) {
+    const client = getRedis();
+    if (!client) {
       return null;
     }
 
     try {
-      const value = await this.client.get(key);
+      const value = await client.get(key);
       if (!value) {
         return null;
       }
@@ -96,12 +115,13 @@ export class CacheService {
    * Set value in cache with TTL
    */
   async set(key: string, value: any, ttlSeconds: number = 300): Promise<boolean> {
-    if (!this.client) {
+    const client = getRedis();
+    if (!client) {
       return false;
     }
 
     try {
-      await this.client.setex(key, ttlSeconds, JSON.stringify(value));
+      await client.setex(key, ttlSeconds, JSON.stringify(value));
       return true;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache set error');
@@ -113,12 +133,13 @@ export class CacheService {
    * Delete value from cache
    */
   async delete(key: string): Promise<boolean> {
-    if (!this.client) {
+    const client = getRedis();
+    if (!client) {
       return false;
     }
 
     try {
-      await this.client.del(key);
+      await client.del(key);
       return true;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache delete error');
@@ -130,16 +151,17 @@ export class CacheService {
    * Delete multiple keys matching pattern
    */
   async deletePattern(pattern: string): Promise<number> {
-    if (!this.client) {
+    const client = getRedis();
+    if (!client) {
       return 0;
     }
 
     try {
-      const keys = await this.client.keys(pattern);
+      const keys = await client.keys(pattern);
       if (keys.length === 0) {
         return 0;
       }
-      return await this.client.del(...keys);
+      return await client.del(...keys);
     } catch (error) {
       logger.error({ err: error, pattern }, 'Cache delete pattern error');
       return 0;
@@ -150,12 +172,13 @@ export class CacheService {
    * Check if key exists
    */
   async exists(key: string): Promise<boolean> {
-    if (!this.client) {
+    const client = getRedis();
+    if (!client) {
       return false;
     }
 
     try {
-      const result = await this.client.exists(key);
+      const result = await client.exists(key);
       return result === 1;
     } catch (error) {
       logger.error({ err: error, key }, 'Cache exists error');

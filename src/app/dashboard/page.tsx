@@ -157,49 +157,49 @@ export default function DashboardPage() {
                         </BreadcrumbList>
                     </Breadcrumb>
 
-                    <section className="rounded-lg border bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-900 text-white shadow-xl">
+                    <section className="rounded-lg border bg-card text-foreground shadow-sm">
                         <div className="p-6 sm:p-8 space-y-6">
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-sm text-white/70">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         {greeting?.icon}
                                         <span>{greeting?.text}, {firstName}</span>
                                     </div>
                                     <h1 className="text-2xl sm:text-3xl font-semibold">Your money at a glance</h1>
-                                    <p className="text-sm text-white/70">Real activity pulled from your wallets, invoices, and transfers.</p>
+                                    <p className="text-sm text-muted-foreground">Real activity pulled from your wallets, invoices, and transfers.</p>
                                     <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2 w-full sm:w-auto">
-                                        <Button asChild size="sm" variant="secondary" className="bg-white text-slate-900 hover:bg-white/90 w-full sm:w-auto">
+                                        <Button asChild size="sm" className="w-full sm:w-auto">
                                             <Link href="/dashboard/payments" className="flex items-center gap-2">
                                                 Send money
                                                 <ArrowUpRight className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                        <Button asChild size="sm" variant="outline" className="border-white/25 bg-white/5 text-white hover:bg-white/10 w-full sm:w-auto">
+                                        <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
                                             <Link href="/dashboard/request-payment" className="text-center">Request payment</Link>
                                         </Button>
                                     </div>
                                 </div>
 
-                                <div className="rounded-lg border border-white/15 bg-white/5 p-4 min-w-[260px] space-y-3">
+                                <div className="rounded-lg border bg-muted/30 p-4 min-w-[260px] space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs uppercase tracking-wide text-white/60">Primary wallet</p>
-                                        <Badge variant="secondary" className="text-xs bg-white/15 border-white/10 text-white">
+                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary wallet</p>
+                                        <Badge variant="secondary" className="text-xs">
                                             {wallets.length} wallets
                                         </Badge>
                                     </div>
                                     <div className="text-3xl font-semibold">
                                         {primaryWallet ? formatMoney(Number(primaryWallet.balance || 0), primaryWallet.currency) : '--'}
                                     </div>
-                                    <p className="text-sm text-white/60">
+                                    <p className="text-sm text-muted-foreground">
                                         {primaryWallet ? `${primaryWallet.currency} - refreshed live` : 'Create your first wallet to start'}
                                     </p>
                                     <div className="flex flex-wrap gap-2">
-                                        <Badge variant="outline" className="border-white/30 text-white">
+                                        <Badge variant="outline">
                                             {isKycVerified ? <ShieldCheck className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
                                             {isKycVerified ? 'KYC verified' : 'Finish KYC to unlock limits'}
                                         </Badge>
                                         {pendingInvoices > 0 && (
-                                            <Badge variant="secondary" className="bg-amber-400/20 text-amber-100 border-amber-200/30">
+                                            <Badge variant="secondary" className="bg-amber-50 text-amber-800 border border-amber-200">
                                                 {pendingInvoices} invoice{pendingInvoices > 1 ? 's' : ''} pending
                                             </Badge>
                                         )}
@@ -208,10 +208,10 @@ export default function DashboardPage() {
                             </div>
 
                             {wallets.length > 0 && (
-                                <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+                                <div className="rounded-lg border bg-background px-4 py-3">
                                     <div className="flex items-center justify-between gap-3">
-                                        <p className="text-xs uppercase tracking-wide text-white/60">Wallets</p>
-                                        <Button asChild size="sm" variant="ghost" className="h-8 text-white/80 hover:bg-white/10 hover:text-white">
+                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Wallets</p>
+                                        <Button asChild size="sm" variant="ghost" className="h-8">
                                             <Link href="/dashboard/wallets">Manage</Link>
                                         </Button>
                                     </div>
@@ -222,11 +222,7 @@ export default function DashboardPage() {
                                             .map((w) => (
                                                 <div
                                                     key={w.currency}
-                                                    className={`shrink-0 rounded-full border px-3 py-1 text-sm ${
-                                                        w.currency === primaryCurrency
-                                                            ? 'border-white/30 bg-white/15 text-white'
-                                                            : 'border-white/10 bg-white/5 text-white/80'
-                                                    }`}
+                                                    className={`shrink-0 rounded-full border px-3 py-1 text-sm ${w.currency === primaryCurrency ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/30'}`}
                                                 >
                                                     <span className="font-semibold">{w.currency}</span>
                                                     <span className="ml-2 font-mono text-xs">
@@ -350,20 +346,20 @@ function StatTile({
     tone?: 'positive' | 'negative' | 'neutral';
 }) {
     const toneClasses = {
-        positive: 'bg-emerald-500/10 text-emerald-500',
-        negative: 'bg-rose-500/10 text-rose-500',
-        neutral: 'bg-slate-500/10 text-slate-500',
+        positive: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        negative: 'bg-rose-50 text-rose-700 border-rose-200',
+        neutral: 'bg-slate-50 text-slate-700 border-slate-200',
     };
 
     return (
-        <div className="rounded-lg border border-white/10 bg-white/5 backdrop-blur px-4 py-3 text-white">
+        <div className="rounded-lg border bg-background px-4 py-3">
             <div className="flex items-center justify-between">
-                <p className="text-sm text-white/70">{label}</p>
-                {icon && <span className="h-6 w-6 text-white/60">{icon}</span>}
+                <p className="text-sm text-muted-foreground">{label}</p>
+                {icon && <span className="h-6 w-6 text-muted-foreground">{icon}</span>}
             </div>
             <div className="mt-2 text-2xl font-semibold">{value}</div>
-            {hint && <p className="mt-1 text-xs">{hint}</p>}
-            <div className={`mt-2 inline-flex items-center rounded-full px-2 py-1 text-[11px] ${toneClasses[tone]}`}>
+            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+            <div className={`mt-2 inline-flex items-center rounded-full border px-2 py-1 text-[11px] ${toneClasses[tone]}`}>
                 {tone === 'positive' && <ArrowUpRight className="h-3 w-3 mr-1" />}
                 {tone === 'negative' && <ArrowDownRight className="h-3 w-3 mr-1" />}
                 {tone === 'neutral' && <Sparkles className="h-3 w-3 mr-1" />}

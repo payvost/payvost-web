@@ -1,0 +1,94 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { Search, LifeBuoy } from 'lucide-react';
+
+import type { User } from 'firebase/auth';
+
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { ThemeSwitcher } from '@/components/theme-switcher';
+import { NotificationDropdown } from '@/components/notification-dropdown';
+import { UserNav } from '@/components/user-nav';
+import { QuickActionsDropdown } from '@/components/quick-actions-dropdown';
+import { DashboardSearch } from '@/components/dashboard-search';
+
+type DashboardContext = 'personal' | 'business';
+
+export interface DashboardHeaderProps {
+  context: DashboardContext;
+  user: User | null;
+  scrolled?: boolean;
+  supportHref?: string;
+  rightSlot?: React.ReactNode;
+  businessLogoUrl?: string | null;
+}
+
+export function DashboardHeader({
+  context,
+  user,
+  scrolled = false,
+  supportHref,
+  rightSlot,
+  businessLogoUrl,
+}: DashboardHeaderProps) {
+  const resolvedSupportHref =
+    supportHref ?? (context === 'business' ? '/business/support' : '/dashboard/support');
+
+  return (
+    <header
+      className={cn(
+        'sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-2 bg-background/85 px-3 py-2 backdrop-blur-sm supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-4 lg:min-h-[60px] lg:flex-nowrap lg:px-6',
+        'border-b border-border/40',
+        scrolled && 'shadow-sm'
+      )}
+    >
+      <SidebarTrigger className="md:hidden" />
+
+      {/* Search */}
+      <div className="w-full flex-1 order-2 md:order-none">
+        <div className="relative w-full md:max-w-sm">
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Search">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="top">
+                <SheetHeader>
+                  <SheetTitle>Search</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  <DashboardSearch />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="hidden md:block">
+            <DashboardSearch />
+          </div>
+        </div>
+      </div>
+
+      {/* Right actions */}
+      <div className="ml-auto flex w-full flex-wrap items-center gap-1.5 sm:gap-2 md:w-auto md:flex-nowrap md:justify-end">
+        <QuickActionsDropdown />
+        {rightSlot}
+        <Button variant="ghost" size="icon" asChild aria-label="Support">
+          <Link href={resolvedSupportHref}>
+            <LifeBuoy className="h-[1.15rem] w-[1.15rem]" />
+            <span className="sr-only">Support</span>
+          </Link>
+        </Button>
+        <ThemeSwitcher />
+        <NotificationDropdown context={context} />
+        <UserNav user={user} businessLogoUrl={businessLogoUrl} />
+      </div>
+    </header>
+  );
+}
+

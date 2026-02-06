@@ -105,7 +105,7 @@ export function BusinessLayoutProvider({ children }: { children: React.ReactNode
   const isLoading = authLoading || businessStatus === 'loading';
 
   return (
-    <SidebarProvider style={{ '--sidebar-width': '12rem' } as React.CSSProperties}>
+    <SidebarProvider style={{ '--sidebar-width': '16rem' } as React.CSSProperties}>
       <BusinessSidebar />
       <SidebarInset ref={mainContentRef}>
         <BusinessHeader scrolled={scrolled} />

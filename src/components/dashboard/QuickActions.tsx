@@ -15,26 +15,30 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
         {
             label: 'Send',
             icon: <ArrowUpRight className="h-4 w-4" />,
-            color: 'from-primary/20 via-primary/10 to-primary/5 text-primary',
+            tone: 'border-primary/20 bg-primary/5 text-primary',
+            iconTone: 'bg-primary/10 text-primary',
             onClick: () => setOpen(true),
             href: undefined,
         },
         {
             label: 'Request',
             icon: <ArrowDownLeft className="h-4 w-4" />,
-            color: 'from-blue-500/20 via-blue-500/10 to-blue-500/5 text-blue-600',
+            tone: 'border-blue-500/20 bg-blue-500/5 text-blue-700',
+            iconTone: 'bg-blue-500/10 text-blue-700',
             href: '/dashboard/request-payment',
         },
         {
             label: 'Pay bills',
             icon: <RefreshCw className="h-4 w-4" />,
-            color: 'from-orange-500/20 via-orange-500/10 to-orange-500/5 text-orange-600',
+            tone: 'border-orange-500/20 bg-orange-500/5 text-orange-700',
+            iconTone: 'bg-orange-500/10 text-orange-700',
             href: '/dashboard/payments',
         },
         {
             label: 'Add funds',
             icon: <PlusCircle className="h-4 w-4" />,
-            color: 'from-emerald-500/20 via-emerald-500/10 to-emerald-500/5 text-emerald-600',
+            tone: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-700',
+            iconTone: 'bg-emerald-500/10 text-emerald-700',
             href: '/dashboard/wallets',
         },
     ];
@@ -50,7 +54,7 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
                     {actions.map((action) => {
                         const content = (
                             <>
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white/60 text-slate-900">
+                                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${action.iconTone}`}>
                                     {action.icon}
                                 </span>
                                 <div className="min-w-0 flex-1 text-left">
@@ -67,8 +71,8 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
                                 <Button
                                     key={action.label}
                                     asChild
-                                    variant="secondary"
-                                    className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg bg-gradient-to-br p-3 ${action.color}`}
+                                    variant="outline"
+                                    className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg border p-3 ${action.tone}`}
                                     disabled={!isKycVerified}
                                 >
                                     <Link href={action.href} className="flex w-full min-w-0 items-center gap-3">
@@ -81,8 +85,8 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
                         return (
                             <Button
                                 key={action.label}
-                                variant="secondary"
-                                className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg bg-gradient-to-br p-3 ${action.color}`}
+                                variant="outline"
+                                className={`h-auto w-full min-w-0 justify-start gap-3 rounded-lg border p-3 ${action.tone}`}
                                 onClick={action.onClick}
                                 disabled={!isKycVerified}
                             >
