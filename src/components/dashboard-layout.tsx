@@ -17,6 +17,9 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
 import { Home, ArrowRightLeft, Settings, Send, Wallet, CreditCard, HandCoins, ShieldCheck, ShieldAlert, Gift } from 'lucide-react';
@@ -29,10 +32,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ProtectRoute, useAuth } from '@/hooks/use-auth';
 import useAutoLogout from '@/hooks/use-auto-logout';
 import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DashboardSwitcher } from './dashboard-switcher';
-import { QuickActionsDropdown } from './quick-actions-dropdown';
 import { DashboardHeader } from '@/components/dashboard-header';
 
 
@@ -159,14 +160,12 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     <ProtectRoute>
       <SidebarProvider style={{ '--sidebar-width': '16rem' } as React.CSSProperties}>
         <Sidebar variant="inset" collapsible="icon">
-          <SidebarHeader className="h-14 px-2 py-2 border-b border-sidebar-border/60">
+          <SidebarHeader className="h-14 lg:h-[60px] px-3 py-2 border-b border-border/40">
             <div className="flex items-center justify-between gap-2 px-1">
               <Link href="/" className="flex items-center gap-2 min-w-0">
                 <Icons.logo className="h-7 shrink-0" />
-                <span className="text-sm font-semibold tracking-tight truncate group-data-[collapsible=icon]:hidden">
-                  Payvost
-                </span>
               </Link>
+              <SidebarTrigger className="hidden md:inline-flex opacity-70 hover:opacity-100" />
             </div>
           </SidebarHeader>
 
@@ -187,6 +186,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
               </SidebarMenu>
             </SidebarGroup>
 
+            <SidebarSeparator />
+
             <SidebarGroup>
               <SidebarGroupLabel>Money</SidebarGroupLabel>
               <SidebarMenu>
@@ -202,6 +203,8 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                 ))}
               </SidebarMenu>
             </SidebarGroup>
+
+            <SidebarSeparator />
 
             <SidebarGroup>
               <SidebarGroupLabel>Requests & Protection</SidebarGroupLabel>
@@ -255,7 +258,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
             )}
           </SidebarContent>
 
-          <SidebarFooter className="p-2 border-t border-sidebar-border/60">
+          <SidebarFooter className="p-2 border-t border-border/40">
             <SidebarMenu className="w-full">
               <SidebarMenuItem className="w-full">
                 <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')} tooltip="Settings">
@@ -267,6 +270,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>
+          <SidebarRail />
         </Sidebar>
 
         <SidebarInset ref={mainContentRef}>

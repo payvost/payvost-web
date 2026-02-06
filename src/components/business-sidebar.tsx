@@ -16,6 +16,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -95,41 +98,52 @@ export function BusinessSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="h-14 px-2 py-2 border-b border-sidebar-border/60">
-        <Link
-          href="/business/settings"
-          className="flex h-full items-center gap-2 rounded-md px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          {businessLogo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={businessLogo} alt={businessName} className="h-8 w-8 shrink-0 rounded object-cover" />
-          ) : (
-            <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
-              <span className="text-xs font-medium text-sidebar-foreground">{businessName.charAt(0).toUpperCase()}</span>
-            </div>
-          )}
+      <SidebarHeader className="h-14 lg:h-[60px] px-3 py-2 border-b border-border/40">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <Link
+            href="/business/settings"
+            className="flex h-full items-center gap-2 rounded-md px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground min-w-0 flex-1"
+          >
+            {businessLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={businessLogo} alt={businessName} className="h-8 w-8 shrink-0 rounded object-cover" />
+            ) : (
+              <div className="h-8 w-8 shrink-0 rounded bg-muted flex items-center justify-center">
+                <span className="text-xs font-medium text-sidebar-foreground">
+                  {businessName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
 
-          <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-sidebar-foreground truncate">{businessName}</span>
-              {isVerified && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />}
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-sidebar-foreground truncate">{businessName}</span>
+                {isVerified && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />}
+              </div>
+              <div className="mt-0.5">
+                <Badge
+                  variant={statusBadge.variant}
+                  className={cn('px-2 py-0 text-[11px] h-5', statusBadge.className)}
+                >
+                  {statusBadge.label}
+                </Badge>
+              </div>
             </div>
-            <div className="mt-0.5">
-              <Badge variant={statusBadge.variant} className={cn('px-2 py-0 text-[11px] h-5', statusBadge.className)}>
-                {statusBadge.label}
-              </Badge>
-            </div>
-          </div>
-        </Link>
+          </Link>
+
+          <SidebarTrigger className="hidden md:inline-flex opacity-70 hover:opacity-100" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
         {renderGroup('Overview', overviewItems)}
+        <SidebarSeparator />
         {renderGroup('Money', moneyItems)}
+        <SidebarSeparator />
         {renderGroup('Customers', customersItems)}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/60">
+      <SidebarFooter className="border-t border-border/40">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -153,7 +167,7 @@ export function BusinessSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
-
