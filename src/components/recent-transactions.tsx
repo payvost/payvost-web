@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,20 +15,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ArrowUpRight } from "lucide-react"
-import Link from "next/link"
-import { useAuth } from "@/hooks/use-auth"
-import { useEffect, useState } from "react"
-import { doc, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { Skeleton } from "./ui/skeleton"
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Skeleton } from "./ui/skeleton";
+
+type DashboardTransaction = {
+  id?: string;
+  recipientName?: string;
+  recipient?: string;
+  sendAmount: string;
+  sendCurrency: string;
+  status?: string;
+  date: string;
+};
 
 export function RecentTransactions() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<DashboardTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,8 +50,17 @@ export function RecentTransactions() {
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
       if (doc.exists()) {
         const userData = doc.data();
-        const sortedTransactions = (userData.transactions || []).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setTransactions(sortedTransactions.slice(0, 5)); // Get latest 5
+        const normalized: DashboardTransaction[] = (userData.transactions || []).map((tx: DashboardTransaction, index: number) => ({
+          id: tx.id ?? `${index}`,
+          recipientName: tx.recipientName ?? tx.recipient,
+          recipient: tx.recipient,
+          sendAmount: typeof tx.sendAmount === 'string' ? tx.sendAmount : String(tx.sendAmount ?? '0'),
+          sendCurrency: tx.sendCurrency || 'USD',
+          status: tx.status || 'Pending',
+          date: tx.date || new Date().toISOString(),
+        }));
+        const sortedTransactions = normalized.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(sortedTransactions.slice(0, 5));
       }
       setLoading(false);
     });
@@ -50,26 +69,24 @@ export function RecentTransactions() {
   }, [user]);
 
   const formatCurrency = (amount: string, currency: string) => {
-    const numericAmount = parseFloat(amount.replace(/[^0-9.-]+/g,""));
+    const numericAmount = parseFloat(String(amount).replace(/[^0-9.-]+/g,""));
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
     }).format(numericAmount);
   };
 
-
   return (
-    <Card>
+    <Card className="border-muted-foreground/15 shadow-sm">
       <CardHeader className="flex flex-row items-center">
-        <div className="grid gap-2">
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
-            An overview of your latest transfers.
-          </CardDescription>
+        <div className="grid gap-1">
+          <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
+          <CardDescription className="text-xs">Live feed of your last five transactions.</CardDescription>
         </div>
-        <Button asChild size="sm" className="ml-auto gap-1">
+        <Badge variant="secondary" className="ml-auto mr-2 text-[11px]">Live</Badge>
+        <Button asChild size="sm" className="gap-1">
           <Link href="/dashboard/transactions">
-            View All
+            View all
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -95,12 +112,12 @@ export function RecentTransactions() {
               ))
             ) : transactions.length > 0 ? (
               transactions.map((tx) => (
-                <TableRow key={tx.id}>
+                <TableRow key={tx.id} className="hover:bg-muted/40">
                   <TableCell>
                     <div className="font-medium">{tx.recipientName || tx.recipient}</div>
-                    <div className="text-sm text-muted-foreground hidden md:inline">{tx.sendCurrency}</div>
+                    <div className="text-xs text-muted-foreground hidden md:inline">{tx.sendCurrency}</div>
                   </TableCell>
-                  <TableCell className="text-right">{formatCurrency(tx.sendAmount, tx.sendCurrency)}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">{formatCurrency(tx.sendAmount, tx.sendCurrency)}</TableCell>
                   <TableCell className="hidden text-right sm:table-cell">
                     <Badge 
                       variant={
@@ -112,7 +129,9 @@ export function RecentTransactions() {
                       {tx.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden text-right md:table-cell">{new Date(tx.date).toLocaleDateString()}</TableCell>
+                  <TableCell className="hidden text-right md:table-cell text-sm text-muted-foreground">
+                    {new Date(tx.date).toLocaleDateString()}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
@@ -126,5 +145,5 @@ export function RecentTransactions() {
         </Table>
       </CardContent>
     </Card>
-  )
+  );
 }

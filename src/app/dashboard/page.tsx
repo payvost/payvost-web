@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { LanguagePreference } from '@/types/language';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { RecentTransactions } from '@/components/recent-transactions';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, ArrowUpRight, ArrowDownRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { AccountCompletion } from '@/components/account-completion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import dynamic from 'next/dynamic';
@@ -16,8 +16,9 @@ import { DashboardLoadingSkeleton } from '@/components/skeletons/dashboard-skele
 import { TransactionPinSetupDialog } from '@/components/transaction-pin-setup-dialog';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
-// New Imports
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { WalletOverview } from '@/components/dashboard/WalletOverview';
 import { SpendingBreakdown } from '@/components/dashboard/SpendingBreakdown';
@@ -35,9 +36,17 @@ interface GreetingState {
     icon: React.ReactNode;
 }
 
+type FilterLabel = 'Last 30 Days' | 'Last 60 Days' | 'Last 90 Days';
+
+const filterToMonths: Record<FilterLabel, number> = {
+    'Last 30 Days': 1,
+    'Last 60 Days': 2,
+    'Last 90 Days': 3,
+};
+
 export default function DashboardPage() {
     const [language, setLanguage] = useState<LanguagePreference>('en');
-    const [filter, setFilter] = useState('Last 30 Days');
+    const [filter, setFilter] = useState<FilterLabel>('Last 30 Days');
     const [greeting, setGreeting] = useState<GreetingState | null>(null);
 
     const {
@@ -73,6 +82,34 @@ export default function DashboardPage() {
 
     const isLoading = authLoading || loadingWallets;
 
+    const primaryWallet = useMemo(() => {
+        if (!wallets || wallets.length === 0) return null;
+        return [...wallets].sort((a, b) => (Number(b.balance || 0) - Number(a.balance || 0)))[0];
+    }, [wallets]);
+
+    const formatMoney = (value: number, currency?: string) =>
+        new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency || primaryWallet?.currency || 'USD',
+            maximumFractionDigits: Math.abs(value) >= 1000 ? 0 : 2
+        }).format(Number.isFinite(value) ? value : 0);
+
+    const pendingInvoices = useMemo(
+        () => invoices.filter((invoice) => (invoice.status || '').toLowerCase() === 'pending').length,
+        [invoices]
+    );
+
+    const filteredChartData = useMemo(() => {
+        if (!chartData || chartData.length === 0) return [];
+        const months = filterToMonths[filter] ?? chartData.length;
+        return chartData.slice(Math.max(chartData.length - months, 0));
+    }, [chartData, filter]);
+
+    const incomeTotal = filteredChartData.reduce((sum, item) => sum + item.income, 0);
+    const expenseTotal = filteredChartData.reduce((sum, item) => sum + item.expense, 0);
+    const netFlow = incomeTotal - expenseTotal;
+    const partnerSuccess = externalTxStats.total > 0 ? Math.round((externalTxStats.completed / externalTxStats.total) * 100) : 0;
+
     if (isLoading) {
         return (
             <LayoutComponent language={language} setLanguage={setLanguage}>
@@ -84,7 +121,7 @@ export default function DashboardPage() {
     return (
         <LayoutComponent language={language} setLanguage={setLanguage}>
             <ErrorBoundary>
-                <div className="flex-1 space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
+                <div className="flex-1 space-y-5 sm:space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
                     <Breadcrumb className="hidden sm:block">
                         <BreadcrumbList>
                             <BreadcrumbItem>
@@ -96,14 +133,86 @@ export default function DashboardPage() {
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {greeting?.icon}
-                        <h1 className="text-base font-semibold sm:text-lg md:text-2xl">
-                            {greeting?.text}, {firstName}!
-                        </h1>
-                    </div>
 
-                    {!isKycVerified && !isLoading && <KycNotification onDismiss={() => { }} />}
+                    <section className="rounded-3xl border bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-900 text-white shadow-xl">
+                        <div className="p-6 sm:p-8 space-y-6">
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm text-white/70">
+                                        {greeting?.icon}
+                                        <span>{greeting?.text}, {firstName}</span>
+                                    </div>
+                                    <h1 className="text-2xl sm:text-3xl font-semibold">Your money at a glance</h1>
+                                    <p className="text-sm text-white/70">Real activity pulled from your wallets, invoices, and partner rails.</p>
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        <Button asChild size="sm" variant="secondary" className="bg-white text-slate-900 hover:bg-white/90">
+                                            <Link href="/dashboard/payments" className="flex items-center gap-2">
+                                                Send money
+                                                <ArrowUpRight className="h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                        <Button asChild size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                                            <Link href="/dashboard/request-payment">Request payment</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-white/15 bg-white/5 p-4 min-w-[260px] space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs uppercase tracking-wide text-white/60">Top wallet</p>
+                                        <Badge variant="secondary" className="text-xs bg-white/15 border-white/10 text-white">
+                                            {wallets.length} wallets
+                                        </Badge>
+                                    </div>
+                                    <div className="text-3xl font-semibold">
+                                        {primaryWallet ? formatMoney(Number(primaryWallet.balance || 0), primaryWallet.currency) : '—'}
+                                    </div>
+                                    <p className="text-sm text-white/60">
+                                        {primaryWallet ? `${primaryWallet.currency} · refreshed live` : 'Create your first wallet to start'}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Badge variant="outline" className="border-white/30 text-white">
+                                            {isKycVerified ? <ShieldCheck className="h-3.5 w-3.5 mr-1" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                                            {isKycVerified ? 'KYC verified' : 'Finish KYC to unlock limits'}
+                                        </Badge>
+                                        {pendingInvoices > 0 && (
+                                            <Badge variant="secondary" className="bg-amber-400/20 text-amber-100 border-amber-200/30">
+                                                {pendingInvoices} invoice{pendingInvoices > 1 ? 's' : ''} pending
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <StatTile
+                                    label="Net flow"
+                                    value={formatMoney(netFlow)}
+                                    hint={`${formatMoney(incomeTotal)} in / ${formatMoney(expenseTotal)} out`}
+                                    tone={netFlow >= 0 ? 'positive' : 'negative'}
+                                />
+                                <StatTile
+                                    label="Inflow (selected window)"
+                                    value={formatMoney(incomeTotal)}
+                                    hint={filter}
+                                />
+                                <StatTile
+                                    label="Outflow (selected window)"
+                                    value={formatMoney(expenseTotal)}
+                                    hint={filter}
+                                    tone="neutral"
+                                    icon={<ArrowDownRight className="h-4 w-4" />}
+                                />
+                                <StatTile
+                                    label="Partner success"
+                                    value={`${partnerSuccess}%`}
+                                    hint={`${externalTxStats.total} total · ${externalTxStats.failed} failed`}
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    {!isKycVerified && <KycNotification onDismiss={() => { }} />}
 
                     {user && (
                         <TransactionPinSetupDialog
@@ -115,7 +224,6 @@ export default function DashboardPage() {
                         />
                     )}
 
-                    {/* Wallet Overview */}
                     <WalletOverview
                         wallets={wallets}
                         loading={loadingWallets}
@@ -123,14 +231,17 @@ export default function DashboardPage() {
                         onWalletCreated={refreshWallets}
                     />
 
-                    <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-7 mt-6 sm:mt-8">
-                        <div className="lg:col-span-4 space-y-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>Overview</CardTitle>
+                    <div className="grid gap-6 lg:grid-cols-12">
+                        <div className="lg:col-span-8 space-y-6">
+                            <Card className="border border-muted-foreground/10 shadow-sm">
+                                <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <CardTitle>Cash flow</CardTitle>
+                                        <CardDescription>Income vs expense based on your real transactions.</CardDescription>
+                                    </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-8">
+                                            <Button variant="outline" size="sm" className="h-9">
                                                 {filter}
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -142,8 +253,8 @@ export default function DashboardPage() {
                                     </DropdownMenu>
                                 </CardHeader>
                                 <CardContent className="pl-2">
-                                    {hasTransactionData ? (
-                                        <TransactionChart data={chartData} />
+                                    {hasTransactionData && filteredChartData.length > 0 ? (
+                                        <TransactionChart data={filteredChartData} />
                                     ) : (
                                         <div className="h-[250px] flex flex-col items-center justify-center text-center">
                                             <p className="text-muted-foreground">We are still propagating your data.</p>
@@ -154,20 +265,55 @@ export default function DashboardPage() {
                             </Card>
 
                             <RecentTransactions />
-
-                            <SpendingBreakdown spendingData={spendingData} hasTransactionData={hasTransactionData} />
-
-                            <PartnerTransactions stats={externalTxStats} />
                         </div>
 
-                        <div className="lg:col-span-3 space-y-6">
+                        <div className="lg:col-span-4 space-y-6">
                             <QuickActions isKycVerified={isKycVerified} />
                             <AccountCompletion />
                             <InvoiceOverview invoices={invoices} loading={loadingInvoices} isKycVerified={isKycVerified} />
+                            <SpendingBreakdown spendingData={spendingData} hasTransactionData={hasTransactionData} />
+                            <PartnerTransactions stats={externalTxStats} />
                         </div>
                     </div>
                 </div>
             </ErrorBoundary>
         </LayoutComponent>
+    );
+}
+
+function StatTile({
+    label,
+    value,
+    hint,
+    icon,
+    tone = 'neutral',
+}: {
+    label: string;
+    value: string;
+    hint?: string;
+    icon?: React.ReactNode;
+    tone?: 'positive' | 'negative' | 'neutral';
+}) {
+    const toneClasses = {
+        positive: 'bg-emerald-500/10 text-emerald-500',
+        negative: 'bg-rose-500/10 text-rose-500',
+        neutral: 'bg-slate-500/10 text-slate-500',
+    };
+
+    return (
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur px-4 py-3 text-white">
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-white/70">{label}</p>
+                {icon && <span className="h-6 w-6 text-white/60">{icon}</span>}
+            </div>
+            <div className="mt-2 text-2xl font-semibold">{value}</div>
+            {hint && <p className="mt-1 text-xs">{hint}</p>}
+            <div className={`mt-2 inline-flex items-center rounded-full px-2 py-1 text-[11px] ${toneClasses[tone]}`}>
+                {tone === 'positive' && <ArrowUpRight className="h-3 w-3 mr-1" />}
+                {tone === 'negative' && <ArrowDownRight className="h-3 w-3 mr-1" />}
+                {tone === 'neutral' && <Sparkles className="h-3 w-3 mr-1" />}
+                <span className="font-medium capitalize">{tone === 'neutral' ? 'insight' : tone}</span>
+            </div>
+        </div>
     );
 }

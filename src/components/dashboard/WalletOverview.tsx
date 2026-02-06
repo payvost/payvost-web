@@ -38,44 +38,41 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
     const showCreateWalletCTA = wallets.length < 4;
 
     const EmptyState = () => (
-        <div className="w-full">
-            <Card className="border-2 border-dashed">
-                <CardContent className="p-6">
-                    <div className="flex flex-col items-center text-center space-y-4 max-w-xl mx-auto">
-                        <div className="space-y-1">
-                            <CardTitle className="text-xl font-bold">Start Your Global Journey</CardTitle>
-                            <CardDescription className="text-sm">
-                                Create your first currency wallet to send, receive, and manage money across borders instantly.
-                            </CardDescription>
-                        </div>
-                        <div className="pt-2">
-                            <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
-                                <Button size="default" disabled={!isKycVerified} className="w-full">
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Create Your First Wallet
-                                </Button>
-                            </CreateWalletDialog>
-                            {!isKycVerified && <p className="text-xs text-muted-foreground mt-2">Complete KYC verification to create a wallet</p>}
-                        </div>
-                        <div className="pt-1">
-                            <p className="text-xs text-muted-foreground mb-1.5">Popular: </p>
-                            <div className="flex flex-wrap justify-center gap-1.5">
-                                {['USD', 'EUR', 'GBP', 'NGN'].map((currency) => (
-                                    <Badge key={currency} variant="secondary" className="text-xs py-0.5 px-2">{currency}</Badge>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+        <div className="w-full rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center">
+            <div className="mx-auto max-w-xl space-y-4">
+                <div className="space-y-1">
+                    <CardTitle className="text-xl font-semibold">Create your first wallet</CardTitle>
+                    <CardDescription className="text-sm">
+                        Spin up a currency wallet to start sending, receiving, and holding funds securely.
+                    </CardDescription>
+                </div>
+                <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                    <Button size="default" disabled={!isKycVerified} className="w-full sm:w-auto">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Create wallet
+                    </Button>
+                </CreateWalletDialog>
+                {!isKycVerified && <p className="text-xs text-muted-foreground">Complete KYC to unlock wallet creation.</p>}
+                <div className="flex flex-wrap justify-center gap-1.5 text-xs text-muted-foreground">
+                    {['USD', 'EUR', 'GBP', 'NGN'].map((currency) => (
+                        <Badge key={currency} variant="secondary" className="py-0.5 px-2">{currency}</Badge>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 
     if (loading) {
-        return <div className="text-center p-4">Loading wallets...</div>; // Ideally skeleton here
-    }
-
-    if (!hasWallets) {
-        return <EmptyState />;
+        return (
+            <Card className="border-muted-foreground/15">
+                <CardHeader>
+                    <CardTitle>Wallets</CardTitle>
+                    <CardDescription>Fetching your balances...</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-32 animate-pulse rounded-lg bg-muted" />
+                </CardContent>
+            </Card>
+        );
     }
 
     const renderCarouselContent = () => {
@@ -147,23 +144,50 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
 
 
     return (
-        <div>
-            {/* Mobile Carousel */}
-            <div className="lg:hidden">
-                <Carousel setApi={setApi} className="w-full">
-                    <CarouselContent>
-                        {renderCarouselContent()}
-                    </CarouselContent>
-                </Carousel>
-                <div className="py-2 flex justify-center gap-2">
-                    {Array.from({ length: count }).map((_, i) => (
-                        <Button key={i} variant="ghost" size="icon" className={cn("h-2 w-2 rounded-full p-0", i === current - 1 ? "bg-primary" : "bg-muted-foreground/50")} onClick={() => api?.scrollTo(i)} />
-                    ))}
+        <Card className="border-muted-foreground/15 shadow-sm">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                    <CardTitle>Wallets</CardTitle>
+                    <CardDescription>Multi-currency balances with instant actions.</CardDescription>
                 </div>
-            </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        {wallets.length} active
+                    </Badge>
+                    <CreateWalletDialog onWalletCreated={onWalletCreated} disabled={!isKycVerified} existingWallets={wallets}>
+                        <Button size="sm" variant="outline" disabled={!isKycVerified}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add wallet
+                        </Button>
+                    </CreateWalletDialog>
+                    <Button asChild size="sm" variant="ghost">
+                        <Link href="/dashboard/wallets">View all</Link>
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {!hasWallets && <EmptyState />}
 
-            {/* Desktop Grid */}
-            {renderDesktopGrid()}
-        </div>
+                {hasWallets && (
+                    <>
+                        {/* Mobile Carousel */}
+                        <div className="lg:hidden">
+                            <Carousel setApi={setApi} className="w-full">
+                                <CarouselContent>
+                                    {renderCarouselContent()}
+                                </CarouselContent>
+                            </Carousel>
+                            <div className="py-2 flex justify-center gap-2">
+                                {Array.from({ length: count }).map((_, i) => (
+                                    <Button key={i} variant="ghost" size="icon" className={cn("h-2 w-2 rounded-full p-0", i === current - 1 ? "bg-primary" : "bg-muted-foreground/50")} onClick={() => api?.scrollTo(i)} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Desktop Grid */}
+                        {renderDesktopGrid()}
+                    </>
+                )}
+            </CardContent>
+        </Card>
     );
 }
