@@ -272,15 +272,10 @@ export function generateRateAlertEmailHTML(params: {
 }
 
 /**
- * Send rate alert email using Mailgun template
- * Template name: 'rate alert email template' (Mailgun stored template name)
+ * Send rate alert email using rich HTML (no Mailgun stored template required)
  * 
- * Required template variables:
- * - sourceCurrency: Source currency code (e.g., USD)
- * - targetCurrency: Target currency code (e.g., EUR)
- * - currentRate: Current exchange rate
- * - targetRate: Target rate that was set
- * - userName: User's name (optional)
+ * If you later want to switch back to Mailgun templates, you can pass `template`
+ * instead of `html` in sendEmail() and keep variables consistent.
  */
 export async function sendRateAlertEmail(
   to: string, 
@@ -296,26 +291,19 @@ export async function sendRateAlertEmail(
 ) {
   let textContent = text;
   
-  // Use Mailgun template if params provided, otherwise fallback to HTML generation
+  // Use rich HTML if params provided, otherwise send plain text
   if (htmlParams) {
     // Use provided text or generate from params
     if (!text || text === '') {
       textContent = `Your FX rate alert: ${htmlParams.sourceCurrency}/${htmlParams.targetCurrency}\n\nGood news! The rate for ${htmlParams.sourceCurrency} to ${htmlParams.targetCurrency} is now ${htmlParams.currentRate}, meeting your target of ${htmlParams.targetRate}.`;
     }
 
-    // Use Mailgun template
+    const html = generateRateAlertEmailHTML(htmlParams);
     const result = await sendEmail({
       to,
       subject,
       text: textContent,
-      template: 'rate alert email template', // Mailgun stored template name
-      variables: {
-        sourceCurrency: htmlParams.sourceCurrency,
-        targetCurrency: htmlParams.targetCurrency,
-        currentRate: String(htmlParams.currentRate),
-        targetRate: String(htmlParams.targetRate),
-        userName: htmlParams.userName || '',
-      },
+      html,
       from: `Payvost Alerts <alerts@${domain}>`,
       tags: ['rate-alert'],
     });

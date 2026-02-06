@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { sendEmailViaMailgun } from './mailgun';
+import { renderInvoiceEmail } from './email-templates';
 
 interface InvoiceToInfo {
   name?: string;
@@ -64,19 +65,24 @@ export async function invoiceReminderCronJob() {
         }
 
         // Send email
+        const rendered = renderInvoiceEmail({
+          to: customerEmail,
+          name: customerName,
+          type: 'reminder',
+          invoiceNumber: invoice.invoiceNumber,
+          amount: invoice.grandTotal.toString(),
+          currency: invoice.currency,
+          dueDate: invoice.dueDate.toISOString().split('T')[0],
+          businessName: fromInfo?.name || 'Payvost',
+          downloadLink: invoice.publicUrl || invoice.pdfUrl || '',
+        });
+
         await sendEmailViaMailgun({
           to: customerEmail,
-          subject: `Payment Reminder: Invoice ${invoice.invoiceNumber} is due soon`,
-          template: 'invoice reminder template',
-          variables: {
-            customerName,
-            invoiceNumber: invoice.invoiceNumber,
-            amount: invoice.grandTotal.toString(),
-            currency: invoice.currency,
-            dueDate: invoice.dueDate.toISOString().split('T')[0],
-            businessName: fromInfo?.name || 'Payvost',
-            downloadLink: invoice.publicUrl || invoice.pdfUrl || '',
-          },
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+          tags: rendered.tags,
         });
 
         remindersSent++;

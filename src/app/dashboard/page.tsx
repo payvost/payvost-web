@@ -207,32 +207,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            {wallets.length > 0 && (
-                                <div className="rounded-lg border bg-background px-4 py-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Wallets</p>
-                                        <Button asChild size="sm" variant="ghost" className="h-8">
-                                            <Link href="/dashboard/wallets">Manage</Link>
-                                        </Button>
-                                    </div>
-                                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                                        {wallets
-                                            .slice()
-                                            .sort((a, b) => a.currency.localeCompare(b.currency))
-                                            .map((w) => (
-                                                <div
-                                                    key={w.currency}
-                                                    className={`shrink-0 rounded-full border px-3 py-1 text-sm ${w.currency === primaryCurrency ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-muted/30'}`}
-                                                >
-                                                    <span className="font-semibold">{w.currency}</span>
-                                                    <span className="ml-2 font-mono text-xs">
-                                                        {formatMoney(Number(w.balance || 0), w.currency)}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                            )}
+                            {/* Removed wallet chips from hero card to keep it cleaner (wallets live in the Wallet section). */}
 
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <StatTile

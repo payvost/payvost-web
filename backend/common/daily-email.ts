@@ -274,16 +274,27 @@ async function sendDailyRateEmail(user: { email: string; name?: string | null; c
       `;
     }).join('');
 
-    // Send email using Mailgun template
+    // Send email using rich HTML (no Mailgun stored template required)
+    const html = generateDailyRateEmailHTML({
+      userName: user.name || '',
+      rates: rateSummary,
+      date,
+    });
+
+    const text = [
+      `Daily FX Rate Summary - ${date}`,
+      '',
+      user.name ? `Hello ${user.name},` : 'Hello,',
+      '',
+      ...rateSummary.map(r => `${r.pair}: ${r.rate.toFixed(4)} (${r.change24h >= 0 ? '+' : ''}${r.change24h.toFixed(2)}%)`),
+      '',
+      'View all rates: https://payvost.com/fx-rates',
+    ].join('\n');
     const result = await sendEmail({
       to: user.email,
       subject: `📊 Daily FX Rate Summary - ${date}`,
-      template: 'daily rate summary email template', // Mailgun stored template name
-      variables: {
-        userName: user.name || '',
-        date: date,
-        rates: ratesTableRows, // Pre-generated HTML table rows
-      },
+      html,
+      text,
       from: `Payvost Daily Summary <alerts@${process.env.MAILGUN_DOMAIN || 'payvost.com'}>`,
       tags: ['daily-rate-summary'],
     });

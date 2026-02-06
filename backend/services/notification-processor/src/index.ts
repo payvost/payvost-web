@@ -5,11 +5,21 @@ import cron from 'node-cron';
 import { prisma } from './prisma';
 import { sendEmailViaMailgun } from './mailgun';
 import { invoiceReminderCronJob } from './cron-jobs';
+import {
+  renderInvoiceEmail,
+  renderKycEmail,
+  renderLoginEmail,
+  renderPaymentLinkEmail,
+  renderTransactionEmail,
+  renderBusinessEmail,
+  type RenderedEmail,
+} from './email-templates';
 
 dotenv.config();
 
 const app: Express = express();
 const PORT = process.env.PORT || 3006;
+const INTERNAL_TOKEN = process.env.INTERNAL_SERVICE_TOKEN || '';
 
 // Middleware
 app.use(cors());
@@ -26,81 +36,149 @@ function formatTimestamp(value?: Date | string): string {
   return date.toISOString();
 }
 
-function buildTemplateAndSubject(kind: string, payload: Record<string, any>) {
-  const subjectOverride = payload.subject;
-  switch (kind) {
-    case 'login': {
-      return {
-        // Matches existing Mailgun stored template name in this account
-        template: 'login notification template',
-        subject: subjectOverride || 'New login to your Payvost account',
-      };
-    }
-    case 'kyc': {
-      const status = payload.status === 'approved' ? 'approved' : 'rejected';
-      if (status !== 'approved') {
-        throw new Error('Missing Mailgun template: kyc rejected template');
-      }
-      return {
-        // Matches existing Mailgun stored template name in this account
-        template: 'kyc approved template',
-        subject: subjectOverride || 'KYC Approved',
-      };
-    }
-    case 'business': {
-      throw new Error('Missing Mailgun templates: business approved template, business rejected template');
-    }
-    case 'transaction': {
-      const status = payload.status || 'initiated';
-      if (status !== 'success') {
-        throw new Error(
-          status === 'failed'
-            ? 'Missing Mailgun template: transaction failed template'
-            : 'Missing Mailgun template: transaction initiated template'
-        );
-      }
-      const template = 'transaction success template';
-      const subject =
-        status === 'success' ? 'Transaction Successful' :
-        status === 'failed' ? 'Transaction Failed' :
-        'Transaction Initiated';
-      return { template, subject: subjectOverride || subject };
-    }
-    case 'payment-link': {
-      throw new Error('Missing Mailgun template: payment link template');
-    }
-    case 'invoice': {
-      const type = payload.type || 'generated';
-      if (!['generated', 'reminder'].includes(type)) {
-        throw new Error('Missing Mailgun template: invoice paid template');
-      }
-      const template =
-        type === 'reminder' ? 'invoice reminder template' : 'invoice generated template';
-      const subject =
-        type === 'paid' ? 'Invoice Paid' :
-        type === 'reminder' ? 'Invoice Reminder' :
-        'Invoice Generated';
-      return { template, subject: subjectOverride || subject };
-    }
-    default:
-      return { template: payload.template || 'general', subject: subjectOverride || 'Notification' };
-  }
+function isAuthorized(req: Request): boolean {
+  if (!INTERNAL_TOKEN) return false;
+  const token = req.headers['x-internal-token'];
+  return typeof token === 'string' && token === INTERNAL_TOKEN;
 }
 
-function mapLegacyTemplateName(input?: string): string | undefined {
-  if (!input) return undefined;
+function renderByType(type: string, payload: Record<string, any>): RenderedEmail {
+  const t = (type || '').toLowerCase().trim();
 
-  const legacyMap: Record<string, string> = {
-    'login-notification': 'login notification template',
-    'kyc-approved': 'kyc approved template',
-    'transaction-success': 'transaction success template',
-    'invoice-generated': 'invoice generated template',
-    'invoice-reminder': 'invoice reminder template',
-    'daily-rate-summary': 'daily rate summary email template',
-    'rate-alert': 'rate alert email template',
-  };
+  // Support legacy type ids from various callers
+  if (t === 'login' || t === 'login-notification' || t === 'login_notification' || t === 'login_alert') {
+    return renderLoginEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      device: payload.deviceInfo || payload.device,
+      location: payload.location,
+      ipAddress: payload.ipAddress,
+      timestamp: payload.timestamp,
+    });
+  }
 
-  return legacyMap[input] || input;
+  if (t === 'kyc' || t === 'kyc-approved' || t === 'kyc_verified' || t === 'kyc-approved-template') {
+    return renderKycEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      status: 'approved',
+      reason: payload.reason,
+      nextSteps: payload.nextSteps,
+    });
+  }
+
+  if (t === 'kyc-rejected' || t === 'kyc_rejected') {
+    return renderKycEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      status: 'rejected',
+      reason: payload.reason,
+      nextSteps: payload.nextSteps,
+    });
+  }
+
+  if (t === 'transaction' || t === 'transaction-success' || t === 'transaction_success') {
+    return renderTransactionEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      status: payload.status || (t.includes('success') ? 'success' : 'initiated'),
+      amount: payload.amount,
+      currency: payload.currency,
+      recipientName: payload.recipientName || payload.recipient,
+      transactionId: payload.transactionId,
+      reason: payload.reason,
+    });
+  }
+
+  if (t === 'transaction-failed' || t === 'transaction_failed') {
+    return renderTransactionEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      status: 'failed',
+      amount: payload.amount,
+      currency: payload.currency,
+      recipientName: payload.recipientName || payload.recipient,
+      transactionId: payload.transactionId,
+      reason: payload.reason,
+    });
+  }
+
+  if (t === 'invoice' || t === 'invoice-generated' || t === 'invoice_generated') {
+    return renderInvoiceEmail({
+      to: payload.email || payload.to,
+      name: payload.name || payload.customerName,
+      type: payload.type || 'generated',
+      invoiceNumber: payload.invoiceNumber || payload.invoice_number,
+      amount: payload.amount,
+      currency: payload.currency,
+      dueDate: payload.dueDate || payload.due_date,
+      businessName: payload.businessName || payload.business_name,
+      downloadLink: payload.downloadLink || payload.download_link,
+    });
+  }
+
+  if (t === 'invoice-reminder' || t === 'invoice_reminder') {
+    return renderInvoiceEmail({
+      to: payload.email || payload.to,
+      name: payload.name || payload.customerName,
+      type: 'reminder',
+      invoiceNumber: payload.invoiceNumber || payload.invoice_number,
+      amount: payload.amount,
+      currency: payload.currency,
+      dueDate: payload.dueDate || payload.due_date,
+      businessName: payload.businessName || payload.business_name,
+      downloadLink: payload.downloadLink || payload.download_link,
+    });
+  }
+
+  if (t === 'invoice-paid' || t === 'invoice_paid') {
+    return renderInvoiceEmail({
+      to: payload.email || payload.to,
+      name: payload.name || payload.customerName,
+      type: 'paid',
+      invoiceNumber: payload.invoiceNumber || payload.invoice_number,
+      amount: payload.amount,
+      currency: payload.currency,
+      dueDate: payload.dueDate || payload.due_date,
+      businessName: payload.businessName || payload.business_name,
+      downloadLink: payload.downloadLink || payload.download_link,
+    });
+  }
+
+  if (t === 'payment-link' || t === 'payment_link') {
+    return renderPaymentLinkEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      amount: payload.amount,
+      currency: payload.currency,
+      paymentLink: payload.paymentLink,
+      expiryDate: payload.expiryDate,
+      description: payload.description,
+    });
+  }
+
+  if (t === 'business') {
+    return renderBusinessEmail({
+      to: payload.email || payload.to,
+      name: payload.name,
+      status: payload.status === 'approved' ? 'approved' : 'rejected',
+      businessName: payload.businessName || payload.business_name || 'Business',
+      reason: payload.reason,
+      nextSteps: payload.nextSteps,
+    });
+  }
+
+  // Fallback: treat as a generic transaction update to avoid silent failure
+  return renderTransactionEmail({
+    to: payload.email || payload.to,
+    name: payload.name,
+    status: 'initiated',
+    amount: payload.amount,
+    currency: payload.currency,
+    recipientName: payload.recipientName || payload.recipient,
+    transactionId: payload.transactionId,
+    reason: payload.reason,
+  });
 }
 
 // Health check endpoint
@@ -134,20 +212,21 @@ app.post('/notify/login', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('login', req.body || {});
+    const rendered = renderLoginEmail({
+      to: email,
+      name: name || 'User',
+      device: deviceInfo || 'Unknown',
+      location: location || 'Unknown',
+      timestamp: formatTimestamp(timestamp),
+      ipAddress: ipAddress || 'Unknown',
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        deviceInfo: deviceInfo || 'Unknown',
-        device: deviceInfo || 'Unknown',
-        location: location || 'Unknown',
-        timestamp: formatTimestamp(timestamp),
-        ipAddress: ipAddress || 'Unknown',
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -164,18 +243,20 @@ app.post('/notify/kyc', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('kyc', { ...req.body, status });
+    const rendered = renderKycEmail({
+      to: email,
+      name: name || 'User',
+      status: status === 'approved' ? 'approved' : 'rejected',
+      reason,
+      nextSteps,
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        status: status || 'rejected',
-        reason: reason || '',
-        nextSteps: nextSteps || '',
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -192,19 +273,25 @@ app.post('/notify/business', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('business', { ...req.body, status });
+    if (!businessName) {
+      return res.status(400).json({ error: 'Missing required field: businessName' });
+    }
+
+    const rendered = renderBusinessEmail({
+      to: email,
+      name: name || 'User',
+      status: status === 'approved' ? 'approved' : 'rejected',
+      businessName,
+      reason,
+      nextSteps,
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        status: status || 'rejected',
-        businessName: businessName || 'Business',
-        reason: reason || '',
-        nextSteps: nextSteps || '',
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -221,22 +308,23 @@ app.post('/notify/transaction', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('transaction', { ...req.body, status });
+    const rendered = renderTransactionEmail({
+      to: email,
+      name: name || 'User',
+      status: status || 'initiated',
+      amount,
+      currency,
+      recipientName,
+      transactionId,
+      reason,
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        transactionId: transactionId || '',
-        amount: amount != null ? String(amount) : '',
-        currency: currency || '',
-        status: status || 'initiated',
-        recipientName: recipientName || '',
-        reason: reason || '',
-        date: new Date().toLocaleString(),
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -253,20 +341,22 @@ app.post('/notify/payment-link', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('payment-link', req.body || {});
+    const rendered = renderPaymentLinkEmail({
+      to: email,
+      name: name || 'User',
+      amount,
+      currency,
+      paymentLink,
+      expiryDate,
+      description,
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        amount: amount != null ? String(amount) : '',
-        currency: currency || '',
-        paymentLink: paymentLink || '',
-        expiryDate: expiryDate ? formatTimestamp(expiryDate) : '',
-        description: description || '',
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -283,26 +373,24 @@ app.post('/notify/invoice', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
-    const { template, subject } = buildTemplateAndSubject('invoice', { ...req.body, type });
+    const rendered = renderInvoiceEmail({
+      to: email,
+      name: name || 'User',
+      type: type || 'generated',
+      invoiceNumber,
+      amount,
+      currency,
+      dueDate,
+      businessName,
+      downloadLink,
+    });
 
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template,
-      variables: {
-        name: name || 'User',
-        invoiceNumber: invoiceNumber || '',
-        invoice_number: invoiceNumber || '',
-        amount: amount != null ? String(amount) : '',
-        currency: currency || '',
-        dueDate: dueDate ? formatTimestamp(dueDate) : '',
-        due_date: dueDate ? formatTimestamp(dueDate) : '',
-        businessName: businessName || 'Payvost',
-        business_name: businessName || 'Payvost',
-        downloadLink: downloadLink || '',
-        download_link: downloadLink || '',
-        type: type || 'generated',
-      },
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     return res.json({ success: true, messageId: result.id });
@@ -314,6 +402,9 @@ app.post('/notify/invoice', async (req: NotifyRequest, res: Response) => {
 
 // Debug-only: echoes payload to verify request routing
 app.post('/notify/test', (req: NotifyRequest, res: Response) => {
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
   res.json({
     success: true,
     receivedAt: new Date().toISOString(),
@@ -325,24 +416,85 @@ app.post('/notify/test', (req: NotifyRequest, res: Response) => {
   });
 });
 
+// Debug-only: render an email without sending it (useful for verifying HTML quickly)
+app.post('/notify/preview', (req: NotifyRequest, res: Response) => {
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const { type, variables } = req.body || {};
+  if (!type) return res.status(400).json({ success: false, error: 'Missing required field: type' });
+
+  const payload = { ...(variables || {}), email: variables?.email || 'preview@example.com' };
+  const rendered = renderByType(String(type), payload);
+  return res.json({ success: true, subject: rendered.subject, tags: rendered.tags, html: rendered.html, text: rendered.text });
+});
+
+// Debug-only: sends one email per supported trigger to a single recipient
+app.post('/notify/test-all', async (req: NotifyRequest, res: Response) => {
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const { email } = req.body || {};
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Missing required field: email' });
+  }
+
+  const tests: Array<{ type: string; vars: Record<string, any> }> = [
+    { type: 'login', vars: { email, name: 'Test User', deviceInfo: 'Chrome', location: 'Unknown', ipAddress: '127.0.0.1', timestamp: new Date().toISOString() } },
+    { type: 'kyc-approved', vars: { email, name: 'Test User', status: 'approved' } },
+    { type: 'kyc-rejected', vars: { email, name: 'Test User', status: 'rejected', reason: 'Document image unclear', nextSteps: 'Re-upload a clear photo of the document.' } },
+    { type: 'transaction-success', vars: { email, name: 'Test User', status: 'success', amount: 500, currency: 'USD', recipientName: 'John Doe', transactionId: 'TXN-TEST-001' } },
+    { type: 'transaction-failed', vars: { email, name: 'Test User', status: 'failed', amount: 500, currency: 'USD', recipientName: 'John Doe', transactionId: 'TXN-TEST-002', reason: 'Insufficient funds' } },
+    { type: 'invoice-generated', vars: { email, name: 'Test User', type: 'generated', invoiceNumber: 'INV-TEST-001', amount: 1000, currency: 'USD', dueDate: new Date().toISOString(), businessName: 'Payvost', downloadLink: 'https://payvost.com/invoice/INV-TEST-001' } },
+    { type: 'invoice-reminder', vars: { email, name: 'Test User', type: 'reminder', invoiceNumber: 'INV-TEST-002', amount: 1000, currency: 'USD', dueDate: new Date().toISOString(), businessName: 'Payvost', downloadLink: 'https://payvost.com/invoice/INV-TEST-002' } },
+    { type: 'invoice-paid', vars: { email, name: 'Test User', type: 'paid', invoiceNumber: 'INV-TEST-003', amount: 1000, currency: 'USD', dueDate: new Date().toISOString(), businessName: 'Payvost', downloadLink: 'https://payvost.com/invoice/INV-TEST-003' } },
+    { type: 'payment-link', vars: { email, name: 'Test User', amount: 250, currency: 'USD', paymentLink: 'https://payvost.com/pay/TEST', expiryDate: new Date(Date.now() + 86400000).toISOString(), description: 'Test payment link' } },
+    { type: 'business', vars: { email, name: 'Test User', status: 'approved', businessName: 'Test Business Ltd' } },
+  ];
+
+  const results: Array<{ type: string; ok: boolean; messageId?: string; error?: string }> = [];
+  for (const t of tests) {
+    try {
+      const rendered = renderByType(t.type, t.vars);
+      const r = await sendEmailViaMailgun({
+        to: email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        tags: rendered.tags,
+      });
+      results.push({ type: t.type, ok: true, messageId: r.id });
+    } catch (e: any) {
+      results.push({ type: t.type, ok: false, error: e?.message || String(e) });
+    }
+  }
+
+  return res.json({ success: true, count: results.length, results });
+});
+
 // Send notification endpoint
 app.post('/send', async (req: Request, res: Response) => {
   try {
-    const { type, email, subject, template, variables } = req.body;
+    const { type, email, subject, variables } = req.body;
 
     // Validate required fields
-    if (!email || !type || !subject) {
+    if (!email || !type) {
       return res.status(400).json({
-        error: 'Missing required fields: email, type, subject',
+        error: 'Missing required fields: email, type',
       });
     }
 
-    // Send email
+    const payload = { ...(variables || {}), email };
+    const rendered = renderByType(type, payload);
+
     const result = await sendEmailViaMailgun({
       to: email,
-      subject,
-      template: mapLegacyTemplateName(template || type) || 'login notification template',
-      variables: variables || {},
+      subject: subject || rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      tags: rendered.tags,
     });
 
     res.json({
