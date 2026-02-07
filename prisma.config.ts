@@ -1,15 +1,18 @@
-// prisma.config.ts
 import dotenv from "dotenv";
-import path from "path";
 import fs from "fs";
+import path from "path";
 
-// Load only backend/.env for Prisma operations to avoid conflicts
-// Root .env is for frontend/Next.js, backend/.env is for backend/Prisma
-const backendEnvPath = path.resolve(__dirname, "backend/.env");
+// Prefer backend-specific env files so Prisma CLI doesn't pick up frontend vars.
+const backendEnvLocal = path.resolve(__dirname, "backend/.env.local");
+const backendEnv = path.resolve(__dirname, "backend/.env");
 
-// Load backend .env only (if it exists)
-if (fs.existsSync(backendEnvPath)) {
-  dotenv.config({ path: backendEnvPath });
+// Load .env.local first (higher priority), then fall back to .env
+if (fs.existsSync(backendEnvLocal)) {
+  dotenv.config({ path: backendEnvLocal });
+}
+
+if (fs.existsSync(backendEnv)) {
+  dotenv.config({ path: backendEnv });
 }
 
 export default {

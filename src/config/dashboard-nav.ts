@@ -3,6 +3,7 @@ import {
   Home,
   Wallet,
   Send,
+  SendHorizontal,
   ArrowRightLeft,
   CreditCard,
   ShieldCheck,
@@ -11,7 +12,6 @@ import {
   HandCoins,
   FileText,
   Calendar,
-  Settings2,
 } from 'lucide-react';
 
 import type { CapabilityKey } from '@/lib/capabilities';
@@ -65,7 +65,7 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
           {
             label: 'Send money',
             href: '/dashboard/payments/send',
-            icon: Send,
+            icon: SendHorizontal,
             trackingId: 'nav.payments.send',
             capabilityKey: 'payments.send',
           },
@@ -82,13 +82,6 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
             icon: FileText,
             trackingId: 'nav.payments.bills',
             capabilityKey: 'payments.bills',
-          },
-          {
-            label: 'Payment methods',
-            href: '/dashboard/settings/payment-methods',
-            icon: Settings2,
-            trackingId: 'nav.payments.methods',
-            capabilityKey: 'payments.methods',
           },
           {
             label: 'Payment activity',
@@ -150,4 +143,3 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
     ],
   },
 ];
-

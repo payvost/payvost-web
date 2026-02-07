@@ -4,7 +4,7 @@
 ALTER TABLE "Account" ADD COLUMN IF NOT EXISTS "workspaceId" TEXT;
 CREATE INDEX IF NOT EXISTS "Account_workspaceId_idx" ON "Account"("workspaceId");
 ALTER TABLE "Account"
-  ADD CONSTRAINT IF NOT EXISTS "Account_workspaceId_fkey"
+  ADD CONSTRAINT "Account_workspaceId_fkey"
   FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -68,11 +68,11 @@ CREATE INDEX IF NOT EXISTS "WorkspaceMember_userId_idx" ON "WorkspaceMember"("us
 CREATE INDEX IF NOT EXISTS "WorkspaceMember_workspaceId_idx" ON "WorkspaceMember"("workspaceId");
 
 ALTER TABLE "WorkspaceMember"
-  ADD CONSTRAINT IF NOT EXISTS "WorkspaceMember_workspaceId_fkey"
+  ADD CONSTRAINT "WorkspaceMember_workspaceId_fkey"
   FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "WorkspaceMember"
-  ADD CONSTRAINT IF NOT EXISTS "WorkspaceMember_userId_fkey"
+  ADD CONSTRAINT "WorkspaceMember_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "User"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -111,19 +111,19 @@ CREATE INDEX IF NOT EXISTS "Card_assignedToUserId_idx" ON "Card"("assignedToUser
 CREATE INDEX IF NOT EXISTS "Card_createdByUserId_idx" ON "Card"("createdByUserId");
 
 ALTER TABLE "Card"
-  ADD CONSTRAINT IF NOT EXISTS "Card_workspaceId_fkey"
+  ADD CONSTRAINT "Card_workspaceId_fkey"
   FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "Card"
-  ADD CONSTRAINT IF NOT EXISTS "Card_accountId_fkey"
+  ADD CONSTRAINT "Card_accountId_fkey"
   FOREIGN KEY ("accountId") REFERENCES "Account"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "Card"
-  ADD CONSTRAINT IF NOT EXISTS "Card_createdByUserId_fkey"
+  ADD CONSTRAINT "Card_createdByUserId_fkey"
   FOREIGN KEY ("createdByUserId") REFERENCES "User"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "Card"
-  ADD CONSTRAINT IF NOT EXISTS "Card_assignedToUserId_fkey"
+  ADD CONSTRAINT "Card_assignedToUserId_fkey"
   FOREIGN KEY ("assignedToUserId") REFERENCES "User"("id")
   ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -153,11 +153,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "CardControl_cardId_version_key" ON "CardContr
 CREATE INDEX IF NOT EXISTS "CardControl_cardId_updatedAt_idx" ON "CardControl"("cardId", "updatedAt");
 
 ALTER TABLE "CardControl"
-  ADD CONSTRAINT IF NOT EXISTS "CardControl_cardId_fkey"
+  ADD CONSTRAINT "CardControl_cardId_fkey"
   FOREIGN KEY ("cardId") REFERENCES "Card"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "CardControl"
-  ADD CONSTRAINT IF NOT EXISTS "CardControl_updatedByUserId_fkey"
+  ADD CONSTRAINT "CardControl_updatedByUserId_fkey"
   FOREIGN KEY ("updatedByUserId") REFERENCES "User"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -184,7 +184,7 @@ CREATE INDEX IF NOT EXISTS "CardTransaction_cardId_happenedAt_idx" ON "CardTrans
 CREATE INDEX IF NOT EXISTS "CardTransaction_status_happenedAt_idx" ON "CardTransaction"("status", "happenedAt");
 
 ALTER TABLE "CardTransaction"
-  ADD CONSTRAINT IF NOT EXISTS "CardTransaction_cardId_fkey"
+  ADD CONSTRAINT "CardTransaction_cardId_fkey"
   FOREIGN KEY ("cardId") REFERENCES "Card"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -204,11 +204,11 @@ CREATE INDEX IF NOT EXISTS "CardEvent_workspaceId_createdAt_idx" ON "CardEvent"(
 CREATE INDEX IF NOT EXISTS "CardEvent_cardId_createdAt_idx" ON "CardEvent"("cardId", "createdAt");
 
 ALTER TABLE "CardEvent"
-  ADD CONSTRAINT IF NOT EXISTS "CardEvent_cardId_fkey"
+  ADD CONSTRAINT "CardEvent_cardId_fkey"
   FOREIGN KEY ("cardId") REFERENCES "Card"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "CardEvent"
-  ADD CONSTRAINT IF NOT EXISTS "CardEvent_workspaceId_fkey"
+  ADD CONSTRAINT "CardEvent_workspaceId_fkey"
   FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -226,7 +226,6 @@ CREATE INDEX IF NOT EXISTS "CardRevealAudit_cardId_createdAt_idx" ON "CardReveal
 CREATE INDEX IF NOT EXISTS "CardRevealAudit_actorUserId_createdAt_idx" ON "CardRevealAudit"("actorUserId", "createdAt");
 
 ALTER TABLE "CardRevealAudit"
-  ADD CONSTRAINT IF NOT EXISTS "CardRevealAudit_cardId_fkey"
+  ADD CONSTRAINT "CardRevealAudit_cardId_fkey"
   FOREIGN KEY ("cardId") REFERENCES "Card"("id")
   ON DELETE CASCADE ON UPDATE CASCADE;
-
