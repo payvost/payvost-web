@@ -519,6 +519,28 @@ router.post('/deduct', verifyFirebaseToken, requireKYC, async (req: Authenticate
 
     // Deduct balance in a transaction
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Idempotency guard (best-effort): if a ledger entry already exists for this referenceId,
+      // return the prior result without applying another debit.
+      if (referenceId) {
+        const existing = await tx.ledgerEntry.findFirst({
+          where: { accountId, referenceId: String(referenceId) },
+          select: { amount: true, balanceAfter: true },
+        });
+        if (existing) {
+          const signed = parseFloat(String(existing.amount));
+          const newBalance = parseFloat(String(existing.balanceAfter));
+          const previousBalance = newBalance - signed; // signed is negative for DEBIT
+          return {
+            accountId,
+            amount: Math.abs(signed),
+            currency,
+            previousBalance,
+            newBalance,
+            idempotent: true,
+          };
+        }
+      }
+
       // Lock account for update
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance
@@ -555,7 +577,7 @@ router.post('/deduct', verifyFirebaseToken, requireKYC, async (req: Authenticate
           balanceAfter: newBalance,
           type: 'DEBIT',
           description: description || 'External transaction payment',
-          referenceId: referenceId || null,
+          referenceId: referenceId ? String(referenceId) : null,
         },
       });
 
@@ -616,6 +638,28 @@ router.post('/refund', verifyFirebaseToken, async (req: AuthenticatedRequest, re
 
     // Refund balance in a transaction
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Idempotency guard (best-effort): if a ledger entry already exists for this referenceId,
+      // return the prior result without applying another credit.
+      if (referenceId) {
+        const existing = await tx.ledgerEntry.findFirst({
+          where: { accountId, referenceId: String(referenceId) },
+          select: { amount: true, balanceAfter: true },
+        });
+        if (existing) {
+          const signed = parseFloat(String(existing.amount));
+          const newBalance = parseFloat(String(existing.balanceAfter));
+          const previousBalance = newBalance - signed; // signed is positive for CREDIT
+          return {
+            accountId,
+            amount: Math.abs(signed),
+            currency,
+            previousBalance,
+            newBalance,
+            idempotent: true,
+          };
+        }
+      }
+
       // Lock account for update
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance
@@ -647,7 +691,7 @@ router.post('/refund', verifyFirebaseToken, async (req: AuthenticatedRequest, re
           balanceAfter: newBalance,
           type: 'CREDIT',
           description: description || 'Refund for failed transaction',
-          referenceId: referenceId || null,
+          referenceId: referenceId ? String(referenceId) : null,
         },
       });
 

@@ -53,12 +53,15 @@ import paymentRoutes from './services/payment/src/routes';
 import escrowRoutes from './services/escrow/routes';
 import errorTrackerRoutes from './services/error-tracker/routes';
 import invoiceRoutes from './services/invoice/routes';
+import publicInvoiceRoutes from './services/invoice/public-routes';
 import businessRoutes from './services/business/routes';
 import contentRoutes from './services/content/routes';
 import supportRoutes from './services/support/routes';
 import referralRoutes from './services/referral/routes';
 import recipientRoutes from './services/recipient/routes';
 import { startRecurringInvoiceScheduler } from './services/invoice/src/scheduler';
+import createCardsRouter from './services/cards/routes';
+import createWorkspacesRouter from './services/workspaces/routes';
 
 logger.info('Static service imports loaded');
 
@@ -80,6 +83,16 @@ import { registerVersionedRoutes } from './gateway/api-versioning';
 // Register Auth routes (flat structure for legacy compatibility)
 app.use('/api/auth', authRoutes);
 
+// Cards v2: explicit v1 + legacy paths (keep these out of registerVersionedRoutes due to historical /api prefixing).
+const cardsRoutes = createCardsRouter();
+app.use('/api/v1/cards', cardsRoutes);
+app.use('/api/cards', cardsRoutes);
+
+// Workspaces v1: explicit paths (avoid registerVersionedRoutes double-/api issue).
+const workspacesRoutes = createWorkspacesRouter();
+app.use('/api/v1/workspaces', workspacesRoutes);
+app.use('/api/workspaces', workspacesRoutes);
+
 registerVersionedRoutes(app, 'User Service', '/api/user', userRoutes, ['v1']);
 registerVersionedRoutes(app, 'Wallet Service', '/api/wallet', walletRoutes, ['v1']);
 registerVersionedRoutes(app, 'Transaction Service', '/api/transaction', transactionRoutes, ['v1']);
@@ -89,6 +102,7 @@ registerVersionedRoutes(app, 'Payment Service', '/api/payment', paymentRoutes, [
 registerVersionedRoutes(app, 'Escrow Service', '/api/escrow', escrowRoutes, ['v1']);
 registerVersionedRoutes(app, 'Error Tracker Service', '/api/error-tracker', errorTrackerRoutes, ['v1']);
 registerVersionedRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes, ['v1']);
+registerVersionedRoutes(app, 'Public Invoice Service', '/public/invoices', publicInvoiceRoutes, ['v1']);
 registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes, ['v1']);
 registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
 registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);

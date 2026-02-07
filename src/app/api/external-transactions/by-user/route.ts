@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const requestedUserId = searchParams.get('userId');
     const accountId = searchParams.get('accountId');
+    const provider = searchParams.get('provider');
+    const type = searchParams.get('type');
+    const status = searchParams.get('status');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -23,6 +26,9 @@ export async function GET(req: NextRequest) {
       where: {
         userId,
         ...(accountId ? { accountId } : {}),
+        ...(provider ? { provider: provider as any } : {}),
+        ...(type ? { type: type as any } : {}),
+        ...(status ? { status: status as any } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: Math.min(limit, 200),

@@ -10,9 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Link as LinkIcon, Share2, Trash2, Loader2, Copy, Edit, CheckCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { ref, deleteObject } from "firebase/storage";
+import type { DocumentData } from 'firebase/firestore';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -49,31 +47,39 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-        setLoading(false);
-        return;
-    }
+    if (!user) return;
+    let cancelled = false;
 
-    const q = query(collection(db, "invoices"), where("userId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const invoicesData: DocumentData[] = [];
-        querySnapshot.forEach((doc) => {
-            invoicesData.push({ id: doc.id, ...doc.data() });
+    (async () => {
+      setLoading(true);
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/v1/invoices?invoiceType=USER`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store',
         });
-        invoicesData.sort((a, b) => {
-            const aTime = a.createdAt?.toDate?.() || new Date(0);
-            const bTime = b.createdAt?.toDate?.() || new Date(0);
-            return bTime.getTime() - aTime.getTime();
-        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to load invoices (${res.status})`);
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+        const invoicesData = Array.isArray(data?.invoices) ? data.invoices : [];
         setInvoices(invoicesData);
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching invoices: ", error);
-        setLoading(false);
-    });
+      } catch (e: any) {
+        console.error('Error fetching invoices:', e);
+        if (!cancelled) {
+          toast({ title: 'Error', description: e?.message || 'Failed to load invoices', variant: 'destructive' });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
-    return () => unsubscribe();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user, toast]);
 
   const handleCopyLink = (link: string) => {
     if (!link) {
@@ -84,7 +90,8 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
         });
         return;
     }
-    navigator.clipboard.writeText(link);
+    const url = link.startsWith('http') ? link : `${window.location.origin}${link}`;
+    navigator.clipboard.writeText(url);
     toast({
         title: "Link Copied!",
         description: "The public invoice link has been copied.",
@@ -100,10 +107,11 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
         });
         return;
     }
+    const shareUrl = invoice.publicUrl?.startsWith('http') ? invoice.publicUrl : `${window.location.origin}${invoice.publicUrl}`;
     const shareData = {
         title: `Invoice #${invoice.invoiceNumber}`,
         text: `Here is the invoice from ${invoice.fromName} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}.`,
-        url: invoice.publicUrl
+        url: shareUrl
     };
 
     if (navigator.share) {
@@ -141,7 +149,20 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
     if (!invoiceToDelete) return;
     setIsDeleting(true);
     try {
-        await deleteDoc(doc(db, 'invoices', invoiceToDelete.id));
+        if (!user) throw new Error('Not authenticated');
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/v1/invoices/${invoiceToDelete.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store',
+        });
+
+        if (!res.ok && res.status !== 204) {
+          const err = await res.json().catch(() => null) as any;
+          throw new Error(err?.error || `Failed to delete invoice (${res.status})`);
+        }
+
+        setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id));
         toast({
             title: "Invoice Deleted",
             description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.`,
@@ -160,14 +181,18 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
 
   const handleMarkAsPaid = async (invoiceId: string) => {
     try {
-        const docRef = doc(db, 'invoices', invoiceId);
-        await updateDoc(docRef, { 
-            status: 'Paid',
-            paidAt: serverTimestamp(),
+        if (!user) throw new Error('Not authenticated');
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          cache: 'no-store',
         });
-        setInvoices(invoices.map(inv => 
-            inv.id === invoiceId ? { ...inv, status: 'Paid' } : inv
-        ));
+        if (!res.ok) {
+          const err = await res.json().catch(() => null) as any;
+          throw new Error(err?.error || `Failed to mark as paid (${res.status})`);
+        }
+        setInvoices(invoices.map(inv => inv.id === invoiceId ? { ...inv, status: 'Paid' } : inv));
         toast({
             title: "Invoice Updated",
             description: "The invoice has been marked as paid.",
@@ -254,7 +279,7 @@ export function InvoiceListView({ onCreateClick, onEditClick, isKycVerified }: I
                 <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(invoice.grandTotal)}</TableCell>
                 <TableCell>{invoice.dueDate?.toDate?.() ? invoice.dueDate.toDate().toLocaleDateString() : new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
-                    <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
+                    <Badge variant={statusVariant[String(invoice.status)] || 'outline'}>{String(invoice.status)}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>

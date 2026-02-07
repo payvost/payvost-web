@@ -17,6 +17,7 @@ import { Copy, Download, FileImage, Loader2, Send, QrCode, Share2, Printer } fro
 import type { InvoiceFormValues } from './create-invoice-page';
 import { DocumentData } from 'firebase/firestore';
 import { QRCodeDialog } from './qr-code-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
 interface SendInvoiceDialogProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ interface SendInvoiceDialogProps {
 
 export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSend }: SendInvoiceDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [invoiceData, setInvoiceData] = useState<DocumentData | null>(null);
   const [qrCodeOpen, setQrCodeOpen] = useState(false);
@@ -45,10 +47,16 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
       const retryDelay = 1000; // 1 second
       
       try {
-        // Use backend API endpoint instead of direct Firestore reads
-        // This bypasses Firestore security rules and avoids permission issues
-        const response = await fetch(`/api/invoices/public/${invoiceId}`, {
+        if (!user) {
+          setLoading(false);
+          toast({ title: 'Not authenticated', description: 'Please sign in again.', variant: 'destructive' });
+          return;
+        }
+
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/v1/invoices/${invoiceId}`, {
           method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` },
           cache: 'no-store',
         });
 
@@ -109,17 +117,15 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
           return;
         }
 
-        // Convert backend format to frontend format
+        // Invoice endpoint already returns UI-friendly flattened fields (publicUrl + publicLinkToken when available)
         const convertedData: DocumentData = {
           id: invoiceData.id,
           invoiceNumber: invoiceData.invoiceNumber || '',
-          status: invoiceData.status || 'Pending',
-          publicUrl: invoiceData.publicUrl || `${window.location.origin}/invoice/${invoiceData.id}`,
-          grandTotal: typeof invoiceData.grandTotal === 'object' 
-            ? parseFloat(invoiceData.grandTotal.toString()) 
-            : invoiceData.grandTotal,
+          status: invoiceData.status || 'Draft',
+          publicUrl: invoiceData.publicUrl || null,
+          publicLinkToken: invoiceData.publicLinkToken || null,
+          grandTotal: invoiceData.grandTotal,
           currency: invoiceData.currency || 'USD',
-          // Include other fields that might be needed
           ...invoiceData,
         };
 
@@ -146,24 +152,31 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
     };
 
     fetchInvoice();
-  }, [isOpen, invoiceId, toast]);
+  }, [isOpen, invoiceId, toast, user]);
 
   const copyLink = () => {
-    const publicUrl = invoiceData?.publicUrl || (invoiceId ? `${window.location.origin}/invoice/${invoiceId}` : null);
+    const publicUrl = getPublicUrl();
     if (!publicUrl) return;
     navigator.clipboard.writeText(publicUrl);
     toast({ title: 'Link Copied!' });
   }
   
   const getPublicUrl = () => {
-    return invoiceData?.publicUrl || (invoiceId ? `${window.location.origin}/invoice/${invoiceId}` : null);
+    const raw = (invoiceData as any)?.publicUrl as string | null | undefined;
+    if (!raw) return null;
+    return raw.startsWith('http') ? raw : `${window.location.origin}${raw}`;
   }
 
   const handlePrint = () => {
     if (!invoiceId) return;
+    const publicLinkToken = (invoiceData as any)?.publicLinkToken as string | null;
+    if (!publicLinkToken) {
+      toast({ title: 'Link Not Ready', description: 'Public link is not available yet.', variant: 'destructive' });
+      return;
+    }
     
     // Open PDF in new window for printing
-    const pdfUrl = `/api/pdf/invoice/${invoiceId}`;
+    const pdfUrl = `/api/pdf/invoice/${invoiceId}?token=${encodeURIComponent(publicLinkToken)}`;
     window.open(pdfUrl, '_blank');
     
     toast({
@@ -174,9 +187,14 @@ export function SendInvoiceDialog({ isOpen, setIsOpen, invoiceId, onSuccessfulSe
 
   const handleDownloadInvoice = () => {
     if (!invoiceId) return;
+    const publicLinkToken = (invoiceData as any)?.publicLinkToken as string | null;
+    if (!publicLinkToken) {
+      toast({ title: 'Link Not Ready', description: 'Public link is not available yet.', variant: 'destructive' });
+      return;
+    }
 
     // Use Vercel serverless function for PDF generation
-    const downloadUrl = `/api/pdf/invoice/${invoiceId}`;
+    const downloadUrl = `/api/pdf/invoice/${invoiceId}?token=${encodeURIComponent(publicLinkToken)}`;
     
     // Show loading toast
     toast({

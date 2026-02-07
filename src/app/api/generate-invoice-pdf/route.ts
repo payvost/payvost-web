@@ -1,37 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminStorage } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { adminStorage } from '@/lib/firebase-admin';
+import { buildBackendUrl } from '@/lib/api/backend';
 
 // This route generates a PDF and uploads it to Firebase Storage
-// Called when invoice is created/updated (status = Pending/Paid)
+// Called on-demand and requires a valid public invoice token.
 
 export async function POST(req: NextRequest) {
   try {
-    const { invoiceId } = await req.json();
+    const { invoiceId, token } = await req.json();
     
     if (!invoiceId) {
       return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
     }
+    if (!token) {
+      return NextResponse.json({ error: 'Missing token' }, { status: 400 });
+    }
 
     console.log(`[PDF Generation] Starting for invoice: ${invoiceId}`);
 
-    // Fetch invoice from Firestore
-    let invoiceDoc = await adminDb.collection('invoices').doc(invoiceId).get();
-    let collectionName = 'invoices';
-    
-    if (!invoiceDoc.exists) {
-      invoiceDoc = await adminDb.collection('businessInvoices').doc(invoiceId).get();
-      collectionName = 'businessInvoices';
-    }
+    // Fetch invoice via token-gated backend endpoint
+    const invoiceUrl = buildBackendUrl(`/api/v1/public/invoices/${encodeURIComponent(token)}`);
+    const invoiceResponse = await fetch(invoiceUrl, { method: 'GET', cache: 'no-store' });
 
-    if (!invoiceDoc.exists) {
+    if (!invoiceResponse.ok) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    const invoiceData = invoiceDoc.data();
+    const invoiceData = await invoiceResponse.json();
+
+    if (!invoiceData || invoiceData.id !== invoiceId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     
-    // Only generate PDF for public invoices (Pending, Paid, Overdue - not Draft)
-    if (invoiceData?.status === 'Draft' || !invoiceData?.isPublic) {
+    // Only generate PDF for non-draft invoices
+    if (String(invoiceData?.status || '').toUpperCase() === 'DRAFT') {
       return NextResponse.json({ 
         message: 'Invoice is draft or not public, skipping PDF generation' 
       }, { status: 200 });
@@ -184,14 +186,7 @@ export async function POST(req: NextRequest) {
     // This keeps storage bucket URL hidden and allows access control
     // PDFs are served via /api/pdf/invoice/[id] which handles access control
 
-    // Update Firestore to indicate PDF is ready (no signed URL stored)
-    await adminDb.collection(collectionName).doc(invoiceId).update({
-      pdfGeneratedAt: FieldValue.serverTimestamp(),
-      pdfReady: true, // Flag to indicate PDF is ready
-      // Don't store signed URL - serve through /api/pdf/invoice/[id] instead
-    });
-
-    console.log(`[PDF Generation] Updated Firestore - PDF ready for invoice: ${invoiceId} (served via API)`);
+    // Invoice state is stored in Postgres; we only cache the rendered PDF in Storage.
 
     return NextResponse.json({
       success: true,

@@ -7,6 +7,7 @@
 // API Client
 export { apiClient, ApiError } from './apiClient';
 export type { default as ApiClient } from './apiClient';
+export { workspacesService } from './workspacesService';
 
 // Wallet Service
 export { walletService, WalletServiceError } from './walletService';
@@ -36,6 +37,9 @@ export type {
 
 // Payment Service
 export { paymentService } from './paymentService';
+
+// Payments Orchestration (PaymentOrder)
+export { paymentsService } from './paymentsService';
 
 // Email Service (existing) - Server-side only, import directly from './emailService' in API routes
 // export * from './emailService';

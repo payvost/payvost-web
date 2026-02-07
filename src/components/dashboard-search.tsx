@@ -8,7 +8,7 @@ import {
   Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Users, 
   Building2, Calendar, BarChart3, TrendingUp, Lock, Key, UserCog,
   Receipt, QrCode, Link as LinkIcon, Repeat, Gift, Zap, Smartphone,
-  Globe, BookOpen, MessageSquare, ChevronRight
+  Globe, BookOpen, MessageSquare, ChevronRight, Upload
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
@@ -39,6 +39,7 @@ const dashboardSearchItems: SearchItem[] = [
   
   // Payments
   { title: 'Payments', href: '/dashboard/payments', description: 'Send money and make payments', icon: Send, category: 'Payments', keywords: ['payment', 'send', 'remittance', 'transfer'] },
+  { title: 'Send Money', href: '/dashboard/payments/send', description: 'International transfers and remittances', icon: ArrowRightLeft, category: 'Payments', keywords: ['send', 'transfer', 'remittance'] },
   { title: 'Request Payment', href: '/dashboard/request-payment', description: 'Request payments from others', icon: HandCoins, category: 'Payments', keywords: ['request', 'invoice', 'collect'] },
   { title: 'Payment Links', href: '/dashboard/request-payment?tab=payment-link', description: 'Create shareable payment links', icon: LinkIcon, category: 'Payments', keywords: ['link', 'share', 'url'] },
   { title: 'Invoices', href: '/dashboard/request-payment?tab=invoice', description: 'Create and manage invoices', icon: FileText, category: 'Payments', keywords: ['invoice', 'billing', 'bill'] },
@@ -46,10 +47,10 @@ const dashboardSearchItems: SearchItem[] = [
   { title: 'Split Payments', href: '/dashboard/request-payment?tab=split-payment', description: 'Split payments between multiple people', icon: Users, category: 'Payments', keywords: ['split', 'share', 'divide'] },
   { title: 'Event Tickets', href: '/dashboard/request-payment?tab=event-tickets', description: 'Sell tickets for events', icon: Ticket, category: 'Payments', keywords: ['ticket', 'event', 'sell'] },
   { title: 'Donations', href: '/dashboard/request-payment?tab=donations', description: 'Create donation campaigns', icon: Gift, category: 'Payments', keywords: ['donation', 'campaign', 'charity'] },
-  { title: 'Bill Payment', href: '/dashboard/payments?tab=bill-payment', description: 'Pay utility bills and services', icon: Zap, category: 'Payments', keywords: ['bill', 'utility', 'electricity', 'airtime'] },
-  { title: 'Bulk Transfer', href: '/dashboard/payments?tab=bulk-transfer', description: 'Send money to multiple recipients', icon: Send, category: 'Payments', keywords: ['bulk', 'multiple', 'batch'] },
-  { title: 'Scheduled Payments', href: '/dashboard/payments?tab=scheduled', description: 'View and manage scheduled payments', icon: Calendar, category: 'Payments', keywords: ['scheduled', 'future', 'planned'] },
-  { title: 'Gift Cards', href: '/dashboard/payments?tab=gift-cards', description: 'Purchase and manage gift cards', icon: Gift, category: 'Payments', keywords: ['gift', 'card', 'voucher'] },
+  { title: 'Bill Payment', href: '/dashboard/payments/bills', description: 'Pay utility bills and services', icon: Zap, category: 'Payments', keywords: ['bill', 'utility', 'electricity', 'airtime'] },
+  { title: 'Bulk Payments', href: '/dashboard/payments/bulk', description: 'Upload and pay multiple recipients', icon: Upload, category: 'Payments', keywords: ['bulk', 'multiple', 'batch'] },
+  { title: 'Scheduled Payments', href: '/dashboard/payments/scheduled', description: 'View and manage scheduled payments', icon: Calendar, category: 'Payments', keywords: ['scheduled', 'future', 'planned'] },
+  { title: 'Gift Cards', href: '/dashboard/payments/gift-cards', description: 'Browse gift card catalog', icon: Gift, category: 'Payments', keywords: ['gift', 'card', 'voucher'] },
   
   // Disputes & Security
   { title: 'Disputes', href: '/dashboard/dispute', description: 'Manage transaction disputes', icon: ShieldAlert, category: 'Disputes & Security', keywords: ['dispute', 'chargeback', 'refund'] },

@@ -206,10 +206,17 @@ export interface BillPaymentResponse {
 class ReloadlyService {
   private tokenCache: Map<string, TokenCache> = new Map();
 
+  private assertServer(): void {
+    if (typeof window !== 'undefined') {
+      throw new ReloadlyError('ReloadlyService is server-only (use Next.js API routes from the client)');
+    }
+  }
+
   /**
    * Get authentication token
    */
   private async getAuthToken(service: 'airtime' | 'giftcards' | 'utilities'): Promise<string> {
+    this.assertServer();
     // Check cache
     const cached = this.tokenCache.get(service);
     if (cached && cached.expiresAt > Date.now()) {
@@ -282,6 +289,7 @@ class ReloadlyService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
+    this.assertServer();
     const token = await this.getAuthToken(service);
     const baseUrl = getReloadlyBaseUrl(service);
 

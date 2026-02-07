@@ -44,8 +44,8 @@ export default function CardsScreen() {
       // Simple card creation - in production, show a form
       const newCard = await createCard({
         cardLabel: 'My Card',
-        currency: 'USD',
-        cardModel: 'debit',
+        workspaceType: 'PERSONAL',
+        network: 'VISA',
       });
       await trackUserAction.cardCreated('debit');
       Alert.alert('Success', 'Card created successfully!');
@@ -144,7 +144,7 @@ export default function CardsScreen() {
               </View>
               <View style={styles.cardBody}>
                 <Text style={styles.cardNumber}>
-                  {card.fullNumber || `**** **** **** ${card.last4}`}
+                  {`**** **** **** ${card.last4}`}
                 </Text>
                 <View style={styles.cardFooter}>
                   <View>

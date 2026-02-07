@@ -89,7 +89,7 @@ export default function LoginPage() {
             </section>
 
             {/* Right: Form */}
-            <Card className="w-full justify-self-center bg-card/80 shadow-none ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-10/12 lg:justify-self-center animate-in fade-in zoom-in-95 duration-700">
+            <Card className="w-full justify-self-center bg-card/80 shadow-none ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-9/12 xl:w-8/12 lg:justify-self-center animate-in fade-in zoom-in-95 duration-700">
               <CardHeader className="p-4 pb-3">
                 <CardTitle className="font-display text-2xl tracking-tight sm:text-3xl">Sign in</CardTitle>
                 <CardDescription className="text-sm sm:text-base">

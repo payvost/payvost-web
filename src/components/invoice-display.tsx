@@ -15,6 +15,12 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
   Pending: 'secondary',
   Overdue: 'destructive',
   Draft: 'outline',
+  Issued: 'secondary',
+  Sent: 'secondary',
+  Viewed: 'secondary',
+  'Partially Paid': 'secondary',
+  Void: 'destructive',
+  Credited: 'outline',
 };
 
 export function InvoiceDisplay({ invoice, showActionButtons = true }: InvoiceDisplayProps) {

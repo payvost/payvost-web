@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, doc, addDoc, updateDoc, serverTimestamp, Timestamp, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
@@ -37,7 +37,6 @@ const invoiceItemSchema = z.object({
 });
 
 export const invoiceSchema = z.object({
-  invoiceNumber: z.string().min(1, 'Invoice number is required'),
   issueDate: z.date({ required_error: 'Issue date is required' }),
   dueDate: z.date({ required_error: 'Due date is required' }),
   currency: z.string().min(1, 'Currency is required'),
@@ -53,7 +52,6 @@ export const invoiceSchema = z.object({
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
   paymentMethod: z.string().optional(),
-  status: z.enum(['Draft', 'Pending', 'Paid']).default('Pending').optional(),
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
@@ -113,36 +111,55 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             taxRate: 0,
             currency: 'USD',
             paymentMethod: 'rapyd',
-            invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
         },
     });
 
      useEffect(() => {
-        if (isEditing && invoiceId) {
-            const docRef = doc(db, 'invoices', invoiceId);
-            const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const invoice = docSnap.data();
-                    reset({
-                        invoiceNumber: invoice.invoiceNumber,
-                        issueDate: invoice.issueDate.toDate(),
-                        dueDate: invoice.dueDate.toDate(),
-                        currency: invoice.currency,
-                        fromName: invoice.fromName,
-                        fromAddress: invoice.fromAddress,
-                        toName: invoice.toName,
-                        toEmail: invoice.toEmail,
-                        toAddress: invoice.toAddress,
-                        items: invoice.items,
-                        notes: invoice.notes || '',
-                        taxRate: invoice.taxRate || 0,
-                        paymentMethod: invoice.paymentMethod?.toLowerCase() || 'rapyd',
-                    });
+        if (!isEditing || !invoiceId) return;
+        if (!user) return;
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch(`/api/v1/invoices/${invoiceId}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Failed to load invoice (${res.status})`);
                 }
-            });
-            return () => unsubscribe();
-        }
-    }, [isEditing, invoiceId, reset]);
+
+                const invoice = await res.json();
+                if (cancelled) return;
+
+                reset({
+                    issueDate: invoice.issueDate ? new Date(invoice.issueDate) : new Date(),
+                    dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(),
+                    currency: invoice.currency || 'USD',
+                    fromName: invoice.fromName || '',
+                    fromAddress: invoice.fromAddress || '',
+                    toName: invoice.toName || '',
+                    toEmail: invoice.toEmail || '',
+                    toAddress: invoice.toAddress || '',
+                    items: Array.isArray(invoice.items) ? invoice.items : [{ description: '', quantity: 1, price: 0 }],
+                    notes: invoice.notes || '',
+                    taxRate: invoice.taxRate || 0,
+                    paymentMethod: invoice.paymentMethod || 'rapyd',
+                });
+            } catch (e: any) {
+                console.error('Failed to load invoice:', e);
+                toast({ title: 'Error', description: e?.message || 'Failed to load invoice', variant: 'destructive' });
+            } finally {
+                setLoadingUserData(false);
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [isEditing, invoiceId, reset, toast, user]);
     
     useEffect(() => {
         if (!user) {
@@ -195,76 +212,91 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         return `${symbol}${formattedAmount}`;
     };
 
-    const saveInvoice = async (defaultStatus?: 'Draft' | 'Pending' | 'Paid') => {
+    const mapPaymentMethod = (value: string | undefined) => {
+        const v = String(value || '').toLowerCase();
+        if (v === 'stripe') return 'STRIPE';
+        if (v === 'rapyd') return 'RAPYD';
+        if (v === 'manual') return 'MANUAL';
+        if (v === 'payvost') return 'PAYVOST';
+        return 'PAYVOST';
+    };
+
+    const upsertDraft = async () => {
         if (!user) {
             toast({ title: 'Not authenticated', variant: 'destructive'});
             throw new Error('User not authenticated');
         }
-        
+
         const data = getValues();
-        // Use status from form field, or fall back to defaultStatus parameter for backward compatibility
-        const statusToUse = (data.status || defaultStatus || 'Pending') as 'Draft' | 'Pending' | 'Paid';
-        
-        const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-        const taxAmount = subtotal * (watchedTaxRate / 100);
-        const grandTotal = subtotal + taxAmount;
-        
-        const firestoreData = {
-            ...data,
-            issueDate: Timestamp.fromDate(data.issueDate),
-            dueDate: Timestamp.fromDate(data.dueDate),
-            grandTotal,
-            userId: user.uid,
-            status: statusToUse,
-            updatedAt: serverTimestamp(),
-            isPublic: statusToUse !== 'Draft',
-            paymentMethod: data.paymentMethod || 'rapyd',
+        const token = await user.getIdToken();
+
+        const payload = {
+            invoiceType: 'USER',
+            currency: data.currency,
+            issueDate: data.issueDate.toISOString(),
+            dueDate: data.dueDate.toISOString(),
+            fromInfo: {
+                name: data.fromName || user.displayName || '',
+                address: data.fromAddress || '',
+                email: user.email || undefined,
+            },
+            toInfo: {
+                name: data.toName,
+                address: data.toAddress,
+                email: data.toEmail,
+            },
+            items: data.items,
+            taxRate: data.taxRate || 0,
+            notes: data.notes || '',
+            paymentMethod: mapPaymentMethod(data.paymentMethod),
         };
 
         if (savedInvoiceId) {
-            const docRef = doc(db, 'invoices', savedInvoiceId);
-            await updateDoc(docRef, firestoreData);
-            
-            // Trigger PDF regeneration if status changed to non-draft
-            if (statusToUse !== 'Draft') {
-              fetch('/api/generate-invoice-pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: savedInvoiceId }),
-              }).catch(err => console.error('Failed to trigger PDF generation:', err));
-            }
-            
-            return savedInvoiceId;
-        } else {
-            const docRef = await addDoc(collection(db, 'invoices'), {
-                ...firestoreData,
-                createdAt: serverTimestamp(),
+            const res = await fetch(`/api/v1/invoices/${savedInvoiceId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+                cache: 'no-store',
             });
-            const newId = docRef.id;
-            const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-            const publicUrl = `${siteUrl}/invoice/${newId}`;
-            await updateDoc(docRef, { publicUrl });
-            setSavedInvoiceId(newId);
-            
-            // Trigger PDF generation for non-draft invoices (async, don't wait)
-            if (status !== 'Draft') {
-              fetch('/api/generate-invoice-pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: newId }),
-              }).catch(err => console.error('Failed to trigger PDF generation:', err));
-            }
-            
-            return newId;
+            if (!res.ok) throw new Error(`Failed to save draft (${res.status})`);
+            return savedInvoiceId;
         }
+
+        const res = await fetch('/api/v1/invoices/drafts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+            cache: 'no-store',
+        });
+        if (!res.ok) throw new Error(`Failed to create draft (${res.status})`);
+        const created = await res.json();
+        const newId = created?.id;
+        if (!newId) throw new Error('Invalid draft response');
+        setSavedInvoiceId(newId);
+        return newId as string;
     };
 
 
     const onSubmit: SubmitHandler<InvoiceFormValues> = async () => {
         setIsSaving(true);
         try {
-            const finalInvoiceId = await saveInvoice('Pending');
-            setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
+            const finalInvoiceId = await upsertDraft();
+            // Issue+send (server will issue drafts automatically)
+            if (!user) throw new Error('User not authenticated');
+            const token = await user.getIdToken();
+            const sendRes = await fetch(`/api/v1/invoices/${finalInvoiceId}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ channel: 'email' }),
+                cache: 'no-store',
+            });
+            if (!sendRes.ok) throw new Error(`Failed to send invoice (${sendRes.status})`);
             setShowSendDialog(true);
         } catch (error) {
             console.error("Error sending invoice:", error);
@@ -287,7 +319,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         
         setIsSaving(true);
         try {
-            await saveInvoice('Draft');
+            await upsertDraft();
             toast({ title: "Draft Saved", description: "Your invoice has been saved." });
             onBack();
         } catch (error) {
@@ -323,11 +355,9 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                     <CardHeader className="flex flex-col md:flex-row justify-between gap-4 items-start">
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-start w-full">
                             <div className="space-y-2 col-span-2 md:col-span-1">
-                                <Label htmlFor="invoiceNumber">Invoice #</Label>
-                                <Input id="invoiceNumber" {...register('invoiceNumber')} className="h-10" />
-                                <div className="h-4">
-                                  {errors.invoiceNumber && <p className="text-sm text-destructive">{errors.invoiceNumber.message}</p>}
-                                </div>
+                                <Label>Invoice</Label>
+                                <Input value={isEditing ? 'Editing draft' : 'New draft'} readOnly className="h-10" />
+                                <div className="h-4" />
                             </div>
                              <div className="space-y-2 col-span-2 md:col-span-1">
                                 <Label>Currency</Label>
@@ -374,22 +404,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                             </div>
                             <div className="space-y-2 col-span-1">
                                 <Label>Status</Label>
-                                <Controller
-                                    name="status"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <Select onValueChange={field.onChange} defaultValue={field.value || 'Pending'}>
-                                            <SelectTrigger>
-                                                <SelectValue/>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Draft">Draft</SelectItem>
-                                                <SelectItem value="Pending">Pending</SelectItem>
-                                                <SelectItem value="Paid">Paid</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
+                                <Input value="Draft" readOnly className="h-10" />
                             </div>
                             <div className="space-y-2 col-span-1">
                                 <Label>Due Date</Label>

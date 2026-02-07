@@ -164,6 +164,17 @@ async function refundToAccount(
     }
 
     await prisma.$transaction(async (tx: any) => {
+      // Idempotency: if a ledger entry already exists for this referenceId, do nothing.
+      if (referenceId) {
+        const existing = await tx.ledgerEntry.findFirst({
+          where: { accountId, referenceId: String(referenceId) },
+          select: { id: true },
+        });
+        if (existing) {
+          return;
+        }
+      }
+
       const lockedAccount = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
         SELECT id, balance
         FROM "Account"
@@ -192,7 +203,7 @@ async function refundToAccount(
           balanceAfter: newBalance,
           type: 'CREDIT',
           description: description,
-          referenceId: referenceId || null,
+          referenceId: referenceId ? String(referenceId) : null,
         },
       });
     });
@@ -495,11 +506,22 @@ async function handleBillPaymentSuccess(data: any) {
   
   try {
     const customId = data.customIdentifier;
-    const [, userId, accountId] = customId?.split('-') || [];
+    const paymentOrderId =
+      typeof customId === 'string' && customId.startsWith('po_') ? customId.slice('po_'.length) : null;
+    const [, legacyUserId, legacyAccountId] = customId?.split('-') || [];
 
-    await prisma.externalTransaction.upsert({
+    // Prefer canonical PaymentOrder correlation.
+    const order = paymentOrderId
+      ? await prisma.paymentOrder.findUnique({ where: { id: paymentOrderId } }).catch(() => null)
+      : null;
+
+    const userId = order?.userId || legacyUserId || 'unknown';
+    const accountId = order?.sourceAccountId || legacyAccountId || null;
+    const providerTransactionId = data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`;
+
+    const tx = await prisma.externalTransaction.upsert({
       where: {
-        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        providerTransactionId,
       },
       update: {
         status: 'COMPLETED',
@@ -520,7 +542,7 @@ async function handleBillPaymentSuccess(data: any) {
         userId: userId || 'unknown',
         accountId: accountId || null,
         provider: 'RELOADLY',
-        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        providerTransactionId,
         type: 'BILL_PAYMENT',
         status: 'COMPLETED',
         amount: data.amount || 0,
@@ -539,6 +561,27 @@ async function handleBillPaymentSuccess(data: any) {
         completedAt: new Date(),
       },
     });
+
+    if (order) {
+      await prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'COMPLETED',
+          providerRef: String(data.transactionId || order.providerRef || ''),
+          externalTxId: tx.id,
+          completedAt: new Date(),
+          errorMessage: null,
+          metadata: {
+            ...(order.metadata as any),
+            providerTransactionId,
+            receiptNumber: data.receiptNumber || data.receipt || data.transactionId?.toString(),
+            receiptUrl: data.receiptUrl || data.receiptLink,
+            confirmationCode: data.confirmationCode || data.confirmationNumber,
+            paymentDate: data.paymentDate || new Date().toISOString(),
+          },
+        },
+      });
+    }
   } catch (error) {
     console.error('[Webhook Service] Error updating bill payment transaction:', error);
   }
@@ -554,11 +597,21 @@ async function handleBillPaymentFailed(data: any) {
   
   try {
     const customId = data.customIdentifier;
-    const [, userId, accountId] = customId?.split('-') || [];
+    const paymentOrderId =
+      typeof customId === 'string' && customId.startsWith('po_') ? customId.slice('po_'.length) : null;
+    const [, legacyUserId, legacyAccountId] = customId?.split('-') || [];
+
+    const order = paymentOrderId
+      ? await prisma.paymentOrder.findUnique({ where: { id: paymentOrderId } }).catch(() => null)
+      : null;
+
+    const userId = order?.userId || legacyUserId || 'unknown';
+    const accountId = order?.sourceAccountId || legacyAccountId || null;
+    const providerTransactionId = data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`;
 
     const transactionRecord = await prisma.externalTransaction.upsert({
       where: {
-        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        providerTransactionId,
       },
       update: {
         status: 'FAILED',
@@ -571,7 +624,7 @@ async function handleBillPaymentFailed(data: any) {
         userId: userId || 'unknown',
         accountId: accountId || null,
         provider: 'RELOADLY',
-        providerTransactionId: data.transactionId?.toString() || `reloadly-bill-${data.transactionId}`,
+        providerTransactionId,
         type: 'BILL_PAYMENT',
         status: 'FAILED',
         amount: data.amount || 0,
@@ -583,14 +636,37 @@ async function handleBillPaymentFailed(data: any) {
       },
     });
 
-    if (accountId && data.amount) {
+    // Update canonical PaymentOrder status when available.
+    if (order) {
+      await prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: {
+          status: 'FAILED',
+          providerRef: String(data.transactionId || order.providerRef || ''),
+          externalTxId: transactionRecord.id,
+          errorMessage: data.errorMessage || 'Bill payment failed',
+          metadata: {
+            ...(order.metadata as any),
+            providerTransactionId,
+            failureReason: data.errorMessage || data.status || 'Bill payment failed',
+          },
+        },
+      });
+    }
+
+    // Refund: prefer PaymentOrder amounts/currency; fall back to webhook payload.
+    const refundAmount = order ? Number(order.sourceAmount) : Number(data.amount);
+    const refundCurrency = order ? String(order.sourceCurrency) : String(data.currencyCode || 'USD');
+    const refundReferenceId = order ? `po:${order.id}:refund` : transactionRecord.id;
+
+    if (accountId && refundAmount) {
       try {
         await refundToAccount(
           accountId,
-          data.amount,
-          data.currencyCode || 'USD',
+          refundAmount,
+          refundCurrency,
           `Refund for failed bill payment`,
-          transactionRecord.id
+          refundReferenceId
         );
       } catch (refundError) {
         console.error('[Webhook Service] Failed to refund balance:', refundError);

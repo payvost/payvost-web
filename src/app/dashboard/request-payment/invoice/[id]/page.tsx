@@ -2,8 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { doc, onSnapshot, DocumentData, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import type { DocumentData } from 'firebase/firestore';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -29,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useAuth } from '@/hooks/use-auth';
 
 function InvoiceDetailsPageContent() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
@@ -36,6 +36,7 @@ function InvoiceDetailsPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const id = params.id as string;
+    const { user } = useAuth();
     const [invoice, setInvoice] = useState<DocumentData | null>(null);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
@@ -45,24 +46,38 @@ function InvoiceDetailsPageContent() {
 
     useEffect(() => {
         if (!id) return;
+        if (!user) return;
 
-        const invoiceUnsub = onSnapshot(doc(db, "invoices", id), (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                setInvoice({ id: doc.id, ...data });
-            } else {
-                setInvoice(null);
+        let cancelled = false;
+
+        (async () => {
+            setLoading(true);
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch(`/api/v1/invoices/${id}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    setInvoice(null);
+                    return;
+                }
+
+                const data = await res.json();
+                if (cancelled) return;
+                setInvoice(data);
+            } catch (e) {
+                console.error('Error fetching invoice:', e);
+                if (!cancelled) setInvoice(null);
+            } finally {
+                if (!cancelled) setLoading(false);
             }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching invoice:", error);
-            setLoading(false);
-        });
+        })();
 
-        return () => {
-            invoiceUnsub();
-        };
-    }, [id]);
+        return () => { cancelled = true; };
+    }, [id, user]);
 
     const copyLink = (link: string) => {
         if (!link) {
@@ -83,11 +98,17 @@ function InvoiceDetailsPageContent() {
     const handleMarkAsPaid = async () => {
         if (!id) return;
         try {
-            const docRef = doc(db, 'invoices', id);
-            await updateDoc(docRef, {
-                status: 'Paid',
-                paidAt: new Date(),
+            if (!user) throw new Error('Not authenticated');
+            const token = await user.getIdToken();
+            const res = await fetch(`/api/invoices/${id}/mark-paid`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                cache: 'no-store',
             });
+            if (!res.ok) {
+                const err = await res.json().catch(() => null) as any;
+                throw new Error(err?.error || `Failed to mark paid (${res.status})`);
+            }
             toast({
                 title: 'Status Updated',
                 description: 'The invoice has been marked as paid.',
@@ -100,8 +121,17 @@ function InvoiceDetailsPageContent() {
     const handleDelete = async () => {
         if (!id) return;
         try {
-            const docRef = doc(db, 'invoices', id);
-            await deleteDoc(docRef);
+            if (!user) throw new Error('Not authenticated');
+            const token = await user.getIdToken();
+            const res = await fetch(`/api/v1/invoices/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+                cache: 'no-store',
+            });
+            if (!res.ok && res.status !== 204) {
+                const err = await res.json().catch(() => null) as any;
+                throw new Error(err?.error || `Failed to delete invoice (${res.status})`);
+            }
             toast({
                 title: 'Invoice Deleted',
                 description: 'The invoice has been permanently deleted.',

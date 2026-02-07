@@ -13,20 +13,68 @@ export interface VirtualCard {
   id: string;
   cardLabel: string;
   last4: string;
-  cardType: 'visa' | 'mastercard' | 'amex';
-  expiry: string;
-  cvv?: string;
+  cardType: 'visa' | 'mastercard';
+  expiry?: string;
   balance: number;
   currency: string;
   theme?: string;
-  status: 'active' | 'frozen' | 'cancelled';
-  fullNumber?: string;
+  status: 'active' | 'frozen' | 'terminated';
   spendingLimit?: {
     amount: number;
-    currency: string;
+    interval: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all_time';
   };
-  cardModel?: 'debit' | 'credit';
-  availableCredit?: number;
+}
+
+type CardV2 = {
+  id: string;
+  label: string;
+  last4: string;
+  network: 'VISA' | 'MASTERCARD';
+  expMonth?: number | null;
+  expYear?: number | null;
+  currency: string;
+  status: 'ACTIVE' | 'FROZEN' | 'TERMINATED';
+  controls?: { spendLimitAmount?: any; spendLimitInterval?: string } | null;
+};
+
+function toExpiry(expMonth?: number | null, expYear?: number | null): string | undefined {
+  if (!expMonth || !expYear) return undefined;
+  return `${String(expMonth).padStart(2, '0')}/${String(expYear).slice(-2)}`;
+}
+
+function mapCardV2ToLegacy(card: CardV2): VirtualCard {
+  return {
+    id: card.id,
+    cardLabel: card.label,
+    last4: card.last4,
+    cardType: card.network === 'MASTERCARD' ? 'mastercard' : 'visa',
+    expiry: toExpiry(card.expMonth, card.expYear),
+    balance: 0,
+    currency: card.currency || 'USD',
+    status: card.status === 'FROZEN' ? 'frozen' : card.status === 'TERMINATED' ? 'terminated' : 'active',
+    spendingLimit: card.controls?.spendLimitAmount
+      ? {
+          amount: Number(card.controls.spendLimitAmount),
+          interval: ((card.controls.spendLimitInterval || 'MONTHLY') as string).toLowerCase() as any,
+        }
+      : undefined,
+  };
+}
+
+async function getAuthHeader() {
+  const token = await SecureStorage.getToken('auth_token');
+  if (!token) throw new Error('Not authenticated');
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function getDefaultAccountId(workspaceType: 'PERSONAL' | 'BUSINESS'): Promise<string> {
+  const headers = await getAuthHeader();
+  const resp = await axios.get(`${API_URL}/api/wallet/accounts`, { headers });
+  const accounts = resp.data?.accounts || [];
+  const wantedType = workspaceType === 'BUSINESS' ? 'BUSINESS' : 'PERSONAL';
+  const match = accounts.find((a: any) => a.type === wantedType) || accounts[0];
+  if (!match?.id) throw new Error('No funding account available');
+  return match.id;
 }
 
 /**
@@ -34,18 +82,10 @@ export interface VirtualCard {
  */
 export const getCards = async (): Promise<VirtualCard[]> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await axios.get(`${API_URL}/api/cards`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return response.data.cards || response.data || [];
+    const headers = await getAuthHeader();
+    const response = await axios.get(`${API_URL}/api/v1/cards?workspaceType=PERSONAL&limit=200`, { headers });
+    const cards = (response.data?.cards || []) as CardV2[];
+    return cards.map(mapCardV2ToLegacy);
   } catch (error: any) {
     console.error('Error fetching cards:', error);
     throw new Error(error.response?.data?.error || 'Failed to fetch cards');
@@ -57,11 +97,12 @@ export const getCards = async (): Promise<VirtualCard[]> => {
  */
 export interface CreateCardRequest {
   cardLabel: string;
-  currency: string;
-  cardModel?: 'debit' | 'credit';
+  workspaceType?: 'PERSONAL' | 'BUSINESS';
+  accountId?: string;
+  network?: 'VISA' | 'MASTERCARD';
   spendingLimit?: {
     amount: number;
-    currency: string;
+    interval?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'ALL_TIME';
   };
   theme?: string;
 }
@@ -72,23 +113,30 @@ export interface CreateCardResponse {
 
 export const createCard = async (data: CreateCardRequest): Promise<CreateCardResponse> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
+    const workspaceType = data.workspaceType || 'PERSONAL';
+    const headers = await getAuthHeader();
+    const accountId = data.accountId || (await getDefaultAccountId(workspaceType));
 
-    const response = await axios.post(
-      `${API_URL}/api/cards`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const payload = {
+      workspaceType,
+      accountId,
+      label: data.cardLabel,
+      network: data.network || 'VISA',
+      type: 'VIRTUAL',
+      controls: data.spendingLimit?.amount
+        ? {
+            spendLimitAmount: data.spendingLimit.amount,
+            spendLimitInterval: data.spendingLimit.interval || 'MONTHLY',
+          }
+        : undefined,
+    };
 
-    return { card: response.data };
+    const response = await axios.post(`${API_URL}/api/v1/cards`, payload, {
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+
+    const created = response.data?.card as CardV2;
+    return { card: mapCardV2ToLegacy(created) };
   } catch (error: any) {
     console.error('Error creating card:', error);
     throw new Error(error.response?.data?.error || 'Failed to create card');
@@ -100,18 +148,10 @@ export const createCard = async (data: CreateCardRequest): Promise<CreateCardRes
  */
 export const getCardDetails = async (cardId: string): Promise<VirtualCard> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await axios.get(`${API_URL}/api/cards/${cardId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return response.data.card || response.data;
+    const headers = await getAuthHeader();
+    const response = await axios.get(`${API_URL}/api/v1/cards/${cardId}`, { headers });
+    const card = response.data?.card as CardV2;
+    return mapCardV2ToLegacy(card);
   } catch (error: any) {
     console.error('Error fetching card details:', error);
     throw new Error(error.response?.data?.error || 'Failed to fetch card details');
@@ -123,26 +163,18 @@ export const getCardDetails = async (cardId: string): Promise<VirtualCard> => {
  */
 export const updateCardStatus = async (
   cardId: string,
-  status: 'active' | 'frozen' | 'cancelled'
+  status: 'active' | 'frozen' | 'terminated'
 ): Promise<VirtualCard> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
+    const headers = await getAuthHeader();
+    if (status === 'terminated') {
+      await axios.post(`${API_URL}/api/v1/cards/${cardId}/terminate`, {}, { headers });
+      return await getCardDetails(cardId);
     }
 
-    const response = await axios.patch(
-      `${API_URL}/api/cards/${cardId}/status`,
-      { status },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return response.data.card || response.data;
+    const endpoint = status === 'frozen' ? 'freeze' : 'unfreeze';
+    await axios.post(`${API_URL}/api/v1/cards/${cardId}/${endpoint}`, {}, { headers });
+    return await getCardDetails(cardId);
   } catch (error: any) {
     console.error('Error updating card status:', error);
     throw new Error(error.response?.data?.error || 'Failed to update card status');
@@ -154,16 +186,8 @@ export const updateCardStatus = async (
  */
 export const deleteCard = async (cardId: string): Promise<void> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    await axios.delete(`${API_URL}/api/cards/${cardId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const headers = await getAuthHeader();
+    await axios.post(`${API_URL}/api/v1/cards/${cardId}/terminate`, {}, { headers });
   } catch (error: any) {
     console.error('Error deleting card:', error);
     throw new Error(error.response?.data?.error || 'Failed to delete card');
@@ -175,22 +199,12 @@ export const deleteCard = async (cardId: string): Promise<void> => {
  */
 export const getCardTransactions = async (cardId: string, limit = 50, offset = 0) => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await axios.get(
-      `${API_URL}/api/cards/${cardId}/transactions`,
-      {
-        params: { limit, offset },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    return response.data.transactions || response.data || [];
+    const headers = await getAuthHeader();
+    const response = await axios.get(`${API_URL}/api/v1/cards/${cardId}/transactions`, {
+      params: { limit },
+      headers,
+    });
+    return response.data.transactions || [];
   } catch (error: any) {
     console.error('Error fetching card transactions:', error);
     throw new Error(error.response?.data?.error || 'Failed to fetch card transactions');
@@ -202,26 +216,19 @@ export const getCardTransactions = async (cardId: string, limit = 50, offset = 0
  */
 export const updateCardLimit = async (
   cardId: string,
-  spendingLimit: { amount: number; currency: string }
+  spendingLimit: { amount: number; interval?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'ALL_TIME' }
 ): Promise<VirtualCard> => {
   try {
-    const token = await SecureStorage.getToken('auth_token');
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await axios.patch(
-      `${API_URL}/api/cards/${cardId}/limit`,
-      { spendingLimit },
+    const headers = await getAuthHeader();
+    await axios.patch(
+      `${API_URL}/api/v1/cards/${cardId}/controls`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+        spendLimitAmount: spendingLimit.amount,
+        spendLimitInterval: spendingLimit.interval || 'MONTHLY',
+      },
+      { headers: { ...headers, 'Content-Type': 'application/json' } }
     );
-
-    return response.data.card || response.data;
+    return await getCardDetails(cardId);
   } catch (error: any) {
     console.error('Error updating card limit:', error);
     throw new Error(error.response?.data?.error || 'Failed to update card limit');

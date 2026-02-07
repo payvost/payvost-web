@@ -1,11 +1,70 @@
 import { Router, Request, Response } from 'express';
 import { InvoiceService, InvoiceRecipient } from './src/invoice-service';
+import { InvoiceV1Service } from './src/invoice-v1-service';
 import { verifyFirebaseToken, AuthenticatedRequest } from '../../gateway/middleware';
 import { prisma } from '../../common/prisma';
 import admin from '../../firebase';
 
 const router = Router();
 const invoiceService = new InvoiceService(prisma);
+const invoiceV1 = new InvoiceV1Service(prisma);
+
+function titleCaseStatus(status: string | null | undefined): string {
+  const raw = String(status || '').trim();
+  if (!raw) return 'Draft';
+  return raw
+    .toLowerCase()
+    .split('_')
+    .map(s => (s ? s[0].toUpperCase() + s.slice(1) : s))
+    .join(' ');
+}
+
+function serializeInvoiceForUi(invoice: any, publicLinkToken?: string | null) {
+  const grandTotal = typeof invoice?.grandTotal === 'object' && invoice?.grandTotal !== null
+    ? parseFloat(invoice.grandTotal.toString())
+    : Number(invoice?.grandTotal || 0);
+  const taxRate = typeof invoice?.taxRate === 'object' && invoice?.taxRate !== null
+    ? parseFloat(invoice.taxRate.toString())
+    : Number(invoice?.taxRate || 0);
+
+  const fromInfo = invoice?.fromInfo || {};
+  const toInfo = invoice?.toInfo || {};
+  const paymentMethod = String(invoice?.paymentMethod || 'PAYVOST').toLowerCase();
+  const manualBankDetails = invoice?.manualBankDetails || null;
+
+  const publicUrl = publicLinkToken ? `/i/${publicLinkToken}` : null;
+
+  return {
+    ...invoice,
+    status: titleCaseStatus(invoice?.status),
+    grandTotal,
+    taxRate,
+    issueDate: invoice?.issueDate instanceof Date ? invoice.issueDate.toISOString() : invoice?.issueDate,
+    dueDate: invoice?.dueDate instanceof Date ? invoice.dueDate.toISOString() : invoice?.dueDate,
+    createdAt: invoice?.createdAt instanceof Date ? invoice.createdAt.toISOString() : invoice?.createdAt,
+    updatedAt: invoice?.updatedAt instanceof Date ? invoice.updatedAt.toISOString() : invoice?.updatedAt,
+    paidAt: invoice?.paidAt instanceof Date ? invoice.paidAt.toISOString() : invoice?.paidAt ?? null,
+    issuedAt: invoice?.issuedAt instanceof Date ? invoice.issuedAt.toISOString() : invoice?.issuedAt ?? null,
+    sentAt: invoice?.sentAt instanceof Date ? invoice.sentAt.toISOString() : invoice?.sentAt ?? null,
+    viewedAt: invoice?.viewedAt instanceof Date ? invoice.viewedAt.toISOString() : invoice?.viewedAt ?? null,
+    voidedAt: invoice?.voidedAt instanceof Date ? invoice.voidedAt.toISOString() : invoice?.voidedAt ?? null,
+    // Flatten for existing UI components (legacy compatibility)
+    fromName: fromInfo?.name || invoice?.fromName || '',
+    fromAddress: fromInfo?.address || invoice?.fromAddress || '',
+    fromEmail: fromInfo?.email || invoice?.fromEmail || '',
+    toName: toInfo?.name || invoice?.toName || '',
+    toAddress: toInfo?.address || invoice?.toAddress || '',
+    toEmail: toInfo?.email || invoice?.toEmail || '',
+    items: invoice?.items || [],
+    paymentMethod,
+    manualBankName: manualBankDetails?.bankName || invoice?.manualBankName || '',
+    manualAccountName: manualBankDetails?.accountName || invoice?.manualAccountName || '',
+    manualAccountNumber: manualBankDetails?.accountNumber || invoice?.manualAccountNumber || '',
+    manualOtherDetails: manualBankDetails?.otherDetails || invoice?.manualOtherDetails || '',
+    publicUrl,
+    publicLinkToken: publicLinkToken || null,
+  };
+}
 
 /**
  * GET /invoices
@@ -18,14 +77,17 @@ router.get('/', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Resp
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { status, limit, offset } = req.query;
-    const result = await invoiceService.listUserInvoices(userId, {
+    const { status, limit, offset, invoiceType } = req.query as any;
+    const result = await invoiceV1.listInvoices(userId, {
       status: status as any,
+      invoiceType: invoiceType as any,
       limit: limit ? parseInt(limit as string) : undefined,
       offset: offset ? parseInt(offset as string) : undefined,
     });
 
-    res.json(result);
+    // Keep legacy response shape while adding public link info for UI.
+    const invoices = result.invoices.map((inv: any) => serializeInvoiceForUi(inv, inv?.PublicLink?.token || null));
+    res.json({ invoices, total: result.total });
   } catch (error: any) {
     console.error('Error listing invoices:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -86,139 +148,52 @@ router.get('/business', verifyFirebaseToken, async (req: AuthenticatedRequest, r
 });
 
 /**
- * GET /invoices/:id
- * Get invoice by ID
+ * POST /invoices/drafts
+ * Create a draft invoice (v1 command-style endpoint)
  */
-router.get('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/drafts', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { id } = req.params;
     const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const invoice = await invoiceService.getInvoiceById(id, userId);
-
-    if (!invoice) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-
-    res.json(invoice);
+    const invoice = await invoiceV1.createDraft(userId, req.body);
+    res.status(201).json(serializeInvoiceForUi(invoice));
   } catch (error: any) {
-    console.error('Error getting invoice:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
-  }
-});
-
-/**
- * GET /invoices/public/:id
- * Get public invoice (no auth required)
- * Returns invoice data with business profile if available
- */
-router.get('/public/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    console.log(`[Public Invoice] Fetching invoice: ${id}`);
-
-    let invoice;
-    try {
-      invoice = await invoiceService.getPublicInvoice(id);
-    } catch (serviceError: any) {
-      console.error('[Public Invoice] Service error:', serviceError);
-      console.error('[Public Invoice] Service error stack:', serviceError?.stack);
-
-      // If it's a Firebase initialization error, return a more helpful message
-      if (serviceError?.message?.includes('not initialized') ||
-        serviceError?.message?.includes('not available')) {
-        return res.status(503).json({
-          error: 'Service temporarily unavailable',
-          details: 'Database service is not properly configured'
-        });
-      }
-
-      // Re-throw to be caught by outer catch
-      throw serviceError;
-    }
-
-    if (!invoice) {
-      console.log(`[Public Invoice] Invoice not found: ${id}`);
-      return res.status(404).json({ error: 'Invoice not found or not public' });
-    }
-
-    console.log(`[Public Invoice] Invoice found: ${id}, type: ${invoice.invoiceType}`);
-
-    // Try to fetch business profile if businessId exists
-    let businessProfile = null;
-    if (invoice.businessId) {
-      try {
-        const db = admin.firestore();
-
-        // Query users collection for business profile
-        const usersSnapshot = await db.collection('users')
-          .where('businessProfile.id', '==', invoice.businessId)
-          .limit(1)
-          .get();
-
-        if (!usersSnapshot.empty) {
-          const userData = usersSnapshot.docs[0].data();
-          businessProfile = userData.businessProfile || null;
-        }
-      } catch (profileError) {
-        console.warn('Could not fetch business profile:', profileError);
-        // Continue without business profile
-      }
-    }
-
-    // Convert Prisma Decimal objects to numbers and dates to ISO strings for JSON serialization
-    const serializedInvoice = {
-      ...invoice,
-      grandTotal: typeof invoice.grandTotal === 'object' && invoice.grandTotal !== null
-        ? parseFloat(invoice.grandTotal.toString())
-        : invoice.grandTotal,
-      taxRate: typeof invoice.taxRate === 'object' && invoice.taxRate !== null
-        ? parseFloat(invoice.taxRate.toString())
-        : invoice.taxRate || 0,
-      issueDate: invoice.issueDate instanceof Date
-        ? invoice.issueDate.toISOString()
-        : invoice.issueDate,
-      dueDate: invoice.dueDate instanceof Date
-        ? invoice.dueDate.toISOString()
-        : invoice.dueDate,
-      createdAt: invoice.createdAt instanceof Date
-        ? invoice.createdAt.toISOString()
-        : invoice.createdAt,
-      updatedAt: invoice.updatedAt instanceof Date
-        ? invoice.updatedAt.toISOString()
-        : invoice.updatedAt,
-      businessProfile,
-    };
-
-    res.json(serializedInvoice);
-  } catch (error: any) {
-    console.error('Error getting public invoice:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      error: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('Error creating draft invoice:', error);
+    res.status(400).json({ error: error.message || 'Invalid invoice data' });
   }
 });
 
 /**
  * POST /invoices
- * Create new invoice
+ * Legacy create endpoint (kept for backward compatibility).
+ * Creates a draft, and issues immediately when caller indicates a non-draft lifecycle.
  */
 router.post('/', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.uid;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const draft = await invoiceV1.createDraft(userId, req.body);
+
+    const requestedStatus = String(req.body?.status || '').toUpperCase();
+    const shouldIssue = requestedStatus && requestedStatus !== 'DRAFT' && requestedStatus !== 'DRAFTS';
+    const shouldSend = Boolean(req.body?.send === true);
+
+    if (shouldIssue || shouldSend) {
+      const issued = await invoiceV1.issueInvoice(userId, (draft as any).id);
+      if (shouldSend) {
+        // Reuse /:id/send behavior for eventing + best-effort notifications.
+        const updated = await prisma.invoice.update({
+          where: { id: issued.invoice.id },
+          data: { status: 'SENT' as any, sentAt: new Date() },
+        });
+        return res.status(201).json(serializeInvoiceForUi(updated, issued.publicLink?.token || null));
+      }
+      return res.status(201).json(serializeInvoiceForUi(issued.invoice, issued.publicLink?.token || null));
     }
 
-    const invoice = await invoiceService.createInvoice({
-      ...req.body,
-      userId,
-      createdBy: userId,
-    });
-
-    res.status(201).json(invoice);
+    return res.status(201).json(serializeInvoiceForUi(draft));
   } catch (error: any) {
     console.error('Error creating invoice:', error);
     res.status(400).json({ error: error.message || 'Invalid invoice data' });
@@ -226,10 +201,120 @@ router.post('/', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Res
 });
 
 /**
- * PATCH /invoices/:id
- * Update invoice
+ * POST /invoices/:id/issue
+ * Issue an invoice (locks it + assigns invoice number + creates public token link)
  */
-router.patch('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:id/issue', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { invoice, publicLink } = await invoiceV1.issueInvoice(userId, id);
+    res.json({
+      invoice: serializeInvoiceForUi(invoice, publicLink?.token || null),
+      publicLink: {
+        token: publicLink.token,
+        url: `/i/${publicLink.token}`,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error issuing invoice:', error);
+    res.status(400).json({ error: error.message || 'Failed to issue invoice' });
+  }
+});
+
+/**
+ * POST /invoices/:id/send
+ * Marks invoice as sent and triggers notification delivery (best-effort).
+ */
+router.post('/:id/send', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    let invoice = await invoiceV1.getInvoice(userId, id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    // Ensure it is issued (and has a token link) before sending.
+    let publicToken: string | null = (invoice as any)?.PublicLink?.token || null;
+    if ((invoice as any).status === ('DRAFT' as any)) {
+      const issued = await invoiceV1.issueInvoice(userId, id);
+      invoice = issued.invoice as any;
+      publicToken = issued.publicLink?.token || null;
+    } else if (!publicToken) {
+      const link = await invoiceV1.upsertPublicLink(id);
+      publicToken = link.token;
+    }
+
+    // Update lifecycle fields.
+    const nextStatus = (invoice as any).status === ('ISSUED' as any) || (invoice as any).status === ('PENDING' as any)
+      ? ('SENT' as any)
+      : (invoice as any).status;
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        sentAt: (invoice as any).sentAt ? undefined : new Date(),
+      },
+    });
+
+    await prisma.invoiceEvent.create({
+      data: {
+        invoiceId: id,
+        actorUserId: userId,
+        type: 'INVOICE_SENT' as any,
+        payload: { channel: req.body?.channel || 'email' },
+      },
+    });
+
+    // Best-effort notification delivery.
+    const toInfo = (updated as any).toInfo as InvoiceRecipient;
+    const customerEmail = toInfo?.email;
+    if (customerEmail) {
+      const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
+      const publicUrl = publicToken ? `/i/${publicToken}` : null;
+
+      fetch(`${NOTIFICATION_SERVICE_URL}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'invoice-generated',
+          email: customerEmail,
+          subject: `Invoice ${updated.invoiceNumber}`,
+          template: 'invoice template',
+          variables: {
+            invoiceNumber: updated.invoiceNumber,
+            amount: typeof (updated as any).grandTotal === 'object' ? parseFloat((updated as any).grandTotal.toString()) : Number((updated as any).grandTotal || 0),
+            currency: (updated as any).currency || 'USD',
+            dueDate: (updated as any).dueDate instanceof Date ? (updated as any).dueDate.toISOString().split('T')[0] : (updated as any).dueDate,
+            customerName: toInfo?.name || 'Valued Customer',
+            publicUrl,
+          },
+        }),
+      }).catch(() => {
+        // Ignore notification errors; the invoice is still sent from a system-of-record perspective.
+      });
+    }
+
+    res.json({
+      invoice: serializeInvoiceForUi(updated, publicToken),
+      publicLink: publicToken
+        ? { token: publicToken, url: `/i/${publicToken}` }
+        : null,
+    });
+  } catch (error: any) {
+    console.error('Error sending invoice:', error);
+    res.status(400).json({ error: error.message || 'Failed to send invoice' });
+  }
+});
+
+/**
+ * POST /invoices/:id/void
+ */
+router.post('/:id/void', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.uid;
@@ -237,14 +322,84 @@ router.patch('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res:
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const invoice = await invoiceService.updateInvoice(id, userId, req.body);
-    res.json(invoice);
+    const reason = req.body?.reason;
+    const invoice = await invoiceV1.voidInvoice(userId, id, reason);
+    res.json(serializeInvoiceForUi(invoice));
+  } catch (error: any) {
+    console.error('Error voiding invoice:', error);
+    res.status(400).json({ error: error.message || 'Failed to void invoice' });
+  }
+});
+
+/**
+ * POST /invoices/:id/credit-notes
+ */
+router.post('/:id/credit-notes', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.uid;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const issued = await invoiceV1.createCreditNote(userId, id, {
+      reason: req.body?.reason,
+      amount: req.body?.amount,
+    });
+
+    res.json({
+      creditNote: serializeInvoiceForUi(issued.invoice, issued.publicLink?.token || null),
+      publicLink: {
+        token: issued.publicLink?.token,
+        url: issued.publicLink?.token
+          ? `${process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'http://localhost:3000'}/i/${issued.publicLink.token}`
+          : null,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error creating credit note:', error);
+    res.status(400).json({ error: error.message || 'Failed to create credit note' });
+  }
+});
+
+/**
+ * PATCH /invoices/:id
+ * Update invoice (draft-only, v1 behavior)
+ */
+router.patch('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const invoice = await invoiceV1.updateDraft(userId, id, req.body);
+    res.json(serializeInvoiceForUi(invoice));
   } catch (error: any) {
     console.error('Error updating invoice:', error);
-    if (error.message === 'Invoice not found' || error.message === 'Unauthorized') {
-      return res.status(404).json({ error: error.message });
-    }
+    if (error.message === 'Invoice not found') return res.status(404).json({ error: error.message });
+    if (error.message === 'Unauthorized') return res.status(403).json({ error: error.message });
+    if (error.message === 'Only drafts can be edited') return res.status(409).json({ error: error.message });
     res.status(400).json({ error: error.message || 'Invalid update data' });
+  }
+});
+
+/**
+ * GET /invoices/:id
+ * Get invoice by ID
+ */
+router.get('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const invoice = await invoiceV1.getInvoice(userId, id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    res.json(serializeInvoiceForUi(invoice, (invoice as any)?.PublicLink?.token || null));
+  } catch (error: any) {
+    console.error('Error getting invoice:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -341,7 +496,14 @@ router.delete('/:id', verifyFirebaseToken, async (req: AuthenticatedRequest, res
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    await invoiceService.deleteInvoice(id, userId);
+    const invoice = await invoiceV1.getInvoice(userId, id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    if ((invoice as any).status !== ('DRAFT' as any)) {
+      return res.status(409).json({ error: 'Only drafts can be deleted. Issued invoices must be voided.' });
+    }
+
+    await prisma.invoice.delete({ where: { id } });
     res.status(204).send();
   } catch (error: any) {
     console.error('Error deleting invoice:', error);

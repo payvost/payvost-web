@@ -1,25 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, deleteDoc, query, where } from 'firebase/firestore';
-import { Loader2, Star, Trash2, Zap } from 'lucide-react';
+import { Loader2, Trash2, Zap } from 'lucide-react';
 import { format } from 'date-fns';
+import { paymentsService } from '@/services/paymentsService';
 
-interface SavedBillTemplate {
+export interface SavedBillTemplate {
   id: string;
-  billerId: string;
-  billerName: string;
-  accountNumber: string;
-  nickname?: string;
-  lastPaidAmount: number;
-  lastPaidDate: Date;
-  currency: string;
-  category?: string;
+  providerEntityId: string; // billerId
+  nickname?: string | null;
+  lastUsedAt?: string | null;
+  fields: {
+    subscriberAccountNumber?: string;
+    targetCurrency?: string;
+    [key: string]: any;
+  };
 }
 
 interface SavedBillTemplatesProps {
@@ -27,42 +24,31 @@ interface SavedBillTemplatesProps {
 }
 
 export function SavedBillTemplates({ onSelectTemplate }: SavedBillTemplatesProps) {
-  const { user } = useAuth();
   const [templates, setTemplates] = useState<SavedBillTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadTemplates = async () => {
-      if (!user) return;
-
+    let cancelled = false;
+    (async () => {
       setLoading(true);
       try {
-        // Load from recent bill payments
-        const recentBillsRef = collection(db, 'users', user.uid, 'billTemplates');
-        const snapshot = await getDocs(recentBillsRef);
-        
-        const loadedTemplates = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as SavedBillTemplate[];
-
-        setTemplates(loadedTemplates);
+        const res = await paymentsService.templates('BILL_PAYMENT');
+        if (!cancelled) setTemplates((res.items || []) as SavedBillTemplate[]);
       } catch (error) {
-        console.error('Failed to load saved templates:', error);
+        console.error('Failed to load saved bill templates:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    loadTemplates();
-  }, [user]);
+  }, []);
 
   const handleDelete = async (templateId: string) => {
-    if (!user) return;
-
     try {
-      await deleteDoc(doc(db, 'users', user.uid, 'billTemplates', templateId));
-      setTemplates(templates.filter(t => t.id !== templateId));
+      await paymentsService.deleteTemplate(templateId);
+      setTemplates((prev) => prev.filter((t) => t.id !== templateId));
     } catch (error) {
       console.error('Failed to delete template:', error);
     }
@@ -116,31 +102,21 @@ export function SavedBillTemplates({ onSelectTemplate }: SavedBillTemplatesProps
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold mb-1">
-                    {template.nickname || template.billerName}
+                    {template.nickname || template.fields?.billerName || `Biller ${template.providerEntityId}`}
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Account: {template.accountNumber}</div>
-                    {template.lastPaidDate && (
-                      <div>
-                        Last paid: {format(new Date(template.lastPaidDate), 'MMM dd, yyyy')} • 
-                        {template.lastPaidAmount.toFixed(2)} {template.currency}
-                      </div>
-                    )}
+                    <div>Account: {template.fields?.subscriberAccountNumber || 'N/A'}</div>
+                    {template.lastUsedAt ? (
+                      <div>Last used: {format(new Date(template.lastUsedAt), 'MMM dd, yyyy')}</div>
+                    ) : null}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => onSelectTemplate(template)}
-                >
+                <Button size="sm" onClick={() => onSelectTemplate(template)}>
                   Pay Now
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDelete(template.id)}
-                >
+                <Button size="sm" variant="ghost" onClick={() => handleDelete(template.id)} aria-label="Delete template">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -151,4 +127,3 @@ export function SavedBillTemplates({ onSelectTemplate }: SavedBillTemplatesProps
     </Card>
   );
 }
-

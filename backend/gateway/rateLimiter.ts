@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 
 // Extend Express Request to include rateLimit property
 type RateLimitedRequest = Request & {
@@ -14,13 +14,13 @@ type RateLimitedRequest = Request & {
  * General API rate limiter
  * 100 requests per 15 minutes per IP
  */
-export const generalLimiter = rateLimit({
+export const generalLimiter: any = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req: RateLimitedRequest, res: Response) => {
+  handler: (req: any, res: any) => {
     res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many requests from this IP, please try again later.',
@@ -33,14 +33,14 @@ export const generalLimiter = rateLimit({
  * Strict rate limiter for authentication endpoints
  * 5 requests per 15 minutes per IP
  */
-export const authLimiter = rateLimit({
+export const authLimiter: any = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login attempts per windowMs
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful requests
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req: RateLimitedRequest, res: Response) => {
+  handler: (req: any, res: any) => {
     res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many authentication attempts, please try again later.',
@@ -53,13 +53,13 @@ export const authLimiter = rateLimit({
  * Rate limiter for financial transactions
  * 20 requests per minute per IP
  */
-export const transactionLimiter = rateLimit({
+export const transactionLimiter: any = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20, // Limit each IP to 20 transactions per minute
   message: 'Too many transaction requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req: RateLimitedRequest, res: Response) => {
+  handler: (req: any, res: any) => {
     res.status(429).json({
       error: 'Rate limit exceeded',
       message: 'Too many transaction requests, please try again later.',
@@ -76,11 +76,10 @@ export const createApiKeyLimiter = (maxRequests: number = 100, windowMs: number 
   return rateLimit({
     windowMs,
     max: maxRequests,
-    keyGenerator: (req: Request) => {
+    keyGenerator: (req: any) => {
       // Use API key from header if present, otherwise fall back to IP
-      const r = req as any;
-      const apiKey = r.headers?.['x-api-key'] as string;
-      return apiKey || r.ip || 'unknown';
+      const apiKey = req.headers?.['x-api-key'] as string;
+      return apiKey || req.ip || 'unknown';
     },
     message: 'API rate limit exceeded',
     standardHeaders: true,

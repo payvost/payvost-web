@@ -52,24 +52,31 @@ export default function BusinessInvoiceDetailsPage() {
 
         const fetchInvoice = async () => {
             try {
-                // Fetch invoice document directly (like regular invoices do)
-                const docRef = doc(db, 'businessInvoices', id);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const invoiceData = docSnap.data();
-                    setInvoice({ id: docSnap.id, ...invoiceData });
-                    
-                    // Load business profile if user is authenticated
-                    if (user) {
-                        const userDocRef = doc(db, 'users', user.uid);
-                        const userSnap = await getDoc(userDocRef);
-                        if (userSnap.exists()) {
-                            setBusinessProfile(userSnap.data().businessProfile || null);
-                        }
-                    }
-                } else {
+                if (!user) {
                     setInvoice(null);
+                    return;
+                }
+
+                const token = await user.getIdToken();
+                const res = await fetch(`/api/v1/invoices/${id}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    setInvoice(null);
+                    return;
+                }
+
+                const invoiceData = await res.json();
+                setInvoice(invoiceData);
+
+                // Load business profile
+                const userDocRef = doc(db, 'users', user.uid);
+                const userSnap = await getDoc(userDocRef);
+                if (userSnap.exists()) {
+                    setBusinessProfile(userSnap.data().businessProfile || null);
                 }
             } catch (error: any) {
                 console.error("Error fetching invoice:", error);
@@ -112,7 +119,7 @@ export default function BusinessInvoiceDetailsPage() {
     }
 
     const currentStatus = invoice.status as Status;
-    const currentStatusInfo = statusInfo[currentStatus];
+    const currentStatusInfo = statusInfo[currentStatus] || { icon: <FileText className="h-5 w-5" />, variant: 'outline' as const };
 
     const formatCurrency = (amount: number, currency: string) => {
         try {
@@ -128,15 +135,29 @@ export default function BusinessInvoiceDetailsPage() {
         }
     };
 
+    const formatDate = (date: any) => {
+        if (!date) return 'N/A';
+        if (date?.toDate && typeof date.toDate === 'function') {
+            return format(date.toDate(), 'PPP');
+        }
+        const d = date instanceof Date ? date : new Date(date);
+        return Number.isNaN(d.getTime()) ? 'N/A' : format(d, 'PPP');
+    };
+
     const subtotal = invoice.items.reduce((acc: number, item: any) => acc + (item.quantity || 0) * (item.price || 0), 0);
     const grandTotal = invoice.grandTotal || 0;
     const taxAmount = grandTotal - subtotal;
 
     const handlePrint = () => {
         if (!id) return;
+        const token = String((invoice as any)?.publicLinkToken || '');
+        if (!token) {
+          toast({ title: 'Not Available', description: 'Issue and send the invoice to generate a public token for PDF.', variant: 'destructive' });
+          return;
+        }
         
         // Open PDF in new window for printing
-        const pdfUrl = `/api/pdf/invoice/${id}`;
+        const pdfUrl = `/api/pdf/invoice/${id}?token=${encodeURIComponent(token)}`;
         window.open(pdfUrl, '_blank');
         
         toast({
@@ -160,7 +181,7 @@ export default function BusinessInvoiceDetailsPage() {
                 </div>
                  <div className="flex gap-2">
                     <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                    <a href={`/api/pdf/invoice/${id}`} download>
+                    <a href={`/api/pdf/invoice/${id}?token=${encodeURIComponent(String((invoice as any)?.publicLinkToken || ''))}`} download>
                         <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                     </a>
                     <Button><Send className="mr-2 h-4 w-4"/>Resend Invoice</Button>
@@ -198,8 +219,8 @@ export default function BusinessInvoiceDetailsPage() {
                             <p className="text-sm text-muted-foreground">{invoice.fromAddress}</p>
                         </div>
                         <div className="space-y-1 text-right">
-                            <p><strong className="font-semibold">Issue Date:</strong> {format(invoice.issueDate.toDate(), 'PPP')}</p>
-                            <p><strong className="font-semibold">Due Date:</strong> {format(invoice.dueDate.toDate(), 'PPP')}</p>
+                            <p><strong className="font-semibold">Issue Date:</strong> {formatDate(invoice.issueDate)}</p>
+                            <p><strong className="font-semibold">Due Date:</strong> {formatDate(invoice.dueDate)}</p>
                         </div>
                      </div>
                     <Table>

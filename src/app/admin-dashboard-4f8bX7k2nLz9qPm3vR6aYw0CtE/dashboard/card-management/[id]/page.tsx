@@ -11,37 +11,53 @@ import { VirtualCard } from '@/components/virtual-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import type { VirtualCardData } from '@/types/virtual-card';
+import type { CardSummary } from '@/types/cards-v2';
 
-const cardDetails: VirtualCardData = {
+const cardDetails: CardSummary = {
     id: 'vc_1',
-    cardLabel: 'Marketing Team',
+    workspaceId: 'ws_demo',
+    accountId: 'acc_demo',
+    label: 'Marketing Team',
     last4: '4284',
-    cardType: 'visa',
-    expiry: '12/26',
-    cvv: '123',
-    balance: 1850.25,
+    network: 'VISA',
+    type: 'VIRTUAL',
+    expMonth: 12,
+    expYear: 2026,
+    status: 'ACTIVE',
     currency: 'USD',
-    theme: 'blue',
-    status: 'active',
-    fullNumber: '4012 3456 7890 4284',
-    cardModel: 'debit',
-    spendingLimit: { amount: 5000, interval: 'monthly' },
-    transactions: [
-        { id: 'tx_1', description: 'Google Ads', amount: -250.00, date: '2024-08-15' },
-        { id: 'tx_2', description: 'Facebook Ads', amount: -400.00, date: '2024-08-14' },
-        { id: 'tx_3', description: 'Figma Subscription', amount: -45.00, date: '2024-08-12' },
-        { id: 'tx_4', description: 'Canva Pro', amount: -12.99, date: '2024-08-10' },
-    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    controls: {
+      version: 1,
+      spendLimitAmount: 5000,
+      spendLimitInterval: 'MONTHLY',
+      allowedCountries: [],
+      blockedCountries: [],
+      allowedMcc: [],
+      blockedMcc: [],
+      merchantAllowlist: [],
+      merchantBlocklist: [],
+      onlineAllowed: true,
+      atmAllowed: false,
+      contactlessAllowed: true,
+      updatedAt: new Date().toISOString(),
+    },
 };
+
+const demoTransactions = [
+  { id: 'tx_1', description: 'Google Ads', amount: -250.0, date: '2024-08-15' },
+  { id: 'tx_2', description: 'Facebook Ads', amount: -400.0, date: '2024-08-14' },
+  { id: 'tx_3', description: 'Figma Subscription', amount: -45.0, date: '2024-08-12' },
+  { id: 'tx_4', description: 'Canva Pro', amount: -12.99, date: '2024-08-10' },
+];
 
 
 export default function CardDetailsPage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const card = cardDetails; // Fetch by params.id in real app
 
-    const limit = card.spendingLimit?.amount ?? 0;
-    const spent = card.transactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    const limit = Number(card.controls?.spendLimitAmount || 0);
+    const spent = demoTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
     const progress = limit > 0 ? (spent / limit) * 100 : 0;
     
     return (
@@ -52,7 +68,7 @@ export default function CardDetailsPage({ params }: { params: { id: string } }) 
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">{card.cardLabel}</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">{card.label}</h2>
                         <p className="text-muted-foreground">Card ID: {card.id}</p>
                     </div>
                 </div>
@@ -76,7 +92,7 @@ export default function CardDetailsPage({ params }: { params: { id: string } }) 
                            <Button variant="destructive"><Power className="mr-2 h-4 w-4"/>Terminate</Button>
                         </CardContent>
                     </Card>
-                    {card.spendingLimit && (
+                    {limit > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle>Spending Limit</CardTitle>
@@ -109,8 +125,8 @@ export default function CardDetailsPage({ params }: { params: { id: string } }) 
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {card.transactions.length > 0 ? (
-                                        card.transactions.map(tx => (
+                                    {demoTransactions.length > 0 ? (
+                                        demoTransactions.map(tx => (
                                             <TableRow key={tx.id}>
                                                 <TableCell className="font-medium">{tx.description}</TableCell>
                                                 <TableCell>{tx.date}</TableCell>

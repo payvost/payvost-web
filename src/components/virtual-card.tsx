@@ -1,40 +1,48 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
-import { MoreVertical, Copy, Eye, EyeOff, DollarSign, Snowflake, Power } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Badge } from './ui/badge';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import type { VirtualCardData, CardTheme } from '@/types/virtual-card';
-import { revealCard } from '@/services/cardsService';
+import { MoreVertical, Copy, Eye, EyeOff, Snowflake, Power, Settings } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import type { CardSummary, RevealCardResponse } from '@/types/cards-v2';
+import { revealCard } from '@/services/cardsService';
 
-const themeClasses: Record<CardTheme, string> = {
-  blue: 'from-blue-500 to-indigo-600 text-white',
-  purple: 'from-purple-500 to-violet-600 text-white',
-  green: 'from-green-500 to-teal-600 text-white',
-  black: 'from-gray-800 to-black text-white',
-};
+function formatExpiry(card: CardSummary) {
+  if (!card.expMonth || !card.expYear) return '**/**';
+  return `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`;
+}
 
-export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; onToggleStatus?: (card: VirtualCardData) => void }) {
-  const [showDetails, setShowDetails] = useState(false);
-  const [revealedNumber, setRevealedNumber] = useState<string | undefined>();
-  const [revealedCvv, setRevealedCvv] = useState<string | undefined>();
-  const [revealedExpiry, setRevealedExpiry] = useState<string | undefined>();
-  const [revealing, setRevealing] = useState(false);
+export function VirtualCard(props: {
+  card: CardSummary;
+  onFreezeToggle?: (card: CardSummary) => void;
+  onTerminate?: (card: CardSummary) => void;
+  onOpenControls?: (card: CardSummary) => void;
+}) {
   const { toast } = useToast();
-  const isCredit = card.cardModel === 'credit';
-  const displayAmount = isCredit ? (card.availableCredit ?? 0) : card.balance;
-  const displayLabel = isCredit ? 'Available Credit' : 'Balance';
-  const maskedNumber = card.maskedNumber || `**** **** **** ${card.last4}`;
-  const canReveal = Boolean(card.providerCardId || card.id);
-  const displayNumber = showDetails
-    ? (revealedNumber || card.fullNumber || maskedNumber).replace(/(.{4})/g, '$1 ').trim()
-    : maskedNumber;
-  const displayExpiry = showDetails ? (revealedExpiry || card.expiry) : undefined;
-  const displayCvv = showDetails ? (revealedCvv || card.cvv) : undefined;
+  const [revealing, setRevealing] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [reveal, setReveal] = useState<RevealCardResponse | null>(null);
+
+  const maskedNumber = useMemo(() => `**** **** **** ${props.card.last4}`, [props.card.last4]);
+  const displayPan = showDetails ? (reveal?.pan || maskedNumber) : maskedNumber;
+  const displayExpiry = showDetails ? (reveal?.expMonth && reveal?.expYear ? `${String(reveal.expMonth).padStart(2, '0')}/${String(reveal.expYear).slice(-2)}` : formatExpiry(props.card)) : formatExpiry(props.card);
+  const displayCvv = showDetails ? (reveal?.cvv || '***') : '***';
+
+  useEffect(() => {
+    if (!reveal?.expiresAt) return;
+    const ms = new Date(reveal.expiresAt).getTime() - Date.now();
+    if (!Number.isFinite(ms) || ms <= 0) return;
+    const t = setTimeout(() => {
+      setShowDetails(false);
+      setReveal(null);
+    }, ms);
+    return () => clearTimeout(t);
+  }, [reveal?.expiresAt]);
 
   const handleReveal = async () => {
     if (showDetails) {
@@ -42,29 +50,19 @@ export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; o
       return;
     }
 
-    if (revealedNumber || card.fullNumber) {
-      setShowDetails(true);
-      return;
-    }
-
     try {
       setRevealing(true);
-      const response = await revealCard(card.id);
-      if (response.fullNumber) {
-        setRevealedNumber(response.fullNumber);
-      }
-      if (response.cvv) {
-        setRevealedCvv(response.cvv);
-      }
-      if (response.expiry) {
-        setRevealedExpiry(response.expiry);
-      }
+      const resp = await revealCard(props.card.id, { reason: 'user_initiated' });
+      setReveal(resp);
       setShowDetails(true);
-    } catch (error) {
-      console.error('Failed to reveal card details:', error);
+    } catch (error: any) {
+      const msg = String(error?.message || '');
+      // apiClient normalizes errors; backend returns 403 for step-up requirement.
       toast({
         title: 'Unable to reveal card',
-        description: 'Card details are not available right now.',
+        description: msg.includes('Recent authentication')
+          ? 'For security, please re-authenticate and try again.'
+          : 'Card details are not available right now.',
         variant: 'destructive',
       });
     } finally {
@@ -72,34 +70,30 @@ export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; o
     }
   };
 
+  const copyPan = async () => {
+    if (!reveal?.pan) return;
+    await navigator.clipboard.writeText(reveal.pan);
+    toast({ title: 'Copied', description: 'Card number copied to clipboard.' });
+  };
+
+  const statusBadge =
+    props.card.status === 'ACTIVE'
+      ? 'bg-green-500/80 border-transparent text-white'
+      : props.card.status === 'FROZEN'
+        ? 'bg-blue-400/80 border-transparent text-white'
+        : 'bg-red-500/80 border-transparent text-white';
+
   return (
     <div className="[perspective:1000px]">
-      <div
-        className={cn(
-          'relative h-56 w-full rounded-lg text-white shadow-lg bg-gradient-to-br',
-          themeClasses[card.theme]
-        )}
-      >
+      <div className={cn('relative h-56 w-full rounded-lg text-white shadow-lg bg-gradient-to-br from-slate-800 to-slate-950')}>
         <div className="p-6 flex flex-col justify-between h-full">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-semibold">{card.cardLabel}</h3>
-              <Badge
-                variant={card.status === 'active' ? 'default' : card.status === 'frozen' ? 'secondary' : 'destructive'}
-                className={cn(
-                  'mt-1 capitalize',
-                  card.status === 'active'
-                    ? 'bg-green-500/80 dark:bg-green-500/90 border-transparent text-white'
-                    : card.status === 'frozen'
-                      ? 'bg-blue-400/80 dark:bg-blue-400/90 border-transparent text-white'
-                      : 'bg-red-500/80 dark:bg-red-500/90 border-transparent text-white'
-                )}
-              >
-                {card.status}
-              </Badge>
+              <h3 className="font-semibold">{props.card.label}</h3>
+              <Badge className={cn('mt-1 capitalize', statusBadge)}>{props.card.status.toLowerCase()}</Badge>
             </div>
             <div className="flex items-center gap-2">
-              {card.cardType === 'visa' ? (
+              {props.card.network === 'VISA' ? (
                 <Image src="/visa.png" alt="Visa" width={49} height={16} />
               ) : (
                 <Image src="/mastercard.png" alt="Mastercard" width={60} height={36} />
@@ -111,15 +105,15 @@ export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; o
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onToggleStatus?.(card)}>
+                  <DropdownMenuItem disabled={props.card.status === 'TERMINATED'} onClick={() => props.onFreezeToggle?.(props.card)}>
                     <Snowflake className="mr-2 h-4 w-4" />
-                    {card.status === 'active' ? 'Freeze Card' : 'Unfreeze Card'}
+                    {props.card.status === 'ACTIVE' ? 'Freeze Card' : 'Unfreeze Card'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Fund Card
+                  <DropdownMenuItem onClick={() => props.onOpenControls?.(props.card)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Controls
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" disabled={props.card.status === 'TERMINATED'} onClick={() => props.onTerminate?.(props.card)}>
                     <Power className="mr-2 h-4 w-4" />
                     Terminate Card
                   </DropdownMenuItem>
@@ -127,16 +121,17 @@ export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; o
               </DropdownMenu>
             </div>
           </div>
+
           <div>
             <div className="flex items-center gap-4 mb-1">
-              <div className="text-lg font-mono tracking-widest">{displayNumber}</div>
+              <div className="text-lg font-mono tracking-widest">{displayPan.replace(/(.{4})/g, '$1 ').trim()}</div>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-white hover:bg-white/20"
-                onClick={() => canReveal && handleReveal()}
-                disabled={!canReveal || revealing}
-                title={canReveal ? 'Reveal card details' : 'Card details unavailable'}
+                onClick={handleReveal}
+                disabled={revealing || props.card.status === 'TERMINATED'}
+                title="Reveal card details"
               >
                 {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -144,28 +139,33 @@ export function VirtualCard({ card, onToggleStatus }: { card: VirtualCardData; o
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-white hover:bg-white/20"
-                onClick={() => (revealedNumber || card.fullNumber) && navigator.clipboard.writeText(revealedNumber || card.fullNumber || '')}
-                disabled={!revealedNumber && !card.fullNumber}
-                title={revealedNumber || card.fullNumber ? 'Copy card number' : 'Card number unavailable'}
+                onClick={copyPan}
+                disabled={!showDetails || !reveal?.pan}
+                title="Copy card number"
               >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
+
             <div className="flex justify-between items-end">
               <div>
-                <p className="text-xs">Expires: {displayExpiry || '**/**'}</p>
-                <p className="text-xs">CVV: {displayCvv || '***'}</p>
+                <p className="text-xs">Expires: {displayExpiry}</p>
+                <p className="text-xs">CVV: {displayCvv}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs">{displayLabel}</p>
-                <p className="text-2xl font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: card.currency }).format(displayAmount)}
-                </p>
+                <p className="text-xs">Currency</p>
+                <p className="text-2xl font-bold font-mono">{props.card.currency}</p>
               </div>
             </div>
+            {showDetails && reveal?.expiresAt && (
+              <p className="mt-2 text-[11px] opacity-80">
+                Details will auto-hide at {new Date(reveal.expiresAt).toLocaleTimeString()}.
+              </p>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
+

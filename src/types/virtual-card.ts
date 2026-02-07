@@ -23,12 +23,10 @@ export interface VirtualCardData {
     last4: string;
     cardType: CardType;
     expiry?: string;
-    cvv?: string;
     balance: number;
     currency: string;
     theme: CardTheme;
     status: CardStatus;
-    fullNumber?: string;
     maskedNumber?: string;
     transactions: CardTransaction[];
     spendingLimit?: SpendingLimit;

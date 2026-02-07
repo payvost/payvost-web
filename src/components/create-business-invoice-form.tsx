@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, doc, addDoc, updateDoc, serverTimestamp, Timestamp, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
@@ -37,7 +37,6 @@ const invoiceItemSchema = z.object({
 });
 
 export const invoiceSchema = z.object({
-  invoiceNumber: z.string().min(1, 'Invoice number is required'),
   issueDate: z.date({ required_error: 'Issue date is required' }),
   dueDate: z.date({ required_error: 'Due date is required' }),
   currency: z.string().min(1, 'Currency is required'),
@@ -53,7 +52,6 @@ export const invoiceSchema = z.object({
     z.number().min(0, 'Tax rate cannot be negative').optional()
   ),
   paymentMethod: z.string().optional(),
-  status: z.enum(['Draft', 'Pending', 'Paid']).default('Pending').optional(),
   isRecurring: z.boolean().default(false).optional(),
   recurringFrequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
   recurringEndDate: z.date().optional(),
@@ -103,7 +101,6 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
             items: [{ description: '', quantity: 1, price: 0 }],
             notes: 'Thank you for your business. Please pay within 30 days.',
             taxRate: 0, currency: 'USD', paymentMethod: 'rapyd',
-            invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
         },
   });
   
@@ -114,33 +111,45 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         }
         
         if (isEditing && invoiceId) {
-            const docRef = doc(db, 'businessInvoices', invoiceId);
-            const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const invoice = docSnap.data();
-                    if (invoice.createdBy === user.uid) {
-                        reset({
-                            invoiceNumber: invoice.invoiceNumber,
-                            issueDate: invoice.issueDate.toDate(),
-                            dueDate: invoice.dueDate.toDate(),
-                            currency: invoice.currency,
-                            fromName: invoice.fromName,
-                            fromAddress: invoice.fromAddress,
-                            toName: invoice.toName,
-                            toEmail: invoice.toEmail,
-                            toAddress: invoice.toAddress,
-                            items: invoice.items,
-                            notes: invoice.notes || '',
-                            taxRate: invoice.taxRate || 0,
-                            paymentMethod: invoice.paymentMethod?.toLowerCase() || 'rapyd',
-                        });
-                        setBusinessId(invoice.businessId || null);
-                        setLoadingUserData(false);
-                    }
+            let cancelled = false;
+            (async () => {
+                try {
+                    const token = await user.getIdToken();
+                    const res = await fetch(`/api/v1/invoices/${invoiceId}`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        cache: 'no-store',
+                    });
+                    if (!res.ok) throw new Error(`Failed to load invoice (${res.status})`);
+                    const invoice = await res.json();
+                    if (cancelled) return;
+
+                    reset({
+                        issueDate: invoice.issueDate ? new Date(invoice.issueDate) : new Date(),
+                        dueDate: invoice.dueDate ? new Date(invoice.dueDate) : new Date(),
+                        currency: invoice.currency || 'USD',
+                        fromName: invoice.fromName || '',
+                        fromAddress: invoice.fromAddress || '',
+                        toName: invoice.toName || '',
+                        toEmail: invoice.toEmail || '',
+                        toAddress: invoice.toAddress || '',
+                        items: Array.isArray(invoice.items) ? invoice.items : [{ description: '', quantity: 1, price: 0 }],
+                        notes: invoice.notes || '',
+                        taxRate: invoice.taxRate || 0,
+                        paymentMethod: invoice.paymentMethod || 'rapyd',
+                        isRecurring: false,
+                    });
+
+                    setBusinessId(invoice.businessId || null);
+                } catch (e: any) {
+                    console.error('Failed to load invoice:', e);
+                    toast({ title: 'Error', description: e?.message || 'Failed to load invoice', variant: 'destructive' });
+                } finally {
+                    setLoadingUserData(false);
                 }
-            });
-            return () => unsubscribe();
-            return;
+            })();
+
+            return () => { cancelled = true; };
         }
 
         const userDocUnsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
@@ -155,7 +164,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         });
 
         return () => userDocUnsub();
-    }, [user, authLoading, setValue, isEditing, invoiceId, reset]);
+    }, [user, authLoading, setValue, isEditing, invoiceId, reset, toast]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -195,82 +204,74 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
       return value.replace(/,/g, '');
     };
 
-    const saveInvoice = async (defaultStatus?: 'Draft' | 'Pending' | 'Paid') => {
+    const mapPaymentMethod = (value: string | undefined) => {
+        const v = String(value || '').toLowerCase();
+        if (v === 'stripe') return 'STRIPE';
+        if (v === 'rapyd') return 'RAPYD';
+        if (v === 'manual') return 'MANUAL';
+        if (v === 'payvost') return 'PAYVOST';
+        return 'PAYVOST';
+    };
+
+    const upsertDraft = async () => {
         if (!user) throw new Error('User not authenticated.');
         if (!businessId) throw new Error('Business ID not found.');
 
         const data = getValues();
-        const statusToUse = (data.status || defaultStatus || 'Pending') as 'Draft' | 'Pending' | 'Paid';
-        const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0);
-        const taxAmount = subtotal * (watchedTaxRate / 100);
-        const grandTotal = subtotal + taxAmount;
-        
-        const firestoreData: any = {
-            issueDate: Timestamp.fromDate(data.issueDate),
-            dueDate: Timestamp.fromDate(data.dueDate),
-            invoiceNumber: data.invoiceNumber,
+        const token = await user.getIdToken();
+
+        const payload = {
+            invoiceType: 'BUSINESS',
+            businessId,
             currency: data.currency,
-            fromName: data.fromName,
-            fromAddress: data.fromAddress,
-            toName: data.toName,
-            toEmail: data.toEmail,
-            toAddress: data.toAddress,
+            issueDate: data.issueDate.toISOString(),
+            dueDate: data.dueDate.toISOString(),
+            fromInfo: {
+                name: data.fromName,
+                address: data.fromAddress,
+                email: user.email || undefined,
+            },
+            toInfo: {
+                name: data.toName,
+                address: data.toAddress,
+                email: data.toEmail,
+            },
             items: data.items,
-            notes: data.notes,
-            taxRate: data.taxRate,
-            grandTotal,
-            createdBy: user.uid,
-            businessId: businessId,
-            status: statusToUse,
-            updatedAt: serverTimestamp(),
-            isPublic: statusToUse !== 'Draft',
-            paymentMethod: data.paymentMethod || 'rapyd',
-            isRecurring: !!data.isRecurring, // Explicitly convert to boolean
+            taxRate: data.taxRate || 0,
+            notes: data.notes || '',
+            paymentMethod: mapPaymentMethod(data.paymentMethod),
+            // Recurring templates are a separate system in the new model; ignore for now.
         };
 
-        // Only add recurring fields if invoice is actually recurring
-        if (data.isRecurring === true) {
-            firestoreData.recurringFrequency = data.recurringFrequency;
-            if (data.recurringEndDate) {
-                firestoreData.recurringEndDate = Timestamp.fromDate(data.recurringEndDate);
-            }
-        }
-        // If not recurring, don't add recurringFrequency or recurringEndDate at all
-
         if (savedInvoiceId) {
-            const docRef = doc(db, 'businessInvoices', savedInvoiceId);
-            await updateDoc(docRef, firestoreData);
-            
-            // Trigger PDF regeneration if status changed to non-draft
-            if (statusToUse !== 'Draft') {
-              fetch('/api/generate-invoice-pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: savedInvoiceId }),
-              }).catch(err => console.error('Failed to trigger PDF generation:', err));
-            }
-            
-            return savedInvoiceId;
-        } else {
-            const docRef = await addDoc(collection(db, 'businessInvoices'), {
-                ...firestoreData,
-                createdAt: serverTimestamp(),
+            const res = await fetch(`/api/v1/invoices/${savedInvoiceId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload),
+                cache: 'no-store',
             });
-            const publicUrl = `${window.location.origin}/invoice/${docRef.id}`;
-            await updateDoc(docRef, { publicUrl });
-            const newId = docRef.id;
-            
-            // Trigger PDF generation for non-draft invoices (async, don't wait)
-            if (statusToUse !== 'Draft') {
-              fetch('/api/generate-invoice-pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: newId }),
-              }).catch(err => console.error('Failed to trigger PDF generation:', err));
+            if (!res.ok) {
+                const err = await res.json().catch(() => null) as any;
+                throw new Error(err?.error || `Failed to save draft (${res.status})`);
             }
-            
-            return newId;
+            return savedInvoiceId;
         }
+
+        const res = await fetch('/api/v1/invoices/drafts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload),
+            cache: 'no-store',
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => null) as any;
+            throw new Error(err?.error || `Failed to create draft (${res.status})`);
+        }
+        const created = await res.json();
+        const newId = created?.id;
+        if (!newId) throw new Error('Invalid draft response');
+        setSavedInvoiceId(newId);
+        return newId as string;
     };
     
     const handleSaveAsDraft = async () => {
@@ -282,7 +283,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
         
         setIsSaving(true);
         try {
-            await saveInvoice('Draft');
+            await upsertDraft();
             toast({ title: "Draft Saved", description: "Your invoice has been saved as a draft." });
             onBack();
         } catch (error: any) {
@@ -312,13 +313,21 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
     const onSubmit: SubmitHandler<InvoiceFormValues> = async (data) => {
         setIsSaving(true);
         try {
-            const finalInvoiceId = await saveInvoice('Pending');
-            setSavedInvoiceId(finalInvoiceId); // Ensure state is updated
-            
-            // Small delay to ensure invoice is fully committed to Firestore
-            // before trying to fetch it via API
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+            const finalInvoiceId = await upsertDraft();
+
+            if (!user) throw new Error('User not authenticated');
+            const token = await user.getIdToken();
+            const sendRes = await fetch(`/api/v1/invoices/${finalInvoiceId}/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ channel: 'email' }),
+                cache: 'no-store',
+            });
+            if (!sendRes.ok) {
+                const err = await sendRes.json().catch(() => null) as any;
+                throw new Error(err?.error || `Failed to send invoice (${sendRes.status})`);
+            }
+
             setShowSendDialog(true);
         } catch (error: any) {
             console.error("Error sending invoice:", error);
@@ -361,8 +370,8 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                 <CardHeader>
                      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 items-start w-full">
                         <div className="space-y-2 col-span-2 md:col-span-1">
-                            <Label htmlFor="invoiceNumber">Invoice #</Label>
-                            <Input id="invoiceNumber" {...register('invoiceNumber')} className="h-10" />
+                            <Label>Invoice</Label>
+                            <Input value={isEditing ? 'Editing draft' : 'New draft'} readOnly className="h-10" />
                         </div>
                          <div className="space-y-2 col-span-2 md:col-span-1">
                             <Label>Currency</Label>
@@ -386,22 +395,7 @@ export function CreateBusinessInvoiceForm({ onBack, invoiceId }: CreateBusinessI
                         </div>
                         <div className="space-y-2 col-span-1">
                             <Label>Status</Label>
-                            <Controller
-                                name="status"
-                                control={control}
-                                render={({ field }) => (
-                                    <Select onValueChange={field.onChange} defaultValue={field.value || 'Pending'}>
-                                        <SelectTrigger>
-                                            <SelectValue/>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Draft">Draft</SelectItem>
-                                            <SelectItem value="Pending">Pending</SelectItem>
-                                            <SelectItem value="Paid">Paid</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
+                            <Input value="Draft" readOnly className="h-10" />
                         </div>
                         <div className="space-y-2 col-span-1">
                             <Label>Invoice Date</Label>

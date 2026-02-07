@@ -1,74 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
 import { requireAuth, HttpError } from '@/lib/api/auth';
-import { rapydService, RapydError, type IssuedCard } from '@/services/rapydService';
+import { buildBackendUrl } from '@/lib/api/backend';
 
-function extractLast4(card: IssuedCard, fallback?: string): string {
-  return card.last4 || card.last_4 || card.pan_last_4 || fallback || '0000';
-}
+// Legacy reveal route: proxies to /api/v1/cards/:cardId/reveal.
+// Returns legacy keys (fullNumber) for compatibility, but never stores PAN/CVV.
 
-function extractExpiry(card: IssuedCard): string | undefined {
-  if (card.expiration_date || card.expiry_date || card.exp_date) {
-    return (card.expiration_date || card.expiry_date || card.exp_date) as string;
-  }
-  if (card.expiration_month && card.expiration_year) {
-    const month = String(card.expiration_month).padStart(2, '0');
-    const year = String(card.expiration_year).slice(-2);
-    return `${month}/${year}`;
-  }
-  return undefined;
-}
-
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { uid } = await requireAuth(request);
+    const { token } = await requireAuth(req);
     const { id } = await context.params;
+    const payload = await req.json().catch(() => ({}));
 
-    const userRef = adminDb.collection('users').doc(uid);
-    const cardRef = userRef.collection('cards').doc(id);
-    const cardSnap = await cardRef.get();
+    const response = await fetch(buildBackendUrl(`/api/v1/cards/${encodeURIComponent(id)}/reveal`), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
 
-    let cardData = cardSnap.exists ? cardSnap.data() : null;
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
 
-    if (!cardData) {
-      const querySnap = await userRef.collection('cards').where('providerCardId', '==', id).limit(1).get();
-      if (!querySnap.empty) {
-        cardData = querySnap.docs[0].data();
+    if (contentType.includes('application/json') && text) {
+      try {
+        const json = JSON.parse(text);
+        if (json && typeof json === 'object' && 'pan' in json) {
+          return NextResponse.json(
+            {
+              ...json,
+              fullNumber: (json as any).pan,
+            },
+            { status: response.status, headers: { 'Cache-Control': 'no-store' } }
+          );
+        }
+        return NextResponse.json(json, { status: response.status, headers: { 'Cache-Control': 'no-store' } });
+      } catch {
+        // Fall through
       }
     }
 
-    if (!cardData) {
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
-    }
-
-    const providerCardId = cardData.providerCardId || id;
-    const issuedCard = await rapydService.getIssuedCard(providerCardId);
-    const last4 = extractLast4(issuedCard, cardData.last4);
-    const expiry = extractExpiry(issuedCard) || cardData.expiry;
-
-    return NextResponse.json({
-      cardId: providerCardId,
-      last4,
-      maskedNumber: issuedCard.masked_number || cardData.maskedNumber || `**** **** **** ${last4}`,
-      expiry,
-      fullNumber: issuedCard.card_number,
-      cvv: issuedCard.cvv,
+    return new NextResponse(text || null, {
+      status: response.status,
+      headers: {
+        'content-type': contentType || 'text/plain',
+        'Cache-Control': 'no-store',
+      },
     });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    if (error instanceof RapydError) {
-      console.error('[Cards Reveal API] Rapyd error:', error.message, error.response);
-      return NextResponse.json(
-        { error: error.message, details: error.response },
-        { status: error.statusCode || 502 }
-      );
-    }
-    console.error('[Cards Reveal API] Failed to reveal card:', error);
-    return NextResponse.json({ error: 'Failed to reveal card' }, { status: 500 });
+    console.error('POST /api/cards/[id]/reveal proxy error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

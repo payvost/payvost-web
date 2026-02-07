@@ -25,16 +25,30 @@ export function buildBackendUrl(path: string): string {
  */
 export async function backendResponseToNext(response: Response): Promise<NextResponse> {
   const contentType = response.headers.get('content-type') || '';
+  const cacheControl = response.headers.get('cache-control') || undefined;
+  const apiVersion = response.headers.get('api-version') || undefined;
   const text = await response.text();
 
   if (!text) {
-    return new NextResponse(null, { status: response.status });
+    return new NextResponse(null, {
+      status: response.status,
+      headers: {
+        ...(cacheControl ? { 'cache-control': cacheControl } : {}),
+        ...(apiVersion ? { 'api-version': apiVersion } : {}),
+      },
+    });
   }
 
   if (contentType.includes('application/json')) {
     try {
       const json = JSON.parse(text);
-      return NextResponse.json(json, { status: response.status });
+      return NextResponse.json(json, {
+        status: response.status,
+        headers: {
+          ...(cacheControl ? { 'cache-control': cacheControl } : {}),
+          ...(apiVersion ? { 'api-version': apiVersion } : {}),
+        },
+      });
     } catch {
       // Fall through to return raw text when JSON parsing fails
     }
@@ -44,6 +58,8 @@ export async function backendResponseToNext(response: Response): Promise<NextRes
     status: response.status,
     headers: {
       'content-type': contentType || 'text/plain',
+      ...(cacheControl ? { 'cache-control': cacheControl } : {}),
+      ...(apiVersion ? { 'api-version': apiVersion } : {}),
     },
   });
 }

@@ -115,7 +115,48 @@ const RAPYD_ENDPOINTS = {
   WALLET_BY_ID: '/v1/user/:walletId',
   VIRTUAL_ACCOUNTS: '/v1/virtual_accounts',
   VIRTUAL_ACCOUNT_BY_ID: '/v1/virtual_accounts/:virtualAccountId',
+  // Card issuing
+  ISSUED_CARDS: '/v1/issuing/cards',
+  CARD_BY_ID: '/v1/issuing/cards/:cardId',
+  UPDATE_CARD_STATUS: '/v1/issuing/cards/status',
 } as const;
+
+/**
+ * Card Issuing types
+ */
+export interface CreateIssuedCardRequest {
+  ewallet: string;
+  card_program: string;
+  country: string;
+  currency: string;
+  card_type?: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface IssuedCard {
+  id: string;
+  status?: string;
+  card_status?: string;
+  last4?: string;
+  last_4?: string;
+  pan_last_4?: string;
+  expiration_date?: string;
+  expiry_date?: string;
+  exp_date?: string;
+  expiration_month?: string | number;
+  expiration_year?: string | number;
+  masked_number?: string;
+  card_number?: string;
+  cvv?: string;
+  [key: string]: any;
+}
+
+export interface UpdateIssuedCardStatusRequest {
+  card: string;
+  status: 'block' | 'unblock' | string;
+}
 
 /**
  * Get Rapyd base URL based on environment
@@ -323,6 +364,56 @@ class RapydService {
     } catch (error) {
       throw new RapydError(
         `Failed to get virtual account: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Card Issuing =============
+
+  /**
+   * Create an issued card
+   */
+  async createIssuedCard(cardData: CreateIssuedCardRequest): Promise<IssuedCard> {
+    try {
+      return await this.request<IssuedCard>(
+        'POST',
+        RAPYD_ENDPOINTS.ISSUED_CARDS,
+        cardData
+      );
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create issued card: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Get issued card by ID
+   */
+  async getIssuedCard(cardId: string): Promise<IssuedCard> {
+    try {
+      const endpoint = this.replaceUrlParams(RAPYD_ENDPOINTS.CARD_BY_ID, { cardId });
+      return await this.request<IssuedCard>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get issued card: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Update issued card status (block/unblock; issuer may support additional statuses)
+   */
+  async updateIssuedCardStatus(payload: UpdateIssuedCardStatusRequest): Promise<IssuedCard> {
+    try {
+      return await this.request<IssuedCard>(
+        'POST',
+        RAPYD_ENDPOINTS.UPDATE_CARD_STATUS,
+        payload
+      );
+    } catch (error) {
+      throw new RapydError(
+        `Failed to update issued card status: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

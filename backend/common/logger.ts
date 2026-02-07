@@ -6,6 +6,27 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const logger = pino({
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
+  redact: {
+    // Avoid accidental logging of sensitive card data (PAN/CVV) anywhere in nested payloads.
+    // This is defense-in-depth; we also avoid persisting these fields entirely.
+    paths: [
+      '*.pan',
+      '*.PAN',
+      '*.card_number',
+      '*.cardNumber',
+      '*.cvv',
+      '*.cvc',
+      '*.cvc2',
+      '*.security_code',
+      '*.securityCode',
+      '*.fullNumber',
+      'pan',
+      'card_number',
+      'cvv',
+      'fullNumber',
+    ],
+    censor: '[REDACTED]',
+  },
   transport: isDevelopment
     ? {
         target: 'pino-pretty',

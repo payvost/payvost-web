@@ -125,20 +125,17 @@ service cloud.firestore {
 
     // 🔹 Invoices (for individual users)
     match /invoices/{invoiceId} {
-      allow read: if resource.data.isPublic == true ||
-                  (request.auth != null && request.auth.uid == resource.data.userId);
-      allow list: if request.auth != null; // ✅ allows user to query their invoices
+      // Public invoices are now token-gated at the backend; do not allow public Firestore reads.
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow list: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
     // 🏢 Business Invoices (for registered businesses)
     match /businessInvoices/{invoiceId} {
-      // ✅ Allow reads - invoices are shareable via public links
-      // In practice, public invoices (isPublic == true) can be accessed by anyone
-      // Draft invoices are protected by not having a public link shared
-      // But we allow reads here to prevent permission errors during creation/navigation
-      allow read: if true;
+      // Public invoices are now token-gated at the backend; do not allow public Firestore reads.
+      allow read: if request.auth != null && request.auth.uid == resource.data.createdBy;
 
       // ✅ List invoices (authenticated users only)
       // Must always query with: where("createdBy", "==", user.uid)

@@ -12,6 +12,9 @@ datasource db {
 model Account {
   id                                       String            @id @default(cuid())
   userId                                   String
+  // Optional workspace for grouping accounts under PERSONAL/BUSINESS workspaces.
+  // Backfilled gradually; existing accounts may remain null.
+  workspaceId                               String?
   currency                                 String
   balance                                  Decimal           @default(0) @db.Decimal(20, 8)
   type                                     String            @default("PERSONAL")
@@ -19,16 +22,19 @@ model Account {
   createdAt                                DateTime          @default(now())
   updatedAt                                DateTime          @updatedAt
   User                                     User              @relation(fields: [userId], references: [id])
+  Workspace                                Workspace?        @relation(fields: [workspaceId], references: [id])
   AccountActivity                          AccountActivity[]
   AppliedFee                               AppliedFee[]
   LedgerEntry                              LedgerEntry[]
   fundingSources                           AccountFundingSource[]
   ReferralReward                           ReferralReward[]
+  Cards                                    Card[]
   Transfer_Transfer_fromAccountIdToAccount Transfer[]        @relation("Transfer_fromAccountIdToAccount")
   Transfer_Transfer_toAccountIdToAccount   Transfer[]        @relation("Transfer_toAccountIdToAccount")
 
   @@index([rapydWalletId])
   @@index([userId])
+  @@index([workspaceId])
 }
 
 model AccountFundingSource {
@@ -497,6 +503,149 @@ model ExternalTransaction {
   @@index([userId])
 }
 
+// ============================================
+// Outbound Payments: Global-standard primitives
+// ============================================
+
+model PaymentOrder {
+  id                 String             @id @default(cuid())
+  userId             String
+  sourceAccountId    String
+  type               PaymentOrderType
+  status             PaymentOrderStatus @default(DRAFT)
+
+  // Idempotency: unique per user + type.
+  idempotencyKey     String
+
+  // Source (payer) amounts
+  sourceAmount       Decimal            @db.Decimal(20, 8)
+  sourceCurrency     String
+
+  // Target (recipient/provider) amounts
+  targetAmount       Decimal            @db.Decimal(20, 8)
+  targetCurrency     String
+
+  // Fees (in source currency by default)
+  feeAmount          Decimal            @default(0) @db.Decimal(20, 8)
+  feeCurrency        String
+
+  // FX snapshot (if any)
+  fxRate             Decimal?           @db.Decimal(20, 10)
+  fxProvider         String?
+  fxSnapshotId       String?
+
+  // Provider routing / correlation
+  provider           ExternalProvider?
+  providerRef        String?            // provider-side primary reference (e.g. transactionId)
+  externalTxId       String?            // optional link to ExternalTransaction.id
+
+  // Product-specific payload (biller/product/recipient details, etc.)
+  metadata           Json?
+
+  errorMessage       String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  submittedAt        DateTime?
+  completedAt        DateTime?
+
+  attempts           PaymentAttempt[]
+
+  @@unique([userId, type, idempotencyKey])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([provider, providerRef])
+  @@index([sourceAccountId])
+}
+
+model PaymentAttempt {
+  id                   String              @id @default(cuid())
+  paymentOrderId       String
+  provider             ExternalProvider
+  status               PaymentAttemptStatus @default(CREATED)
+  requestPayloadHash   String?
+  providerIdempotencyKey String?
+  providerRef          String?
+  errorMessage         String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  paymentOrder         PaymentOrder        @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+
+  @@index([paymentOrderId, createdAt])
+  @@index([provider, providerRef])
+}
+
+model PaymentTemplate {
+  id               String          @id @default(cuid())
+  userId           String
+  type             PaymentTemplateType
+  nickname         String?
+  provider         ExternalProvider
+  providerEntityId String          // billerId / productId etc. (as string for flexibility)
+  fields           Json            // persisted form fields (account/meter number, recipient, etc.)
+  lastUsedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([userId, type, updatedAt])
+  @@unique([userId, type, provider, providerEntityId])
+}
+
+model PaymentSchedule {
+  id           String          @id @default(cuid())
+  userId       String
+  type         PaymentOrderType
+  templateId   String?
+  status       PaymentScheduleStatus @default(ACTIVE)
+  timezone     String         @default("UTC")
+  cron         String         // cron expression (server-side runner interprets this)
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  endAt        DateTime?
+  metadata     Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([userId, status, nextRunAt])
+  @@index([status, nextRunAt])
+}
+
+model BulkBatch {
+  id            String           @id @default(cuid())
+  userId        String
+  sourceAccountId String
+  status        BulkBatchStatus  @default(DRAFT)
+  currency      String
+  totalItems    Int              @default(0)
+  totalAmount   Decimal          @default(0) @db.Decimal(20, 8)
+  metadata      Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items         BulkBatchItem[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model BulkBatchItem {
+  id           String            @id @default(cuid())
+  batchId      String
+  status       BulkBatchItemStatus @default(PENDING)
+  amount       Decimal           @db.Decimal(20, 8)
+  currency     String
+  details      Json              // per-row payload (recipient/biller/etc.)
+  paymentOrderId String?
+  errorMessage String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  batch        BulkBatch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, createdAt])
+  @@index([status, createdAt])
+}
+
 model FeeRule {
   id                  String                @id @default(cuid())
   name                String
@@ -518,7 +667,9 @@ model FeeRule {
 model Invoice {
   id                String        @id @default(cuid())
   invoiceNumber     String        @unique
+  kind              InvoiceKind   @default(INVOICE)
   invoiceType       InvoiceType   @default(USER)
+  workspaceId       String?
   userId            String
   businessId        String?
   createdBy         String
@@ -527,6 +678,7 @@ model Invoice {
   status            InvoiceStatus @default(DRAFT)
   currency          String
   grandTotal        Decimal       @db.Decimal(20, 8)
+  amountPaid        Decimal       @default(0) @db.Decimal(20, 8)
   taxRate           Decimal       @default(0) @db.Decimal(5, 2)
   fromInfo          Json
   toInfo            Json
@@ -534,12 +686,30 @@ model Invoice {
   paymentMethod     PaymentMethod @default(PAYVOST)
   manualBankDetails Json?
   notes             String?
+  // Legacy public access fields. New public access uses InvoicePublicLink tokens.
   isPublic          Boolean       @default(false)
   publicUrl         String?
   pdfUrl            String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   paidAt            DateTime?
+  issuedAt          DateTime?
+  sentAt            DateTime?
+  viewedAt          DateTime?
+  voidedAt          DateTime?
+  voidReason        String?
+
+  legacySource      InvoiceLegacySource?
+  legacyId          String?       @unique
+
+  creditNoteForId   String?
+  creditNoteFor     Invoice?      @relation("InvoiceCreditNoteFor", fields: [creditNoteForId], references: [id])
+  creditNotes       Invoice[]     @relation("InvoiceCreditNoteFor")
+
+  Workspace         Workspace?    @relation(fields: [workspaceId], references: [id])
+  PublicLink        InvoicePublicLink?
+  Events            InvoiceEvent[]
+  Payments          InvoicePayment[]
 
   @@index([businessId])
   @@index([createdBy])
@@ -549,6 +719,240 @@ model Invoice {
   @@index([isPublic])
   @@index([status])
   @@index([userId])
+  @@index([workspaceId])
+  @@index([issuedAt])
+  @@index([legacySource])
+}
+
+model Workspace {
+  id              String        @id @default(cuid())
+  type            WorkspaceType
+  ownerUserId     String
+  // For PERSONAL workspaces, businessId is an empty string to allow a single unique workspace per user.
+  businessId      String        @default("")
+  name            String
+  defaultCurrency String        @default("USD")
+  defaultLocale   String        @default("en-US")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  Invoices        Invoice[]
+  InvoiceSeries   InvoiceSeries[]
+  Members         WorkspaceMember[]
+  Cards           Card[]
+  CardEvents      CardEvent[]
+  Accounts        Account[]
+
+  @@unique([type, ownerUserId, businessId])
+  @@index([ownerUserId])
+  @@index([businessId])
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(OWNER)
+  createdAt   DateTime      @default(now())
+
+  Workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User          @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Card {
+  id               String     @id @default(cuid())
+  workspaceId      String
+  accountId        String
+  label            String
+  status           CardStatus @default(ACTIVE)
+  network          CardNetwork
+  type             CardType   @default(VIRTUAL)
+  currency         String
+
+  provider         ExternalProvider @default(RAPYD)
+  providerCardId   String
+
+  last4            String
+  expMonth         Int?
+  expYear          Int?
+
+  createdByUserId  String
+  assignedToUserId String?
+
+  // Request idempotency (per workspace + creator)
+  idempotencyKey   String?
+
+  metadata         Json?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  Workspace        Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  Account          Account    @relation(fields: [accountId], references: [id])
+  CreatedBy        User       @relation("CardCreatedBy", fields: [createdByUserId], references: [id])
+  AssignedTo       User?      @relation("CardAssignedTo", fields: [assignedToUserId], references: [id])
+
+  Controls         CardControl[]
+  Transactions     CardTransaction[]
+  Events           CardEvent[]
+  RevealAudits     CardRevealAudit[]
+
+  @@unique([provider, providerCardId])
+  @@unique([workspaceId, createdByUserId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@index([accountId])
+  @@index([assignedToUserId])
+  @@index([createdByUserId])
+}
+
+model CardControl {
+  id               String              @id @default(cuid())
+  cardId           String
+  version          Int                 @default(1)
+
+  spendLimitAmount Decimal?            @db.Decimal(20, 8)
+  spendLimitInterval SpendingInterval  @default(MONTHLY)
+
+  allowedCountries String[]            @default([])
+  blockedCountries String[]            @default([])
+  allowedMcc       String[]            @default([])
+  blockedMcc       String[]            @default([])
+  merchantAllowlist String[]           @default([])
+  merchantBlocklist String[]           @default([])
+
+  onlineAllowed    Boolean             @default(true)
+  atmAllowed       Boolean             @default(false)
+  contactlessAllowed Boolean           @default(true)
+
+  updatedByUserId  String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  Card             Card                @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  UpdatedBy        User                @relation("CardControlUpdatedBy", fields: [updatedByUserId], references: [id])
+
+  @@unique([cardId, version])
+  @@index([cardId, updatedAt])
+}
+
+model CardTransaction {
+  id             String               @id @default(cuid())
+  cardId         String
+  providerTxId   String               @unique
+  kind           CardTransactionKind
+  amount         Decimal              @db.Decimal(20, 8)
+  currency       String
+  merchantName   String?
+  merchantCountry String?
+  mcc            String?
+  status         CardTransactionStatus @default(PENDING)
+  happenedAt     DateTime
+  raw            Json?
+  createdAt      DateTime             @default(now())
+
+  Card           Card                 @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, happenedAt])
+  @@index([status, happenedAt])
+}
+
+model CardEvent {
+  id          String     @id @default(cuid())
+  cardId      String
+  workspaceId String
+  actorUserId String?
+  type        String
+  payload     Json?
+  createdAt   DateTime   @default(now())
+
+  Card        Card       @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  Workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([cardId, createdAt])
+}
+
+model CardRevealAudit {
+  id          String   @id @default(cuid())
+  cardId      String
+  actorUserId String
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  Card        Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model InvoiceSeries {
+  id          String    @id @default(cuid())
+  workspaceId String
+  prefix      String    @default("INV-")
+  padding     Int       @default(6)
+  nextNumber  Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId])
+  @@index([workspaceId])
+}
+
+model InvoicePublicLink {
+  id           String   @id @default(cuid())
+  invoiceId    String   @unique
+  token        String   @unique
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  lastViewedAt DateTime?
+  viewCount    Int      @default(0)
+
+  Invoice      Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([revokedAt])
+}
+
+model InvoiceEvent {
+  id          String           @id @default(cuid())
+  invoiceId   String
+  actorUserId String?
+  type        InvoiceEventType
+  payload     Json?
+  createdAt   DateTime         @default(now())
+
+  Invoice     Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model InvoicePayment {
+  id             String   @id @default(cuid())
+  invoiceId       String
+  provider        String
+  providerRef     String?
+  idempotencyKey  String?
+  amount          Decimal  @db.Decimal(20, 8)
+  currency        String
+  status          String
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  Invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([provider])
+  @@index([providerRef])
+  @@index([idempotencyKey])
 }
 
 model KnowledgeBaseArticle {
@@ -586,6 +990,8 @@ model LedgerEntry {
   createdAt    DateTime @default(now())
   Account      Account  @relation(fields: [accountId], references: [id])
 
+  // Idempotency for ledger writes by referenceId. Note: multiple NULL referenceIds are allowed by Postgres.
+  @@unique([accountId, referenceId])
   @@index([accountId])
 }
 
@@ -973,6 +1379,11 @@ model User {
   SupportTicket_SupportTicket_customerIdToUser                SupportTicket[]        @relation("SupportTicket_customerIdToUser")
   TicketAttachment                                            TicketAttachment[]
   TicketMessage                                               TicketMessage[]
+
+  WorkspaceMemberships                                        WorkspaceMember[]
+  CardsCreated                                                Card[]                @relation("CardCreatedBy")
+  CardsAssigned                                               Card[]                @relation("CardAssignedTo")
+  CardControlsUpdated                                         CardControl[]         @relation("CardControlUpdatedBy")
 }
 
 enum ArticleStatus {
@@ -1094,6 +1505,61 @@ enum ExternalTransactionType {
   CARD_ISSUANCE
 }
 
+enum PaymentOrderType {
+  REMITTANCE
+  BILL_PAYMENT
+  GIFT_CARD
+  BULK_ITEM
+}
+
+enum PaymentOrderStatus {
+  DRAFT
+  QUOTED
+  AUTHORIZED
+  SUBMITTED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  SUBMITTED
+  SUCCEEDED
+  FAILED
+}
+
+enum PaymentTemplateType {
+  BILL_PAYMENT
+  GIFT_CARD
+}
+
+enum PaymentScheduleStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum BulkBatchStatus {
+  DRAFT
+  VALIDATED
+  SUBMITTED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum BulkBatchItemStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 enum FeeType {
   FIXED
   PERCENTAGE
@@ -1115,15 +1581,97 @@ enum IncidentStatus {
 
 enum InvoiceStatus {
   DRAFT
+  // Legacy "unpaid" status kept for compatibility with older code and migrations.
   PENDING
+  // Global-standard lifecycle statuses (new).
+  ISSUED
+  SENT
+  VIEWED
+  PARTIALLY_PAID
   PAID
+  // Legacy; overdue is computed from dueDate + amountDue. Kept for compatibility.
   OVERDUE
+  VOID
+  CREDITED
   CANCELLED
 }
 
 enum InvoiceType {
   USER
   BUSINESS
+}
+
+enum InvoiceKind {
+  INVOICE
+  CREDIT_NOTE
+}
+
+enum WorkspaceType {
+  PERSONAL
+  BUSINESS
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  SPEND_MANAGER
+  CARDHOLDER
+  VIEWER
+}
+
+enum CardStatus {
+  ACTIVE
+  FROZEN
+  TERMINATED
+}
+
+enum CardNetwork {
+  VISA
+  MASTERCARD
+}
+
+enum CardType {
+  VIRTUAL
+  PHYSICAL
+}
+
+enum SpendingInterval {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+  ALL_TIME
+}
+
+enum CardTransactionKind {
+  AUTH
+  CLEARING
+  REFUND
+  REVERSAL
+}
+
+enum CardTransactionStatus {
+  PENDING
+  COMPLETED
+  DECLINED
+  REVERSED
+}
+
+enum InvoiceLegacySource {
+  FIRESTORE_INVOICES
+  FIRESTORE_BUSINESS_INVOICES
+  NATIVE
+}
+
+enum InvoiceEventType {
+  INVOICE_CREATED
+  INVOICE_ISSUED
+  INVOICE_SENT
+  INVOICE_VIEWED
+  PAYMENT_APPLIED
+  INVOICE_VOIDED
+  CREDIT_NOTE_ISSUED
+  PDF_RENDERED
 }
 
 enum MessageType {

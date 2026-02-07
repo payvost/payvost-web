@@ -9,8 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, FileText, Search, Clock, CircleDollarSign, Edit, Trash2, Send, Copy, Eye, CheckCircle, Loader2, Receipt } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { collection, query, where, onSnapshot, DocumentData, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import type { DocumentData } from 'firebase/firestore';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -55,26 +54,38 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
             return;
         }
 
-        const q = query(collection(db, "businessInvoices"), where("createdBy", "==", user.uid));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const invoicesData: DocumentData[] = [];
-            querySnapshot.forEach((doc) => {
-                invoicesData.push({ id: doc.id, ...doc.data() });
-            });
-            invoicesData.sort((a, b) => {
-                const aTime = a.createdAt?.toDate?.() || new Date(0);
-                const bTime = b.createdAt?.toDate?.() || new Date(0);
-                return bTime.getTime() - aTime.getTime();
-            });
-            setInvoices(invoicesData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching business invoices: ", error);
-            setLoading(false);
-        });
+        let cancelled = false;
 
-        return () => unsubscribe();
-    }, [user]);
+        (async () => {
+            setLoading(true);
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch(`/api/v1/invoices?invoiceType=BUSINESS`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Failed to load invoices (${res.status})`);
+                }
+
+                const data = await res.json();
+                if (cancelled) return;
+                const invoicesData = Array.isArray(data?.invoices) ? data.invoices : [];
+                setInvoices(invoicesData);
+            } catch (e: any) {
+                console.error('Error fetching business invoices:', e);
+                if (!cancelled) {
+                    toast({ title: 'Error', description: e?.message || 'Failed to load invoices', variant: 'destructive' });
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [user, toast]);
 
     const handleCopyLink = (link: string) => {
         if (!link) {
@@ -85,7 +96,8 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
             });
             return;
         }
-        navigator.clipboard.writeText(link);
+        const url = link.startsWith('http') ? link : `${window.location.origin}${link}`;
+        navigator.clipboard.writeText(url);
         toast({ title: "Copied!", description: "Public invoice link copied to clipboard." });
     };
 
@@ -185,7 +197,20 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
         if (!invoiceToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteDoc(doc(db, 'businessInvoices', invoiceToDelete.id));
+            if (!user) throw new Error('Not authenticated');
+            const token = await user.getIdToken();
+            const res = await fetch(`/api/v1/invoices/${invoiceToDelete.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+                cache: 'no-store',
+            });
+
+            if (!res.ok && res.status !== 204) {
+                const err = await res.json().catch(() => null) as any;
+                throw new Error(err?.error || `Failed to delete invoice (${res.status})`);
+            }
+
+            setInvoices(invoices.filter(inv => inv.id !== invoiceToDelete.id));
             toast({ title: 'Invoice Deleted', description: `Invoice #${invoiceToDelete.invoiceNumber} has been deleted.` });
         } catch (error: any) {
             toast({ title: 'Error', description: error.message || 'Failed to delete invoice.', variant: 'destructive' });
@@ -339,7 +364,7 @@ export function BusinessInvoiceListView({ onCreateClick, onEditClick, isKycVerif
                                     <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency || 'USD' }).format(Number(invoice.grandTotal || 0))}</TableCell>
                                     <TableCell>{invoice.dueDate?.toDate ? new Date(invoice.dueDate.toDate()).toLocaleDateString() : new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
+                                        <Badge variant={statusVariant[String(invoice.status)] || 'outline'}>{String(invoice.status)}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                          <DropdownMenu>

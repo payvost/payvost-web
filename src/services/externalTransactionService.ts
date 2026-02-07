@@ -103,7 +103,9 @@ class ExternalTransactionService {
     params.set('userId', userId);
     if (options?.limit) params.set('limit', String(options.limit));
     if (options?.offset) params.set('offset', String(options.offset));
-    // Note: Filtering by provider/type/status can be added to API route when needed
+    if (options?.provider) params.set('provider', options.provider);
+    if (options?.type) params.set('type', options.type);
+    if (options?.status) params.set('status', options.status);
     return apiClient.get(`/api/external-transactions/by-user?${params.toString()}`);
   }
 
