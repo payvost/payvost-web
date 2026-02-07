@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { SiteHeader } from '@/components/site-header';
 import { CurrencySparkline } from '@/components/fx/mini-rate-chart';
 import { DetailedRateChart, CurrencyComparisonChart } from '@/components/fx/detailed-chart';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowUpDown,
   TrendingUp,
@@ -60,6 +61,7 @@ interface ExchangeRate {
 }
 
 export default function FXRatesPage() {
+  const searchParams = useSearchParams();
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [favorites, setFavorites] = useState<string[]>(['EUR', 'GBP', 'NGN']);
@@ -74,6 +76,7 @@ export default function FXRatesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   // Rate Alert Dialog State
   const [showRateAlertDialog, setShowRateAlertDialog] = useState(false);
+  const openedFromQueryRef = useRef(false);
   const [alertForm, setAlertForm] = useState({
     sourceCurrency: baseCurrency,
     targetCurrency: '',
@@ -155,6 +158,16 @@ export default function FXRatesPage() {
       setAlertMessage(error.message || 'Network error. Please try again.');
     }
   }
+
+  // Allow deep-linking into the rate alert dialog: /fx-rates?open=rate-alert
+  useEffect(() => {
+    if (openedFromQueryRef.current) return;
+    const open = searchParams.get('open');
+    if (open !== 'rate-alert') return;
+    openedFromQueryRef.current = true;
+    setAlertForm((prev) => ({ ...prev, sourceCurrency: baseCurrency }));
+    setShowRateAlertDialog(true);
+  }, [searchParams, baseCurrency]);
 
   // Fetch real exchange rates from Payvost Exchange Engine (OpenExchangeRates API)
   const fetchExchangeRates = useCallback(async () => {

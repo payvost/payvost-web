@@ -58,7 +58,7 @@ const dashboardSearchItems: SearchItem[] = [
   // Profile & Settings
   { title: 'Profile', href: '/dashboard/profile', description: 'Manage your profile information', icon: UserCog, category: 'Profile & Settings', keywords: ['profile', 'account', 'personal'] },
   { title: 'Settings', href: '/dashboard/settings', description: 'Account settings and preferences', icon: Settings, category: 'Profile & Settings', keywords: ['settings', 'preferences', 'config'] },
-  { title: 'Security', href: '/dashboard/profile', description: 'Security and authentication settings', icon: Lock, category: 'Profile & Settings', keywords: ['security', 'password', '2fa', 'pin'] },
+  { title: 'Security', href: '/dashboard/settings/security', description: 'Security and authentication settings', icon: Lock, category: 'Profile & Settings', keywords: ['security', 'password', '2fa', 'pin'] },
   { title: 'Notifications', href: '/dashboard/notifications', description: 'Manage notification preferences', icon: Bell, category: 'Profile & Settings', keywords: ['notification', 'alert', 'email'] },
   
   // Support & Help

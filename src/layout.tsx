@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ThemeProvider } from '@/components/theme-provider';
+import { UserPreferencesApplier } from '@/components/user-preferences-applier';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -39,6 +40,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
             <AuthProvider>
+                <UserPreferencesApplier />
                 {children}
             </AuthProvider>
             <Toaster />
