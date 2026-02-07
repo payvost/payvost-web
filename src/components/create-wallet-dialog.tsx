@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,8 @@ import { Loader2, Wallet, CheckCircle, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
-import { walletService, WalletServiceError, type Account } from '@/services';
+import { walletService, WalletServiceError, currencyService, type Account } from '@/services';
+import { getCurrencyName, getFlagCode } from '@/utils/currency-meta';
 
 interface CreateWalletDialogProps {
   children?: React.ReactNode;
@@ -32,16 +33,7 @@ const createWalletSchema = z.object({
 
 type FormValues = z.infer<typeof createWalletSchema>;
 
-const availableCurrencies = [
-  { currency: 'USD', name: 'US Dollar', flag: 'us' },
-  { currency: 'EUR', name: 'Euro', flag: 'eu' },
-  { currency: 'GBP', name: 'British Pound', flag: 'gb' },
-  { currency: 'NGN', name: 'Nigerian Naira', flag: 'ng' },
-  { currency: 'JPY', name: 'Japanese Yen', flag: 'jp' },
-  { currency: 'CAD', name: 'Canadian Dollar', flag: 'ca' },
-  { currency: 'AUD', name: 'Australian Dollar', flag: 'au' },
-  { currency: 'GHS', name: 'Ghanaian Cedi', flag: 'gh' },
-];
+const fallbackCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'JPY', 'CAD', 'AUD', 'GHS'];
 
 export function CreateWalletDialog({
   children,
@@ -59,18 +51,47 @@ export function CreateWalletDialog({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const [creationStatus, setCreationStatus] = useState<'form' | 'submitting' | 'success'>('form');
+  const [supportedCurrencies, setSupportedCurrencies] = useState<string[]>(fallbackCurrencies);
+  const [loadingCurrencies, setLoadingCurrencies] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoadingCurrencies(true);
+      try {
+        const list = await currencyService.getSupportedCurrencies();
+        if (!cancelled && Array.isArray(list) && list.length > 0) {
+          setSupportedCurrencies(list.map(c => c.toUpperCase()));
+        }
+      } catch {
+        // Ignore; fallback stays.
+      } finally {
+        if (!cancelled) setLoadingCurrencies(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Filter out currencies that user already has wallets for
   const existingCurrencies = new Set(existingWallets.map(w => w.currency));
   const requiredCurrency = requiredCurrencyFirst;
   const hasRequiredCurrency = requiredCurrency ? existingCurrencies.has(requiredCurrency) : true;
 
-  const availableCurrenciesFiltered = (() => {
-    const base = availableCurrencies.filter((c) => !existingCurrencies.has(c.currency));
+  const availableCurrenciesFiltered = useMemo(() => {
+    const base = supportedCurrencies
+      .filter((code) => !existingCurrencies.has(code))
+      .map((currency) => ({
+        currency,
+        name: getCurrencyName(currency),
+        flag: getFlagCode(currency),
+      }));
     if (!requiredCurrency || !enforceRequiredCurrencyFirst) return base;
     if (hasRequiredCurrency) return base;
     return base.filter((c) => c.currency === requiredCurrency);
-  })();
+  }, [supportedCurrencies, existingCurrencies, requiredCurrency, enforceRequiredCurrencyFirst, hasRequiredCurrency]);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(createWalletSchema),
@@ -213,6 +234,9 @@ export function CreateWalletDialog({
                                 )}
                             />
                             {errors.currency && <p className="text-sm text-destructive">{errors.currency.message}</p>}
+                            {loadingCurrencies ? (
+                              <p className="text-xs text-muted-foreground">Loading supported currencies…</p>
+                            ) : null}
                         </div>
                     </div>
                     <DialogFooter>

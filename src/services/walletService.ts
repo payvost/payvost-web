@@ -70,6 +70,22 @@ export interface FundingInstructions {
   reused?: boolean;
 }
 
+export interface LedgerEntry {
+  id: string;
+  accountId: string;
+  amount: string | number;
+  balanceAfter: string | number;
+  type: string;
+  description?: string | null;
+  referenceId?: string | null;
+  createdAt: string;
+}
+
+export interface ActivityResponse {
+  items: LedgerEntry[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
 /**
  * Wallet Service class
  */
@@ -237,6 +253,24 @@ class WalletService {
     } catch (error) {
       if (error instanceof ApiError) {
         throw new Error(`Failed to create funding instructions: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Unified activity feed (ledger entries) across all user wallets.
+   */
+  async getActivity(params?: { limit?: number; offset?: number }): Promise<ActivityResponse> {
+    try {
+      const query = new URLSearchParams();
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.offset) query.set('offset', String(params.offset));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return await apiClient.get<ActivityResponse>(`/api/wallet/activity${suffix}`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to fetch wallet activity: ${error.message}`);
       }
       throw error;
     }
