@@ -102,7 +102,7 @@ export function BusinessSidebar() {
         <div className="flex w-full items-center justify-between gap-2">
           <Link
             href="/business/settings"
-            className="flex h-full items-center gap-2 rounded-md px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground min-w-0 flex-1"
+            className="flex h-full items-center gap-2 rounded-md px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
           >
             {businessLogo ? (
               // eslint-disable-next-line @next/next/no-img-element

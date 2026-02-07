@@ -164,7 +164,7 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
       >
         <Sidebar variant="inset" collapsible="icon">
           <SidebarHeader className="h-[var(--app-header-height)] flex-row items-center justify-between gap-2 p-0 px-3">
-            <Link href="/" className="flex items-center gap-2 min-w-0">
+            <Link href="/" className="flex items-center gap-2 min-w-0 group-data-[collapsible=icon]:hidden">
               <Icons.logo className="h-8 shrink-0" />
             </Link>
             <SidebarTrigger className="hidden md:inline-flex opacity-70 hover:opacity-100" />
