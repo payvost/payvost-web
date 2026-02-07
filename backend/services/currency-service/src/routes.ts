@@ -14,13 +14,44 @@ const router = Router();
 router.get('/rates', optionalAuth, async (req: Request, res: Response) => {
     try {
         const { base = 'USD', target } = req.query;
+        const baseCurrency = String(base || 'USD').toUpperCase();
 
-        const rate = await currencyService.getExchangeRate(base as string, target as string || 'USD');
+        // If a target currency is specified, keep the single-rate response.
+        if (target) {
+            const targetCurrency = String(target).toUpperCase();
+            const rate = await currencyService.getExchangeRate(baseCurrency, targetCurrency);
 
-        res.status(200).json({
-            base,
-            timestamp: new Date().toISOString(),
-            rates: { [target as string || 'USD']: rate.toString() },
+            return res.status(200).json({
+                base: baseCurrency,
+                timestamp: new Date().toISOString(),
+                rates: { [targetCurrency]: rate.toNumber() },
+            });
+        }
+
+        // Otherwise return a full rates map based on the latest accepted snapshot.
+        const snapshot = await rateSnapshotService.getLatestAcceptedSnapshot();
+        const snapshotRates = snapshot.ratesJson as Record<string, string>;
+        const rates: Record<string, number> = {};
+
+        // Snapshot base is expected to be USD (DEFAULT_BASE), but handle non-USD base safely.
+        const baseRate = snapshotRates[baseCurrency] ? new Decimal(snapshotRates[baseCurrency]) : new Decimal(1);
+
+        for (const [currency, rateStr] of Object.entries(snapshotRates)) {
+            const r = new Decimal(rateStr);
+            // Convert USD-based rates into baseCurrency-based rates.
+            const normalized = baseCurrency === snapshot.baseCurrency
+                ? r
+                : r.div(baseRate);
+            rates[currency] = normalized.toNumber();
+        }
+
+        // Ensure the base currency itself is present.
+        rates[baseCurrency] = 1;
+
+        return res.status(200).json({
+            base: baseCurrency,
+            timestamp: new Date(snapshot.fetchedAt).toISOString(),
+            rates,
         });
     } catch (error: any) {
         console.error('Error fetching exchange rates:', error);

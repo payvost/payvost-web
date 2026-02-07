@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Card, CardContent, CardTitle, CardDescription, CardHeader, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardTitle, CardDescription, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Wallet, ArrowRight } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { CreateWalletDialog } from '@/components/create-wallet-dialog';
 import { CurrencyCard } from '@/components/currency-card';
 import { Carousel, CarouselApi, CarouselContent, CarouselItem } from '@/components/ui/carousel';
@@ -36,7 +36,6 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
     }, [api]);
 
     const hasWallets = wallets.length > 0;
-    const showCreateWalletCTA = wallets.length < 4;
 
     const EmptyState = () => (
         <div className="w-full rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-6 text-center">
@@ -88,75 +87,23 @@ export function WalletOverview({ wallets, loading, isKycVerified, onWalletCreate
                 <CurrencyCard currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={getFlagCode(wallet.currency)} />
             </CarouselItem>
         ));
-
-        if (showCreateWalletCTA) {
-            items.push(
-                <CarouselItem key="create-wallet-cta" className="md:basis-1/2 lg:basis-1/3">
-                    <Card className="flex flex-col justify-center items-center h-full min-h-[200px] border-dashed p-4">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-muted rounded-full"><Wallet className="h-6 w-6 text-muted-foreground" /></div>
-                            <div className="flex-1 text-left">
-                                <CardTitle className="text-base mb-1">Add Wallet</CardTitle>
-                                <CardDescription className="text-xs">Add more currencies to hold.</CardDescription>
-                            </div>
-                        </div>
-                        <CreateWalletDialog
-                            onWalletCreated={onWalletCreated}
-                            disabled={!isKycVerified}
-                            existingWallets={wallets}
-                            requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
-                            enforceRequiredCurrencyFirst={true}
-                        >
-                            <Button size="sm" variant="outline" className="w-full mt-4" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button>
-                        </CreateWalletDialog>
-                    </Card>
-                </CarouselItem>
-            );
-        }
         return items;
     }
 
     const renderDesktopGrid = () => {
-        const cards = wallets.slice(0, 4).map(wallet => (
-            <CurrencyCard key={wallet.currency} currency={wallet.currency} balance={wallet.balance} growth="+0.0%" flag={getFlagCode(wallet.currency)} />
-        ));
-
-        cards.push(
-            <Card key="all-wallets" className="flex flex-col justify-between h-full">
-                <CardHeader className="pb-2 pt-6 px-6 text-center">
-                    <CardTitle className="text-sm font-medium">All Wallets</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 pt-0 flex-grow flex flex-col justify-center items-center">
-                    <p className="text-muted-foreground text-xs text-center">View all your currency balances in one place.</p>
-                </CardContent>
-                <CardFooter className="p-6 pt-0">
-                    <Button asChild className="w-full">
-                        <Link href="/dashboard/wallets">View All Wallets <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-        );
-
-        if (showCreateWalletCTA) {
-            cards.push(
-                <Card key="create-wallet-cta" className="flex flex-col justify-center items-center h-full border-dashed">
-                    <CardContent className="p-6 text-center">
-                        <Wallet className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                        <CardTitle className="text-base mb-1">Expand Your Reach</CardTitle>
-                        <CardDescription className="text-xs mb-4">Add more currencies to transact globally.</CardDescription>
-                        <CreateWalletDialog
-                            onWalletCreated={onWalletCreated}
-                            disabled={!isKycVerified}
-                            existingWallets={wallets}
-                            requiredCurrencyFirst={requiredCurrencyFirst ?? undefined}
-                            enforceRequiredCurrencyFirst={true}
-                        >
-                            <Button size="sm" variant="outline" disabled={!isKycVerified}><PlusCircle className="mr-2 h-4 w-4" /> Add New Wallet</Button>
-                        </CreateWalletDialog>
-                    </CardContent>
-                </Card>
-            );
-        }
+        const cards = wallets
+            .slice()
+            .sort((a, b) => a.currency.localeCompare(b.currency))
+            .slice(0, 5)
+            .map((wallet) => (
+                <CurrencyCard
+                    key={wallet.currency}
+                    currency={wallet.currency}
+                    balance={wallet.balance}
+                    growth="+0.0%"
+                    flag={getFlagCode(wallet.currency)}
+                />
+            ));
 
         return <div className="hidden lg:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">{cards}</div>;
     }

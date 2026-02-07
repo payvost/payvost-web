@@ -4,7 +4,7 @@ import { ValidationError } from '../../gateway/index';
 import { prisma } from '../../common/prisma';
 import { Prisma } from '@prisma/client';
 import admin from 'firebase-admin';
-import { rapydService, CreateWalletRequest, RapydError } from '../rapyd';
+import { rapydService, CreateWalletRequest, CreateVirtualAccountRequest, RapydError } from '../rapyd';
 import { ensurePrismaUser } from '../user/syncUser';
 
 const router = Router();
@@ -262,6 +262,228 @@ router.get('/accounts/:id/ledger', verifyFirebaseToken, async (req: Authenticate
   } catch (error: any) {
     console.error('Error fetching ledger entries:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch ledger entries' });
+  }
+});
+
+/**
+ * GET /api/wallet/activity?limit=50&offset=0
+ * Unified recent wallet activity powered by ledger entries (source of truth).
+ */
+router.get('/activity', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { limit = '50', offset = '0' } = req.query;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const accounts = await prisma.account.findMany({
+      where: { userId },
+      select: { id: true, currency: true },
+    });
+
+    const accountIds = accounts.map(a => a.id);
+    if (accountIds.length === 0) {
+      return res.status(200).json({ items: [], pagination: { total: 0, limit: parseInt(limit as string), offset: parseInt(offset as string) } });
+    }
+
+    const items = await prisma.ledgerEntry.findMany({
+      where: { accountId: { in: accountIds } },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(parseInt(limit as string) || 50, 200),
+      skip: parseInt(offset as string) || 0,
+    });
+
+    const total = await prisma.ledgerEntry.count({
+      where: { accountId: { in: accountIds } },
+    });
+
+    res.status(200).json({
+      items,
+      pagination: {
+        total,
+        limit: parseInt(limit as string) || 50,
+        offset: parseInt(offset as string) || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error fetching wallet activity:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch wallet activity' });
+  }
+});
+
+/**
+ * GET /api/wallet/accounts/:id/funding-instructions
+ * Return persisted funding instructions for an account (e.g., virtual account bank details).
+ */
+router.get('/accounts/:id/funding-instructions', verifyFirebaseToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { id } = req.params;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const account = await prisma.account.findFirst({
+      where: { id, userId },
+    });
+
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const fundingSource = await prisma.accountFundingSource.findFirst({
+      where: { accountId: id, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!fundingSource) {
+      return res.status(404).json({ error: 'Funding instructions not found' });
+    }
+
+    res.status(200).json({ fundingSource });
+  } catch (error: any) {
+    console.error('Error fetching funding instructions:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch funding instructions' });
+  }
+});
+
+/**
+ * POST /api/wallet/accounts/:id/funding-instructions
+ * Create (or reuse) funding instructions for an account.
+ * Requires KYC. Attempts Rapyd virtual account creation when configured.
+ */
+router.post('/accounts/:id/funding-instructions', verifyFirebaseToken, requireKYC, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { id } = req.params;
+
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
+
+    const account = await prisma.account.findFirst({
+      where: { id, userId },
+    });
+
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // Reuse existing active funding source if present.
+    const existing = await prisma.accountFundingSource.findFirst({
+      where: { accountId: id, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existing) {
+      return res.status(200).json({ fundingSource: existing, reused: true });
+    }
+
+    // Resolve (or create) Rapyd ewallet id for this user.
+    let ewallet = account.rapydWalletId;
+    if (!ewallet) {
+      const anyAccountWithRapyd = await prisma.account.findFirst({
+        where: { userId, rapydWalletId: { not: null } },
+        orderBy: { createdAt: 'desc' },
+      });
+      ewallet = anyAccountWithRapyd?.rapydWalletId || null;
+    }
+
+    if (!ewallet) {
+      // Attempt to create Rapyd wallet (non-blocking fallback in account creation; here we try again).
+      try {
+        const userDoc = await admin.firestore().collection('users').doc(userId).get();
+        const userData = userDoc.data() || {};
+
+        if (userData && userData.email) {
+          const fullName = userData.fullName || userData.name || '';
+          const nameParts = String(fullName).trim().split(/\s+/);
+          const firstName = nameParts[0] || 'User';
+          const lastName = nameParts.slice(1).join(' ') || '';
+
+          const rapydWalletData: CreateWalletRequest = {
+            first_name: firstName,
+            last_name: lastName,
+            email: userData.email,
+            ewallet_reference_id: userId,
+            type: (account.type === 'BUSINESS') ? 'company' : 'person',
+            metadata: {
+              userId,
+              platform: 'payvost',
+            },
+            contact: {
+              email: userData.email,
+              phone_number: userData.phone || userData.phoneNumber || undefined,
+              country: userData.countryCode || userData.country || undefined,
+              first_name: firstName,
+              last_name: lastName,
+            },
+          };
+
+          const rapydWallet = await rapydService.createWallet(rapydWalletData);
+          ewallet = rapydWallet.id;
+
+          await prisma.account.update({
+            where: { id: account.id },
+            data: { rapydWalletId: ewallet },
+          });
+        }
+      } catch (rapydError: any) {
+        console.error('[Rapyd] Failed to create wallet during funding instructions:', rapydError);
+      }
+    }
+
+    if (!ewallet) {
+      return res.status(503).json({
+        error: 'Funding instructions unavailable',
+        message: 'Rapyd wallet not configured for this user. Please try again later.',
+      });
+    }
+
+    // Determine country for virtual account creation.
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data() || {};
+    const country = (userData.countryCode || userData.country || 'US').toString().toUpperCase();
+
+    const payload: CreateVirtualAccountRequest = {
+      currency: account.currency,
+      country,
+      description: `Payvost funding virtual account for ${account.currency}`,
+      ewallet,
+      merchant_reference_id: `pv_va_${account.id}`,
+      metadata: {
+        userId,
+        accountId: account.id,
+        currency: account.currency,
+        platform: 'payvost',
+      },
+    };
+
+    const virtualAccount = await rapydService.createVirtualAccount(payload);
+
+    const fundingSource = await prisma.accountFundingSource.create({
+      data: {
+        accountId: account.id,
+        type: 'VIRTUAL_ACCOUNT',
+        provider: 'RAPYD',
+        providerRef: virtualAccount.id,
+        details: virtualAccount as any,
+        status: 'ACTIVE',
+      },
+    });
+
+    res.status(201).json({ fundingSource });
+  } catch (error: any) {
+    console.error('Error creating funding instructions:', error);
+
+    if (error instanceof RapydError) {
+      return res.status(503).json({ error: error.message || 'Rapyd unavailable' });
+    }
+
+    res.status(500).json({ error: error.message || 'Failed to create funding instructions' });
   }
 });
 

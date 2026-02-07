@@ -77,11 +77,44 @@ export interface Wallet {
 }
 
 /**
+ * Rapyd Virtual Account (Collect) types
+ */
+export interface CreateVirtualAccountRequest {
+  currency: string;
+  country: string;
+  description?: string;
+  ewallet?: string;
+  merchant_reference_id?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface VirtualAccount {
+  id: string;
+  merchant_reference_id: string;
+  ewallet: string;
+  bank_account: {
+    beneficiary_name: string;
+    bank_name: string;
+    account_number: string;
+    routing_number?: string;
+    bic_swift?: string;
+    iban?: string;
+  };
+  metadata?: Record<string, any>;
+  status: string;
+  description?: string;
+  funding_instructions?: any;
+  currency: string;
+}
+
+/**
  * Rapyd API Endpoints
  */
 const RAPYD_ENDPOINTS = {
   WALLETS: '/v1/user',
   WALLET_BY_ID: '/v1/user/:walletId',
+  VIRTUAL_ACCOUNTS: '/v1/virtual_accounts',
+  VIRTUAL_ACCOUNT_BY_ID: '/v1/virtual_accounts/:virtualAccountId',
 } as const;
 
 /**
@@ -263,6 +296,33 @@ class RapydService {
     } catch (error) {
       throw new RapydError(
         `Failed to get wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Create a virtual account (collect) for bank transfer funding instructions.
+   */
+  async createVirtualAccount(payload: CreateVirtualAccountRequest): Promise<VirtualAccount> {
+    try {
+      return await this.request<VirtualAccount>('POST', RAPYD_ENDPOINTS.VIRTUAL_ACCOUNTS, payload);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create virtual account: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Get virtual account by ID.
+   */
+  async getVirtualAccount(virtualAccountId: string): Promise<VirtualAccount> {
+    try {
+      const endpoint = this.replaceUrlParams(RAPYD_ENDPOINTS.VIRTUAL_ACCOUNT_BY_ID, { virtualAccountId });
+      return await this.request<VirtualAccount>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get virtual account: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

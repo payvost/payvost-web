@@ -34,6 +34,9 @@ export type {
   ConversionResult,
 } from './currencyService';
 
+// Payment Service
+export { paymentService } from './paymentService';
+
 // Email Service (existing) - Server-side only, import directly from './emailService' in API routes
 // export * from './emailService';
 

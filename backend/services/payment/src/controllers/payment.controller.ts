@@ -5,14 +5,16 @@ import { determineOptimalProvider } from '../utils/routing';
 import { validateAmount, validateCurrency, validateIdempotencyKey } from '../validators';
 import { AuthenticatedRequest } from '../../../../gateway/auth-middleware';
 import { ValidationError } from '../../../../gateway/index';
+import { prisma } from '../../../../common/prisma';
 
-// Temporary in-memory persistence until a Prisma model is introduced
-// Shape: paymentId -> { intent, provider }
-const paymentStore: Map<string, { intent: PaymentIntent; provider: string }> = new Map();
+function mapStatusToString(status: any): string {
+  return typeof status === 'string' ? status : String(status || 'PENDING');
+}
 
 export async function createPaymentIntent(req: AuthenticatedRequest, res: Response) {
   try {
     const paymentRequest: PaymentRequestDTO = req.body;
+    const uid = (req as any).user?.uid as string | undefined;
     
     // Validate idempotency key is required
     if (!paymentRequest.idempotencyKey) {
@@ -23,13 +25,16 @@ export async function createPaymentIntent(req: AuthenticatedRequest, res: Respon
     await validateIdempotencyKey(paymentRequest.idempotencyKey);
     
     // Check if payment with this idempotency key already exists
-    const existingPayment = paymentStore.get(paymentRequest.idempotencyKey);
+    const existingPayment = await prisma.paymentIntentRecord.findUnique({
+      where: { idempotencyKey: paymentRequest.idempotencyKey },
+    });
     if (existingPayment) {
+      const provider = PaymentProviderRegistry.get(existingPayment.provider);
       return res.json({
-        paymentId: existingPayment.intent.id,
-        clientSecret: existingPayment.intent.clientSecret,
+        paymentId: existingPayment.providerRef,
+        clientSecret: existingPayment.clientSecret,
         provider: existingPayment.provider,
-        requiredFields: PaymentProviderRegistry.get(existingPayment.provider)?.getRequiredFields() || [],
+        requiredFields: provider?.getRequiredFields() || [],
         message: 'Payment intent already exists (idempotent)'
       });
     }
@@ -45,7 +50,7 @@ export async function createPaymentIntent(req: AuthenticatedRequest, res: Respon
     const intent = await provider.createPaymentIntent(paymentRequest);
     
     // Store payment intent with idempotency key as key
-    await savePaymentIntentToDB(intent, provider.name, paymentRequest.idempotencyKey);
+    await savePaymentIntentToDB(intent, provider.name, paymentRequest.idempotencyKey, paymentRequest, uid);
     
     res.json({
       paymentId: intent.id,
@@ -71,6 +76,9 @@ export async function getPaymentStatus(req: Request, res: Response) {
     }
     
     const provider = PaymentProviderRegistry.get(payment.provider);
+    if (!provider) {
+      return res.status(500).json({ error: `Provider ${payment.provider} not configured` });
+    }
     const status = await provider.getPaymentStatus(paymentId);
     
     res.json({ status });
@@ -81,14 +89,58 @@ export async function getPaymentStatus(req: Request, res: Response) {
   }
 }
 
-async function getPaymentFromDB(paymentId: string): Promise<{ intent: PaymentIntent; provider: string } | null> {
-  const record = paymentStore.get(paymentId) || null;
-  return record;
+async function getPaymentFromDB(paymentId: string): Promise<{ provider: string } | null> {
+  const record = await prisma.paymentIntentRecord.findFirst({
+    where: { providerRef: paymentId },
+    select: { provider: true },
+  });
+  return record || null;
 }
 
-async function savePaymentIntentToDB(intent: PaymentIntent, provider: string, idempotencyKey: string): Promise<void> {
-  // Store by both payment ID and idempotency key for lookup
-  paymentStore.set(intent.id, { intent, provider });
-  paymentStore.set(idempotencyKey, { intent, provider });
+async function savePaymentIntentToDB(
+  intent: PaymentIntent,
+  provider: string,
+  idempotencyKey: string,
+  request: PaymentRequestDTO,
+  uid?: string
+): Promise<void> {
+  const userId = (uid || request?.metadata?.userId || (request as any)?.userId || null) as string | null;
+  const accountId = (request?.metadata?.accountId || null) as string | null;
+
+  if (!userId) {
+    // Best-effort: derive from authenticated request on the server side when present.
+    // For safety, we still persist with "unknown" userId only if we have accountId.
+  }
+
+  if (!accountId) {
+    // We still persist the record for status tracking, but wallet top-ups require accountId.
+  }
+
+  await prisma.paymentIntentRecord.upsert({
+    where: { idempotencyKey },
+    update: {
+      provider,
+      providerRef: intent.id,
+      amount: intent.amount,
+      currency: intent.currency,
+      status: mapStatusToString(intent.status),
+      clientSecret: intent.clientSecret || null,
+      metadata: intent.metadata || request.metadata || undefined,
+      userId: userId || 'unknown',
+      accountId: accountId || 'unknown',
+    },
+    create: {
+      userId: userId || 'unknown',
+      accountId: accountId || 'unknown',
+      provider,
+      providerRef: intent.id,
+      idempotencyKey,
+      amount: intent.amount,
+      currency: intent.currency,
+      status: mapStatusToString(intent.status),
+      clientSecret: intent.clientSecret || null,
+      metadata: intent.metadata || request.metadata || undefined,
+    },
+  });
 }
 

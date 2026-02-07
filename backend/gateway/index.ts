@@ -162,9 +162,13 @@ export function createGateway() {
 
   // CORS configuration with conditional origin checking
   app.use((req: Request, res: Response, next: NextFunction) => {
-    // Health check and monitoring endpoints that don't require strict CORS
+    // Endpoints that should accept requests without an Origin header (load balancers, providers).
     const noCorsPaths = ['/health', '/'];
     const isHealthCheck = noCorsPaths.includes(req.path);
+    const isWebhookPath =
+      req.path.includes('/webhook') ||
+      req.path.startsWith('/api/webhooks/') ||
+      req.path.startsWith('/api/payment/providers/');
     const isSimpleRequest = ['GET', 'HEAD'].includes(req.method);
 
     // Helper function to check if IP is internal/localhost
@@ -204,9 +208,9 @@ export function createGateway() {
           return callback(null, true);
         }
 
-        // Allow requests without origin for health checks and simple GET/HEAD requests
+        // Allow requests without origin for health checks, webhook endpoints, and simple GET/HEAD requests
         // (used by load balancers, monitoring tools, etc.)
-        if (!origin && (isHealthCheck || isSimpleRequest)) {
+        if (!origin && (isHealthCheck || isWebhookPath || isSimpleRequest)) {
           return callback(null, true);
         }
 
@@ -243,7 +247,13 @@ export function createGateway() {
   });
 
   // Body parsing
-  app.use(express.json({ limit: '10mb' }));
+  // Capture raw body for webhook signature verification (e.g., Stripe).
+  app.use(express.json({
+    limit: '10mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Request logging (with correlation IDs)

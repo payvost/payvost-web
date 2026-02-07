@@ -55,6 +55,21 @@ export interface WithdrawDto {
   destination: string;
 }
 
+export interface FundingInstructions {
+  fundingSource: {
+    id: string;
+    accountId: string;
+    type: string;
+    provider: string;
+    providerRef: string;
+    details: any;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  reused?: boolean;
+}
+
 /**
  * Wallet Service class
  */
@@ -194,6 +209,34 @@ class WalletService {
     } catch (error) {
       if (error instanceof ApiError) {
         throw new Error(`Failed to get balance: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get persisted funding instructions for an account.
+   */
+  async getFundingInstructions(accountId: string): Promise<FundingInstructions> {
+    try {
+      return await apiClient.get<FundingInstructions>(`/api/wallet/accounts/${accountId}/funding-instructions`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to fetch funding instructions: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create (or reuse) funding instructions for an account.
+   */
+  async createFundingInstructions(accountId: string): Promise<FundingInstructions> {
+    try {
+      return await apiClient.post<FundingInstructions>(`/api/wallet/accounts/${accountId}/funding-instructions`, {});
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to create funding instructions: ${error.message}`);
       }
       throw error;
     }

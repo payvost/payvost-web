@@ -141,10 +141,22 @@ class CurrencyService {
    */
   async getSupportedCurrencies(): Promise<string[]> {
     try {
-      const response = await apiClient.get<{ currencies: string[] }>(
+      const response = await apiClient.get<{ currencies: any }>(
         '/api/currency/supported'
       );
-      return response.currencies;
+
+      const raw = response.currencies;
+      if (Array.isArray(raw)) {
+        // New backend shape: [{ code, name, symbol }]
+        if (raw.length > 0 && typeof raw[0] === 'object' && raw[0] && 'code' in raw[0]) {
+          return raw.map((c: any) => String(c.code).toUpperCase());
+        }
+        // Legacy shape: ['USD', ...]
+        return raw.map((c: any) => String(c).toUpperCase());
+      }
+
+      // Unexpected shape; fall back to defaults below.
+      throw new Error('Unsupported currencies response format');
     } catch (error) {
       // Return default currencies if API fails
       return ['USD', 'EUR', 'GBP', 'NGN', 'GHS', 'KES', 'CAD', 'AUD', 'JPY'];

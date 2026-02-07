@@ -30,6 +30,41 @@ model Account {
   @@index([userId])
 }
 
+model AccountFundingSource {
+  id          String   @id @default(cuid())
+  accountId   String
+  type        String
+  provider    String
+  providerRef String   @unique
+  details     Json
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  Account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+}
+
+model PaymentIntentRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  accountId      String
+  provider       String
+  providerRef    String   @unique
+  idempotencyKey String   @unique
+  amount         Decimal  @db.Decimal(20, 8)
+  currency       String
+  status         String
+  clientSecret   String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([accountId])
+  @@index([userId])
+}
+
 model AccountActivity {
   id        String   @id @default(cuid())
   accountId String

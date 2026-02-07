@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const requestedUserId = searchParams.get('userId');
+    const accountId = searchParams.get('accountId');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -19,7 +20,10 @@ export async function GET(req: NextRequest) {
     }
 
     const transactions = await prisma.externalTransaction.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(accountId ? { accountId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       take: Math.min(limit, 200),
       skip: offset,
