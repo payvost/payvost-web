@@ -71,8 +71,8 @@ router.post('/providers/stripe/webhook', async (req: any, res: Response) => {
 
         if (!existingLedger) {
           await prisma.$transaction(async (tx: any) => {
-            const locked = await tx.$queryRaw<Array<{ id: string; balance: string }>>`
-              SELECT id, balance
+            const locked = await tx.$queryRaw<Array<{ id: string; balance: string; currency: string }>>`
+              SELECT id, balance, currency
               FROM "Account"
               WHERE id = ${accountId}
               FOR UPDATE
@@ -81,6 +81,9 @@ router.post('/providers/stripe/webhook', async (req: any, res: Response) => {
             const accountData = locked[0];
             if (!accountData) {
               throw new Error('Account not found');
+            }
+            if (String(accountData.currency).toUpperCase() !== currency) {
+              throw new Error('Currency mismatch');
             }
 
             const currentBalance = parseFloat(accountData.balance);

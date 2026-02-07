@@ -76,7 +76,7 @@ export function CreateWalletDialog({
   }, []);
 
   // Filter out currencies that user already has wallets for
-  const existingCurrencies = new Set(existingWallets.map(w => w.currency));
+  const existingCurrencies = useMemo(() => new Set(existingWallets.map(w => w.currency)), [existingWallets]);
   const requiredCurrency = requiredCurrencyFirst;
   const hasRequiredCurrency = requiredCurrency ? existingCurrencies.has(requiredCurrency) : true;
 

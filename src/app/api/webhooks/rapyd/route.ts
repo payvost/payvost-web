@@ -347,46 +347,108 @@ async function handleVirtualAccountDeposit(data: any) {
 
     console.log(`[Rapyd Webhook] Virtual account deposit: ${transactionId}`);
 
-    // Create or update transaction record
-    const transaction = await prisma.externalTransaction.findFirst({
+    // Lookup funding source -> account mapping (created during "funding-instructions" creation).
+    const fundingSource = virtualAccountId
+      ? await prisma.accountFundingSource.findFirst({
+          where: { provider: 'RAPYD', providerRef: virtualAccountId, status: 'ACTIVE' },
+        })
+      : null;
+
+    const amountRaw = data.amount ?? data.original_amount ?? data.gross_amount ?? data.net_amount ?? 0;
+    const amount = typeof amountRaw === 'number' ? amountRaw : parseFloat(String(amountRaw || '0'));
+    const currency = String(data.currency_code || data.currency || data.currencyCode || 'USD').toUpperCase();
+
+    const derivedUserId =
+      (fundingSource?.details as any)?.metadata?.userId ||
+      (fundingSource?.details as any)?.metadata?.uid ||
+      null;
+
+    // Upsert external transaction record (for audit/history).
+    const externalTx = await prisma.externalTransaction.upsert({
       where: {
+        providerTransactionId: String(transactionId),
+      },
+      update: {
+        status: 'COMPLETED',
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
+      },
+      create: {
+        userId: String(derivedUserId || 'unknown'),
+        accountId: fundingSource?.accountId || null,
         provider: 'RAPYD',
-        providerTransactionId: transactionId,
+        providerTransactionId: String(transactionId),
         type: 'VIRTUAL_ACCOUNT_DEPOSIT',
+        status: 'COMPLETED',
+        amount: amount || 0,
+        currency,
+        recipientDetails: {
+          virtualAccountId,
+        },
+        metadata: data,
+        webhookReceived: true,
+        webhookData: data,
+        completedAt: new Date(),
       },
     });
 
-    if (transaction) {
-      const previousStatus = transaction.status;
-      
-      await prisma.externalTransaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: 'COMPLETED',
-          webhookReceived: true,
-          webhookData: data,
-          completedAt: new Date(),
-        },
+    // Credit wallet balance + ledger entry (idempotent by referenceId).
+    if (fundingSource?.accountId && transactionId && amount > 0) {
+      const referenceId = String(transactionId);
+      const existingLedger = await prisma.ledgerEntry.findFirst({
+        where: { referenceId },
+        select: { id: true },
       });
 
-      // Send notification for completed deposit
-      if (previousStatus !== 'COMPLETED') {
-        try {
-          const { notifyDeposit, notifyLargeDeposit } = await import('@/lib/unified-notifications');
-          const amount = parseFloat(transaction.amount.toString());
-          const currency = transaction.currency;
-          
-          await notifyDeposit(transaction.userId, amount, currency, 'Virtual Account Deposit');
-          
-          // Check for large deposit (threshold: 1000)
-          if (amount >= 1000) {
-            await notifyLargeDeposit(transaction.userId, amount, currency, 1000);
+      if (!existingLedger) {
+        await prisma.$transaction(async (tx: any) => {
+          const locked = await tx.$queryRaw<Array<{ id: string; balance: string; currency: string }>>`
+            SELECT id, balance, currency
+            FROM "Account"
+            WHERE id = ${fundingSource.accountId}
+            FOR UPDATE
+          `;
+
+          const accountData = locked[0];
+          if (!accountData) throw new Error('Account not found');
+          if (String(accountData.currency).toUpperCase() !== currency) {
+            throw new Error('Currency mismatch for virtual account deposit');
           }
-        } catch (notifError) {
-          console.error('Error sending deposit notification:', notifError);
-          // Don't fail webhook if notification fails
+
+          const currentBalance = parseFloat(accountData.balance);
+          const newBalance = (currentBalance + amount).toFixed(8);
+
+          await tx.account.update({
+            where: { id: fundingSource.accountId },
+            data: { balance: newBalance },
+          });
+
+          await tx.ledgerEntry.create({
+            data: {
+              accountId: fundingSource.accountId,
+              amount: amount.toString(),
+              balanceAfter: newBalance,
+              type: 'CREDIT',
+              description: 'Bank transfer deposit',
+              referenceId,
+            },
+          });
+        });
+      }
+    }
+
+    // Notifications (non-blocking)
+    try {
+      const { notifyDeposit, notifyLargeDeposit } = await import('@/lib/unified-notifications');
+      if (derivedUserId && derivedUserId !== 'unknown') {
+        await notifyDeposit(String(derivedUserId), amount, currency, 'Virtual Account Deposit');
+        if (amount >= 1000) {
+          await notifyLargeDeposit(String(derivedUserId), amount, currency, 1000);
         }
       }
+    } catch (notifError) {
+      console.error('Error sending deposit notification:', notifError);
     }
   } catch (error) {
     console.error('[Rapyd Webhook] Error handling virtual account deposit:', error);

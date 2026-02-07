@@ -22,6 +22,7 @@ model Account {
   AccountActivity                          AccountActivity[]
   AppliedFee                               AppliedFee[]
   LedgerEntry                              LedgerEntry[]
+  fundingSources                           AccountFundingSource[]
   ReferralReward                           ReferralReward[]
   Transfer_Transfer_fromAccountIdToAccount Transfer[]        @relation("Transfer_fromAccountIdToAccount")
   Transfer_Transfer_toAccountIdToAccount   Transfer[]        @relation("Transfer_toAccountIdToAccount")
@@ -41,7 +42,7 @@ model AccountFundingSource {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  Account Account @relation(fields: [accountId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
 }

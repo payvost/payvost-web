@@ -86,6 +86,11 @@ export interface ActivityResponse {
   pagination: { total: number; limit: number; offset: number };
 }
 
+export interface LedgerResponse {
+  entries: LedgerEntry[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
 /**
  * Wallet Service class
  */
@@ -271,6 +276,24 @@ class WalletService {
     } catch (error) {
       if (error instanceof ApiError) {
         throw new Error(`Failed to fetch wallet activity: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Ledger entries for a specific account.
+   */
+  async getLedger(accountId: string, params?: { limit?: number; offset?: number }): Promise<LedgerResponse> {
+    try {
+      const query = new URLSearchParams();
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.offset) query.set('offset', String(params.offset));
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return await apiClient.get<LedgerResponse>(`/api/wallet/accounts/${accountId}/ledger${suffix}`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw new Error(`Failed to fetch ledger: ${error.message}`);
       }
       throw error;
     }

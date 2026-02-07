@@ -29,30 +29,53 @@ router.get('/rates', optionalAuth, async (req: Request, res: Response) => {
         }
 
         // Otherwise return a full rates map based on the latest accepted snapshot.
-        const snapshot = await rateSnapshotService.getLatestAcceptedSnapshot();
-        const snapshotRates = snapshot.ratesJson as Record<string, string>;
-        const rates: Record<string, number> = {};
+        try {
+            const snapshot = await rateSnapshotService.getLatestAcceptedSnapshot();
+            const snapshotRates = snapshot.ratesJson as Record<string, string>;
+            const rates: Record<string, number> = {};
 
-        // Snapshot base is expected to be USD (DEFAULT_BASE), but handle non-USD base safely.
-        const baseRate = snapshotRates[baseCurrency] ? new Decimal(snapshotRates[baseCurrency]) : new Decimal(1);
+            // Snapshot base is expected to be USD (DEFAULT_BASE), but handle non-USD base safely.
+            const baseRate = snapshotRates[baseCurrency] ? new Decimal(snapshotRates[baseCurrency]) : new Decimal(1);
 
-        for (const [currency, rateStr] of Object.entries(snapshotRates)) {
-            const r = new Decimal(rateStr);
-            // Convert USD-based rates into baseCurrency-based rates.
-            const normalized = baseCurrency === snapshot.baseCurrency
-                ? r
-                : r.div(baseRate);
-            rates[currency] = normalized.toNumber();
+            for (const [currency, rateStr] of Object.entries(snapshotRates)) {
+                const r = new Decimal(rateStr);
+                // Convert USD-based rates into baseCurrency-based rates.
+                const normalized = baseCurrency === snapshot.baseCurrency
+                    ? r
+                    : r.div(baseRate);
+                rates[currency] = normalized.toNumber();
+            }
+
+            rates[baseCurrency] = 1;
+
+            return res.status(200).json({
+                base: baseCurrency,
+                timestamp: new Date(snapshot.fetchedAt).toISOString(),
+                rates,
+            });
+        } catch (snapshotError: any) {
+            // Fallback: compute a minimal set of rates on-demand (resilience).
+            const fallbackCurrencies = ['USD', 'EUR', 'GBP', 'NGN', 'GHS', 'KES', 'ZAR', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR'];
+            const rates: Record<string, number> = { [baseCurrency]: 1 };
+            await Promise.all(
+                fallbackCurrencies
+                    .filter(c => c !== baseCurrency)
+                    .map(async (c) => {
+                        try {
+                            const r = await currencyService.getExchangeRate(baseCurrency, c);
+                            rates[c] = r.toNumber();
+                        } catch {
+                            // skip
+                        }
+                    })
+            );
+
+            return res.status(200).json({
+                base: baseCurrency,
+                timestamp: new Date().toISOString(),
+                rates,
+            });
         }
-
-        // Ensure the base currency itself is present.
-        rates[baseCurrency] = 1;
-
-        return res.status(200).json({
-            base: baseCurrency,
-            timestamp: new Date(snapshot.fetchedAt).toISOString(),
-            rates,
-        });
     } catch (error: any) {
         console.error('Error fetching exchange rates:', error);
         res.status(500).json({ error: error.message || 'Failed to fetch exchange rates' });

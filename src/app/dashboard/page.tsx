@@ -259,7 +259,8 @@ export default function DashboardPage() {
                     />
 
                     <div className="grid gap-6 lg:grid-cols-12">
-                        <div className="lg:col-span-8 space-y-6">
+                        {/* Slightly narrower left column (about 10% shift) to give the sidebar more room */}
+                        <div className="lg:col-span-7 space-y-6">
                             <Card className="border border-muted-foreground/10 shadow-sm">
                                 <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div>
@@ -292,14 +293,17 @@ export default function DashboardPage() {
                             </Card>
 
                             <RecentTransactions />
+
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <SpendingBreakdown spendingData={spendingData} hasTransactionData={hasTransactionData} />
+                                <DisputeOverview disputes={disputes} loading={loadingDisputes} />
+                            </div>
                         </div>
 
-                        <div className="lg:col-span-4 space-y-6">
+                        <div className="lg:col-span-5 space-y-6">
                             <QuickActions isKycVerified={isKycVerified} />
                             <AccountCompletion />
                             <InvoiceOverview invoices={invoices} loading={loadingInvoices} isKycVerified={isKycVerified} />
-                            <SpendingBreakdown spendingData={spendingData} hasTransactionData={hasTransactionData} />
-                            <DisputeOverview disputes={disputes} loading={loadingDisputes} />
                         </div>
                     </div>
                 </div>
