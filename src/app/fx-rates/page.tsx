@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +60,7 @@ interface ExchangeRate {
   lastUpdated: Date;
 }
 
-export default function FXRatesPage() {
+function FXRatesPageContent() {
   const searchParams = useSearchParams();
   const [baseCurrency, setBaseCurrency] = useState('USD');
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
@@ -880,5 +880,19 @@ export default function FXRatesPage() {
         </Card>
       </main>
     </div>
+  );
+}
+
+export default function FXRatesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-muted-foreground">Loading FX rates...</div>
+        </div>
+      }
+    >
+      <FXRatesPageContent />
+    </Suspense>
   );
 }
