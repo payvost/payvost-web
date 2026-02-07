@@ -15,6 +15,8 @@ export function WalletsHeader(props: {
   onWalletCreated: () => void;
   onFund: () => void;
   onExchange: () => void;
+  createOpen?: boolean;
+  onCreateOpenChange?: (open: boolean) => void;
 }) {
   const {
     title = 'Wallets',
@@ -25,6 +27,8 @@ export function WalletsHeader(props: {
     onWalletCreated,
     onFund,
     onExchange,
+    createOpen,
+    onCreateOpenChange,
   } = props;
 
   return (
@@ -58,6 +62,8 @@ export function WalletsHeader(props: {
         <CreateWalletDialog
           onWalletCreated={onWalletCreated}
           disabled={!isKycVerified}
+          open={createOpen}
+          onOpenChange={onCreateOpenChange}
           existingWallets={wallets}
           requiredCurrencyFirst={requiredCurrencyFirst}
           enforceRequiredCurrencyFirst={true}
@@ -71,4 +77,3 @@ export function WalletsHeader(props: {
     </div>
   );
 }
-

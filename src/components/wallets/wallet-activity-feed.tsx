@@ -43,8 +43,6 @@ function formatMoney(amount: number, currency: string, locale = 'en-US') {
     style: 'currency',
     currency,
     currencyDisplay: 'narrowSymbol',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
   }).format(amount);
 }
 
@@ -182,4 +180,3 @@ export function WalletActivityFeed(props: {
     </Card>
   );
 }
-

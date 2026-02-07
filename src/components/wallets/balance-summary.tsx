@@ -10,8 +10,6 @@ function formatMoney(amount: number, currency: string, locale = 'en-US') {
     style: 'currency',
     currency,
     currencyDisplay: 'narrowSymbol',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
   }).format(amount);
 }
 
@@ -51,7 +49,7 @@ export function BalanceSummary(props: {
           <Skeleton className="h-10 w-56" />
         ) : (
           <div className="text-4xl font-bold">
-            {totalEstimated == null ? '—' : formatMoney(totalEstimated, homeCurrency)}
+            {totalEstimated == null ? '-' : formatMoney(totalEstimated, homeCurrency)}
           </div>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
@@ -61,4 +59,3 @@ export function BalanceSummary(props: {
     </Card>
   );
 }
-

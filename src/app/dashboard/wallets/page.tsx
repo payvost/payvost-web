@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
@@ -18,6 +19,8 @@ import { WalletList } from '@/components/wallets/wallet-list';
 import { WalletActivityFeed, type ActivityItem } from '@/components/wallets/wallet-activity-feed';
 import { FundWalletSheet } from '@/components/wallets/fund-wallet-sheet';
 import { ExchangeSheet } from '@/components/wallets/exchange-sheet';
+import { EmptyState } from '@/components/empty-state';
+import { Wallet } from 'lucide-react';
 
 import { SUPPORTED_COUNTRIES } from '@/config/kyc-config';
 
@@ -50,6 +53,8 @@ export default function WalletsPage() {
 
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [exchangeFromId, setExchangeFromId] = useState<string | undefined>(undefined);
+
+  const [createWalletOpen, setCreateWalletOpen] = useState(false);
 
   // Firestore: KYC + homeCurrency (source of truth for now).
   useEffect(() => {
@@ -177,14 +182,15 @@ export default function WalletsPage() {
 
         if (ledgerRes.status === 'fulfilled') {
           for (const entry of ledgerRes.value.items || []) {
-            const amount = parseNumber(entry.amount);
+            const rawAmount = parseNumber(entry.amount);
+            const direction = String(entry.type || '').toUpperCase() === 'DEBIT' ? 'debit' : 'credit';
             items.push({
               kind: 'ledger',
               id: entry.id,
               createdAt: entry.createdAt,
               currency: wallets.find(w => w.id === entry.accountId)?.currency || homeCurrency || 'USD',
-              amount: Math.abs(amount),
-              direction: amount >= 0 ? 'credit' : 'debit',
+              amount: Math.abs(rawAmount),
+              direction,
               description: entry.description || null,
             });
           }
@@ -255,9 +261,6 @@ export default function WalletsPage() {
 
   const onSettled = async () => {
     await refreshWallets();
-    // re-fetch activity after wallet refresh
-    setLoadingActivity(true);
-    setTimeout(() => setLoadingActivity(false), 300);
   };
 
   return (
@@ -282,32 +285,62 @@ export default function WalletsPage() {
           onWalletCreated={refreshWallets}
           onFund={() => primaryWallet && openFund(primaryWallet)}
           onExchange={() => openExchange(primaryWallet?.id)}
+          createOpen={createWalletOpen}
+          onCreateOpenChange={setCreateWalletOpen}
         />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-3">
-            <BalanceSummary
-              homeCurrency={primaryCurrency}
-              totalEstimated={totalEstimated}
-              ratesTimestamp={ratesTimestamp}
-              loading={loadingRates}
-            />
-          </div>
+        {!isKycVerified ? (
+          <Alert>
+            <AlertTitle>KYC required</AlertTitle>
+            <AlertDescription>
+              Complete identity verification to create wallets, fund balances, and exchange currencies.{' '}
+              <a className="underline underline-offset-4" href="/dashboard/profile">Go to profile</a>.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-          <div className="lg:col-span-2 space-y-6">
-            <WalletList
-              wallets={wallets}
-              primaryCurrency={primaryCurrency}
-              onFund={openFund}
-              onExchangeFrom={(w) => openExchange(w.id)}
-              onDetails={(w) => (window.location.href = `/dashboard/wallets/${w.id}`)}
-            />
-          </div>
+        {wallets.length === 0 ? (
+          <EmptyState
+            icon={<Wallet className="h-16 w-16" />}
+            title="Create your first wallet"
+            description="Add a currency wallet to hold balances, receive deposits, and exchange between currencies."
+            action={isKycVerified ? {
+              label: 'Add wallet',
+              onClick: () => setCreateWalletOpen(true),
+            } : undefined}
+            secondaryAction={!isKycVerified ? {
+              label: 'Complete KYC',
+              onClick: () => { window.location.href = '/dashboard/profile'; },
+              variant: 'outline',
+            } : undefined}
+            size="lg"
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-3">
+              <BalanceSummary
+                homeCurrency={primaryCurrency}
+                totalEstimated={totalEstimated}
+                ratesTimestamp={ratesTimestamp}
+                loading={loadingRates}
+              />
+            </div>
 
-          <div className="lg:col-span-1">
-            <WalletActivityFeed items={activity} loading={loadingActivity} />
+            <div className="lg:col-span-2 space-y-6">
+              <WalletList
+                wallets={wallets}
+                primaryCurrency={primaryCurrency}
+                onFund={openFund}
+                onExchangeFrom={(w) => openExchange(w.id)}
+                onDetails={(w) => (window.location.href = `/dashboard/wallets/${w.id}`)}
+              />
+            </div>
+
+            <div className="lg:col-span-1">
+              <WalletActivityFeed items={activity} loading={loadingActivity} />
+            </div>
           </div>
-        </div>
+        )}
 
         {fundAccount ? (
           <FundWalletSheet
