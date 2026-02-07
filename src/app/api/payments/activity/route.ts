@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, HttpError } from '@/lib/api/auth';
 import { prisma } from '@/lib/prisma';
 
+function isPrismaConnectivityError(error: any): boolean {
+  const name = typeof error?.name === 'string' ? error.name : '';
+  return (
+    name === 'PrismaClientInitializationError' ||
+    name === 'PrismaClientRustPanicError' ||
+    name === 'PrismaClientUnknownRequestError'
+  );
+}
+
+function isLikelyMigrationPendingError(error: any): boolean {
+  const name = typeof error?.name === 'string' ? error.name : '';
+  const code = typeof error?.code === 'string' ? error.code : '';
+  const message = typeof error?.message === 'string' ? error.message : '';
+
+  if (name !== 'PrismaClientKnownRequestError') return false;
+
+  // Common “schema mismatch / missing table/column” codes.
+  if (['P2021', 'P2022'].includes(code)) return true;
+
+  // Fallback to message sniffing (some errors don’t surface a stable code).
+  return /does not exist|unknown\s+table|unknown\s+column|relation\s+\"?paymentorder\"?\s+does not exist/i.test(message);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { uid, claims } = await requireAuth(req);
@@ -38,8 +61,19 @@ export async function GET(req: NextRequest) {
     if (error instanceof HttpError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
+
+    if (isPrismaConnectivityError(error) || isLikelyMigrationPendingError(error)) {
+      const isProd = process.env.NODE_ENV === 'production';
+      const errorMessage =
+        !isProd && isLikelyMigrationPendingError(error)
+          ? 'Payments activity unavailable (migration pending)'
+          : 'Service temporarily unavailable';
+
+      console.error('GET /api/payments/activity unavailable:', error);
+      return NextResponse.json({ error: errorMessage }, { status: 503 });
+    }
+
     console.error('GET /api/payments/activity error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-

@@ -1,5 +1,5 @@
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
@@ -22,6 +22,12 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 import { siteUrl } from '@/lib/constants';
+
+// Explicit viewport to avoid mobile browsers rendering the page in a scaled "desktop" layout viewport.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

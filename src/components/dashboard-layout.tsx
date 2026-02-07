@@ -13,6 +13,10 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuAction,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarInset,
   SidebarFooter,
   SidebarGroup,
@@ -22,7 +26,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
-import { Home, ArrowRightLeft, Settings, Send, Wallet, CreditCard, HandCoins, ShieldCheck, ShieldAlert, Gift } from 'lucide-react';
+import { ChevronDown, Settings } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { Button } from './ui/button';
@@ -35,6 +39,10 @@ import { Badge } from './ui/badge';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { DashboardSwitcher } from './dashboard-switcher';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { DASHBOARD_NAV, type DashboardNavItem } from '@/config/dashboard-nav';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { GatedActionModal, type GatedActionModalState } from '@/components/gated-action-modal';
 
 
 interface DashboardLayoutProps {
@@ -48,9 +56,15 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   const pathname = usePathname();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { capabilities } = useCapabilities();
   const mainContentRef = React.useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = React.useState(false);
   const [isBusinessApproved, setIsBusinessApproved] = useState(false);
+  const [gatedModal, setGatedModal] = useState<GatedActionModalState>({
+    open: false,
+    title: '',
+    description: '',
+  });
 
 
   useEffect(() => {
@@ -131,23 +145,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     enabled: Boolean(user),
   });
 
-  const overviewItems = [{ href: '/dashboard', icon: <Home strokeWidth={2.5} />, label: 'Dashboard' }];
-
-  const moneyItems = [
-    { href: '/dashboard/wallets', icon: <Wallet strokeWidth={2.5} />, label: 'Wallet' },
-    { href: '/dashboard/payments', icon: <Send strokeWidth={2.5} />, label: 'Payments' },
-    { href: '/dashboard/transactions', icon: <ArrowRightLeft strokeWidth={2.5} />, label: 'Transactions' },
-    { href: '/dashboard/cards', icon: <CreditCard strokeWidth={2.5} />, label: 'Virtual Cards' },
-  ];
-
-  const getPaidAndProtectionItems = [
-    { href: '/dashboard/request-payment', icon: <HandCoins strokeWidth={2.5} />, label: 'Requests' },
-    { href: '/dashboard/escrow', icon: <ShieldCheck strokeWidth={2.5} />, label: 'Escrow', isNew: true },
-    { href: '/dashboard/dispute', icon: <ShieldAlert strokeWidth={2.5} />, label: 'Disputes' },
-  ];
-
-  const perksItems = [{ href: '/dashboard/referrals', icon: <Gift strokeWidth={2.5} />, label: 'Referrals' }];
-
   const isActive = (href: string) => {
     // Exact match for parent routes, prefix match for others.
     if (href === '/dashboard') {
@@ -155,6 +152,148 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     }
     return pathname.startsWith(href);
   }
+
+  const isItemActive = (item: DashboardNavItem): boolean => {
+    if (isActive(item.href)) return true;
+    return Boolean(item.children?.some(isItemActive));
+  };
+
+  const paymentsItem = DASHBOARD_NAV.flatMap((s) => s.items).find((i) => i.href === '/dashboard/payments' && i.children);
+  const paymentsActive = paymentsItem ? isItemActive(paymentsItem) : false;
+  const [paymentsOpen, setPaymentsOpen] = useState<boolean>(paymentsActive);
+
+  useEffect(() => {
+    if (paymentsActive) setPaymentsOpen(true);
+  }, [paymentsActive]);
+
+  const openGatedModal = (opts: { title: string; description: string; resolveHref?: string }) => {
+    setGatedModal({
+      open: true,
+      title: opts.title,
+      description: opts.description,
+      primaryHref: opts.resolveHref,
+      primaryLabel: opts.resolveHref ? 'Complete verification' : undefined,
+      secondaryHref: '/dashboard/support',
+      secondaryLabel: 'Contact support',
+    });
+  };
+
+  const renderNavItem = (item: DashboardNavItem) => {
+    const Icon = item.icon;
+    const active = isItemActive(item);
+
+    // Parent item with submenu (only used for Payments right now).
+    if (item.children?.length) {
+      return (
+        <Collapsible key={item.href} open={paymentsOpen} onOpenChange={setPaymentsOpen}>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+              <Link href={item.href} data-tracking-id={item.trackingId}>
+                <Icon strokeWidth={2.5} />
+                <span>{item.label}</span>
+              </Link>
+            </SidebarMenuButton>
+
+            <CollapsibleTrigger asChild>
+              <SidebarMenuAction
+                aria-label={paymentsOpen ? 'Collapse Payments' : 'Expand Payments'}
+                className="group-data-[collapsible=icon]:hidden"
+              >
+                <ChevronDown className={paymentsOpen ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              </SidebarMenuAction>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up motion-reduce:animate-none group-data-[collapsible=icon]:hidden">
+              <SidebarMenuSub>
+                {item.children.map((child) => {
+                  const ChildIcon = child.icon;
+                  const cap = child.capabilityKey ? capabilities[child.capabilityKey] : { enabled: true };
+                  const disabled = Boolean(child.capabilityKey && !cap.enabled);
+                  const reason = cap.reason || 'Not available for your account.';
+
+                  if (disabled) {
+                    return (
+                      <SidebarMenuSubItem key={child.href}>
+                        <SidebarMenuSubButton
+                          isActive={isItemActive(child)}
+                          className="opacity-60"
+                          title={reason}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openGatedModal({
+                              title: `${child.label} is unavailable`,
+                              description: reason,
+                              resolveHref: cap.resolveHref,
+                            });
+                          }}
+                          data-tracking-id={child.trackingId}
+                        >
+                          <ChildIcon strokeWidth={2.5} />
+                          <span>{child.label}</span>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    );
+                  }
+
+                  return (
+                    <SidebarMenuSubItem key={child.href}>
+                      <SidebarMenuSubButton asChild isActive={isItemActive(child)}>
+                        <Link href={child.href} data-tracking-id={child.trackingId}>
+                          <ChildIcon strokeWidth={2.5} />
+                          <span>{child.label}</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  );
+                })}
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </SidebarMenuItem>
+        </Collapsible>
+      );
+    }
+
+    const cap = item.capabilityKey ? capabilities[item.capabilityKey] : { enabled: true };
+    const disabled = Boolean(item.capabilityKey && !cap.enabled);
+    const reason = cap.reason || 'Not available for your account.';
+
+    if (disabled) {
+      return (
+        <SidebarMenuItem key={item.href}>
+          <SidebarMenuButton
+            isActive={active}
+            tooltip={reason}
+            className="opacity-60"
+            title={reason}
+            onClick={(e) => {
+              e.preventDefault();
+              openGatedModal({ title: `${item.label} is unavailable`, description: reason, resolveHref: cap.resolveHref });
+            }}
+            data-tracking-id={item.trackingId}
+          >
+            <Icon strokeWidth={2.5} />
+            <span>{item.label}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      );
+    }
+
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+          <Link href={item.href} data-tracking-id={item.trackingId}>
+            <Icon strokeWidth={2.5} />
+            <span>{item.label}</span>
+            {item.badge?.type === 'new' ? (
+              <Badge className="ml-auto bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4 group-data-[collapsible=icon]:hidden">
+                {item.badge.label || 'New'}
+              </Badge>
+            ) : null}
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <ProtectRoute>
@@ -171,80 +310,15 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
           </SidebarHeader>
 
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Overview</SidebarGroupLabel>
-              <SidebarMenu>
-                {overviewItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-
-            <SidebarSeparator />
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Money</SidebarGroupLabel>
-              <SidebarMenu>
-                {moneyItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-
-            <SidebarSeparator />
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Requests & Protection</SidebarGroupLabel>
-              <SidebarMenu>
-                {getPaidAndProtectionItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                      <Link href={item.href} className="flex items-center gap-2">
-                        {item.icon}
-                        <span className="flex items-center gap-1.5">
-                          {item.label}
-                          {item.isNew && (
-                            <Badge className="bg-primary text-primary-foreground px-1.5 py-0 text-[10px] leading-tight font-semibold h-4">
-                              New
-                            </Badge>
-                          )}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Perks</SidebarGroupLabel>
-              <SidebarMenu>
-                {perksItems.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
-                      <Link href={item.href}>
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
+            {DASHBOARD_NAV.map((section, idx) => (
+              <React.Fragment key={section.label}>
+                <SidebarGroup>
+                  <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+                  <SidebarMenu>{section.items.map(renderNavItem)}</SidebarMenu>
+                </SidebarGroup>
+                {idx < DASHBOARD_NAV.length - 1 ? <SidebarSeparator /> : null}
+              </React.Fragment>
+            ))}
 
             {!isBusinessApproved && (
               <div className="mt-2 mx-2 p-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
@@ -289,6 +363,11 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
           <ErrorBoundary>{children}</ErrorBoundary>
         </SidebarInset>
       </SidebarProvider>
+
+      <GatedActionModal
+        state={gatedModal}
+        onOpenChange={(open) => setGatedModal((prev) => ({ ...prev, open }))}
+      />
     </ProtectRoute>
   );
 }
