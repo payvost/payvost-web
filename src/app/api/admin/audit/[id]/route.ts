@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+type Params = { params: { id: string } };
+
+export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = params;
   // Placeholder audit entries
   const rows = [
