@@ -8,6 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+'use client';
+
+import { useState, useEffect } from 'react';
+import type { LanguagePreference } from '@/types/language';
+import { DashboardLayout } from '@/components/dashboard-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvoiceTab } from '@/components/invoice-tab';
 import { CreateInvoicePage } from '@/components/create-invoice-page';
-import { RecurringTab } from '@/components/recurring-tab';
 import { SplitPaymentTab } from '@/components/split-payment-tab';
 import { EventTicketsTab } from '@/components/event-tickets-tab';
 import { DonationsTab } from '@/components/donations-tab';
@@ -44,8 +52,8 @@ function PaymentLinkTab() {
 
   useEffect(() => {
     if (!user) {
-        if (!authLoading) setLoadingRequests(false);
-        return;
+      if (!authLoading) setLoadingRequests(false);
+      return;
     }
     let cancelled = false;
     const load = async () => {
@@ -64,13 +72,13 @@ function PaymentLinkTab() {
       cancelled = true;
     };
   }, [user, authLoading]);
-  
+
 
   const handleCreateRequest = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) {
-        toast({ title: 'Not authenticated', description: 'You must be logged in to create a payment link.', variant: 'destructive'});
-        return;
+      toast({ title: 'Not authenticated', description: 'You must be logged in to create a payment link.', variant: 'destructive' });
+      return;
     }
 
     setIsSubmitting(true);
@@ -90,35 +98,35 @@ function PaymentLinkTab() {
         currency,
       });
       const link = res.url;
-      
+
       if (payerEmail) {
         console.log("Sending email to:", payerEmail);
         try {
-            await sendPaymentRequestEmail({
-                to: payerEmail,
-                amount: parseFloat(amount),
-                currency,
-                description,
-                paymentLink: link,
-                requesterName: user.displayName || 'A Payvost User'
-            });
-            toast({
-                title: 'Payment Request Sent!',
-                description: `An email has been sent to ${payerEmail}.`,
-            });
+          await sendPaymentRequestEmail({
+            to: payerEmail,
+            amount: parseFloat(amount),
+            currency,
+            description,
+            paymentLink: link,
+            requesterName: user.displayName || 'A Payvost User'
+          });
+          toast({
+            title: 'Payment Request Sent!',
+            description: `An email has been sent to ${payerEmail}.`,
+          });
         } catch (emailError) {
-            console.error('Failed to send email:', emailError);
-             toast({
-                title: 'Link Generated, Email Failed',
-                description: 'The payment link was created, but the email could not be sent.',
-                variant: 'destructive'
-            });
+          console.error('Failed to send email:', emailError);
+          toast({
+            title: 'Link Generated, Email Failed',
+            description: 'The payment link was created, but the email could not be sent.',
+            variant: 'destructive'
+          });
         }
 
       } else {
-         toast({
-            title: 'Payment Link Generated!',
-            description: 'You can now share the link with your payer.',
+        toast({
+          title: 'Payment Link Generated!',
+          description: 'You can now share the link with your payer.',
         });
       }
 
@@ -129,7 +137,7 @@ function PaymentLinkTab() {
       try {
         const refreshed = await apiClient.get<{ items: any[] }>(`/api/payment-links?limit=5&offset=0`);
         setRecentRequests(refreshed.items || []);
-      } catch {}
+      } catch { }
     } catch (err) {
       console.error('Error saving request:', err);
       toast({
@@ -138,7 +146,7 @@ function PaymentLinkTab() {
         variant: 'destructive',
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -217,8 +225,8 @@ function PaymentLinkTab() {
                 <RadioGroup value={linkType} onValueChange={(value) => setLinkType(value as 'one-time' | 'reusable')} className="grid grid-cols-2 gap-4">
                   <div>
                     <RadioGroupItem value="one-time" id="one-time" className="peer sr-only" />
-                    <Label 
-                      htmlFor="one-time" 
+                    <Label
+                      htmlFor="one-time"
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
                     >
                       <span className="font-medium">One-Time</span>
@@ -227,8 +235,8 @@ function PaymentLinkTab() {
                   </div>
                   <div>
                     <RadioGroupItem value="reusable" id="reusable" className="peer sr-only" />
-                    <Label 
-                      htmlFor="reusable" 
+                    <Label
+                      htmlFor="reusable"
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer"
                     >
                       <span className="font-medium">Reusable</span>
@@ -273,76 +281,76 @@ function PaymentLinkTab() {
             <CardDescription>A log of your recent payment links.</CardDescription>
           </CardHeader>
           <CardContent>
-             {loadingRequests ? (
-                <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-                </div>
-             ) : recentRequests.length === 0 ? (
-                <div className="text-center text-muted-foreground py-10">
-                    <p>You haven't created any payment links yet.</p>
-                </div>
+            {loadingRequests ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            ) : recentRequests.length === 0 ? (
+              <div className="text-center text-muted-foreground py-10">
+                <p>You haven't created any payment links yet.</p>
+              </div>
             ) : (
-                <Table>
+              <Table>
                 <TableHeader>
-                    <TableRow>
+                  <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="text-right">Status</TableHead>
                     <TableHead className="text-right sr-only">Actions</TableHead>
-                    </TableRow>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {recentRequests.map((req) => (
+                  {recentRequests.map((req) => (
                     <TableRow key={req.id}>
-                        <TableCell>
+                      <TableCell>
                         <div className="font-medium truncate">{req.title || 'Payment Link'}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : ''}
-                            {req.linkType && (
-                                <Badge variant="outline" className="text-xs">
-                                    {String(req.linkType) === 'REUSABLE' ? 'Reusable' : 'One-Time'}
-                                </Badge>
-                            )}
+                          {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : ''}
+                          {req.linkType && (
+                            <Badge variant="outline" className="text-xs">
+                              {String(req.linkType) === 'REUSABLE' ? 'Reusable' : 'One-Time'}
+                            </Badge>
+                          )}
                         </div>
-                        </TableCell>
-                        <TableCell>
-                          {String(req.amountType) === 'OPEN'
-                            ? `${req.currency} (open)`
-                            : `${req.currency} ${req.amount ?? ''}`}
-                        </TableCell>
-                        <TableCell className="text-right">
+                      </TableCell>
+                      <TableCell>
+                        {String(req.amountType) === 'OPEN'
+                          ? `${req.currency} (open)`
+                          : `${req.currency} ${req.amount ?? ''}`}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Badge
-                            variant={
+                          variant={
                             req.status === 'DISABLED'
-                                ? 'default'
-                                : req.status === 'ACTIVE' || req.status === 'DRAFT'
+                              ? 'default'
+                              : req.status === 'ACTIVE' || req.status === 'DRAFT'
                                 ? 'secondary'
                                 : 'destructive'
-                            }
-                            className="capitalize"
+                          }
+                          className="capitalize"
                         >
-                            {req.status}
+                          {req.status}
                         </Badge>
-                        </TableCell>
-                         <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => generateShareLink(req.id)}>
-                                <Copy className="h-4 w-4" />
-                                <span className="sr-only">Generate Link</span>
-                            </Button>
-                        </TableCell>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => generateShareLink(req.id)}>
+                          <Copy className="h-4 w-4" />
+                          <span className="sr-only">Generate Link</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                    ))}
+                  ))}
                 </TableBody>
-                </Table>
+              </Table>
             )}
           </CardContent>
           {recentRequests.length > 0 && (
             <CardFooter>
-                <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full">
                 View All Requests
-                </Button>
+              </Button>
             </CardFooter>
-           )}
+          )}
         </Card>
       </div>
 
@@ -364,13 +372,13 @@ export default function RequestPaymentPageContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab') || 'payment-link';
   const create = searchParams.get('create');
-  
+
   const [activeTab, setActiveTab] = useState(tab);
-  
+
   useEffect(() => {
     setActiveTab(tab);
   }, [tab]);
-  
+
   const [invoiceView, setInvoiceView] = useState(create === 'true' ? 'create' : 'list');
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
 
@@ -419,10 +427,6 @@ export default function RequestPaymentPageContent() {
               <FileText className="mr-2 h-4 w-4" />
               Invoice
             </TabsTrigger>
-            <TabsTrigger value="recurring">
-              <Repeat className="mr-2 h-4 w-4" />
-              Recurring
-            </TabsTrigger>
             <TabsTrigger value="split-payment">
               <Users className="mr-2 h-4 w-4" />
               Split Payment
@@ -442,10 +446,6 @@ export default function RequestPaymentPageContent() {
           </TabsContent>
 
           <TabsContent value="invoice">{renderInvoiceContent()}</TabsContent>
-
-          <TabsContent value="recurring">
-            <RecurringTab />
-          </TabsContent>
 
           <TabsContent value="split-payment">
             <SplitPaymentTab />

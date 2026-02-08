@@ -85,23 +85,11 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
             capabilityKey: 'payments.bills',
           },
           {
-            label: 'Payment activity',
-            href: '/dashboard/payments/activity',
-            icon: ArrowRightLeft,
-            trackingId: 'nav.payments.activity',
-          },
-          {
             label: 'Scheduled / Recurring',
             href: '/dashboard/payments/scheduled',
             icon: Calendar,
             trackingId: 'nav.payments.scheduled',
             capabilityKey: 'payments.scheduled',
-          },
-          {
-            label: 'Address book',
-            href: '/dashboard/recipients',
-            icon: Users,
-            trackingId: 'nav.payments.recipients',
           },
         ],
       },
