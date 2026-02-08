@@ -44,7 +44,7 @@ const statusBg: Record<CardStatus, string> = {
 };
 
 function formatExpiry(card: CardSummary) {
-  if (!card.expMonth || !card.expYear) return '—';
+  if (!card.expMonth || !card.expYear) return '--';
   return `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`;
 }
 
@@ -56,7 +56,7 @@ const columns: ColumnDef<CardSummary>[] = [
       <div className="font-medium">
         <div>{row.original.label}</div>
         <div className="text-xs text-muted-foreground font-mono">
-          {row.original.type} • {row.original.network} •••• {row.original.last4}
+          {row.original.type} - {row.original.network} - **** {row.original.last4}
         </div>
       </div>
     ),
@@ -66,8 +66,8 @@ const columns: ColumnDef<CardSummary>[] = [
     header: 'Assigned',
     cell: ({ row }) => {
       const id = row.original.assignedToUserId;
-      if (!id) return <span className="text-muted-foreground">â€”</span>;
-      return <span className="font-mono text-xs">{String(id).slice(0, 8)}â€¦</span>;
+      if (!id) return <span className="text-muted-foreground">--</span>;
+      return <span className="font-mono text-xs">{String(id).slice(0, 8)}...</span>;
     },
   },
   {
@@ -110,6 +110,7 @@ const columns: ColumnDef<CardSummary>[] = [
 
 export function CardsTable(props: {
   data: CardSummary[];
+  selectedCardId?: string | null;
   onRowClick: (card: CardSummary) => void;
   onFreezeToggle?: (card: CardSummary) => void;
   onTerminate?: (card: CardSummary) => void;
@@ -199,7 +200,10 @@ export function CardsTable(props: {
                     <TableRow
                       data-state={row.getIsSelected() && 'selected'}
                       onClick={() => props.onRowClick(row.original)}
-                      className="cursor-pointer"
+                      className={cn(
+                        'cursor-pointer',
+                        props.selectedCardId === row.original.id ? 'bg-muted/50 ring-1 ring-primary/30' : ''
+                      )}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>

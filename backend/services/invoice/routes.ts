@@ -274,8 +274,10 @@ router.post('/:id/send', verifyFirebaseToken, async (req: AuthenticatedRequest, 
     const toInfo = (updated as any).toInfo as InvoiceRecipient;
     const customerEmail = toInfo?.email;
     if (customerEmail) {
-      const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
-      const publicUrl = publicToken ? `/i/${publicToken}` : null;
+      const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006';
+
+      const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'https://www.payvost.com').replace(/\/$/, '');
+      const publicUrl = publicToken ? `${baseUrl}/i/${publicToken}` : null;
 
       fetch(`${NOTIFICATION_SERVICE_URL}/send`, {
         method: 'POST',
@@ -291,7 +293,11 @@ router.post('/:id/send', verifyFirebaseToken, async (req: AuthenticatedRequest, 
             currency: (updated as any).currency || 'USD',
             dueDate: (updated as any).dueDate instanceof Date ? (updated as any).dueDate.toISOString().split('T')[0] : (updated as any).dueDate,
             customerName: toInfo?.name || 'Valued Customer',
+            // Notification processor expects `downloadLink`; keep `publicUrl` for backwards compatibility.
+            downloadLink: publicUrl,
             publicUrl,
+            fromName: ((updated as any).fromInfo as any)?.name || (updated as any).fromName || '',
+            notes: (updated as any).notes || '',
           },
         }),
       }).catch(() => {
@@ -540,7 +546,10 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
     }
 
     // Call notification service to send reminder
-    const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
+    const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006';
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || 'https://www.payvost.com').replace(/\/$/, '');
+    const link = await invoiceV1.upsertPublicLink(id);
+    const publicUrl = link?.token ? `${baseUrl}/i/${link.token}` : '';
 
     try {
       const notificationResponse = await fetch(`${NOTIFICATION_SERVICE_URL}/send`, {
@@ -559,6 +568,10 @@ router.post('/:id/send-reminder', verifyFirebaseToken, async (req: Authenticated
             currency: invoice.currency || 'USD',
             dueDate: invoice.dueDate instanceof Date ? invoice.dueDate.toISOString().split('T')[0] : invoice.dueDate,
             customerName: (invoice.toInfo as unknown as InvoiceRecipient)?.name || 'Valued Customer',
+            downloadLink: publicUrl || undefined,
+            publicUrl: publicUrl || undefined,
+            fromName: (invoice.fromInfo as any)?.name || (invoice as any).fromName || '',
+            notes: (invoice as any).notes || '',
           },
         }),
       });

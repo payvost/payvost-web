@@ -112,8 +112,10 @@ function renderByType(type: string, payload: Record<string, any>): RenderedEmail
       amount: payload.amount,
       currency: payload.currency,
       dueDate: payload.dueDate || payload.due_date,
-      businessName: payload.businessName || payload.business_name,
-      downloadLink: payload.downloadLink || payload.download_link,
+      // Prefer `downloadLink` but also support legacy `publicUrl` from older callers.
+      downloadLink: payload.downloadLink || payload.download_link || payload.publicUrl || payload.public_url,
+      fromName: payload.fromName || payload.from_name || payload.businessName || payload.business_name,
+      notes: payload.notes,
     });
   }
 
@@ -126,8 +128,9 @@ function renderByType(type: string, payload: Record<string, any>): RenderedEmail
       amount: payload.amount,
       currency: payload.currency,
       dueDate: payload.dueDate || payload.due_date,
-      businessName: payload.businessName || payload.business_name,
-      downloadLink: payload.downloadLink || payload.download_link,
+      downloadLink: payload.downloadLink || payload.download_link || payload.publicUrl || payload.public_url,
+      fromName: payload.fromName || payload.from_name || payload.businessName || payload.business_name,
+      notes: payload.notes,
     });
   }
 
@@ -140,8 +143,9 @@ function renderByType(type: string, payload: Record<string, any>): RenderedEmail
       amount: payload.amount,
       currency: payload.currency,
       dueDate: payload.dueDate || payload.due_date,
-      businessName: payload.businessName || payload.business_name,
-      downloadLink: payload.downloadLink || payload.download_link,
+      downloadLink: payload.downloadLink || payload.download_link || payload.publicUrl || payload.public_url,
+      fromName: payload.fromName || payload.from_name || payload.businessName || payload.business_name,
+      notes: payload.notes,
     });
   }
 

@@ -8,7 +8,11 @@
 const NOTIFICATION_SERVICE_URL =
   process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
   process.env.NOTIFICATION_SERVICE_URL ||
-  'https://payvost-notification-service-xrk6.onrender.com';
+  'https://payvost-notification-processor.onrender.com';
+
+const NOTIFICATION_WEBHOOK_DEBUG =
+  process.env.NOTIFICATION_WEBHOOK_DEBUG === '1' ||
+  process.env.NOTIFICATION_WEBHOOK_DEBUG === 'true';
 
 /**
  * Helper function to safely parse JSON response
@@ -51,6 +55,14 @@ export async function sendLoginNotification(params: {
   ipAddress?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    if (NOTIFICATION_WEBHOOK_DEBUG) {
+      const url = new URL(`${NOTIFICATION_SERVICE_URL}/notify/login`);
+      console.log('[notification-webhook] sendLoginNotification', {
+        host: url.host,
+        path: url.pathname,
+      });
+    }
+
     const response = await fetch(`${NOTIFICATION_SERVICE_URL}/notify/login`, {
       method: 'POST',
       headers: {

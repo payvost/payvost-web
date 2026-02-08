@@ -21,6 +21,7 @@ import type { CreateCardRequest, WorkspaceType } from '@/types/cards-v2';
 import type { WorkspaceMember } from '@/services/workspacesService';
 
 const formSchema = z.object({
+  type: z.enum(['VIRTUAL', 'PHYSICAL']),
   accountId: z.string().min(1, 'Select a funding account'),
   label: z.string().min(2, 'Card label must be at least 2 characters').max(64),
   network: z.enum(['VISA', 'MASTERCARD']),
@@ -52,6 +53,7 @@ export function CreateVirtualCardForm(props: {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      type: 'VIRTUAL',
       accountId: filteredAccounts[0]?.id || '',
       label: '',
       network: 'VISA',
@@ -82,7 +84,7 @@ export function CreateVirtualCardForm(props: {
       accountId: values.accountId,
       label: values.label,
       network: values.network,
-      type: 'VIRTUAL',
+      type: values.type,
       ...(props.workspaceType === 'BUSINESS' && values.assignedToUserId ? { assignedToUserId: values.assignedToUserId } : {}),
       controls: {
         spendLimitAmount: values.spendLimitAmount ?? null,
@@ -98,7 +100,7 @@ export function CreateVirtualCardForm(props: {
   return (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>Create Virtual Card</CardTitle>
+        <CardTitle>Create Card</CardTitle>
         <CardDescription>
           Issue a card linked to a funding account. Card details (PAN/CVV) are only available via secure reveal and are never stored.
         </CardDescription>
@@ -115,6 +117,49 @@ export function CreateVirtualCardForm(props: {
                 </div>
               </div>
             )}
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Card Type</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="grid grid-cols-2 gap-4"
+                      disabled={disabled}
+                    >
+                      <div>
+                        <RadioGroupItem value="VIRTUAL" id="type-virtual" className="peer sr-only" />
+                        <Label
+                          htmlFor="type-virtual"
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary"
+                        >
+                          Virtual
+                        </Label>
+                      </div>
+                      <div>
+                        <RadioGroupItem value="PHYSICAL" id="type-physical" className="peer sr-only" />
+                        <Label
+                          htmlFor="type-physical"
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary"
+                        >
+                          Physical
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormDescription>
+                    Physical cards may require additional fulfillment setup (shipping address, program rules). If issuance fails, switch to Virtual.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator />
 
             <FormField
               control={form.control}

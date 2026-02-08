@@ -510,7 +510,10 @@ export default function createCardsRouter() {
         return res.status(500).json({ error: 'Card issuing configuration missing (RAPYD_CARD_PROGRAM_ID, RAPYD_ISSUING_COUNTRY)' });
       }
 
-      const cardType = process.env.RAPYD_ISSUING_CARD_TYPE || 'virtual';
+      const requested = (parsed.data.type || 'VIRTUAL').toUpperCase();
+      const cardType =
+        process.env.RAPYD_ISSUING_CARD_TYPE ||
+        (requested === 'PHYSICAL' ? 'physical' : 'virtual');
 
       const issuerPayload: CreateIssuedCardRequest = {
         ewallet,

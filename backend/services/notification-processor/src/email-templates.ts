@@ -41,20 +41,38 @@ function baseLayout(params: {
   headerLabel?: string;
   bodyHtml: string;
   button?: Button;
+  buttonFullWidth?: boolean;
   footerNote?: string;
 }): { html: string; textPrelude: string } {
   const brand = '#0b3d91';
   const brand2 = '#1460d1';
-  const bg = '#f5f7fb';
+  // Transparent outer background so the email can inherit the client's background (light/dark).
+  const bg = 'transparent';
   const card = '#ffffff';
 
   const headerLabel = params.headerLabel ? esc(params.headerLabel) : '';
+
+  const socialLinks = [
+    { label: 'X', href: 'https://x.com/payvost' },
+    { label: 'Instagram', href: 'https://instagram.com/payvost' },
+    { label: 'Facebook', href: 'https://facebook.com/payvost' },
+    { label: 'LinkedIn', href: 'https://linkedin.com/company/payvost' },
+    { label: 'YouTube', href: 'https://youtube.com/@payvost' },
+    { label: 'GitHub', href: 'https://github.com/payvost' },
+  ];
+
+  const socialHtml = socialLinks
+    .map((s, i) => {
+      const sep = i === socialLinks.length - 1 ? '' : ' &middot; ';
+      return `<a href="${esc(s.href)}" style="color:#e6eefc; text-decoration:underline;">${esc(s.label)}</a>${sep}`;
+    })
+    .join('');
 
   const buttonHtml = params.button
     ? `
       <tr>
         <td align="center" style="padding: 8px 28px 28px 28px;">
-          <a href="${esc(params.button.href)}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:12px 18px;font-size:14px;">
+          <a href="${esc(params.button.href)}" style="display:${params.buttonFullWidth ? 'block' : 'inline-block'};${params.buttonFullWidth ? 'width:100%;box-sizing:border-box;' : ''}background:${brand};color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:14px 18px;font-size:14px;text-align:center;">
             ${esc(params.button.label)}
           </a>
         </td>
@@ -88,13 +106,13 @@ function baseLayout(params: {
       td[class="footer-link"] { text-align: center !important; display: block !important; }
     }
     @media (prefers-color-scheme: dark) {
-      body, table[class="bg"] { background-color: #0b1220 !important; }
+      body, table[class="bg"] { background-color: transparent !important; }
       table[class="container"] { background-color: #0f172a !important; }
       td[class="padded"] { background-color: #0f172a !important; }
       .text { color: #e5e7eb !important; }
       .muted { color: #a1a1aa !important; }
       .panel { background: #0b1a3a !important; border-color: rgba(20,96,209,0.35) !important; }
-      a { color: #93c5fd !important; }
+      td[class="padded"] a { color: #93c5fd !important; }
     }
   </style>
 </head>
@@ -146,7 +164,7 @@ function baseLayout(params: {
                     651 North Broad Street, Middletown, Delaware, US
                   </td>
                   <td class="footer-link" style="text-align:right; font-size:13px;">
-                    <a href="https://payvost.com/support" style="color:#e6eefc; text-decoration:underline;">Support</a>
+                    ${socialHtml}
                   </td>
                 </tr>
               </table>
@@ -418,7 +436,10 @@ export function renderInvoiceEmail(params: {
   amount?: any;
   currency?: string;
   dueDate?: string | Date;
+  // Back-compat: older callers still provide `businessName`. We no longer render it.
   businessName?: string;
+  fromName?: string;
+  notes?: string;
   downloadLink?: string;
 }): RenderedEmail {
   const title =
@@ -432,6 +453,7 @@ export function renderInvoiceEmail(params: {
     'Invoice';
 
   const due = params.dueDate ? formatTimestamp(params.dueDate).split('T')[0] : '';
+  const fromLabel = params.fromName ? String(params.fromName) : 'Payvost';
   const bodyHtml = `
     <p class="text" style="margin:0 0 18px 0; font-size:16px; line-height:24px; color:#111827;">
       Hello ${esc(params.name || 'User')},
@@ -441,10 +463,15 @@ export function renderInvoiceEmail(params: {
     </p>
     ${kvTable([
       { k: 'Invoice number', v: params.invoiceNumber || '' },
+      { k: 'From', v: fromLabel },
       { k: 'Amount', v: money(params.amount, params.currency) },
       { k: 'Due date', v: due },
-      { k: 'Business', v: params.businessName || 'Payvost' },
     ])}
+    ${params.notes ? `
+      <p class="muted" style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.7;">
+        Notes: ${esc(params.notes)}
+      </p>
+    ` : ''}
     ${params.downloadLink ? `
       <p class="muted" style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.7;">
         You can view or download the invoice here: <a href="${esc(params.downloadLink)}" style="color:#0B3D91;text-decoration:none;">${esc(params.downloadLink)}</a>
@@ -457,17 +484,19 @@ export function renderInvoiceEmail(params: {
     title,
     headerLabel,
     bodyHtml,
-    button: params.downloadLink ? { label: 'View invoice', href: params.downloadLink } : { label: 'Open invoices', href: 'https://payvost.com/dashboard/invoices' },
+    button: params.downloadLink ? { label: 'Open invoice', href: params.downloadLink } : undefined,
+    buttonFullWidth: true,
   });
 
   const text = [
     textPrelude,
     toTextFromPairs(title, [
       { k: 'Invoice number', v: params.invoiceNumber || '' },
+      { k: 'From', v: fromLabel },
       { k: 'Amount', v: money(params.amount, params.currency) },
       { k: 'Due date', v: due },
-      { k: 'Business', v: params.businessName || 'Payvost' },
       { k: 'Link', v: params.downloadLink || '' },
+      { k: 'Notes', v: params.notes || '' },
     ]),
   ].join('\n\n');
 

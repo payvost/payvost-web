@@ -29,6 +29,25 @@ function computeSpent(txs: CardTransaction[]) {
   }, 0);
 }
 
+function periodStart(interval: string, now = new Date()) {
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const day = d.getUTCDate();
+  if (interval === 'DAILY') return new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
+  if (interval === 'WEEKLY') {
+    // Monday 00:00 UTC
+    const dow = d.getUTCDay(); // 0=Sun
+    const offset = (dow + 6) % 7;
+    const start = new Date(Date.UTC(y, m, day, 0, 0, 0, 0));
+    start.setUTCDate(start.getUTCDate() - offset);
+    return start;
+  }
+  if (interval === 'MONTHLY') return new Date(Date.UTC(y, m, 1, 0, 0, 0, 0));
+  if (interval === 'YEARLY') return new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0));
+  return new Date(0); // ALL_TIME
+}
+
 export function CardDetails(props: {
   card: CardSummary;
   onFreezeToggle?: (card: CardSummary) => void;
@@ -57,13 +76,53 @@ export function CardDetails(props: {
   }, [props.card.id]);
 
   const limit = props.card.controls?.spendLimitAmount ? Number(props.card.controls.spendLimitAmount) : 0;
-  const spent = useMemo(() => computeSpent(txs), [txs]);
+  const spent = useMemo(() => {
+    const interval = props.card.controls?.spendLimitInterval || 'MONTHLY';
+    const start = periodStart(interval);
+    const inPeriod = txs.filter((t) => new Date(t.happenedAt).getTime() >= start.getTime());
+    return Math.max(0, computeSpent(inPeriod));
+  }, [txs, props.card.controls?.spendLimitInterval]);
   const progress = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <div className="lg:col-span-1 space-y-6">
         <VirtualCard card={props.card} onFreezeToggle={props.onFreezeToggle} onTerminate={props.onTerminate} onOpenControls={props.onOpenControls} />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Details</CardTitle>
+            <CardDescription>Card summary and status.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <div className="flex items-center justify-between py-1">
+              <span className="text-muted-foreground">Card name</span>
+              <span className="font-medium">{props.card.label}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-muted-foreground">Status</span>
+              <span className="font-medium capitalize">{props.card.status.toLowerCase()}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-muted-foreground">Type</span>
+              <span className="font-medium capitalize">{props.card.type.toLowerCase()}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-muted-foreground">Network</span>
+              <span className="font-medium">{props.card.network}</span>
+            </div>
+            <div className="flex items-center justify-between py-1">
+              <span className="text-muted-foreground">Last 4</span>
+              <span className="font-mono">{props.card.last4}</span>
+            </div>
+            {props.card.assignedToUserId && (
+              <div className="flex items-center justify-between py-1">
+                <span className="text-muted-foreground">Assigned</span>
+                <span className="font-mono text-xs">{props.card.assignedToUserId.slice(0, 10)}...</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
