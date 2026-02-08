@@ -1329,9 +1329,6 @@ export default function CustomerDetailsPage() {
                                                 <p className="text-sm text-muted-foreground">{account.type} Account</p>
                                             </div>
                                         </div>
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/dashboard/business-accounts/${account.id}`}>View Account</Link>
-                                        </Button>
                                     </div>
                                 ))}
                                 </div>
