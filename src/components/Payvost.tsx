@@ -626,7 +626,7 @@ export function Payvost() {
     recipientName: recipientName,
     exchangeRate: fromWallet && receiveCurrency && exchangeRate != null && typeof exchangeRate === 'number' && !isNaN(exchangeRate) && exchangeRate > 0
       ? `1 ${fromWallet} = ${formatExchangeRate(exchangeRate)} ${receiveCurrency}`
-      : 'Not available',
+      : 'Select currencies',
     fee: isFreeTransfer ? 'Free' : `$${feeAmount}`,
   };
 
@@ -639,17 +639,24 @@ export function Payvost() {
     }).format(amount);
   };
 
-  const isButtonDisabled =
-    !isKycVerified ||
-    isLoading ||
-    !!amountError ||
-    parseFloat(currentAmount || '0') <= 0 ||
-    (activeTab === 'user' ? !paymentIdRecipient : activeTab === 'bank' ? !bankFormRecipientName : !selectedBeneficiary);
+  const getDisabledReason = () => {
+    if (!isKycVerified) return 'Complete identity verification to proceed';
+    if (isLoading) return 'Processing...';
+    if (!!amountError) return amountError;
+    if (parseFloat(currentAmount || '0') <= 0) return 'Enter a valid amount to send';
+    if (activeTab === 'user' && !paymentIdRecipient) return 'Please select a recipient';
+    if (activeTab === 'bank' && !bankFormRecipientName) return 'Please enter bank details';
+    if (activeTab === 'beneficiary' && !selectedBeneficiary) return 'Please select a beneficiary';
+    return null;
+  };
+
+  const disabledReason = getDisabledReason();
+  const isButtonDisabled = !!disabledReason;
 
   const currentRate =
     fromWallet && receiveCurrency && exchangeRate != null && typeof exchangeRate === 'number' && !isNaN(exchangeRate) && exchangeRate > 0
       ? `1 ${fromWallet} = ${formatExchangeRate(exchangeRate)} ${receiveCurrency}`
-      : 'Not available';
+      : 'Select currencies';
 
   const RateIcon = rateTrend === 'up' ? TrendingUp : rateTrend === 'down' ? TrendingDown : null;
 
@@ -836,6 +843,11 @@ export function Payvost() {
                   'Send to User'
                 )}
               </Button>
+              {disabledReason && (
+                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
+                  {disabledReason}
+                </p>
+              )}
             </PaymentConfirmationDialog>
           </CardFooter>
         </TabsContent>
@@ -1005,6 +1017,11 @@ export function Payvost() {
               <Button className="w-full" disabled={isButtonDisabled}>
                 Send Money
               </Button>
+              {disabledReason && (
+                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
+                  {disabledReason}
+                </p>
+              )}
             </PaymentConfirmationDialog>
           </CardFooter>
         </TabsContent>
@@ -1046,6 +1063,11 @@ export function Payvost() {
               <Button className="w-full" disabled={isLoading || !isKycVerified}>
                 Continue to Transfer
               </Button>
+              {disabledReason && activeTab === 'bank' && (
+                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
+                  {disabledReason}
+                </p>
+              )}
             </PaymentConfirmationDialog>
           </CardFooter>
         </TabsContent>

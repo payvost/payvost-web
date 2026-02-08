@@ -9,25 +9,26 @@ import {
     type CarouselApi,
 } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
+import Autoplay from 'embla-carousel-autoplay';
 
 const slides = [
     {
         id: 1,
         title: "Instantly convert between currencies",
         subtitle: "Exchange money at the best rates with zero hidden fees.",
-        image: "/Man operating payvost app.png",
+        image: "/Man%20operating%20payvost%20app.png",
     },
     {
         id: 2,
         title: "Global payments made easy",
         subtitle: "Send and receive funds across borders in seconds.",
-        image: "/Man operating payvost app.png",
+        image: "/Man%20operating%20payvost%20app.png",
     },
     {
         id: 3,
         title: "Secure and reliable",
         subtitle: "Your financial data is protected with bank-grade security.",
-        image: "/Man operating payvost app.png",
+        image: "/Man%20operating%20payvost%20app.png",
     },
 ];
 
@@ -36,10 +37,9 @@ export function LoginSlideshow() {
     const [current, setCurrent] = React.useState(0);
     const [count, setCount] = React.useState(0);
 
+    // Auto-advance logic (5s interval)
     React.useEffect(() => {
-        if (!api) {
-            return;
-        }
+        if (!api) return;
 
         setCount(api.scrollSnapList().length);
         setCurrent(api.selectedScrollSnap() + 1);
@@ -47,6 +47,12 @@ export function LoginSlideshow() {
         api.on("select", () => {
             setCurrent(api.selectedScrollSnap() + 1);
         });
+
+        const intervalId = setInterval(() => {
+            api.scrollNext();
+        }, 5000);
+
+        return () => clearInterval(intervalId);
     }, [api]);
 
     return (
@@ -62,32 +68,25 @@ export function LoginSlideshow() {
                     {slides.map((slide) => (
                         <CarouselItem key={slide.id} className="h-full pl-0 relative">
                             <div className="relative h-full w-full flex flex-col">
-                                {/* Image Section - Takes distinct space or background */}
+                                {/* Image Section */}
                                 <div className="relative flex-1 w-full overflow-hidden">
                                     <Image
-                                        src={slide.image}
+                                        src={decodeURIComponent(slide.image)}
                                         alt={slide.title}
                                         fill
                                         className="object-cover object-top"
                                         priority={slide.id === 1}
+                                        sizes="(max-width: 1024px) 100vw, 50vw"
                                     />
-                                    {/* Overlay for better text readability if text is on image, 
-                      but user asked for "Title and subtitle below every slide". 
-                      So I will put text in a separate section if "below" means 
-                      below the image physically, or overlay at bottom if "below" means visual hierarchy.
-                      "display Title and subtitle below every slide" - implies distinct section or position.
-                      Looking at the beautiful slide display reference (implied), often it's an image with text overlay at bottom.
-                      Let's try putting text at the bottom overlay with gradient.
-                  */}
-                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                    {/* Gradient overlay removed based on user request */}
                                 </div>
 
                                 {/* Text Content */}
                                 <div className="absolute bottom-10 left-0 right-0 p-8 text-white z-20">
-                                    <h2 className="text-3xl font-display font-medium tracking-tight mb-3">
+                                    <h2 className="text-3xl font-display font-medium tracking-tight mb-3 drop-shadow-md">
                                         {slide.title}
                                     </h2>
-                                    <p className="text-white/80 text-lg font-light leading-relaxed max-w-md">
+                                    <p className="text-white/90 text-lg font-light leading-relaxed max-w-md drop-shadow-md">
                                         {slide.subtitle}
                                     </p>
                                 </div>
@@ -95,7 +94,8 @@ export function LoginSlideshow() {
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                {/* Navigation Dots if needed */}
+
+                {/* Navigation Dots */}
                 <div className="absolute top-8 left-8 flex gap-2 z-30">
                     {Array.from({ length: count }).map((_, index) => (
                         <button
@@ -110,8 +110,7 @@ export function LoginSlideshow() {
                     ))}
                 </div>
             </Carousel>
-
-            {/* Brand Logo on top left corner if needed, or maybe just keeps it clean */}
         </div>
     );
 }
+
