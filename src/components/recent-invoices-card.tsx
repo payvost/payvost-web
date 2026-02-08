@@ -235,7 +235,7 @@ export function RecentInvoicesCard(props: {
           </div>
         ) : (
           <Tabs defaultValue="all">
-            <TabsList className="w-full justify-start">
+            <TabsList className="w-fit justify-start flex-wrap">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="paid">Paid</TabsTrigger>
               <TabsTrigger value="unpaid">Unpaid</TabsTrigger>

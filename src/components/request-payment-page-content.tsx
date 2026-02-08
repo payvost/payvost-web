@@ -388,7 +388,7 @@ export default function RequestPaymentPageContent() {
     if (invoiceView === 'create') {
       return <CreateInvoicePage onBack={handleBackToInvoiceList} invoiceId={editingInvoiceId} />;
     }
-    return <InvoiceTab onCreateClick={handleCreateInvoice} onEditClick={handleEditInvoice} />;
+    return <InvoiceTab />;
   };
 
   return (

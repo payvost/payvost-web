@@ -17,7 +17,7 @@ import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2
 import { cn } from '@/lib/utils';
 import { addDays, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -64,19 +64,6 @@ interface CreateInvoicePageProps {
   disabled?: boolean;
 }
 
-const currencySymbols: { [key: string]: string } = {
-  USD: '$',
-  EUR: '€',
-  GBP: '£',
-  NGN: '₦',
-};
-
-const currencyOptions = [
-    { value: 'USD', label: 'USD ($)' },
-    { value: 'EUR', label: 'EUR (€)' },
-    { value: 'GBP', label: 'GBP (£)' },
-    { value: 'NGN', label: 'NGN (₦)' },
-];
 
 export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'page', disabled = false }: CreateInvoicePageProps) {
     const { toast } = useToast();
@@ -84,6 +71,8 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
     const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
     const { user, loading: authLoading } = useAuth();
     const [loadingUserData, setLoadingUserData] = useState(true);
+    const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([]);
+    const [loadingCurrencies, setLoadingCurrencies] = useState(true);
     const [isDueDateOpen, setIsDueDateOpen] = useState(false);
     const [isIssueDateOpen, setIsIssueDateOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -214,13 +203,72 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
     const grandTotal = subtotal + taxAmount;
 
     const formatCurrency = (amount: number, currency: string) => {
-        const symbol = currencySymbols[currency] || currency;
-        const formattedAmount = new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount);
-        return `${symbol}${formattedAmount}`;
+        try {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+        } catch {
+            const formattedAmount = new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }).format(amount);
+            return `${currency} ${formattedAmount}`;
+        }
     };
+
+    const currencyOptions = useMemo(() => {
+        return availableCurrencies.map((c) => ({ value: c, label: c }));
+    }, [availableCurrencies]);
+
+    useEffect(() => {
+        if (!user) {
+            setAvailableCurrencies([]);
+            setLoadingCurrencies(false);
+            return;
+        }
+
+        let cancelled = false;
+        (async () => {
+            setLoadingCurrencies(true);
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch('/api/wallet/accounts?workspaceType=PERSONAL&limit=200', {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${token}` },
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) throw new Error(`Failed to load wallets (${res.status})`);
+                const data = await res.json();
+                if (cancelled) return;
+
+                const accounts: Array<{ currency?: unknown }> = Array.isArray(data?.accounts) ? data.accounts : [];
+                const currencies = Array.from(
+                    new Set(
+                        accounts
+                            .map((a) => String(a?.currency || '').toUpperCase())
+                            .filter((c) => Boolean(c))
+                    )
+                ).sort();
+
+                setAvailableCurrencies(currencies);
+            } catch (e: unknown) {
+                console.error('Failed to load wallet currencies:', e);
+                setAvailableCurrencies([]);
+            } finally {
+                if (!cancelled) setLoadingCurrencies(false);
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [user]);
+
+    useEffect(() => {
+        if (loadingCurrencies) return;
+        if (!availableCurrencies.length) return;
+        const current = String(getValues('currency') || '').toUpperCase();
+        if (!availableCurrencies.includes(current)) {
+            setValue('currency', availableCurrencies[0], { shouldValidate: true, shouldTouch: true });
+        }
+    }, [availableCurrencies, getValues, loadingCurrencies, setValue]);
 
     const mapPaymentMethod = (value: string | undefined) => {
         const v = String(value || '').toLowerCase();
@@ -234,10 +282,14 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
     const resetForNewInvoice = useCallback(() => {
         const preservedFromName = getValues('fromName');
         const preservedFromAddress = getValues('fromAddress');
+        const preferredCurrency = String(getValues('currency') || '').toUpperCase();
+        const nextCurrency = availableCurrencies.includes(preferredCurrency)
+            ? preferredCurrency
+            : (availableCurrencies[0] || preferredCurrency || 'USD');
         reset({
             issueDate: new Date(),
             dueDate: addDays(new Date(), 30),
-            currency: 'USD',
+            currency: nextCurrency,
             fromName: preservedFromName,
             fromAddress: preservedFromAddress,
             toName: '',
@@ -250,7 +302,7 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
         });
         setSavedInvoiceId(null);
         setStep(0);
-    }, [getValues, reset]);
+    }, [availableCurrencies, getValues, reset]);
 
     const prevInvoiceIdRef = useRef<string | null | undefined>(invoiceId);
     useEffect(() => {
@@ -330,6 +382,11 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
     const onSubmit: SubmitHandler<InvoiceFormValues> = async () => {
         if (disabled) {
             toast({ title: 'Verification required', description: 'Complete verification to create invoices.', variant: 'destructive' });
+            return;
+        }
+        // Prevent accidental submit (e.g. pressing Enter) before the final step.
+        if (step !== 2) {
+            await handleNextStep();
             return;
         }
         setIsSaving(true);
@@ -477,9 +534,17 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
                                     name="currency"
                                     control={control}
                                     render={({ field }) => (
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger>
-                                                <SelectValue>{currencyOptions.find(c => c.value === field.value)?.label || 'Select Currency'}</SelectValue>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <SelectTrigger
+                                                type="button"
+                                                className="h-10"
+                                                disabled={disabled || loadingCurrencies || currencyOptions.length === 0}
+                                            >
+                                                <SelectValue>
+                                                    {loadingCurrencies
+                                                        ? 'Loading...'
+                                                        : currencyOptions.find(c => c.value === field.value)?.label || 'Select Currency'}
+                                                </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {currencyOptions.map(c => (
@@ -501,7 +566,11 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
                                     render={({ field }) => (
                                         <Popover open={isIssueDateOpen} onOpenChange={setIsIssueDateOpen}>
                                             <PopoverTrigger asChild>
-                                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className={cn("h-10 w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                                                >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                                 </Button>
@@ -526,7 +595,11 @@ export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'pa
                                     render={({ field }) => (
                                         <Popover open={isDueDateOpen} onOpenChange={setIsDueDateOpen}>
                                             <PopoverTrigger asChild>
-                                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className={cn("h-10 w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                                                >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                                 </Button>

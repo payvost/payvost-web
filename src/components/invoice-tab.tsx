@@ -10,19 +10,13 @@ import { doc, onSnapshot, type DocumentData, type DocumentSnapshot } from 'fireb
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 import { RecentInvoicesCard } from '@/components/recent-invoices-card';
 
 const CreateInvoicePage = dynamic(() => import('./create-invoice-page').then(mod => mod.CreateInvoicePage), {
     loading: () => <Skeleton className="h-96 w-full" />,
 });
 
-interface InvoiceTabProps {
-  onCreateClick?: () => void;
-  onEditClick?: (invoiceId: string) => void;
-}
-
-export function InvoiceTab({ onCreateClick, onEditClick }: InvoiceTabProps = {}) {
+export function InvoiceTab() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -73,20 +67,7 @@ export function InvoiceTab({ onCreateClick, onEditClick }: InvoiceTabProps = {})
     router.replace(qs ? `/dashboard/request-payment?${qs}` : '/dashboard/request-payment', { scroll: false });
   };
 
-  const handleCreateClick = () => {
-    if (onCreateClick) {
-      onCreateClick();
-      return;
-    }
-    setEditingInvoiceId(null);
-    updateUrl({ edit: null });
-  };
-
   const handleEditClick = (invoiceId: string) => {
-    if (onEditClick) {
-      onEditClick(invoiceId);
-      return;
-    }
     setEditingInvoiceId(invoiceId);
     updateUrl({ edit: invoiceId });
   };
@@ -118,17 +99,11 @@ export function InvoiceTab({ onCreateClick, onEditClick }: InvoiceTabProps = {})
           </Card>
         )}
 
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-medium">Invoice Form</div>
-            <div className="text-xs text-muted-foreground">
-              {editingInvoiceId ? 'Editing draft invoice' : 'Create a new invoice'}
-            </div>
+        <div>
+          <div className="text-sm font-medium">Invoice Form</div>
+          <div className="text-xs text-muted-foreground">
+            {editingInvoiceId ? 'Editing draft invoice' : 'Create a new invoice'}
           </div>
-          <Button type="button" variant="outline" onClick={handleCreateClick} disabled={!user}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Invoice
-          </Button>
         </div>
 
         <CreateInvoicePage

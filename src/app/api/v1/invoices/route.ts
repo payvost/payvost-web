@@ -1,7 +1,8 @@
 import { backendResponseToNext, buildBackendUrl } from '@/lib/api/backend';
 
 export async function GET(req: Request) {
-  const url = buildBackendUrl(`/api/v1/invoices${new URL(req.url).search}`);
+  // Backend versioned invoice routes are mounted under `/api/invoices` (unversioned).
+  const url = buildBackendUrl(`/api/invoices${new URL(req.url).search}`);
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'authorization': req.headers.get('authorization') || '' },
@@ -9,4 +10,3 @@ export async function GET(req: Request) {
   });
   return backendResponseToNext(response);
 }
-

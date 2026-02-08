@@ -141,16 +141,45 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
   const paymentsItem = DASHBOARD_NAV.flatMap((s) => s.items).find((i) => i.label === 'Payments' && i.children);
   const paymentsActive = paymentsItem ? isItemActive(paymentsItem) : false;
-  const [paymentsOpen, setPaymentsOpen] = useState<boolean>(paymentsActive || pathname === '/dashboard');
+  const PAYMENTS_OPEN_STORAGE_KEY = 'dashboard.nav.paymentsOpen';
+  const paymentsPrefLoadedRef = React.useRef(false);
+  const [paymentsOpen, setPaymentsOpen] = useState<boolean>(paymentsActive);
 
   useEffect(() => {
     if (paymentsActive) setPaymentsOpen(true);
   }, [paymentsActive]);
 
   useEffect(() => {
-    // On initial dashboard landing, keep Payments expanded by default.
-    if (pathname === '/dashboard') setPaymentsOpen(true);
-  }, [pathname]);
+    // Persist the Payments dropdown open state so it doesn't collapse on navigation.
+    let persisted: boolean | null = null;
+    try {
+      const raw = localStorage.getItem(PAYMENTS_OPEN_STORAGE_KEY);
+      if (raw === 'true') persisted = true;
+      if (raw === 'false') persisted = false;
+    } catch {
+      // no-op
+    }
+
+    if (persisted == null) {
+      // Default expanded on initial dashboard landing (first time, no pref saved).
+      setPaymentsOpen(pathname === '/dashboard' || paymentsActive);
+    } else {
+      // If the user previously expanded it, keep it expanded across pages.
+      setPaymentsOpen(persisted || paymentsActive);
+    }
+
+    paymentsPrefLoadedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!paymentsPrefLoadedRef.current) return;
+    try {
+      localStorage.setItem(PAYMENTS_OPEN_STORAGE_KEY, paymentsOpen ? 'true' : 'false');
+    } catch {
+      // no-op
+    }
+  }, [paymentsOpen]);
 
   const openGatedModal = (opts: { title: string; description: string; resolveHref?: string }) => {
     setGatedModal({

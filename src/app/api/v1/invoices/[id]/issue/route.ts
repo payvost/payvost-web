@@ -2,7 +2,7 @@ import { backendResponseToNext, buildBackendUrl } from '@/lib/api/backend';
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const url = buildBackendUrl(`/api/v1/invoices/${encodeURIComponent(id)}/issue`);
+  const url = buildBackendUrl(`/api/invoices/${encodeURIComponent(id)}/issue`);
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'authorization': req.headers.get('authorization') || '' },
@@ -10,4 +10,3 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
   return backendResponseToNext(response);
 }
-

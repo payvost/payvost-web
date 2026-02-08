@@ -1,7 +1,7 @@
 import { backendResponseToNext, buildBackendUrl } from '@/lib/api/backend';
 
 export async function POST(req: Request) {
-  const url = buildBackendUrl('/api/v1/invoices/drafts');
+  const url = buildBackendUrl('/api/invoices/drafts');
   const body = await req.text();
 
   const response = await fetch(url, {
@@ -16,4 +16,3 @@ export async function POST(req: Request) {
 
   return backendResponseToNext(response);
 }
-
