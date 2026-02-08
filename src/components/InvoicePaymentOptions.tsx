@@ -150,7 +150,7 @@ export function InvoicePaymentOptions({
     }
 
     // Redirect to dashboard payment page with invoice ID
-    router.push(`/dashboard/payments?invoiceId=${invoiceId}&amount=${amount}&currency=${currency}`);
+    router.push(`/dashboard/payments/send?invoiceId=${invoiceId}&amount=${amount}&currency=${currency}`);
   };
 
   const handleCardPayment = async () => {
@@ -262,7 +262,7 @@ export function InvoicePaymentOptions({
     }
 
     // Redirect to dashboard payment page for bank transfer
-    router.push(`/dashboard/payments?invoiceId=${invoiceId}&amount=${amount}&currency=${currency}&method=bank`);
+    router.push(`/dashboard/payments/send?invoiceId=${invoiceId}&amount=${amount}&currency=${currency}&method=bank`);
   };
 
   const formatCurrency = (amount: number, currency: string) => {

@@ -305,7 +305,7 @@ export default function TransactionsPage() {
                       !searchQuery && filterType.length === 4
                         ? {
                             label: "Send Money",
-                            onClick: () => router.push('/dashboard/payments'),
+                            onClick: () => router.push('/dashboard/payments/send'),
                           }
                         : undefined
                     }

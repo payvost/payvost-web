@@ -62,7 +62,7 @@ export function PayoutsPageClient() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (
                 <Button asChild size="lg">
-                  <Link href="/dashboard/payments">
+                  <Link href="/dashboard/payments/send">
                     Start Sending Payouts
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -116,7 +116,7 @@ export function PayoutsPageClient() {
             <CardContent className="flex justify-center gap-4">
               {user ? (
                 <Button asChild size="lg" variant="secondary">
-                  <Link href="/dashboard/payments">
+                  <Link href="/dashboard/payments/send">
                     Access Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

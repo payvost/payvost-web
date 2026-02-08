@@ -291,7 +291,7 @@ function InvoiceDetailsPageContent() {
                             <DropdownMenuContent align="end">
                                 {invoice.status === 'Draft' && (
                                     <DropdownMenuItem asChild>
-                                        <Link href={`/dashboard/request-payment?create=true&edit=${invoice.id}`}>
+                                        <Link href={`/dashboard/request-payment?tab=invoice&create=true&edit=${invoice.id}`}>
                                             <Edit className="mr-2 h-4 w-4"/>Edit Invoice
                                         </Link>
                                     </DropdownMenuItem>

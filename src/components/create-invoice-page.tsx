@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useFieldArray, useForm, Controller, SubmitHandler } from 'react-hook-form';
+import { useFieldArray, useForm, Controller, SubmitHandler, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, CalendarIcon, Download, Printer, Send, Trash2, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendInvoiceDialog } from './send-invoice-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -57,8 +57,11 @@ export const invoiceSchema = z.object({
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
 
 interface CreateInvoicePageProps {
-    onBack: () => void;
-    invoiceId?: string | null;
+  onBack?: () => void;
+  onFinished?: () => void;
+  invoiceId?: string | null;
+  variant?: 'page' | 'embedded';
+  disabled?: boolean;
 }
 
 const currencySymbols: { [key: string]: string } = {
@@ -75,7 +78,7 @@ const currencyOptions = [
     { value: 'NGN', label: 'NGN (₦)' },
 ];
 
-export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps) {
+export function CreateInvoicePage({ onBack, onFinished, invoiceId, variant = 'page', disabled = false }: CreateInvoicePageProps) {
     const { toast } = useToast();
     const [showSendDialog, setShowSendDialog] = useState(false);
     const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(invoiceId ?? null);
@@ -84,6 +87,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
     const [isDueDateOpen, setIsDueDateOpen] = useState(false);
     const [isIssueDateOpen, setIsIssueDateOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [step, setStep] = useState<0 | 1 | 2>(0);
     const isEditing = !!invoiceId;
 
     const {
@@ -101,6 +105,7 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         mode: 'onTouched',
         defaultValues: {
             issueDate: new Date(),
+            dueDate: addDays(new Date(), 30),
             fromName: '',
             fromAddress: '',
             toName: '',
@@ -113,6 +118,10 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
             paymentMethod: 'rapyd',
         },
     });
+
+    useEffect(() => {
+        setStep(0);
+    }, [invoiceId]);
 
      useEffect(() => {
         if (!isEditing || !invoiceId) return;
@@ -150,9 +159,10 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                     taxRate: invoice.taxRate || 0,
                     paymentMethod: invoice.paymentMethod || 'rapyd',
                 });
-            } catch (e: any) {
+            } catch (e: unknown) {
                 console.error('Failed to load invoice:', e);
-                toast({ title: 'Error', description: e?.message || 'Failed to load invoice', variant: 'destructive' });
+                const msg = e instanceof Error ? e.message : 'Failed to load invoice';
+                toast({ title: 'Error', description: msg, variant: 'destructive' });
             } finally {
                 setLoadingUserData(false);
             }
@@ -221,6 +231,40 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         return 'PAYVOST';
     };
 
+    const resetForNewInvoice = useCallback(() => {
+        const preservedFromName = getValues('fromName');
+        const preservedFromAddress = getValues('fromAddress');
+        reset({
+            issueDate: new Date(),
+            dueDate: addDays(new Date(), 30),
+            currency: 'USD',
+            fromName: preservedFromName,
+            fromAddress: preservedFromAddress,
+            toName: '',
+            toEmail: '',
+            toAddress: '',
+            items: [{ description: '', quantity: 1, price: 0 }],
+            notes: 'Thank you for your business. Please pay within 30 days.',
+            taxRate: 0,
+            paymentMethod: 'rapyd',
+        });
+        setSavedInvoiceId(null);
+        setStep(0);
+    }, [getValues, reset]);
+
+    const prevInvoiceIdRef = useRef<string | null | undefined>(invoiceId);
+    useEffect(() => {
+        const prev = prevInvoiceIdRef.current;
+        if (invoiceId && invoiceId !== prev) {
+            setSavedInvoiceId(invoiceId);
+        }
+        if (!invoiceId && prev && variant === 'embedded') {
+            // Switching from edit mode back to "new invoice" within the same mounted form.
+            resetForNewInvoice();
+        }
+        prevInvoiceIdRef.current = invoiceId;
+    }, [invoiceId, resetForNewInvoice, variant]);
+
     const upsertDraft = async () => {
         if (!user) {
             toast({ title: 'Not authenticated', variant: 'destructive'});
@@ -284,6 +328,10 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
 
 
     const onSubmit: SubmitHandler<InvoiceFormValues> = async () => {
+        if (disabled) {
+            toast({ title: 'Verification required', description: 'Complete verification to create invoices.', variant: 'destructive' });
+            return;
+        }
         setIsSaving(true);
         try {
             const finalInvoiceId = await upsertDraft();
@@ -307,6 +355,10 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
     };
 
     const handleSaveAsDraft = async () => {
+        if (disabled) {
+            toast({ title: 'Verification required', description: 'Complete verification to create invoices.', variant: 'destructive' });
+            return;
+        }
         const isValid = await trigger();
         if (!isValid) {
             toast({
@@ -321,7 +373,11 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         try {
             await upsertDraft();
             toast({ title: "Draft Saved", description: "Your invoice has been saved." });
-            onBack();
+            if (variant === 'embedded') {
+                resetForNewInvoice();
+            }
+            onFinished?.();
+            onBack?.();
         } catch (error) {
             console.error("Error saving draft:", error);
             toast({ title: 'Error', description: 'Could not save draft.', variant: 'destructive'});
@@ -330,30 +386,86 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
         }
     };
 
+    const handleNextStep = async () => {
+        const fieldsToValidate: FieldPath<InvoiceFormValues>[] | undefined = step === 0
+            ? ['currency', 'issueDate', 'dueDate', 'toName', 'toEmail', 'toAddress']
+            : undefined;
+
+        const ok = fieldsToValidate ? await trigger(fieldsToValidate) : await trigger();
+        if (!ok) {
+            toast({
+                title: "Missing Required Fields",
+                description: "Please fix the highlighted fields before continuing.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setStep((s) => (s < 2 ? ((s + 1) as 0 | 1 | 2) : s));
+    };
+
+    const handlePrevStep = () => {
+        setStep((s) => (s > 0 ? ((s - 1) as 0 | 1 | 2) : s));
+    };
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={onBack}>
-                        <ArrowLeft className="h-4 w-4" />
-                        <span className="sr-only">Back</span>
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{isEditing ? 'Edit Invoice' : 'Create Invoice'}</h1>
-                        <p className="text-muted-foreground text-sm">Fill out the form below to create a new invoice.</p>
+            {variant === 'page' && (
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        {onBack && (
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={onBack}>
+                                <ArrowLeft className="h-4 w-4" />
+                                <span className="sr-only">Back</span>
+                            </Button>
+                        )}
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">{isEditing ? 'Edit Invoice' : 'Create Invoice'}</h1>
+                            <p className="text-muted-foreground text-sm">Create a professional invoice in 3 steps.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" disabled><Printer className="mr-2 h-4 w-4"/>Print</Button>
+                        <Button variant="outline" disabled><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline"><Printer className="mr-2 h-4 w-4"/>Print</Button>
-                    <Button variant="outline"><Download className="mr-2 h-4 w-4"/>Download PDF</Button>
-                </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Card>
-                    <CardHeader className="flex flex-col md:flex-row justify-between gap-4 items-start">
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-start w-full">
+                    <CardHeader className="space-y-4">
+                        {variant === 'embedded' && (
+                            <div>
+                                <CardTitle>{isEditing ? 'Edit Invoice' : 'Create Invoice'}</CardTitle>
+                                <CardDescription>Step {step + 1} of 3</CardDescription>
+                            </div>
+                        )}
+
+                        <ol className="flex flex-wrap items-center gap-3 text-sm">
+                            {[
+                                { label: 'Details', idx: 0 as const },
+                                { label: 'Line Items', idx: 1 as const },
+                                { label: 'Review', idx: 2 as const },
+                            ].map((s, i) => (
+                                <li key={s.label} className="flex items-center gap-2">
+                                    <span
+                                        className={cn(
+                                            "flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold",
+                                            step >= s.idx ? "border-primary bg-primary text-primary-foreground" : "border-muted text-muted-foreground",
+                                        )}
+                                    >
+                                        {s.idx + 1}
+                                    </span>
+                                    <span className={cn(step === s.idx ? "font-medium text-foreground" : "text-muted-foreground")}>
+                                        {s.label}
+                                    </span>
+                                    {i < 2 && <span className="mx-1 h-px w-6 bg-muted" />}
+                                </li>
+                            ))}
+                        </ol>
+
+                        {step === 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-start w-full">
                             <div className="space-y-2 col-span-2 md:col-span-1">
                                 <Label>Invoice</Label>
                                 <Input value={isEditing ? 'Editing draft' : 'New draft'} readOnly className="h-10" />
@@ -428,9 +540,11 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                  </div>
                             </div>
                         </div>
+                        )}
                     </CardHeader>
                     <CardContent className="space-y-8">
-                        <div className="grid grid-cols-2 gap-8">
+                        {step === 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <div>
                                 <Label className="font-semibold">From:</Label>
                                 <div className="mt-1 p-3 border rounded-md bg-muted/50 min-h-[108px]">
@@ -450,8 +564,10 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                  {errors.toAddress && <p className="text-sm text-destructive mt-1">{errors.toAddress.message}</p>}
                             </div>
                         </div>
+                        )}
 
-                        <div>
+                        {step === 1 && (
+                        <div className="space-y-8">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -499,7 +615,6 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                             <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ description: '', quantity: 1, price: 0 })}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Item
                             </Button>
-                        </div>
                         
                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start pt-4">
                              <div className="lg:col-span-2 space-y-2">
@@ -525,18 +640,92 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                                 </div>
                             </div>
                         </div>
+                        </div>
+                        )}
 
+                        {step === 2 && (
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="rounded-md border p-4">
+                                        <div className="text-xs text-muted-foreground">From</div>
+                                        <div className="mt-1 font-medium">{getValues('fromName') || 'You'}</div>
+                                        <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{getValues('fromAddress') || ''}</div>
+                                    </div>
+                                    <div className="rounded-md border p-4">
+                                        <div className="text-xs text-muted-foreground">To</div>
+                                        <div className="mt-1 font-medium">{getValues('toName') || 'Client'}</div>
+                                        <div className="mt-1 text-sm text-muted-foreground">{getValues('toEmail') || ''}</div>
+                                        <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{getValues('toAddress') || ''}</div>
+                                    </div>
+                                </div>
 
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    <div className="rounded-md border p-4">
+                                        <div className="text-xs text-muted-foreground">Invoice Date</div>
+                                        <div className="mt-1 font-medium">{getValues('issueDate') ? format(getValues('issueDate'), 'PPP') : ''}</div>
+                                    </div>
+                                    <div className="rounded-md border p-4">
+                                        <div className="text-xs text-muted-foreground">Due Date</div>
+                                        <div className="mt-1 font-medium">{getValues('dueDate') ? format(getValues('dueDate'), 'PPP') : ''}</div>
+                                    </div>
+                                    <div className="rounded-md border p-4">
+                                        <div className="text-xs text-muted-foreground">Total</div>
+                                        <div className="mt-1 font-medium">{formatCurrency(grandTotal, selectedCurrency)}</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Description</TableHead>
+                                                <TableHead className="text-right">Qty</TableHead>
+                                                <TableHead className="text-right">Price</TableHead>
+                                                <TableHead className="text-right">Total</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {watchedItems.map((it, idx) => (
+                                                <TableRow key={idx}>
+                                                    <TableCell className="font-medium">{it.description || `Item ${idx + 1}`}</TableCell>
+                                                    <TableCell className="text-right">{it.quantity}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(Number(it.price || 0), selectedCurrency)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency((Number(it.quantity || 0) * Number(it.price || 0)), selectedCurrency)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
-                    <CardFooter className="justify-end gap-2">
-                         <Button type="button" variant="outline" onClick={handleSaveAsDraft} disabled={isSaving}>
-                             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                             Save as Draft
-                         </Button>
-                         <Button type="submit" disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            <Send className="mr-2 h-4 w-4" />{isEditing ? 'Update & Send' : 'Send Invoice'}
-                         </Button>
+                    <CardFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex gap-2">
+                            {step > 0 && (
+                                <Button type="button" variant="outline" onClick={handlePrevStep} disabled={isSaving}>
+                                    Back
+                                </Button>
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                            {(step === 1 || step === 2) && (
+                                <Button type="button" variant="outline" onClick={handleSaveAsDraft} disabled={isSaving || disabled}>
+                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save as Draft
+                                </Button>
+                            )}
+                            {step < 2 ? (
+                                <Button type="button" onClick={handleNextStep} disabled={isSaving}>
+                                    Next
+                                </Button>
+                            ) : (
+                                <Button type="submit" disabled={isSaving || disabled}>
+                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    <Send className="mr-2 h-4 w-4" />
+                                    {isEditing ? 'Update & Send' : 'Send Invoice'}
+                                </Button>
+                            )}
+                        </div>
                     </CardFooter>
                 </Card>
             </form>
@@ -545,7 +734,13 @@ export function CreateInvoicePage({ onBack, invoiceId }: CreateInvoicePageProps)
                     isOpen={showSendDialog}
                     setIsOpen={setShowSendDialog}
                     invoiceId={savedInvoiceId}
-                    onSuccessfulSend={onBack}
+                    onSuccessfulSend={() => {
+                        if (variant === 'embedded') {
+                            resetForNewInvoice();
+                        }
+                        onFinished?.();
+                        onBack?.();
+                    }}
                 />
             )}
         </div>

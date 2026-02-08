@@ -30,14 +30,12 @@ import { ChevronDown, Settings } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { Button } from './ui/button';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { ProtectRoute, useAuth } from '@/hooks/use-auth';
 import useAutoLogout from '@/hooks/use-auto-logout';
 import { Badge } from './ui/badge';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { DashboardSwitcher } from './dashboard-switcher';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { DASHBOARD_NAV, type DashboardNavItem } from '@/config/dashboard-nav';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -59,7 +57,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
   const { capabilities } = useCapabilities();
   const mainContentRef = React.useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = React.useState(false);
-  const [isBusinessApproved, setIsBusinessApproved] = useState(false);
   const [gatedModal, setGatedModal] = useState<GatedActionModalState>({
     open: false,
     title: '',
@@ -78,22 +75,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     mainEl.addEventListener('scroll', handleScroll, { passive: true });
     return () => mainEl.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-      if (doc.exists()) {
-        const businessProfile = doc.data().businessProfile;
-        // Check for both 'approved' (lowercase) and 'Approved' (capitalized) for compatibility
-        if (businessProfile && (businessProfile.status === 'approved' || businessProfile.status === 'Approved')) {
-          setIsBusinessApproved(true);
-        } else {
-          setIsBusinessApproved(false);
-        }
-      }
-    });
-    return () => unsub();
-  }, [user]);
 
   const handleLogout = async () => {
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
@@ -158,13 +139,18 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
     return Boolean(item.children?.some(isItemActive));
   };
 
-  const paymentsItem = DASHBOARD_NAV.flatMap((s) => s.items).find((i) => i.href === '/dashboard/payments' && i.children);
+  const paymentsItem = DASHBOARD_NAV.flatMap((s) => s.items).find((i) => i.label === 'Payments' && i.children);
   const paymentsActive = paymentsItem ? isItemActive(paymentsItem) : false;
-  const [paymentsOpen, setPaymentsOpen] = useState<boolean>(paymentsActive);
+  const [paymentsOpen, setPaymentsOpen] = useState<boolean>(paymentsActive || pathname === '/dashboard');
 
   useEffect(() => {
     if (paymentsActive) setPaymentsOpen(true);
   }, [paymentsActive]);
+
+  useEffect(() => {
+    // On initial dashboard landing, keep Payments expanded by default.
+    if (pathname === '/dashboard') setPaymentsOpen(true);
+  }, [pathname]);
 
   const openGatedModal = (opts: { title: string; description: string; resolveHref?: string }) => {
     setGatedModal({
@@ -187,11 +173,14 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
       return (
         <Collapsible key={item.href} open={paymentsOpen} onOpenChange={setPaymentsOpen}>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-              <Link href={item.href} data-tracking-id={item.trackingId}>
-                <Icon strokeWidth={2.5} />
-                <span>{item.label}</span>
-              </Link>
+            <SidebarMenuButton
+              isActive={active}
+              tooltip={item.label}
+              onClick={() => setPaymentsOpen((prev) => !prev)}
+              data-tracking-id={item.trackingId}
+            >
+              <Icon strokeWidth={2.5} />
+              <span>{item.label}</span>
             </SidebarMenuButton>
 
             <CollapsibleTrigger asChild>
@@ -319,18 +308,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
                 {idx < DASHBOARD_NAV.length - 1 ? <SidebarSeparator /> : null}
               </React.Fragment>
             ))}
-
-            {!isBusinessApproved && (
-              <div className="mt-2 mx-2 p-3 rounded-lg border border-sidebar-border/70 bg-sidebar-accent/40 text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-                <p className="text-xs font-semibold">Need business tools?</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">
-                  Invoicing, payouts, customers, and more.
-                </p>
-                <Button size="sm" className="w-full" asChild>
-                  <Link href="/dashboard/get-started">Get started</Link>
-                </Button>
-              </div>
-            )}
           </SidebarContent>
 
           <SidebarFooter className="p-2 border-t border-border/40">
@@ -355,7 +332,6 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
             scrolled={scrolled}
             rightSlot={
               <>
-                {isBusinessApproved && <DashboardSwitcher />}
                 <LanguageSwitcher selectedLanguage={language} setLanguage={setLanguage} />
               </>
             }

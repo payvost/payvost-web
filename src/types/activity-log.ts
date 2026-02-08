@@ -1,6 +1,6 @@
 
 export type ActivityStatus = 'Success' | 'Failed' | 'Pending' | 'Alert';
-export type ObjectType = 'Payout' | 'Invoice' | 'Beneficiary' | 'Security';
+export type ObjectType = 'Payout' | 'Invoice' | 'Beneficiary' | 'Customer' | 'Security';
 
 export interface ActivityLog {
   id: string;

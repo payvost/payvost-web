@@ -180,8 +180,8 @@ export function RapydPaymentForm() {
             transactionId: transactionRecord.id,
             userId: user.uid,
           },
-          complete_payment_url: `${window.location.origin}/dashboard/payments?status=success`,
-          error_payment_url: `${window.location.origin}/dashboard/payments?status=error`,
+          complete_payment_url: `${window.location.origin}/dashboard/payments/send?status=success`,
+          error_payment_url: `${window.location.origin}/dashboard/payments/send?status=error`,
         }
       );
 

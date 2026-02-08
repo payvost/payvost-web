@@ -33,8 +33,8 @@ export function AccountCompletion() {
   const { user } = useAuth();
   const [checklistItems, setChecklistItems] = useState([
     { id: 'verify-email', label: 'Verify your email address', icon: <Mail className="h-5 w-5" />, completed: false, href: '/verify-email' },
-    { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: false, href: '/dashboard/payments' },
-    { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: false, href: '/dashboard/payments' },
+    { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: false, href: '/dashboard/payments/send' },
+    { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: false, href: '/dashboard/payments/send' },
     { id: 'setup-2fa', label: 'Secure your account with 2FA', icon: <ShieldCheck className="h-5 w-5" />, completed: false, href: '/dashboard/settings' },
   ]);
   const [loading, setLoading] = useState(true);
@@ -51,8 +51,8 @@ export function AccountCompletion() {
         
         const updatedChecklist = [
             { id: 'verify-email', label: 'Verify your email address', icon: <Mail className="h-5 w-5" />, completed: user.emailVerified, href: '/verify-email' },
-            { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: userData?.beneficiaries?.length > 0, href: '/dashboard/payments' },
-            { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: userData?.transactions?.length > 0, href: '/dashboard/payments' },
+            { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: userData?.beneficiaries?.length > 0, href: '/dashboard/payments/send' },
+            { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: userData?.transactions?.length > 0, href: '/dashboard/payments/send' },
             { id: 'setup-2fa', label: 'Secure your account with 2FA', icon: <ShieldCheck className="h-5 w-5" />, completed: false, href: '/dashboard/settings' }, // 2FA status might need a different check
         ];
 

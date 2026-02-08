@@ -6,7 +6,7 @@ import {
   Search, Home, Wallet, CreditCard, FileText, Settings, HelpCircle, 
   ArrowRightLeft, Send, HandCoins, Ticket, ShieldCheck, ShieldAlert, 
   Puzzle, Store, Briefcase, Bell, LifeBuoy, LineChart, Users, 
-  Building2, Calendar, BarChart3, TrendingUp, Lock, Key, UserCog,
+  Calendar, BarChart3, TrendingUp, Lock, Key, UserCog,
   Receipt, QrCode, Link as LinkIcon, Repeat, Gift, Zap, Smartphone,
   Globe, BookOpen, MessageSquare, ChevronRight, Upload
 } from 'lucide-react';
@@ -38,7 +38,7 @@ const dashboardSearchItems: SearchItem[] = [
   { title: 'Track Transfer', href: '/track-transfer', description: 'Track a specific transfer', icon: Search, category: 'Transactions', keywords: ['track', 'find', 'transfer'] },
   
   // Payments
-  { title: 'Payments', href: '/dashboard/payments', description: 'Send money and make payments', icon: Send, category: 'Payments', keywords: ['payment', 'send', 'remittance', 'transfer'] },
+  { title: 'Payments', href: '/dashboard/payments/send', description: 'Send money and make payments', icon: Send, category: 'Payments', keywords: ['payment', 'send', 'remittance', 'transfer'] },
   { title: 'Send Money', href: '/dashboard/payments/send', description: 'International transfers and remittances', icon: ArrowRightLeft, category: 'Payments', keywords: ['send', 'transfer', 'remittance'] },
   { title: 'Request Payment', href: '/dashboard/request-payment', description: 'Request payments from others', icon: HandCoins, category: 'Payments', keywords: ['request', 'invoice', 'collect'] },
   { title: 'Payment Links', href: '/dashboard/request-payment?tab=payment-link', description: 'Create shareable payment links', icon: LinkIcon, category: 'Payments', keywords: ['link', 'share', 'url'] },
@@ -67,11 +67,10 @@ const dashboardSearchItems: SearchItem[] = [
   { title: 'Help Center', href: '/help', description: 'Browse help articles and guides', icon: HelpCircle, category: 'Support & Help', keywords: ['help', 'guide', 'faq', 'documentation'] },
   { title: 'Contact Support', href: '/dashboard/support', description: 'Contact our support team', icon: MessageSquare, category: 'Support & Help', keywords: ['contact', 'message', 'chat'] },
   
-  // Business Features
-  { title: 'Business Dashboard', href: '/business', description: 'Access business features', icon: Building2, category: 'Business', keywords: ['business', 'company', 'enterprise'] },
-  { title: 'Customers', href: '/dashboard/customers', description: 'Manage your customers', icon: Users, category: 'Business', keywords: ['customer', 'client', 'contact'] },
-  { title: 'Integrations', href: '/dashboard/integrations', description: 'Connect third-party services', icon: Puzzle, category: 'Business', keywords: ['integration', 'api', 'connect'] },
-  { title: 'Analytics', href: '/dashboard', description: 'View analytics and reports', icon: BarChart3, category: 'Business', keywords: ['analytics', 'report', 'statistics'] },
+  // Operations
+  { title: 'Customers', href: '/dashboard/customers', description: 'Manage your customers', icon: Users, category: 'Operations', keywords: ['customer', 'client', 'contact'] },
+  { title: 'Integrations', href: '/dashboard/integrations', description: 'Connect third-party services', icon: Puzzle, category: 'Operations', keywords: ['integration', 'api', 'connect'] },
+  { title: 'Analytics', href: '/dashboard', description: 'View analytics and reports', icon: BarChart3, category: 'Operations', keywords: ['analytics', 'report', 'statistics'] },
   
   // Investment
   { title: 'Investment', href: '/dashboard/investment', description: 'Browse investment opportunities', icon: TrendingUp, category: 'Investment', keywords: ['investment', 'invest', 'portfolio'] },

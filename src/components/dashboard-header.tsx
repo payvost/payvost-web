@@ -16,10 +16,8 @@ import { UserNav } from '@/components/user-nav';
 import { QuickActionsDropdown } from '@/components/quick-actions-dropdown';
 import { DashboardSearch } from '@/components/dashboard-search';
 
-type DashboardContext = 'personal' | 'business';
-
 export interface DashboardHeaderProps {
-  context: DashboardContext;
+  context: 'personal';
   user: User | null;
   scrolled?: boolean;
   supportHref?: string;
@@ -35,8 +33,7 @@ export function DashboardHeader({
   rightSlot,
   businessLogoUrl,
 }: DashboardHeaderProps) {
-  const resolvedSupportHref =
-    supportHref ?? (context === 'business' ? '/business/support' : '/dashboard/support');
+  const resolvedSupportHref = supportHref ?? '/dashboard/support';
 
   return (
     <header

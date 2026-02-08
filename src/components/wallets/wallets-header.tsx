@@ -53,7 +53,7 @@ export function WalletsHeader(props: {
           Exchange
         </Button>
         <Button variant="outline" asChild>
-          <a href="/dashboard/payments">
+          <a href="/dashboard/payments/send">
             <Send className="mr-2 h-4 w-4" />
             Send
           </a>

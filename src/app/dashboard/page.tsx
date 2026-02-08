@@ -170,7 +170,7 @@ export default function DashboardPage() {
                                     <p className="text-sm text-muted-foreground">Real activity pulled from your wallets, invoices, and transfers.</p>
                                     <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 pt-2 w-full sm:w-auto">
                                         <Button asChild size="sm" className="w-full sm:w-auto">
-                                            <Link href="/dashboard/payments" className="flex items-center gap-2">
+                                            <Link href="/dashboard/payments/send" className="flex items-center gap-2">
                                                 Send money
                                                 <ArrowUpRight className="h-4 w-4" />
                                             </Link>

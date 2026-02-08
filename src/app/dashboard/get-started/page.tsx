@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -9,43 +9,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Briefcase, ArrowRight, Building, HeartHandshake, Rocket, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 
-export default function BusinessOnboardingPage() {
+export default function GetStartedPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const { user } = useAuth();
-  const [isBusinessApproved, setIsBusinessApproved] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        if (doc.exists()) {
-          const businessProfile = doc.data().businessProfile;
-          // Check for both 'approved' (lowercase) and 'Approved' (capitalized) for compatibility
-          if (businessProfile && (businessProfile.status === 'approved' || businessProfile.status === 'Approved')) {
-            setIsBusinessApproved(true);
-          } else {
-            setIsBusinessApproved(false);
-          }
-        }
-    });
-
-    return () => unsub();
-  }, [user]);
 
   const profileTypes = [
     {
         title: 'Business Owner',
         description: 'Manage day-to-day operations, invoicing, and global payments for your established business.',
         icon: <Briefcase className="h-10 w-10 text-primary" />,
-        href: isBusinessApproved ? '/business' : '/dashboard/get-started/onboarding/business',
-        status: isBusinessApproved ? 'approved' : 'default',
-        buttonText: isBusinessApproved ? 'Visit Dashboard' : 'Get Started',
+        href: '#',
+        status: 'coming-soon',
+        buttonText: 'Coming Soon',
     },
     {
         title: 'Startup Founder',
@@ -118,22 +95,16 @@ export default function BusinessOnboardingPage() {
                             </CardContent>
                             <CardFooter className="flex-col items-start">
                                 {profile.status === 'coming-soon' && <Badge variant="secondary" className="mb-4">Coming Soon</Badge>}
-                                {profile.status === 'approved' && <Badge variant="secondary" className="mb-4">Approved</Badge>}
-                                {profile.status === 'approved' ? (
-                                  <Link href="/business" className="w-full">
-                                    <Button variant="default" className="w-full">
-                                      Visit Business Dashboard
-                                      <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </Link>
-                                ) : (
-                                  <Link href={profile.href} className="w-full">
-                                    <Button variant="outline" className="w-full" disabled={profile.status === 'coming-soon'}>
-                                      {profile.buttonText}
-                                      <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </Link>
-                                )}
+                                <Link href={profile.href} className="w-full">
+                                  <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    disabled={profile.status === 'coming-soon'}
+                                  >
+                                    {profile.buttonText}
+                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </Link>
                             </CardFooter>
                         </div>
                     </Card>

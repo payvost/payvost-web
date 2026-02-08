@@ -120,8 +120,8 @@ export default function PaymentsActivityPageClient() {
             <p className="mt-1 text-sm text-muted-foreground">Filter and review outbound payments.</p>
           </div>
           <Button asChild variant="outline">
-            <Link href="/dashboard/payments" data-tracking-id="payments.activity.back_to_hub">
-              Back to hub
+            <Link href="/dashboard/payments/send" data-tracking-id="payments.activity.back_to_hub">
+              Back to payments
             </Link>
           </Button>
         </div>
@@ -233,4 +233,3 @@ export default function PaymentsActivityPageClient() {
     </DashboardLayout>
   );
 }
-

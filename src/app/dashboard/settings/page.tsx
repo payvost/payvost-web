@@ -6,7 +6,6 @@ import { useTheme } from 'next-themes';
 import {
   AlertTriangle,
   Bell,
-  Briefcase,
   CreditCard,
   Palette,
   ShieldCheck,
@@ -70,10 +69,6 @@ export default function SettingsOverviewPage() {
       ? userData.defaultWalletCurrency
       : null;
 
-  const businessApproved =
-    userData?.businessProfile &&
-    (userData.businessProfile.status === 'approved' || userData.businessProfile.status === 'Approved');
-
   const cards = useMemo(
     () => [
       {
@@ -119,13 +114,6 @@ export default function SettingsOverviewPage() {
         status: 'Manage ways you pay and get paid',
       },
       {
-        href: '/dashboard/settings/business',
-        title: 'Business',
-        description: 'Team, company, and corporate tools.',
-        icon: Briefcase,
-        status: businessApproved ? 'Business approved' : 'Not enabled',
-      },
-      {
         href: '/dashboard/settings/legal',
         title: 'Legal',
         description: 'Terms, privacy, and support.',
@@ -150,7 +138,6 @@ export default function SettingsOverviewPage() {
       theme,
       loading2fa,
       twoFaStatus?.enabled,
-      businessApproved,
     ]
   );
 
@@ -208,4 +195,3 @@ export default function SettingsOverviewPage() {
     </div>
   );
 }
-

@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   Bell,
-  Briefcase,
   CreditCard,
   Eye,
   Palette,
@@ -35,7 +34,6 @@ export const SETTINGS_NAV: SettingsNavItem[] = [
   { href: '/dashboard/settings/appearance', label: 'Appearance', description: 'Theme and accessibility.', icon: Palette },
   { href: '/dashboard/settings/transactions', label: 'Transactions', description: 'Recipients, templates, FX alerts.', icon: SlidersHorizontal },
   { href: '/dashboard/settings/payment-methods', label: 'Payment Methods', description: 'Cards and wallet funding.', icon: CreditCard },
-  { href: '/dashboard/settings/business', label: 'Business', description: 'Team, company, and corporate tools.', icon: Briefcase },
   { href: '/dashboard/settings/legal', label: 'Legal', description: 'Terms, privacy, and support.', icon: ShieldCheck },
   { href: '/dashboard/settings/danger', label: 'Danger', description: 'Account deletion request.', icon: AlertTriangle },
 ];

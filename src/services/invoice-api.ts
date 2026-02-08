@@ -216,26 +216,6 @@ export class InvoiceAPI {
   }
 
   /**
-   * List business invoices
-   */
-  static async listBusinessInvoices(
-    businessId: string,
-    options?: {
-      status?: 'DRAFT' | 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<InvoiceListResponse> {
-    const params = new URLSearchParams();
-    params.append('businessId', businessId);
-    if (options?.status) params.append('status', options.status);
-    if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.offset) params.append('offset', options.offset.toString());
-
-    return apiRequest<InvoiceListResponse>(`/api/invoices/business?${params.toString()}`);
-  }
-
-  /**
    * Get invoice by ID
    */
   static async getInvoice(id: string): Promise<Invoice> {

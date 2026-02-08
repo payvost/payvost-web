@@ -62,7 +62,7 @@ export function PaymentsPageClient() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (
                 <Button asChild size="lg">
-                  <Link href="/dashboard/payments">
+                  <Link href="/dashboard/payments/send">
                     Go to Payments Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -115,7 +115,7 @@ export function PaymentsPageClient() {
             <CardContent className="flex justify-center">
               {user ? (
                 <Button asChild size="lg" variant="secondary">
-                  <Link href="/dashboard/payments">
+                  <Link href="/dashboard/payments/send">
                     Access Payments Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

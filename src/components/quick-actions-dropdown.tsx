@@ -63,7 +63,7 @@ export function QuickActionsDropdown({ onWalletCreated }: QuickActionsDropdownPr
     {
       label: 'Send Payment',
       icon: <Send className="h-4 w-4" />,
-      href: '/dashboard/payments',
+      href: '/dashboard/payments/send',
       shortcut: '⌘K',
       description: 'Send money to users or banks',
     },

@@ -160,7 +160,6 @@ export function useDashboardData() {
 
                 const newKycStatus = data.kycStatus;
                 const normalizedKycStatus = typeof newKycStatus === 'string' ? newKycStatus.toLowerCase() : 'unverified';
-                const newBusinessStatus = data.businessProfile?.status;
                 const welcomeNotificationSent = data.welcomeNotificationSent || {};
 
                 const inferredHomeCurrency = (() => {
@@ -196,20 +195,6 @@ export function useDashboardData() {
                         }
                     } catch (error) {
                         console.error("Failed to send welcome notification:", error);
-                    }
-                }
-
-                // Welcome notification for Business Approval
-                if (newBusinessStatus === 'Approved' && !welcomeNotificationSent.business && user.displayName) {
-                    try {
-                        await addDoc(collection(db, "users", user.uid, "notifications"), {
-                            icon: 'success', title: 'Business Account Approved!',
-                            description: `Congratulations! Your business "${data.businessProfile.name}" has been approved. You can now switch to your business dashboard.`,
-                            date: serverTimestamp(), read: false, href: '/business', context: 'business'
-                        });
-                        await updateDoc(userDocRef, { 'welcomeNotificationSent.business': true });
-                    } catch (error) {
-                        console.error("Failed to send business approval notification:", error);
                     }
                 }
 

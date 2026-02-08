@@ -428,7 +428,7 @@ export function SiteHeader({ showLogin = true, showRegister = true }: SiteHeader
 
     const actionItems = [
         { title: "Create Wallet", href: "/dashboard/wallets", action: "create-wallet", group: "Actions" },
-        { title: "Send Money", href: "/dashboard/payments", action: "send", group: "Actions" },
+        { title: "Send Money", href: "/dashboard/payments/send", action: "send", group: "Actions" },
         { title: "Request Payment", href: "/dashboard/request-payment", action: "request", group: "Actions" },
         { title: "Create Invoice", href: "/dashboard/request-payment?tab=invoice&create=true", action: "invoice", group: "Actions" },
         { title: "View Transactions", href: "/dashboard/transactions", action: "transactions", group: "Actions" },

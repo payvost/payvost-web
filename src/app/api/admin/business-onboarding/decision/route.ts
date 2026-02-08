@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
         : 'Business Onboarding Review Complete';
       
       const notificationBody = decision === 'approved'
-        ? `Congratulations! Your business onboarding for ${submissionData.name} has been approved. You now have Tier 3 access with unlimited transactions and business account features.${adminResponse ? ` ${adminResponse}` : ''}`
+        ? `Your business onboarding for ${submissionData.name} has been approved. You now have Tier 3 access.${adminResponse ? ` ${adminResponse}` : ''}`
         : `Your business onboarding submission has been reviewed.${reason ? ` Reason: ${reason}` : ''}${adminResponse ? ` ${adminResponse}` : ''} Please review the details and take necessary actions.`;
 
       // Create in-app notification in user's notifications subcollection
@@ -196,8 +196,8 @@ export async function POST(request: NextRequest) {
         context: 'personal', // Set context to personal so it shows in personal dashboard notifications
         read: false,
         date: new Date(),
-        href: decision === 'approved' ? '/business' : '/dashboard/get-started/onboarding/business',
-        link: decision === 'approved' ? '/business' : '/dashboard/get-started/onboarding/business',
+        href: '/dashboard',
+        link: '/dashboard',
         data: {
           status: decision,
           submissionId,

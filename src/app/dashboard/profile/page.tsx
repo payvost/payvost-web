@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint, BadgeInfo, Camera, Copy, Landmark, Banknote, Sparkles, Clock, Briefcase, Users, Building, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Globe, Edit, ShieldCheck, KeyRound, UploadCloud, Loader2, Home, CheckCircle, ArrowRight, Eye, EyeOff, Building2, Ticket, Fingerprint, BadgeInfo, Camera, Copy, Landmark, Banknote, Sparkles, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -88,8 +88,6 @@ export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [businessProfile, setBusinessProfile] = useState<any>(null);
-  const [loadingBusiness, setLoadingBusiness] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -126,7 +124,6 @@ export default function ProfilePage() {
     if (authLoading) return;
     if (!user) {
         setLoading(false);
-        setLoadingBusiness(false);
         return;
     };
 
@@ -155,17 +152,8 @@ export default function ProfilePage() {
                     return false;
                 });
             }
-            
-            // Check for business profile
-            const profile = data.businessProfile;
-            if (profile && (profile.status === 'approved' || profile.status === 'Approved')) {
-                setBusinessProfile(profile);
-            } else {
-                setBusinessProfile(null);
-            }
         }
         setLoading(false);
-        setLoadingBusiness(false);
     });
 
     return () => unsub();
@@ -180,23 +168,6 @@ export default function ProfilePage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const getBusinessInitials = (name?: string) => {
-    if (!name) return 'B';
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  const businessTypeMap: { [key: string]: string } = {
-    'sole-prop': 'Sole Proprietorship',
-    'llc': 'LLC',
-    'corporation': 'Corporation',
-    'non-profit': 'Non-Profit',
-  };
-  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -417,7 +388,6 @@ export default function ProfilePage() {
     acc[w.currency] = w.balance || 0;
     return acc;
   }, {}) || {};
-  const hasVirtualAccounts = Object.keys(accountDetails).length > 0 && Object.values(accountDetails).some((details: any) => details && Object.keys(details).length > 0);
   
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -620,149 +590,6 @@ export default function ProfilePage() {
                             </DialogContent>
                         </Dialog>
                     </CardContent>
-                </Card>
-                
-                {/* Business & Corporate Settings */}
-                <Card className={businessProfile ? "" : "border-dashed"}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Briefcase className="mr-2 h-5 w-5"/> 
-                      Business & Corporate Settings
-                    </CardTitle>
-                    <CardDescription>
-                      {businessProfile 
-                        ? "Manage your team, roles, and company details."
-                        : "Manage your team, roles, and company details. (Pro feature)"
-                      }
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingBusiness ? (
-                      <div className="space-y-4">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                      </div>
-                    ) : businessProfile ? (
-                      <div className="space-y-4">
-                        {/* Business Summary */}
-                        <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/30">
-                          <Avatar className="h-16 w-16 border-2 border-primary/20">
-                            <AvatarImage src={businessProfile.logoUrl} alt={businessProfile.legalName || businessProfile.name} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
-                              {getBusinessInitials(businessProfile.legalName || businessProfile.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-semibold text-lg">{businessProfile.legalName || businessProfile.name}</h3>
-                                {businessProfile.industry && (
-                                  <p className="text-sm text-muted-foreground">{businessProfile.industry}</p>
-                                )}
-                              </div>
-                              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Approved
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                              {businessProfile.businessType && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Building className="h-3.5 w-3.5" />
-                                  <span>{businessTypeMap[businessProfile.businessType] || businessProfile.businessType}</span>
-                                </div>
-                              )}
-                              {businessProfile.website && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Globe className="h-3.5 w-3.5" />
-                                  <a 
-                                    href={businessProfile.website.startsWith('http') ? businessProfile.website : `https://${businessProfile.website}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline flex items-center gap-1"
-                                  >
-                                    {businessProfile.website}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Button asChild variant="outline" className="w-full justify-between">
-                            <Link href="/business/settings">
-                              <span>Manage Team Members</span>
-                              <Users className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button asChild variant="outline" className="w-full justify-between">
-                            <Link href="/business/settings">
-                              <span>Company Details & Documents</span>
-                              <Building className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {!hasVirtualAccounts && (
-                          <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 text-center space-y-2">
-                            <p className="text-sm font-medium text-primary">New to Payvost?</p>
-                            <p className="text-xs text-muted-foreground">Create your first virtual account to get started with business features.</p>
-                            <Button asChild size="sm" variant="default" className="mt-2">
-                              <Link href="/dashboard/wallets">
-                                Create Virtual Account
-                                <ArrowRight className="ml-2 h-3 w-3" />
-                              </Link>
-                            </Button>
-                          </div>
-                        )}
-                        <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-                          <div className="rounded-full bg-primary/10 p-4">
-                            <Sparkles className="h-8 w-8 text-primary" />
-                          </div>
-                          <div className="space-y-2">
-                            <h3 className="font-semibold text-lg">Explore Business Features</h3>
-                            <p className="text-sm text-muted-foreground max-w-sm">
-                              Unlock powerful tools for managing your business finances, team members, and corporate transactions.
-                            </p>
-                          </div>
-                          <ul className="text-sm text-muted-foreground space-y-2 flex flex-col items-center w-full max-w-sm">
-                            <li className="flex items-center justify-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                              Team member management
-                            </li>
-                            <li className="flex items-center justify-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                              Advanced financial controls
-                            </li>
-                            <li className="flex items-center justify-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                              Corporate invoicing
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    {businessProfile ? (
-                      <Button asChild className="w-full">
-                        <Link href="/business">
-                          Switch to Business Dashboard
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button asChild variant="secondary" className="w-full">
-                        <Link href="/dashboard/get-started">
-                          Explore Business Features
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    )}
-                  </CardFooter>
                 </Card>
                 
             </div>

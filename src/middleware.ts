@@ -26,7 +26,6 @@ export const config = {
     '/login',
     '/register',
     '/dashboard/:path*',
-    '/business/:path*',
     '/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/:path*',
   ],
 };

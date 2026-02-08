@@ -32,7 +32,7 @@ export function QuickActions({ isKycVerified }: { isKycVerified: boolean }) {
             icon: <RefreshCw className="h-4 w-4" />,
             tone: 'border-orange-500/20 bg-orange-500/5 text-orange-700',
             iconTone: 'bg-orange-500/10 text-orange-700',
-            href: '/dashboard/payments',
+            href: '/dashboard/payments/bills',
         },
         {
             label: 'Add funds',

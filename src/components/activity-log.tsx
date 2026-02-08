@@ -15,9 +15,9 @@ const statusConfig: Record<ActivityStatus, { color: string }> = {
 };
 
 const defaultActivityLogs: ActivityLogType[] = [
-  { id: '1', timestamp: '2024-08-15T10:00:00Z', user: { name: 'You' }, action: 'Payout Initiated', object: { type: 'Payout', id: 'PO-123', link: '/business/payouts' }, status: 'Success', icon: <DollarSign className="h-4 w-4" /> },
-  { id: '2', timestamp: '2024-08-15T09:30:00Z', user: { name: 'System' }, action: 'Invoice Paid', object: { type: 'Invoice', id: 'INV-002', link: '/business/invoices' }, status: 'Success', icon: <FileText className="h-4 w-4" /> },
-  { id: '3', timestamp: '2024-08-14T15:00:00Z', user: { name: 'System' }, action: 'New Customer', object: { type: 'Beneficiary', id: 'CUST-456', link: '/business/customers' }, status: 'Success', icon: <UserPlus className="h-4 w-4" /> },
+  { id: '1', timestamp: '2024-08-15T10:00:00Z', user: { name: 'You' }, action: 'Payout Initiated', object: { type: 'Payout', id: 'PO-123', link: '/dashboard/payments/send' }, status: 'Success', icon: <DollarSign className="h-4 w-4" /> },
+  { id: '2', timestamp: '2024-08-15T09:30:00Z', user: { name: 'System' }, action: 'Invoice Paid', object: { type: 'Invoice', id: 'INV-002', link: '/dashboard/request-payment?tab=invoice' }, status: 'Success', icon: <FileText className="h-4 w-4" /> },
+  { id: '3', timestamp: '2024-08-14T15:00:00Z', user: { name: 'System' }, action: 'New Contact', object: { type: 'Customer', id: 'CUST-456', link: '/dashboard/customers' }, status: 'Success', icon: <UserPlus className="h-4 w-4" /> },
 ];
 
 function formatTimeAgo(isoString: string) {

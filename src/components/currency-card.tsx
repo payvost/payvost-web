@@ -56,7 +56,7 @@ export function CurrencyCard({ currency, balance, growth, flag }: CurrencyCardPr
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                    <Link href="/dashboard/payments">
+                    <Link href="/dashboard/payments/send">
                       <Send className="h-4 w-4" />
                       <span className="sr-only">Send</span>
                     </Link>

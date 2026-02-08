@@ -13,23 +13,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Copy, QrCode, Link as LinkIcon, FileText, Repeat, Users, Ticket, Gift, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { EnhancedTabs } from '@/components/enhanced-tabs';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, onSnapshot, Timestamp, query, where, limit } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { sendPaymentRequestEmail } from '@/services/emailService';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { QRCodeDialog } from '@/components/qr-code-dialog';
 
 const InvoiceTab = dynamic(() => import('@/components/invoice-tab').then(mod => mod.InvoiceTab), { 
-    loading: () => <Skeleton className="h-96 w-full" />,
-});
-const CreateInvoicePage = dynamic(() => import('@/components/create-invoice-page').then(mod => mod.CreateInvoicePage), { 
     loading: () => <Skeleton className="h-96 w-full" />,
 });
 const RecurringTab = dynamic(() => import('@/components/recurring-tab').then(mod => mod.RecurringTab), { 
@@ -384,8 +380,8 @@ function PaymentLinkTab() {
 function RequestPaymentPageContent() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const searchParams = useSearchParams();
-  const tab = searchParams.get('tab') || 'payment-link';
-  const create = searchParams.get('create');
+  const invoiceIntent = Boolean(searchParams.get('edit')) || searchParams.get('create') === 'true';
+  const tab = searchParams.get('tab') || (invoiceIntent ? 'invoice' : 'payment-link');
   
   const [activeTab, setActiveTab] = useState(tab);
   
@@ -393,37 +389,6 @@ function RequestPaymentPageContent() {
     setActiveTab(tab);
   }, [tab]);
   
-  const [invoiceView, setInvoiceView] = useState(create === 'true' ? 'create' : 'list');
-  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
-
-  const handleEditInvoice = (invoiceId: string) => {
-    setEditingInvoiceId(invoiceId);
-    setInvoiceView('create');
-  };
-
-  const handleCreateInvoice = () => {
-    setEditingInvoiceId(null);
-    setInvoiceView('create');
-  };
-
-  const handleBackToInvoiceList = () => {
-    setEditingInvoiceId(null);
-    setInvoiceView('list');
-    // Also update URL to remove create=true if present
-    const newSearchParams = new URLSearchParams(searchParams.toString());
-    newSearchParams.delete('create');
-    const newUrl = `${window.location.pathname}?${newSearchParams.toString()}`;
-    window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-  };
-
-
-  const renderInvoiceContent = () => {
-    if (invoiceView === 'create') {
-      return <CreateInvoicePage onBack={handleBackToInvoiceList} invoiceId={editingInvoiceId} />;
-    }
-    return <InvoiceTab onCreateClick={handleCreateInvoice} onEditClick={handleEditInvoice} />;
-  };
-
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
@@ -485,7 +450,7 @@ function RequestPaymentPageContent() {
 
           <TabsContent value="invoice" className="animate-in fade-in-50">
              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                {renderInvoiceContent()}
+                <InvoiceTab />
              </Suspense>
             </TabsContent>
 

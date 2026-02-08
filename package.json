@@ -2,6 +2,9 @@
   "name": "qwibik-remit",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "genkit:dev": "genkit dev",
     "dev:all": "npm-run-all --parallel dev genkit:dev",
@@ -139,7 +142,7 @@
     "npm-run-all": "^4.1.5",
     "postcss": "^8",
     "prisma": "^6.18.0",
-    "sharp": "^0.32.6",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3",
