@@ -11,15 +11,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col bg-background overflow-hidden relative">
       <SiteHeader showLogin={false} />
       <main className="flex-1 flex items-center justify-center px-4 lg:px-8 py-2.5">
-        <div className="w-full max-w-none h-full grid lg:grid-cols-2 gap-8 items-center">
-          {/* Left: Slideshow - Full height minus header/margins */}
+        <div className="w-full max-w-none h-full grid lg:grid-cols-[30%_70%] gap-8 items-center">
+          {/* Left: Slideshow - 30% width */}
           <div className="hidden lg:block w-full h-[calc(100vh-100px)] rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-primary/20 relative">
             <LoginSlideshow />
           </div>
 
-          {/* Right: Form - Centered vertically */}
+          {/* Right: Form - 70% width */}
           <div className="w-full flex flex-col items-center justify-center">
-            <Card className="w-full justify-self-center bg-card/95 shadow-xl ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/85 lg:w-9/12 xl:w-8/12 lg:justify-self-center animate-in fade-in zoom-in-95 duration-700">
+            <Card className="w-full max-w-xl bg-card/95 shadow-xl ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/85 animate-in fade-in zoom-in-95 duration-700">
               <CardHeader className="p-6 pb-2 text-center">
                 <CardTitle className="font-display text-3xl font-bold tracking-tight">Sign in</CardTitle>
                 <CardDescription className="text-base mt-2">

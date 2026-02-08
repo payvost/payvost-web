@@ -14,21 +14,21 @@ import Autoplay from 'embla-carousel-autoplay';
 const slides = [
     {
         id: 1,
-        title: "Instantly convert between currencies",
-        subtitle: "Exchange money at the best rates with zero hidden fees.",
-        image: "/Man%20operating%20payvost%20app.png",
+        title: "Send Money Globally in Seconds",
+        subtitle: "Transfer funds across borders with real-time exchange rates and zero hidden fees.",
+        image: "/man-payvost-app.png",
     },
     {
         id: 2,
-        title: "Global payments made easy",
-        subtitle: "Send and receive funds across borders in seconds.",
-        image: "/Man%20operating%20payvost%20app.png",
+        title: "Your Financial Hub, Simplified",
+        subtitle: "Manage all your payments, cards, and transactions from one powerful dashboard.",
+        image: "/man-payvost-app.png",
     },
     {
         id: 3,
-        title: "Secure and reliable",
-        subtitle: "Your financial data is protected with bank-grade security.",
-        image: "/Man%20operating%20payvost%20app.png",
+        title: "Bank-Grade Security You Can Trust",
+        subtitle: "Advanced encryption and multi-factor authentication keep your money safe 24/7.",
+        image: "/man-payvost-app.png",
     },
 ];
 
@@ -71,7 +71,7 @@ export function LoginSlideshow() {
                                 {/* Image Section */}
                                 <div className="relative flex-1 w-full overflow-hidden">
                                     <Image
-                                        src={decodeURIComponent(slide.image)}
+                                        src={slide.image}
                                         alt={slide.title}
                                         fill
                                         className="object-cover object-top"

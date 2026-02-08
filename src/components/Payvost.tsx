@@ -827,7 +827,7 @@ export function Payvost() {
               )}
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col gap-2">
             <PaymentConfirmationDialog
               onConfirm={handleSendMoney}
               transactionDetails={transactionDetails}
@@ -843,12 +843,12 @@ export function Payvost() {
                   'Send to User'
                 )}
               </Button>
-              {disabledReason && (
-                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
-                  {disabledReason}
-                </p>
-              )}
             </PaymentConfirmationDialog>
+            {disabledReason && (
+              <p className="text-xs text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
+                {disabledReason}
+              </p>
+            )}
           </CardFooter>
         </TabsContent>
 
@@ -877,7 +877,7 @@ export function Payvost() {
                       <SelectItem key={b.id} value={b.id}>
                         {(() => {
                           const bank = b.bankName || 'Bank';
-                          const last4 = (b.accountLast4 || (b.accountNumber || '').toString().slice(-4)) as string;
+                          const last4 = (b.accountNumber || '').toString().slice(-4);
                           const masked = last4 ? ` ****${last4}` : '';
                           return `${b.name} (${bank}${masked})`;
                         })()}
@@ -1008,7 +1008,7 @@ export function Payvost() {
               )}
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col gap-2">
             <PaymentConfirmationDialog
               onConfirm={handleSendMoney}
               transactionDetails={transactionDetails}
@@ -1017,12 +1017,12 @@ export function Payvost() {
               <Button className="w-full" disabled={isButtonDisabled}>
                 Send Money
               </Button>
-              {disabledReason && (
-                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
-                  {disabledReason}
-                </p>
-              )}
             </PaymentConfirmationDialog>
+            {disabledReason && (
+              <p className="text-xs text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
+                {disabledReason}
+              </p>
+            )}
           </CardFooter>
         </TabsContent>
 
@@ -1051,7 +1051,7 @@ export function Payvost() {
               disabled={isLoading || !isKycVerified}
             />
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col gap-2">
             <PaymentConfirmationDialog
               onConfirm={handleSendMoney}
               transactionDetails={{
@@ -1063,12 +1063,12 @@ export function Payvost() {
               <Button className="w-full" disabled={isLoading || !isKycVerified}>
                 Continue to Transfer
               </Button>
-              {disabledReason && activeTab === 'bank' && (
-                <p className="text-xs text-muted-foreground mt-2 text-center animate-in fade-in slide-in-from-top-1">
-                  {disabledReason}
-                </p>
-              )}
             </PaymentConfirmationDialog>
+            {disabledReason && activeTab === 'bank' && (
+              <p className="text-xs text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
+                {disabledReason}
+              </p>
+            )}
           </CardFooter>
         </TabsContent>
       </Tabs>
