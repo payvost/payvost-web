@@ -190,11 +190,11 @@ export default function RecipientsPage() {
 
     return (
         <>
-            <main className="flex-1 p-4 lg:p-6 max-w-6xl mx-auto w-full">
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+            <main className="flex-1 flex flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Address Book</h1>
-                        <p className="text-muted-foreground mt-1">Manage your saved beneficiaries for quick transfers.</p>
+                        <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Address Book</h1>
+                        <p className="text-muted-foreground mt-1 text-sm">Manage your saved beneficiaries for quick transfers.</p>
                     </div>
 
                     <Dialog open={isAddingRecipient} onOpenChange={setIsAddingRecipient}>
@@ -369,7 +369,7 @@ export default function RecipientsPage() {
                     </DialogContent>
                 </Dialog>
 
-                <Card className="mb-8">
+                <Card>
                     <CardContent className="p-4">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

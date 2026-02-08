@@ -35,7 +35,6 @@ function uuid(): string {
 }
 
 export default function PaymentsBillsPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -228,175 +227,174 @@ export default function PaymentsBillsPage() {
   };
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Bill Payments</h1>
-        </div>
+    <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Bill Payments</h1>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <SavedBillTemplates onSelectTemplate={onSelectTemplate} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <SavedBillTemplates onSelectTemplate={onSelectTemplate} />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Pay a Bill</CardTitle>
-                <CardDescription>Provider-driven billers with server-authoritative processing.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Country</Label>
-                    <Select
-                      value={country}
-                      onValueChange={(v) => {
-                        setCountry(v);
-                        setSelectedBillerId('');
-                        setBillerSearch('');
-                      }}
-                    >
-                      <SelectTrigger>
+          <Card>
+            <CardHeader>
+              <CardTitle>Pay a Bill</CardTitle>
+              <CardDescription>Provider-driven billers with server-authoritative processing.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 sm:space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Country</Label>
+                  <Select
+                    value={country}
+                    onValueChange={(v) => {
+                      setCountry(v);
+                      setSelectedBillerId('');
+                      setBillerSearch('');
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NG">Nigeria (NG)</SelectItem>
+                      <SelectItem value="US">United States (US)</SelectItem>
+                      <SelectItem value="GB">United Kingdom (GB)</SelectItem>
+                      <SelectItem value="GH">Ghana (GH)</SelectItem>
+                      <SelectItem value="KE">Kenya (KE)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Provider/Biller</Label>
+                  <Input placeholder="Search billers..." value={billerSearch} onChange={(e) => setBillerSearch(e.target.value)} />
+                  <Select
+                    value={selectedBillerId}
+                    onValueChange={(v) => {
+                      setSelectedBillerId(v);
+                    }}
+                    disabled={loadingBillers}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingBillers ? 'Loading...' : 'Select a biller'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredBillers.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {sourceAccountId && accounts.length > 0 ? (
+                <WalletSelector
+                  accounts={accounts}
+                  selectedAccountId={sourceAccountId}
+                  onSelectAccount={setSourceAccountId}
+                  billCurrency={targetCurrency || selectedSourceAccount?.currency || 'USD'}
+                  billAmount={parseFloat(targetAmount) || 0}
+                />
+              ) : null}
+
+              <div className="space-y-2">
+                <Label htmlFor="acct">Account/Meter Number</Label>
+                <Input
+                  id="acct"
+                  placeholder="Enter account or meter number"
+                  value={subscriberAccountNumber}
+                  onChange={(e) => setSubscriberAccountNumber(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amt">Amount {targetCurrency ? `(${targetCurrency})` : ''}</Label>
+                <Input
+                  id="amt"
+                  type="number"
+                  placeholder="Enter amount"
+                  value={targetAmount}
+                  onChange={(e) => setTargetAmount(e.target.value)}
+                  disabled={!selectedBiller}
+                />
+                {selectedBiller ? (
+                  <p className="text-sm text-muted-foreground">
+                    Min: {selectedBiller.localMinAmount} {targetCurrency} • Max: {selectedBiller.localMaxAmount} {targetCurrency}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Quote</span>
+                  {quoting ? (
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
+                    </span>
+                  ) : quote ? (
+                    <span className="font-semibold">
+                      {Number(quote.sourceAmount).toFixed(2)} {quote.sourceCurrency}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Enter amount to preview</span>
+                  )}
+                </div>
+                {quote?.needsConversion ? (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    FX: 1 {quote.sourceCurrency} = {Number(quote.fxRate).toFixed(6)} {targetCurrency} • Fee:{' '}
+                    {Number(quote.feeAmount).toFixed(2)} {quote.sourceCurrency}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="recurring"
+                    checked={scheduleEnabled}
+                    onChange={(e) => setScheduleEnabled(e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="recurring" className="cursor-pointer">
+                    Set up as recurring payment
+                  </Label>
+                </div>
+                {scheduleEnabled ? (
+                  <div className="pl-6 space-y-2">
+                    <Label htmlFor="frequency">Frequency</Label>
+                    <Select value={scheduleFrequency} onValueChange={(v: any) => setScheduleFrequency(v)}>
+                      <SelectTrigger id="frequency">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NG">Nigeria (NG)</SelectItem>
-                        <SelectItem value="US">United States (US)</SelectItem>
-                        <SelectItem value="GB">United Kingdom (GB)</SelectItem>
-                        <SelectItem value="GH">Ghana (GH)</SelectItem>
-                        <SelectItem value="KE">Kenya (KE)</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Provider/Biller</Label>
-                    <Input placeholder="Search billers..." value={billerSearch} onChange={(e) => setBillerSearch(e.target.value)} />
-                    <Select
-                      value={selectedBillerId}
-                      onValueChange={(v) => {
-                        setSelectedBillerId(v);
-                      }}
-                      disabled={loadingBillers}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingBillers ? 'Loading...' : 'Select a biller'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredBillers.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {sourceAccountId && accounts.length > 0 ? (
-                  <WalletSelector
-                    accounts={accounts}
-                    selectedAccountId={sourceAccountId}
-                    onSelectAccount={setSourceAccountId}
-                    billCurrency={targetCurrency || selectedSourceAccount?.currency || 'USD'}
-                    billAmount={parseFloat(targetAmount) || 0}
-                  />
                 ) : null}
-
-                <div className="space-y-2">
-                  <Label htmlFor="acct">Account/Meter Number</Label>
-                  <Input
-                    id="acct"
-                    placeholder="Enter account or meter number"
-                    value={subscriberAccountNumber}
-                    onChange={(e) => setSubscriberAccountNumber(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="amt">Amount {targetCurrency ? `(${targetCurrency})` : ''}</Label>
-                  <Input
-                    id="amt"
-                    type="number"
-                    placeholder="Enter amount"
-                    value={targetAmount}
-                    onChange={(e) => setTargetAmount(e.target.value)}
-                    disabled={!selectedBiller}
-                  />
-                  {selectedBiller ? (
-                    <p className="text-sm text-muted-foreground">
-                      Min: {selectedBiller.localMinAmount} {targetCurrency} • Max: {selectedBiller.localMaxAmount} {targetCurrency}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Quote</span>
-                    {quoting ? (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
-                      </span>
-                    ) : quote ? (
-                      <span className="font-semibold">
-                        {Number(quote.sourceAmount).toFixed(2)} {quote.sourceCurrency}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Enter amount to preview</span>
-                    )}
-                  </div>
-                  {quote?.needsConversion ? (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      FX: 1 {quote.sourceCurrency} = {Number(quote.fxRate).toFixed(6)} {targetCurrency} • Fee:{' '}
-                      {Number(quote.feeAmount).toFixed(2)} {quote.sourceCurrency}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      id="recurring"
-                      checked={scheduleEnabled}
-                      onChange={(e) => setScheduleEnabled(e.target.checked)}
-                      className="rounded"
-                    />
-                    <Label htmlFor="recurring" className="cursor-pointer">
-                      Set up as recurring payment
-                    </Label>
-                  </div>
-                  {scheduleEnabled ? (
-                    <div className="pl-6 space-y-2">
-                      <Label htmlFor="frequency">Frequency</Label>
-                      <Select value={scheduleFrequency} onValueChange={(v: any) => setScheduleFrequency(v)}>
-                        <SelectTrigger id="frequency">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="yearly">Yearly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <PaymentConfirmationDialog onConfirm={handleSubmit} transactionDetails={detailsForDialog}>
-                  <Button className="w-full sm:w-auto" disabled={!selectedBiller || !targetAmount || !subscriberAccountNumber}>
-                    Pay Bill
-                  </Button>
-                </PaymentConfirmationDialog>
-              </CardFooter>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-1">
-            <BillPaymentHistory />
-          </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <PaymentConfirmationDialog onConfirm={handleSubmit} transactionDetails={detailsForDialog}>
+                <Button className="w-full sm:w-auto" disabled={!selectedBiller || !targetAmount || !subscriberAccountNumber}>
+                  Pay Bill
+                </Button>
+              </PaymentConfirmationDialog>
+            </CardFooter>
+          </Card>
         </div>
-      </main>
-    </DashboardLayout>
+
+        <div className="lg:col-span-1">
+          <BillPaymentHistory />
+        </div>
+      </div>
+    </main>
+    </DashboardLayout >
   );
 }
