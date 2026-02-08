@@ -49,40 +49,41 @@ export default function PaymentsScheduledPage() {
   }, [toast]);
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
-      <div className="flex items-center">
-        <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Scheduled Payments</h1>
-      </div>
+    <DashboardLayout>
+      <main className="flex flex-1 flex-col gap-4 p-4 sm:p-5 lg:gap-6 lg:p-6">
+        <div className="flex items-center">
+          <h1 className="text-base font-semibold sm:text-lg md:text-2xl">Scheduled Payments</h1>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Schedules</CardTitle>
-          <CardDescription>Schedules are stored in Prisma and executed by a server-side runner (next step).</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground">Loading schedules...</div>
-          ) : items.length ? (
-            <div className="space-y-3">
-              {items.map((s) => (
-                <div key={s.id} className="rounded-lg border p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold">{s.type.replaceAll('_', ' ')}</div>
-                    <div className="text-sm text-muted-foreground">{s.status}</div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Schedules</CardTitle>
+            <CardDescription>Schedules are stored in Prisma and executed by a server-side runner (next step).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="py-12 text-center text-muted-foreground">Loading schedules...</div>
+            ) : items.length ? (
+              <div className="space-y-3">
+                {items.map((s) => (
+                  <div key={s.id} className="rounded-lg border p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold">{s.type.replaceAll('_', ' ')}</div>
+                      <div className="text-sm text-muted-foreground">{s.status}</div>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Next run: {format(new Date(s.nextRunAt), 'MMM dd, yyyy HH:mm')} ({s.timezone})
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground font-mono">cron: {s.cron}</div>
                   </div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Next run: {format(new Date(s.nextRunAt), 'MMM dd, yyyy HH:mm')} ({s.timezone})
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground font-mono">cron: {s.cron}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center text-muted-foreground">No active schedules.</div>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-muted-foreground">No active schedules.</div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </DashboardLayout >
   );
 }

@@ -330,7 +330,7 @@ export function Payvost() {
         });
 
         await payoutService.create({
-          fromAccountId: selectedAccount.id, recipientId: recipient.id,
+          fromAccountId: selectedWallet.id, recipientId: recipient.id,
           amount: parseFloat(bankFormAmount), currency: fromWallet,
           description: `Payout to ${bankFormRecipientName}`,
         });
@@ -338,10 +338,10 @@ export function Payvost() {
         toast({ title: 'Payout Created', description: `Transfer to ${bankFormRecipientName} initiated.` });
         setBankFormAmount('0.00'); setWallets(await walletService.getAccounts());
         setBeneficiaries(await recipientService.list());
-      } catch (error: any) {
-        toast({ title: 'Transfer Failed', description: error.message, variant: 'destructive' });
-      } finally { setIsLoading(false); }
-    }
+      }
+    } catch (error: any) {
+      toast({ title: 'Transfer Failed', description: error.message, variant: 'destructive' });
+    } finally { setIsLoading(false); }
   };
 
   const recipientName = activeTab === 'user' && paymentIdRecipient

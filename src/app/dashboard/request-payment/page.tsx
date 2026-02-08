@@ -408,95 +408,96 @@ function RequestPaymentPageContent() {
   }, [tab]);
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-      <div className="flex items-center">
-        <h1 className="text-lg font-semibold md:text-2xl">Request Payment</h1>
-      </div>
+    <DashboardLayout>
+      <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <div className="flex items-center">
+          <h1 className="text-lg font-semibold md:text-2xl">Request Payment</h1>
+        </div>
 
-      <EnhancedTabs
-        defaultValue="payment-link"
-        className="w-full"
-        onValueChange={setActiveTab}
-        value={activeTab}
-        tabs={[
-          {
-            value: 'payment-link',
-            label: 'Payment Link',
-            icon: LinkIcon,
-            tooltip: 'Create shareable payment links for quick payments'
-          },
-          {
-            value: 'invoice',
-            label: 'Invoice',
-            icon: FileText,
-            tooltip: 'Create and manage professional invoices'
-          },
-          {
-            value: 'recurring',
-            label: 'Recurring',
-            icon: Repeat,
-            tooltip: 'Set up recurring payment requests'
-          },
-          {
-            value: 'split-payment',
-            label: 'Split Payment',
-            icon: Users,
-            tooltip: 'Split payments between multiple recipients'
-          },
-          {
-            value: 'event-tickets',
-            label: 'Event Tickets',
-            icon: Ticket,
-            tooltip: 'Sell tickets for events and manage attendees'
-          },
-          {
-            value: 'donations',
-            label: 'Donations',
-            icon: Gift,
-            tooltip: 'Create donation campaigns and collect contributions'
-          }
-        ]}
-      >
-        <div className="mb-6" />
+        <EnhancedTabs
+          defaultValue="payment-link"
+          className="w-full"
+          onValueChange={setActiveTab}
+          value={activeTab}
+          tabs={[
+            {
+              value: 'payment-link',
+              label: 'Payment Link',
+              icon: LinkIcon,
+              tooltip: 'Create shareable payment links for quick payments'
+            },
+            {
+              value: 'invoice',
+              label: 'Invoice',
+              icon: FileText,
+              tooltip: 'Create and manage professional invoices'
+            },
+            {
+              value: 'recurring',
+              label: 'Recurring',
+              icon: Repeat,
+              tooltip: 'Set up recurring payment requests'
+            },
+            {
+              value: 'split-payment',
+              label: 'Split Payment',
+              icon: Users,
+              tooltip: 'Split payments between multiple recipients'
+            },
+            {
+              value: 'event-tickets',
+              label: 'Event Tickets',
+              icon: Ticket,
+              tooltip: 'Sell tickets for events and manage attendees'
+            },
+            {
+              value: 'donations',
+              label: 'Donations',
+              icon: Gift,
+              tooltip: 'Create donation campaigns and collect contributions'
+            }
+          ]}
+        >
+          <div className="mb-6" />
 
-        <TabsContent value="payment-link" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <PaymentLinkTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="payment-link" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <PaymentLinkTab />
+            </Suspense>
+          </TabsContent>
 
-        <TabsContent value="invoice" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <InvoiceTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="invoice" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <InvoiceTab />
+            </Suspense>
+          </TabsContent>
 
-        <TabsContent value="recurring" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <RecurringTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="recurring" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <RecurringTab />
+            </Suspense>
+          </TabsContent>
 
-        <TabsContent value="split-payment" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <SplitPaymentTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="split-payment" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <SplitPaymentTab />
+            </Suspense>
+          </TabsContent>
 
-        <TabsContent value="event-tickets" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <EventTicketsTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="event-tickets" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <EventTicketsTab />
+            </Suspense>
+          </TabsContent>
 
-        <TabsContent value="donations" className="animate-in fade-in-50">
-          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-            <DonationsTab />
-          </Suspense>
-        </TabsContent>
+          <TabsContent value="donations" className="animate-in fade-in-50">
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <DonationsTab />
+            </Suspense>
+          </TabsContent>
 
-      </EnhancedTabs>
-    </main>
+        </EnhancedTabs>
+      </main>
     </DashboardLayout >
   );
 }
