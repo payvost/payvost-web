@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { isValidPinFormat, isWeakPin } from "@/lib/security/pin-policy";
+import { Shield, ShieldCheck, ArrowLeft } from "lucide-react";
 
 interface Props {
   userId: string;
@@ -21,8 +22,8 @@ interface Props {
 // Local masked slot to render bullets instead of showing raw digits.
 const MaskedSlot = React.forwardRef<
   React.ElementRef<"div">,
-  React.ComponentPropsWithoutRef<"div"> & { index: number }
->(({ index, className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<"div"> & { index: number; isError?: boolean }
+>(({ index, className, isError, ...props }, ref) => {
   const inputOTPContext: any = React.useContext(OTPInputContext) ?? {};
   const slot = inputOTPContext.slots?.[index] ?? {};
   const char = slot.char as string | undefined;
@@ -33,17 +34,24 @@ const MaskedSlot = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative flex h-14 w-14 items-center justify-center border-y border-r border-input text-2xl font-semibold transition-all first:rounded-l-md first:border-l last:rounded-r-md",
-        isActive && "z-10 ring-2 ring-ring ring-offset-background",
+        'relative flex h-14 w-12 items-center justify-center text-2xl font-bold transition-all duration-300',
+        'border-b-2 border-border/50 bg-transparent',
+        isActive && 'border-primary scale-110',
+        isActive && isError && 'border-destructive',
+        !isActive && char && 'border-foreground/50',
+        isError && !isActive && 'border-destructive/50',
         className
       )}
-      aria-label={`PIN slot ${index + 1}`}
       {...props}
     >
-      {char ? "\u2022" : null}
+      <div className={cn(
+        "h-3 w-3 rounded-full bg-foreground transition-all duration-300",
+        char ? "scale-100 opacity-100" : "scale-0 opacity-0",
+        isError && "bg-destructive"
+      )} />
       {hasFakeCaret && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" />
+          <div className="h-5 w-0.5 animate-caret-blink bg-primary/80 duration-1000" />
         </div>
       )}
     </div>
@@ -54,42 +62,51 @@ MaskedSlot.displayName = "MaskedSlot";
 export function TransactionPinSetupDialog({ userId, open, onOpenChange, onCompleted, force = false }: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [saving, setSaving] = useState(false);
+  const [errorShake, setErrorShake] = useState(false);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      setStep('create');
       setPin("");
       setConfirmPin("");
       setSaving(false);
+      setErrorShake(false);
     }
   }, [open]);
 
-  const pinValid = useMemo(() => isValidPinFormat(pin), [pin]);
-  const pinsMatch = pinValid && pin === confirmPin;
-  const weak = useMemo(() => isWeakPin(pin), [pin]);
+  const triggerError = () => {
+    setErrorShake(true);
+    setTimeout(() => setErrorShake(false), 500);
+  };
 
-  const handleSave = async () => {
+  const handleCreateSubmit = () => {
+    if (pin.length !== 4) return;
+    if (isWeakPin(pin)) {
+      triggerError();
+      toast({ title: "Weak PIN", description: "This PIN is too common. Please choose a more secure PIN.", variant: "destructive" });
+      return;
+    }
+    setStep('confirm');
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (confirmPin.length !== 4) return;
+
+    if (confirmPin !== pin) {
+      triggerError();
+      toast({ title: "PINs do not match", description: "Please re-enter to confirm.", variant: "destructive" });
+      setConfirmPin('');
+      return;
+    }
+
     if (!userId) return;
     if (!user || user.uid !== userId) {
       toast({ title: "Not authenticated", description: "Please sign in again.", variant: "destructive" });
-      return;
-    }
-    if (!pinValid) {
-      toast({ title: "Invalid PIN", description: "PIN must be exactly 4 digits.", variant: "destructive" });
-      return;
-    }
-    if (weak) {
-      toast({
-        title: "Weak PIN",
-        description: "This PIN is too common or predictable. Please choose a more secure PIN.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!pinsMatch) {
-      toast({ title: "PINs do not match", description: "Please re-enter to confirm.", variant: "destructive" });
       return;
     }
 
@@ -110,90 +127,116 @@ export function TransactionPinSetupDialog({ userId, open, onOpenChange, onComple
         throw new Error(data?.error || "Failed to set PIN");
       }
 
-      toast({ title: "PIN set", description: "Your transaction PIN has been saved." });
+      toast({
+        title: "PIN Set",
+        description: "Your transaction PIN has been saved.",
+        className: 'bg-green-50 border-green-200 text-green-800'
+      });
+
       onOpenChange?.(false);
       onCompleted?.();
+
     } catch (err: any) {
       console.error("Failed to save transaction PIN", err);
+      triggerError();
       toast({ title: "Failed to save PIN", description: err?.message || "Please try again.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
+  // Auto-advance
+  useEffect(() => {
+    if (step === 'create' && pin.length === 4) {
+      const t = setTimeout(() => handleCreateSubmit(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [pin, step]);
+
+  useEffect(() => {
+    if (step === 'confirm' && confirmPin.length === 4) {
+      const t = setTimeout(() => handleConfirmSubmit(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [confirmPin, step]);
+
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create your 4-digit transaction PIN</DialogTitle>
-          <DialogDescription>
-            You'll use this PIN to confirm sensitive actions like transfers or withdrawals. Do not share it with anyone.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-center block" htmlFor="pin-input">
-              Enter PIN
-            </label>
-            <div id="pin-input" className="flex justify-center">
-              <InputOTP
-                maxLength={4}
-                value={pin}
-                onChange={(val) => setPin(val.replace(/[^0-9]/g, "").slice(0, 4))}
-                containerClassName="gap-3"
-                aria-label="Enter 4 digit transaction PIN"
-              >
-                <InputOTPGroup>
-                  <MaskedSlot index={0} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={1} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={2} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={3} className="h-12 w-12 text-xl" />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            {weak && (
-              <p className="text-xs text-destructive mt-1">
-                This PIN is too common or predictable. Please choose a more secure PIN.
-              </p>
-            )}
+    <Dialog open={open} onOpenChange={force ? undefined : onOpenChange}>
+      <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none shadow-xl" onInteractOutside={force ? (e) => e.preventDefault() : undefined}>
+        <div className="bg-primary/5 p-6 flex flex-col items-center justify-center border-b border-border/50">
+          <div className="h-12 w-12 rounded-full bg-background flex items-center justify-center shadow-sm mb-3">
+            <Shield className="h-6 w-6 text-primary" />
           </div>
+          <DialogTitle className="text-xl font-bold text-center tracking-tight">
+            {step === 'create' ? 'Create Transaction PIN' : 'Confirm Transaction PIN'}
+          </DialogTitle>
+          <DialogDescription className="text-center text-muted-foreground mt-1.5 max-w-[260px]">
+            {step === 'create'
+              ? "You'll use this PIN to authorize sensitive actions."
+              : "Re-enter your PIN to verify."}
+          </DialogDescription>
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-center block" htmlFor="pin-confirm-input">
-              Confirm PIN
-            </label>
-            <div id="pin-confirm-input" className="flex justify-center">
-              <InputOTP
-                maxLength={4}
-                value={confirmPin}
-                onChange={(val) => setConfirmPin(val.replace(/[^0-9]/g, "").slice(0, 4))}
-                containerClassName="gap-3"
-                aria-label="Confirm 4 digit transaction PIN"
-              >
-                <InputOTPGroup>
-                  <MaskedSlot index={0} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={1} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={2} className="h-12 w-12 text-xl" />
-                  <MaskedSlot index={3} className="h-12 w-12 text-xl" />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            {!pinsMatch && (pin.length === 4 || confirmPin.length === 4) && (
-              <p className="text-xs text-destructive">PINs must be 4 digits and match exactly.</p>
+        <div className="p-6 space-y-6">
+          <div className="flex flex-col items-center gap-6">
+
+            {step === 'create' && (
+              <div className={cn("transition-all duration-300", errorShake && "animate-shake")}>
+                <InputOTP
+                  maxLength={4}
+                  value={pin}
+                  onChange={(val) => setPin(val.replace(/[^0-9]/g, ''))}
+                  className="gap-4"
+                  disabled={saving}
+                  autoFocus
+                >
+                  <InputOTPGroup className="gap-3">
+                    {[0, 1, 2, 3].map((i) => <MaskedSlot key={i} index={i} isError={errorShake} />)}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
             )}
+
+            {step === 'confirm' && (
+              <div className={cn("transition-all duration-300", errorShake && "animate-shake")}>
+                <InputOTP
+                  maxLength={4}
+                  value={confirmPin}
+                  onChange={(val) => setConfirmPin(val.replace(/[^0-9]/g, ''))}
+                  className="gap-4"
+                  disabled={saving}
+                  autoFocus
+                >
+                  <InputOTPGroup className="gap-3">
+                    {[0, 1, 2, 3].map((i) => <MaskedSlot key={i} index={i} isError={errorShake} />)}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            )}
+
+            <div className="flex gap-1.5 mt-2">
+              <div className={cn("h-1.5 w-1.5 rounded-full transition-colors", step === 'create' ? "bg-primary" : "bg-primary/20", step === 'confirm' && "bg-primary/20")} />
+              <div className={cn("h-1.5 w-1.5 rounded-full transition-colors", step === 'confirm' ? "bg-primary" : "bg-primary/20")} />
+            </div>
+
           </div>
         </div>
 
-        <DialogFooter>
-          {!force && (
-            <Button type="button" variant="outline" onClick={() => onOpenChange?.(false)} disabled={saving}>
-              Not now
+        <DialogFooter className="p-4 bg-muted/30 flex items-center justify-between sm:justify-between border-t">
+          {step === 'confirm' ? (
+            <Button variant="ghost" size="sm" onClick={() => { setStep('create'); setPin(''); setConfirmPin(''); }} disabled={saving} className="text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
+          ) : (
+            !force ? (
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange?.(false)} disabled={saving} className="text-muted-foreground hover:text-foreground">
+                Not now
+              </Button>
+            ) : <div />
           )}
-          <Button onClick={handleSave} disabled={!pinsMatch || saving}>
-            {saving ? "Saving..." : "Save PIN"}
-          </Button>
+
+          {saving && <span className="text-xs text-muted-foreground animate-pulse">Processing...</span>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

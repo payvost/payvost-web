@@ -29,14 +29,14 @@ function getToken(req: any): string | null {
   return header || null;
 }
 
-const viewLimiter = rateLimit({
+const viewLimiter: any = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-const checkoutLimiter = rateLimit({
+const checkoutLimiter: any = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,

@@ -1,12 +1,10 @@
 
 import { LoginForm } from '@/components/login-form';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/site-header';
-import Image from 'next/image';
-import { Globe2, ShieldCheck, Zap } from 'lucide-react';
 import { Suspense } from 'react';
+import { LoginSlideshow } from '@/components/login-slideshow';
 
 export default function LoginPage() {
   return (
@@ -15,78 +13,10 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-10 lg:px-8">
         <div className="w-full max-w-none">
           <div className="grid w-full items-stretch gap-8 lg:grid-cols-2">
-            {/* Left: Brand / Value */}
-            <section className="hidden md:block relative overflow-hidden rounded-2xl border bg-card/70 p-7 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/55 lg:p-10 w-full flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
-              <div className="flex items-center gap-3">
-                <div className="relative h-10 w-10 overflow-hidden rounded-xl border bg-background">
-                  <Image
-                    src="/clay-logo.png"
-                    alt="Payvost"
-                    fill
-                    className="object-contain p-1.5"
-                    priority
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-display text-lg leading-none tracking-tight">Payvost</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Global transfers, payouts, invoicing</p>
-                </div>
-                <div className="ml-auto hidden items-center gap-2 sm:flex">
-                  <Badge variant="outline" className="bg-background/60">Secure sign-in</Badge>
-                  <Badge variant="outline" className="bg-background/60">MFA-ready</Badge>
-                </div>
-              </div>
-
-              <h1 className="mt-7 font-display text-3xl leading-tight tracking-tight sm:text-4xl">
-                Welcome back.
-                <span className="block text-muted-foreground">Sign in to keep money moving.</span>
-              </h1>
-              <p className="mt-4 max-w-prose text-sm leading-relaxed text-muted-foreground sm:text-base">
-                A cleaner, faster way to manage transfers, payouts, invoices, and balances. Designed to feel calm, modern, and trustworthy.
-              </p>
-
-              <ul className="mt-7 grid gap-3 sm:mt-9">
-                <li className="flex gap-3 rounded-xl border bg-background/50 p-4">
-                  <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-5">Security-forward by default</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Built with strong authentication and optional two-factor verification.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex gap-3 rounded-xl border bg-background/50 p-4">
-                  <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700">
-                    <Globe2 className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-5">Global-first experience</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Clear language, strong hierarchy, and mobile-ready layout.
-                    </p>
-                  </div>
-                </li>
-                <li className="flex gap-3 rounded-xl border bg-background/50 p-4">
-                  <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-700">
-                    <Zap className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-5">Less friction, more flow</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Smart defaults, helpful microcopy, and consistent interactions.
-                    </p>
-                  </div>
-                </li>
-              </ul>
-
-              <div className="mt-auto pt-8 flex flex-wrap items-center justify-start gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="bg-background/60">Encrypted in transit</Badge>
-                <Badge variant="outline" className="bg-background/60">Session protected</Badge>
-                <Badge variant="outline" className="bg-background/60">Privacy controls</Badge>
-              </div>
-            </section>
+            {/* Left: Slideshow */}
+            <div className="hidden lg:block h-full min-h-[600px] w-full rounded-2xl overflow-hidden">
+              <LoginSlideshow />
+            </div>
 
             {/* Right: Form */}
             <Card className="w-full justify-self-center bg-card/80 shadow-none ring-1 ring-border/60 backdrop-blur supports-[backdrop-filter]:bg-card/65 lg:w-9/12 xl:w-8/12 lg:justify-self-center animate-in fade-in zoom-in-95 duration-700">
