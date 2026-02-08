@@ -26,9 +26,7 @@ export async function GET(req: NextRequest) {
         where: { userId, status: 'COMPLETED' },
         _sum: { amount: true },
       }),
-    ], {
-      timeout: 15000, // 15 second timeout
-    });
+    ]);
 
     return NextResponse.json({
       total,

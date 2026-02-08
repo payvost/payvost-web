@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { LanguagePreference } from '@/types/language';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { RecentTransactions } from '@/components/recent-transactions';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +43,6 @@ const filterToMonths: Record<FilterLabel, number> = {
 };
 
 export default function DashboardPage() {
-    const [language, setLanguage] = useState<LanguagePreference>('en');
     const [filter, setFilter] = useState<FilterLabel>('Last 30 Days');
     const [greeting, setGreeting] = useState<GreetingState | null>(null);
 
@@ -69,8 +66,6 @@ export default function DashboardPage() {
         refreshWallets,
         firstName
     } = useDashboardData();
-
-    const LayoutComponent = DashboardLayout;
 
     useEffect(() => {
         const hour = new Date().getHours();
@@ -135,17 +130,12 @@ export default function DashboardPage() {
     const netFlow = incomeTotal - expenseTotal;
 
     if (isLoading) {
-        return (
-            <LayoutComponent language={language} setLanguage={setLanguage}>
-                <DashboardLoadingSkeleton />
-            </LayoutComponent>
-        );
+        return <DashboardLoadingSkeleton />;
     }
 
     return (
-        <LayoutComponent language={language} setLanguage={setLanguage}>
-            <ErrorBoundary>
-                <div className="flex-1 space-y-5 sm:space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
+        <ErrorBoundary>
+            <div className="flex-1 space-y-5 sm:space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6">
                     <Breadcrumb className="hidden sm:block">
                         <BreadcrumbList>
                             <BreadcrumbItem>
@@ -306,9 +296,8 @@ export default function DashboardPage() {
                             <InvoiceOverview invoices={invoices} loading={loadingInvoices} isKycVerified={isKycVerified} />
                         </div>
                     </div>
-                </div>
-            </ErrorBoundary>
-        </LayoutComponent>
+            </div>
+        </ErrorBoundary>
     );
 }
 

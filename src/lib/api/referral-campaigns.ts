@@ -50,7 +50,7 @@ export interface CreateCampaignInput {
   endDate?: string | Date | null;
 }
 
-export interface UpdateCampaignInput extends Partial<CreateCampaignInput> {}
+export type UpdateCampaignInput = Partial<CreateCampaignInput>;
 
 export interface CampaignStats {
   campaignId: string;

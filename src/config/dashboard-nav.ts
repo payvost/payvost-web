@@ -12,6 +12,7 @@ import {
   HandCoins,
   FileText,
   Calendar,
+  Users,
 } from 'lucide-react';
 
 import type { CapabilityKey } from '@/lib/capabilities';
@@ -96,6 +97,12 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
             trackingId: 'nav.payments.scheduled',
             capabilityKey: 'payments.scheduled',
           },
+          {
+            label: 'Address book',
+            href: '/dashboard/recipients',
+            icon: Users,
+            trackingId: 'nav.payments.recipients',
+          },
         ],
       },
       {
@@ -105,7 +112,7 @@ export const DASHBOARD_NAV: DashboardNavSection[] = [
         trackingId: 'nav.transactions',
       },
       {
-        label: 'Virtual Cards',
+        label: 'Cards',
         href: '/dashboard/cards',
         icon: CreditCard,
         trackingId: 'nav.cards',

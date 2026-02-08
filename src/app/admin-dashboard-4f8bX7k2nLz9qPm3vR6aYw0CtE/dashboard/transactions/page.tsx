@@ -94,8 +94,8 @@ export default function AdminTransactionsPage() {
                 status: activeTab === 'all' ? '' : activeTab,
             });
             
-            if (dateRange.from) params.append('startDate', dateRange.from.toISOString());
-            if (dateRange.to) params.append('endDate', dateRange.to.toISOString());
+            if (dateRange?.from) params.append('startDate', dateRange.from.toISOString());
+            if (dateRange?.to) params.append('endDate', dateRange.to.toISOString());
             if (filterCurrency.length > 0) params.append('currency', filterCurrency[0]);
 
             const response = await axios.get(`/api/admin/dashboard/transactions?${params}`);

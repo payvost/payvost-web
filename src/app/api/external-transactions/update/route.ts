@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest) {
           const { notifyTransactionSuccess, notifyDeposit, notifyLargeDeposit } = await import('@/lib/unified-notifications');
           
           // Check if this is a deposit
-          if (transaction.type === 'VIRTUAL_ACCOUNT_DEPOSIT' || transaction.type === 'DEPOSIT') {
+          if (transaction.type === 'VIRTUAL_ACCOUNT_DEPOSIT') {
             const amount = parseFloat(transaction.amount.toString());
             const currency = transaction.currency;
             
@@ -84,11 +84,12 @@ export async function PATCH(req: NextRequest) {
             }
           } else {
             // Regular transaction success
+            const recipientName = (transaction.recipientDetails as any)?.name || 'Recipient';
             await notifyTransactionSuccess(
               transaction.userId,
               parseFloat(transaction.amount.toString()),
               transaction.currency,
-              transaction.recipientDetails?.name || 'Recipient',
+              recipientName,
               transaction.id
             );
           }

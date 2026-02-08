@@ -27,7 +27,17 @@ import { PaymentConfirmationDialog } from './payment-confirmation-dialog';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { walletService, transactionService, currencyService, userService, type Account, type UserProfile } from '@/services';
+import {
+  walletService,
+  transactionService,
+  currencyService,
+  userService,
+  recipientService,
+  payoutService,
+  type Account,
+  type UserProfile,
+  type Recipient,
+} from '@/services';
 import { TransferPageSkeleton } from '@/components/skeletons/transfer-page-skeleton';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -47,15 +57,11 @@ interface FeeBreakdown {
   };
 }
 
-interface PayvostProps {
-  initialBeneficiaryId?: string;
-}
-
-export function Payvost({ initialBeneficiaryId }: PayvostProps) {
+export function Payvost() {
   const [isLoading, setIsLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const [wallets, setWallets] = useState<Account[]>([]);
-  const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
+  const [beneficiaries, setBeneficiaries] = useState<Recipient[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [sendAmount, setSendAmount] = useState('0.00');
   const [fromWallet, setFromWallet] = useState<string | undefined>(undefined);
@@ -70,6 +76,29 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
   const [rateTrend, setRateTrend] = useState<'up' | 'down' | 'neutral'>('neutral');
   const [previousRate, setPreviousRate] = useState<number | null>(null);
   const { toast } = useToast();
+
+  const normalizeRecipientCountry = (value: unknown): string | undefined => {
+    if (value === null || value === undefined) return undefined;
+    const raw = String(value).trim();
+    if (!raw) return undefined;
+
+    // Accept ISO-3166-1 alpha-2 (and some legacy alpha-3) if provided.
+    if (/^[a-zA-Z]{2,3}$/.test(raw)) return raw.toUpperCase();
+
+    const countryMap: Record<string, string> = {
+      Nigeria: 'NG',
+      Ghana: 'GH',
+      Kenya: 'KE',
+      'South Africa': 'ZA',
+      'United States': 'US',
+      'United Kingdom': 'GB',
+      Canada: 'CA',
+      Australia: 'AU',
+      Germany: 'DE',
+      France: 'FR',
+    };
+    return countryMap[raw];
+  };
 
   // Payment ID (user) transfer state
   const [paymentIdRecipient, setPaymentIdRecipient] = useState<UserProfile | null>(null);
@@ -102,30 +131,41 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
       try {
         const accounts = await walletService.getAccounts();
         setWallets(accounts);
-        // Fetch beneficiaries from Firestore
-        if (user) {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setBeneficiaries(userData.beneficiaries || []);
+        // Fetch saved beneficiaries from Address Book (Prisma-backed via /api/recipient)
+        try {
+          const saved = await recipientService.list();
+          setBeneficiaries(saved);
+        } catch (error) {
+          console.error('Error fetching beneficiaries:', error);
+          setBeneficiaries([]);
+        }
 
-              // Get user country from profile
-              if (userData.countryCode) {
-                setUserCountry(userData.countryCode);
-              } else if (userData.country) {
-                // Map country name to code if needed
-                const countryMap: Record<string, string> = {
-                  'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
-                  'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
-                  'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
-                };
-                setUserCountry(countryMap[userData.country] || 'US');
-              }
+        // Fetch user country from profile (Firestore)
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+
+            if (userData.countryCode) {
+              setUserCountry(userData.countryCode);
+            } else if (userData.country) {
+              const countryMap: Record<string, string> = {
+                Nigeria: 'NG',
+                Ghana: 'GH',
+                Kenya: 'KE',
+                'South Africa': 'ZA',
+                'United States': 'US',
+                'United Kingdom': 'GB',
+                Canada: 'CA',
+                Australia: 'AU',
+                Germany: 'DE',
+                France: 'FR',
+              };
+              setUserCountry(countryMap[userData.country] || 'US');
             }
-          } catch (error) {
-            console.error('Error fetching beneficiaries:', error);
           }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
         }
         if (accounts.length > 0 && !fromWallet) {
           setFromWallet(accounts[0].currency);
@@ -161,27 +201,13 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
     return () => unsubscribe();
   }, [user, authLoading]);
 
-  // Handle initial beneficiary selection from beneficiaries card
+  // Keep recipientCountry in sync for fee estimation when the beneficiary changes.
   useEffect(() => {
-    if (initialBeneficiaryId && initialBeneficiaryId !== selectedBeneficiary && beneficiaries.length > 0) {
-      setSelectedBeneficiary(initialBeneficiaryId);
-      // Switch to beneficiary tab
-      setActiveTab('beneficiary');
-      // Update recipient country based on selected beneficiary
-      const beneficiary = beneficiaries.find((b) => b.id === initialBeneficiaryId);
-      if (beneficiary?.countryCode) {
-        setRecipientCountry(beneficiary.countryCode);
-      } else if (beneficiary?.country) {
-        const countryMap: Record<string, string> = {
-          'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
-          'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
-          'Australia': 'AU', 'Germany': 'DE', 'France': 'FR',
-          'USA': 'US', 'NGA': 'NG', 'GBR': 'GB', 'GHA': 'GH'
-        };
-        setRecipientCountry(countryMap[beneficiary.country] || 'NG');
-      }
-    }
-  }, [initialBeneficiaryId, beneficiaries, selectedBeneficiary]);
+    if (!selectedBeneficiary) return;
+    const beneficiary = beneficiaries.find((b) => b.id === selectedBeneficiary);
+    const cc = normalizeRecipientCountry((beneficiary as any)?.countryCode ?? (beneficiary as any)?.country);
+    if (cc) setRecipientCountry(cc);
+  }, [selectedBeneficiary, beneficiaries]);
 
   useEffect(() => {
     const selectedWallet = wallets.find((w) => w.currency === fromWallet);
@@ -446,10 +472,21 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
 
     // Handle bank transfer
     if (activeTab === 'bank') {
-      if (!fromWallet || !bankFormBank || !bankFormAccountNumber || !bankFormRecipientName || !bankFormAmount || parseFloat(bankFormAmount) <= 0) {
+      if (!fromWallet || !bankFormCountry || !bankFormBank || !bankFormAccountNumber || !bankFormRecipientName || !bankFormAmount || parseFloat(bankFormAmount) <= 0) {
         toast({
           title: 'Error',
           description: 'Please fill in all bank details and enter a valid amount',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // For now, sending to a new bank beneficiary always creates an Address Book entry
+      // (beneficiaries stored in Prisma). The old Firestore-based toggle is no longer supported.
+      if (!bankFormSaveBeneficiary) {
+        toast({
+          title: 'Save required',
+          description: 'To send to a new bank beneficiary, please enable "Save as beneficiary".',
           variant: 'destructive',
         });
         return;
@@ -460,52 +497,41 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
         const selectedAccount = wallets.find((w) => w.currency === fromWallet);
         if (!selectedAccount) throw new Error('Selected wallet not found');
 
-        // 1. Perform the transfer (Remittance to bank)
-        const transaction = await transactionService.create({
-          fromAccountId: selectedAccount.id,
-          amount: parseFloat(bankFormAmount),
+        // 1) Create beneficiary in Address Book
+        const recipient = await recipientService.create({
+          name: bankFormRecipientName,
+          bankName: bankFormBank,
+          accountNumber: bankFormAccountNumber,
           currency: fromWallet,
-          type: 'REMITTANCE',
-          description: `Transfer to ${bankFormRecipientName} (${bankFormBank})`,
-          metadata: {
-            bankName: bankFormBank,
-            accountNumber: bankFormAccountNumber,
-            country: bankFormCountry,
-            recipientName: bankFormRecipientName,
-          },
+          country: bankFormCountry,
+          type: 'EXTERNAL',
         });
 
-        // 2. Save beneficiary if requested
-        if (bankFormSaveBeneficiary && user) {
-          try {
-            const { updateDoc, arrayUnion, doc } = await import('firebase/firestore');
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, {
-              beneficiaries: arrayUnion({
-                id: `ben_${Date.now()}`,
-                name: bankFormRecipientName,
-                bank: bankFormBank,
-                accountNumber: bankFormAccountNumber,
-                accountLast4: bankFormAccountNumber.slice(-4),
-                country: bankFormCountry,
-              })
-            });
-            console.log('Beneficiary saved successfully');
-          } catch (error) {
-            console.error('Failed to save beneficiary:', error);
-            // Don't fail the whole transaction if saving beneficiary fails
-          }
-        }
+        // 2) Create payout (external remittance)
+        await payoutService.create({
+          fromAccountId: selectedAccount.id,
+          recipientId: recipient.id,
+          amount: parseFloat(bankFormAmount),
+          currency: fromWallet,
+          description: `Payout to ${bankFormRecipientName} (${bankFormBank})`,
+        });
 
         toast({
-          title: 'Transfer Successful!',
-          description: `Sent ${bankFormAmount} ${fromWallet} to ${bankFormRecipientName}`,
+          title: 'Payout Created',
+          description: `Created a payout of ${bankFormAmount} ${fromWallet} to ${bankFormRecipientName}.`,
         });
 
         // Reset form and refresh wallets
         setBankFormAmount('0.00');
+        setBankFormAccountNumber('');
+        setBankFormRecipientName('');
+        setBankFormBank('');
+        setBankFormCountry('');
+        setBankFormSaveBeneficiary(false);
         const updatedAccounts = await walletService.getAccounts();
         setWallets(updatedAccounts);
+        const saved = await recipientService.list();
+        setBeneficiaries(saved);
       } catch (error) {
         console.error('Transfer error:', error);
         toast({
@@ -540,23 +566,17 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
       const numericExchangeRate = typeof exchangeRate === 'string' ? parseFloat(exchangeRate) : Number(exchangeRate);
       const validExchangeRate = !isNaN(numericExchangeRate) && isFinite(numericExchangeRate) ? numericExchangeRate : 0;
 
-      const transaction = await transactionService.create({
+      await payoutService.create({
         fromAccountId: selectedAccount.id,
-        toBeneficiaryId: selectedBeneficiary,
+        recipientId: selectedBeneficiary,
         amount: parseFloat(sendAmount),
         currency: fromWallet,
-        recipientCurrency: receiveCurrency,
-        type: 'REMITTANCE',
-        description: `Transfer to ${recipientName}`,
-        metadata: {
-          exchangeRate: validExchangeRate,
-          recipientGets: parseFloat(recipientGets),
-        },
+        description: `Payout to ${recipientName}`,
       });
 
       toast({
-        title: 'Transfer Successful!',
-        description: `Sent ${sendAmount} ${fromWallet} to ${recipientName}`,
+        title: 'Payout Created',
+        description: `Created a payout of ${sendAmount} ${fromWallet} to ${recipientName}.`,
       });
 
       const updatedAccounts = await walletService.getAccounts();
@@ -750,16 +770,8 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
               onRecipientChange={(recipient) => {
                 setPaymentIdRecipient(recipient);
                 // Update recipient country when payment ID recipient is selected
-                if (recipient?.countryCode) {
-                  setRecipientCountry(recipient.countryCode);
-                } else if (recipient?.country) {
-                  const countryMap: Record<string, string> = {
-                    'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
-                    'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
-                    'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
-                  };
-                  setRecipientCountry(countryMap[recipient.country] || 'NG');
-                }
+                const cc = normalizeRecipientCountry((recipient as any)?.countryCode ?? recipient?.country);
+                if (cc) setRecipientCountry(cc);
               }}
               onAmountChange={setPaymentIdAmount}
               onNoteChange={setPaymentIdNote}
@@ -839,16 +851,8 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
                   setSelectedBeneficiary(value);
                   // Update recipient country based on selected beneficiary
                   const beneficiary = beneficiaries.find((b) => b.id === value);
-                  if (beneficiary?.countryCode) {
-                    setRecipientCountry(beneficiary.countryCode);
-                  } else if (beneficiary?.country) {
-                    const countryMap: Record<string, string> = {
-                      'Nigeria': 'NG', 'Ghana': 'GH', 'Kenya': 'KE', 'South Africa': 'ZA',
-                      'United States': 'US', 'United Kingdom': 'GB', 'Canada': 'CA',
-                      'Australia': 'AU', 'Germany': 'DE', 'France': 'FR'
-                    };
-                    setRecipientCountry(countryMap[beneficiary.country] || 'NG');
-                  }
+                  const cc = normalizeRecipientCountry((beneficiary as any)?.countryCode ?? beneficiary?.country);
+                  if (cc) setRecipientCountry(cc);
                 }}
                 disabled={!isKycVerified}
               >
@@ -859,7 +863,12 @@ export function Payvost({ initialBeneficiaryId }: PayvostProps) {
                   {beneficiaries.length > 0 ? (
                     beneficiaries.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
-                        {b.name} ({b.bank} ••••{b.accountLast4})
+                        {(() => {
+                          const bank = b.bankName || 'Bank';
+                          const last4 = (b.accountLast4 || (b.accountNumber || '').toString().slice(-4)) as string;
+                          const masked = last4 ? ` ****${last4}` : '';
+                          return `${b.name} (${bank}${masked})`;
+                        })()}
                       </SelectItem>
                     ))
                   ) : (

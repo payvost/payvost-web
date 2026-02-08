@@ -6,7 +6,7 @@ import { getAuth, Auth, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, Firestore, FirestoreError } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics, logEvent } from "firebase/analytics"; // ✅ Added
-import { getPerformance, Performance } from "firebase/performance"; // ✅ Added
+import { getPerformance } from "firebase/performance"; // ✅ Added
 import { initializeAppCheck, ReCaptchaV3Provider, AppCheck } from "firebase/app-check"; // ✅ Added for App Check
 import { errorEmitter } from "./error-emitter";
 import { FirestorePermissionError } from "./errors";
@@ -69,7 +69,7 @@ if (typeof window !== "undefined") {
 }
 
 // --- Initialize Performance Monitoring (client-side only) ---
-let perf: Performance | null = null;
+let perf: ReturnType<typeof getPerformance> | null = null;
 
 if (typeof window !== "undefined") {
   try {

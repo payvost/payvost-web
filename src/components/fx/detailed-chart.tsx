@@ -37,6 +37,7 @@ export function DetailedRateChart({
 }: DetailedChartProps) {
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | '1y'>('24h');
   const [chartData, setChartData] = useState<{ time: string; rate: number }[]>([]);
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; rate: number; time: string } | null>(null);
 
   useEffect(() => {
     // Generate mock data based on timeframe
@@ -94,6 +95,7 @@ export function DetailedRateChart({
     };
 
     setChartData(generateData());
+    setHoveredPoint(null);
   }, [timeframe, currentRate, change24h]);
 
   if (chartData.length === 0) return null;
@@ -114,8 +116,6 @@ export function DetailedRateChart({
 
   const pathData = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
   const isPositive = change24h >= 0;
-
-  const [hoveredPoint, setHoveredPoint] = useState<typeof points[0] | null>(null);
 
   return (
     <Card className="border-2">

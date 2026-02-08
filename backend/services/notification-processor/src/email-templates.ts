@@ -53,26 +53,38 @@ function baseLayout(params: {
   const headerLabel = params.headerLabel ? esc(params.headerLabel) : '';
 
   const socialLinks = [
-    { label: 'X', href: 'https://x.com/payvost' },
-    { label: 'Instagram', href: 'https://instagram.com/payvost' },
-    { label: 'Facebook', href: 'https://facebook.com/payvost' },
-    { label: 'LinkedIn', href: 'https://linkedin.com/company/payvost' },
-    { label: 'YouTube', href: 'https://youtube.com/@payvost' },
-    { label: 'GitHub', href: 'https://github.com/payvost' },
+    { label: 'X', href: 'https://x.com/payvost', initial: 'X' },
+    { label: 'Instagram', href: 'https://instagram.com/payvost', initial: 'I' },
+    { label: 'Facebook', href: 'https://facebook.com/payvost', initial: 'F' },
+    { label: 'LinkedIn', href: 'https://linkedin.com/company/payvost', initial: 'L' },
+    { label: 'YouTube', href: 'https://youtube.com/@payvost', initial: 'Y' },
+    { label: 'GitHub', href: 'https://github.com/payvost', initial: 'G' },
   ];
 
-  const socialHtml = socialLinks
-    .map((s, i) => {
-      const sep = i === socialLinks.length - 1 ? '' : ' &middot; ';
-      return `<a href="${esc(s.href)}" style="color:#e6eefc; text-decoration:underline;">${esc(s.label)}</a>${sep}`;
-    })
-    .join('');
+  const socialHtml = `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse; display:inline-table;">
+      <tr>
+        ${socialLinks.map((s, i) => `
+          <td style="padding-left:${i === 0 ? '0' : '10'}px;">
+            <a href="${esc(s.href)}" style="display:inline-block; text-decoration:none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" role="img" aria-label="${esc(s.label)}" style="display:block;">
+                <circle cx="12" cy="12" r="11" fill="none" stroke="#e6eefc" stroke-width="1.5" />
+                <text x="12" y="15" text-anchor="middle" font-family="Inter, system-ui, -apple-system, 'Segoe UI', Arial" font-size="10" fill="#e6eefc">${esc(s.initial)}</text>
+              </svg>
+            </a>
+          </td>
+        `).join('')}
+      </tr>
+    </table>
+  `.trim();
+
+  const fullWidth = params.buttonFullWidth !== false;
 
   const buttonHtml = params.button
     ? `
       <tr>
         <td align="center" style="padding: 8px 28px 28px 28px;">
-          <a href="${esc(params.button.href)}" style="display:${params.buttonFullWidth ? 'block' : 'inline-block'};${params.buttonFullWidth ? 'width:100%;box-sizing:border-box;' : ''}background:${brand};color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:14px 18px;font-size:14px;text-align:center;">
+          <a href="${esc(params.button.href)}" style="display:block;${fullWidth ? 'width:100%;box-sizing:border-box;' : ''}background:${brand};color:#ffffff;text-decoration:none;font-weight:700;border-radius:10px;padding:16px 18px;font-size:14px;line-height:20px;text-align:center;">
             ${esc(params.button.label)}
           </a>
         </td>

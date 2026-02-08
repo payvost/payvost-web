@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session cookie (expires in 14 days)
-    const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days in milliseconds
+    // Privileged session cookie: keep lifetime short (absolute expiry).
+    const expiresIn = 60 * 60 * 12 * 1000; // 12 hours in milliseconds
     const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn,
     });
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       maxAge: expiresIn / 1000, // maxAge is in seconds
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       path: '/',
     });
 

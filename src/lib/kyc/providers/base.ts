@@ -68,12 +68,8 @@ export abstract class BaseVerificationProvider implements VerificationProvider {
   protected createSuccessResult<T extends { provider: VerificationProviderName }>(
     data: Partial<T>
   ): T {
-    return {
-      success: true,
-      provider: this.name,
-      verifiedAt: new Date(),
-      ...data,
-    } as T;
+    const base = { success: true, provider: this.name, verifiedAt: new Date() } as const;
+    return { ...(base as any), ...(data as any) } as unknown as T;
   }
 
   /**
@@ -83,12 +79,8 @@ export abstract class BaseVerificationProvider implements VerificationProvider {
     error: string,
     data?: Partial<T>
   ): T {
-    return {
-      success: false,
-      provider: this.name,
-      error,
-      ...data,
-    } as T;
+    const base = { success: false, provider: this.name, error } as const;
+    return { ...(base as any), ...((data || {}) as any) } as unknown as T;
   }
 
   /**

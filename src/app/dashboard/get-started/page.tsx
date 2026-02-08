@@ -2,8 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Briefcase, ArrowRight, Building, HeartHandshake, Rocket, Sparkles } from 'lucide-react';
@@ -13,8 +11,6 @@ import { cn } from '@/lib/utils';
 
 
 export default function GetStartedPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-
   const profileTypes = [
     {
         title: 'Business Owner',
@@ -67,7 +63,7 @@ export default function GetStartedPage() {
   ]
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex-1 p-4 lg:p-6 flex flex-col items-center justify-center">
         <div className="w-full max-w-6xl">
             <div className="text-center mb-12">
@@ -115,6 +111,6 @@ export default function GetStartedPage() {
             </div>
         </div>
       </main>
-    </DashboardLayout>
+    </>
   );
 }

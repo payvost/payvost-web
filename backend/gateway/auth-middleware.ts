@@ -46,7 +46,7 @@ export async function verifyFirebaseToken(
     } else {
       // Try to get session cookie from cookies
       const cookies = req.headers.cookie || '';
-      const sessionCookieMatch = cookies.match(/(?:^|;\s*)(?:writer_session|session|support_session)=([^;]*)/);
+      const sessionCookieMatch = cookies.match(/(?:^|;\s*)(?:writer_session|session|support_session|hr_session)=([^;]*)/);
 
       if (sessionCookieMatch && sessionCookieMatch[1]) {
         const sessionCookie = sessionCookieMatch[1];

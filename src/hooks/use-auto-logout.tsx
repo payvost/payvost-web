@@ -36,7 +36,7 @@ export function useAutoLogout({ timeoutMs = 180_000, onTimeout, enabled = true }
       startTimeRef.current = Date.now();
       
       timerRef.current = window.setTimeout(() => {
-        cbRef.current && cbRef.current();
+        cbRef.current?.();
       }, timeoutMs) as unknown as number;
     };
 
@@ -54,11 +54,11 @@ export function useAutoLogout({ timeoutMs = 180_000, onTimeout, enabled = true }
       if (remainingTimeRef.current > 0 && !timerRef.current) {
         startTimeRef.current = Date.now();
         timerRef.current = window.setTimeout(() => {
-          cbRef.current && cbRef.current();
+          cbRef.current?.();
         }, remainingTimeRef.current) as unknown as number;
       } else if (remainingTimeRef.current <= 0) {
         // Time already expired while offline, trigger logout immediately
-        cbRef.current && cbRef.current();
+        cbRef.current?.();
       }
     };
 

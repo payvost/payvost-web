@@ -29,7 +29,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { TransactionPinSetupDialog } from './transaction-pin-setup-dialog';
-import { collection as fsCollection, query as fsQuery, where as fsWhere, limit as fsLimit, getDocs as fsGetDocs } from 'firebase/firestore';
 import { CountrySelector, CountryOption } from '@/components/location/country-selector';
 import { StateSelector, StateOption } from '@/components/location/state-selector';
 import { CitySelector } from '@/components/location/city-selector';
@@ -379,10 +378,14 @@ export function RegistrationForm() {
       
       setCheckingUsername(true);
       try {
-        const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', name), fsLimit(1));
-        const snap = await fsGetDocs(q);
+        const resp = await fetch('/api/auth/check-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: name }),
+        });
+        const data = await resp.json().catch(() => ({}));
         if (!active) return;
-        setUsernameAvailable(snap.empty);
+        setUsernameAvailable(typeof data?.usernameAvailable === 'boolean' ? data.usernameAvailable : null);
       } catch {
         if (!active) return;
         setUsernameAvailable(null);
@@ -405,10 +408,14 @@ export function RegistrationForm() {
       }
       setCheckingEmail(true);
       try {
-        const q = fsQuery(fsCollection(db, 'users'), fsWhere('email', '==', email), fsLimit(1));
-        const snap = await fsGetDocs(q);
+        const resp = await fetch('/api/auth/check-availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await resp.json().catch(() => ({}));
         if (!active) return;
-        setEmailAvailable(snap.empty);
+        setEmailAvailable(typeof data?.emailAvailable === 'boolean' ? data.emailAvailable : null);
       } catch {
         if (!active) return;
         setEmailAvailable(null);
@@ -909,9 +916,13 @@ export function RegistrationForm() {
       const email = (getValues('email') || '').trim().toLowerCase();
       if (email) {
         try {
-          const q = fsQuery(fsCollection(db, 'users'), fsWhere('email', '==', email), fsLimit(1));
-          const snap = await fsGetDocs(q);
-          if (!snap.empty) {
+          const resp = await fetch('/api/auth/check-availability', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (data?.emailAvailable === false) {
             setError('email', { type: 'manual', message: 'Email already registered. Please log in or use a different email.' });
             toast({ title: 'Email already registered', description: 'Please log in or use a different email.', variant: 'destructive' });
             return;
@@ -992,9 +1003,13 @@ export function RegistrationForm() {
 
     try {
       // Re-validate username availability to prevent race conditions
-      const q = fsQuery(fsCollection(db, 'users'), fsWhere('username', '==', data.username.trim()), fsLimit(1));
-      const existing = await fsGetDocs(q);
-      if (!existing.empty) {
+      const resp = await fetch('/api/auth/check-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: data.username.trim().toLowerCase() }),
+      });
+      const availability = await resp.json().catch(() => ({}));
+      if (availability?.usernameAvailable === false) {
         toast({ title: 'Username already taken', description: 'Please select a different username.', variant: 'destructive' });
         setIsLoading(false);
         return;
@@ -1138,61 +1153,31 @@ export function RegistrationForm() {
         additionalFields: tier1AdditionalValues,
       };
 
+      // Fintech hardening: keep client writes to /users minimal and non-authoritative.
+      // KYC state, roles, limits, risk scoring, and financial aggregates must be server-controlled.
       const firestoreData = {
-        uid: user.uid,
+        // Basic profile
         name: fullName,
         firstName: data.firstName.trim(),
         middleName: data.middleName?.trim() || '',
         lastName: data.lastName.trim(),
-        username: data.username,
-        email: data.email,
-        phone: `+${data.countryCode}${data.phone}`,
         photoURL: photoURL,
         dateOfBirth: Timestamp.fromDate(data.dateOfBirth),
+
+        // Contact + location
+        phone: `+${data.countryCode}${data.phone}`,
         country: data.country,
         countryName: resolvedCountry?.name ?? '',
-        homeCurrency,
-        defaultWalletCurrency: homeCurrency,
         street: data.street,
         city: data.city,
         state: data.state,
         zip: data.zip,
         location: locationPayload,
-        kycStatus: 'tier1_pending_review',
-        kycTier: 'tier1' as const,
-        kycProfile: {
-          countryIso: data.country,
-          countryName: resolvedCountry?.name ?? '',
-          currentTier: 'tier1' as const,
-          status: 'pending_review' as const,
-          availableUpgrades: upcomingTierConfigs.map(({ key }) => key),
-          tiers: {
-            tier1: tier1Submission,
-            tier2: {
-              status: 'locked' as const,
-              summary: tier2Config.summary,
-              requirements: tier2Config.requirements,
-              documents: tier2Config.documents ?? [],
-            },
-            tier3: {
-              status: 'locked' as const,
-              summary: tier3Config.summary,
-              requirements: tier3Config.requirements,
-              documents: tier3Config.documents ?? [],
-            },
-          },
-        },
-        userType: 'Pending' as const,
-        riskScore: calculateRiskScore(),
-        totalSpend: 0,
-        wallets: [],
-        transactions: [],
-        beneficiaries: [],
-        createdAt: serverTimestamp(),
+
+        // Preferences
+        defaultWalletCurrency: homeCurrency,
+
         updatedAt: serverTimestamp(),
-        bvn: tier1AdditionalValues.bvn ?? '',
-        idType: data.idType || '',
-        idNumber: data.idNumber || '',
       };
       // Use setDoc with merge to avoid overwriting if API already created user doc
       await setDoc(userDocRef, firestoreData, { merge: true });

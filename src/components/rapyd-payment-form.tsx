@@ -138,12 +138,12 @@ export function RapydPaymentForm() {
 
     setIsCreating(true);
     let transactionRecord: ExternalTransaction | null = null;
-    let accountId: string | null = null;
+    let accountId: string | undefined;
 
     try {
       // Get user's wallet for the currency
       const matchingAccount = wallets.find((acc) => acc.currency === currency);
-      if (matchingAccount) {
+      if (matchingAccount?.id) {
         accountId = matchingAccount.id;
       }
 
@@ -152,7 +152,7 @@ export function RapydPaymentForm() {
       // Create external transaction record
       const createResponse = await externalTransactionService.create({
         userId: user.uid,
-        accountId: accountId || undefined,
+        accountId,
         provider: 'RAPYD',
         type: 'PAYMENT',
         amount: paymentAmount,

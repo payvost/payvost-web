@@ -62,7 +62,7 @@ export function useDashboardData() {
 
         const monthlySpending = transactions
             .filter(tx => {
-                const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.date);
+                const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : (tx.date ? new Date(tx.date) : new Date(0));
                 return tx.type !== 'inflow' && txDate.getMonth() === thisMonth && txDate.getFullYear() === thisYear;
             })
             .reduce((acc, tx) => {
@@ -96,7 +96,7 @@ export function useDashboardData() {
         }
 
         transactions.forEach((tx) => {
-            const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.date);
+            const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : (tx.date ? new Date(tx.date) : new Date(0));
             if (txDate >= sixMonthsAgo) {
                 const monthKey = `${txDate.getFullYear()}-${txDate.getMonth()}`;
                 const amount = parseFloat(tx.sendAmount || tx.amount || '0');
@@ -199,9 +199,6 @@ export function useDashboardData() {
                 }
 
                 setIsKycVerified(normalizedKycStatus === 'verified');
-                const hasPin = Boolean(data.transactionPinHash);
-                setNeedsPin(!hasPin);
-                setPinDialogOpen(!hasPin);
 
                 const transactions = data.transactions || [];
                 if (transactions.length > 0) {
@@ -260,6 +257,37 @@ export function useDashboardData() {
             unsubDisputes();
         };
     }, [user, authLoading]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadPinStatus = async () => {
+            if (!user) return;
+            try {
+                const token = await user.getIdToken();
+                const res = await fetch('/api/security/pin/status', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error('Failed to load PIN status');
+                const data = (await res.json()) as { hasPin?: boolean };
+                const hasPin = Boolean(data?.hasPin);
+                if (cancelled) return;
+                setNeedsPin(!hasPin);
+                setPinDialogOpen(!hasPin);
+            } catch (err) {
+                console.error('PIN status load error:', err);
+                if (cancelled) return;
+                // Fail open to avoid blocking the dashboard when the API is unavailable.
+                setNeedsPin(false);
+                setPinDialogOpen(false);
+            }
+        };
+
+        void loadPinStatus();
+        return () => {
+            cancelled = true;
+        };
+    }, [user]);
 
     const refreshWallets = () => fetchWallets();
 

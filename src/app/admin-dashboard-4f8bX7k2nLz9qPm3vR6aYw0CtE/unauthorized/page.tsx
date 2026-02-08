@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export const metadata = {
   title: 'Unauthorized - Payvost Admin',
 };
@@ -15,8 +17,8 @@ export default function UnauthorizedPage() {
         <h1 className="text-2xl font-bold">Access denied</h1>
         <p className="text-muted-foreground">You do not have permission to access the admin dashboard. If you believe this is a mistake, contact an administrator.</p>
         <div className="flex items-center justify-center gap-3 pt-2">
-          <a href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/login" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-white text-sm font-medium hover:opacity-90">Go to admin login</a>
-          <a href="/" className="inline-flex items-center rounded-md border px-4 py-2 text-sm">Return home</a>
+          <Link href="/admin-dashboard-4f8bX7k2nLz9qPm3vR6aYw0CtE/login" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-white text-sm font-medium hover:opacity-90">Go to admin login</Link>
+          <Link href="/" className="inline-flex items-center rounded-md border px-4 py-2 text-sm">Return home</Link>
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import Stripe from 'stripe';
+import Redis from 'ioredis';
 import { logger } from '../common/logger';
 import { ValidationError } from './index';
 
@@ -13,12 +15,93 @@ export interface WebhookVerificationOptions {
   algorithm?: 'sha256' | 'sha1' | 'hmac-sha256';
   headerName?: string;
   signaturePrefix?: string;
+  signatureEncoding?: 'hex' | 'base64' | 'utf8';
+}
+
+// ---- Helpers (safe comparisons + replay protection) ----
+
+function safeTimingEqual(a: Buffer, b: Buffer): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function safeTimingEqualHex(aHex: string, bHex: string): boolean {
+  if (!aHex || !bHex) return false;
+  if (aHex.length !== bHex.length) return false;
+  try {
+    const a = Buffer.from(aHex, 'hex');
+    const b = Buffer.from(bHex, 'hex');
+    return safeTimingEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function safeTimingEqualBase64(aB64: string, bB64: string): boolean {
+  if (!aB64 || !bB64) return false;
+  try {
+    const a = Buffer.from(aB64, 'base64');
+    const b = Buffer.from(bB64, 'base64');
+    return safeTimingEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function safeTimingEqualUtf8(aStr: string, bStr: string): boolean {
+  if (aStr.length !== bStr.length) return false;
+  return safeTimingEqual(Buffer.from(aStr, 'utf8'), Buffer.from(bStr, 'utf8'));
+}
+
+let webhookReplayRedis: Redis | null = null;
+const replayMemory = new Map<string, number>(); // key -> expiresAtMs
+
+function getWebhookReplayRedis(): Redis | null {
+  if (webhookReplayRedis) return webhookReplayRedis;
+  const url = process.env.REDIS_URL;
+  if (!url) return null;
+  const client = new Redis(url, { enableReadyCheck: true, lazyConnect: true, maxRetriesPerRequest: 3 });
+  webhookReplayRedis = client;
+  client.connect().catch(() => {});
+  return client;
+}
+
+async function markSeenOnce(key: string, ttlSeconds: number): Promise<boolean> {
+  if (!key) return true;
+
+  const redis = getWebhookReplayRedis();
+  if (redis) {
+    try {
+      const res = await (redis as any).set(key, '1', 'EX', ttlSeconds, 'NX');
+      return res === 'OK';
+    } catch (err) {
+      logger.warn({ err }, 'Webhook replay Redis check failed; falling back to in-memory');
+      // fall through
+    }
+  }
+
+  const now = Date.now();
+  // Opportunistic cleanup to keep memory bounded.
+  if (replayMemory.size > 5000) {
+    for (const [k, exp] of replayMemory) {
+      if (exp <= now) replayMemory.delete(k);
+    }
+  }
+
+  const exp = replayMemory.get(key);
+  if (exp && exp > now) return false;
+  replayMemory.set(key, now + ttlSeconds * 1000);
+  return true;
 }
 
 /**
  * Verify webhook signature for Reloadly
  */
-export function verifyReloadlyWebhook(
+export async function verifyReloadlyWebhook(
   req: Request,
   res: Response,
   next: NextFunction
@@ -46,11 +129,8 @@ export function verifyReloadlyWebhook(
       .update(timestamp + payload)
       .digest('hex');
 
-    // Use constant-time comparison to prevent timing attacks
-    if (!crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )) {
+    // Constant-time comparison (hex).
+    if (!safeTimingEqualHex(signature, expectedSignature)) {
       logger.warn({ ip: req.ip }, 'Invalid Reloadly webhook signature');
       return res.status(401).json({ error: 'Invalid webhook signature' });
     }
@@ -65,6 +145,12 @@ export function verifyReloadlyWebhook(
       return res.status(401).json({ error: 'Webhook timestamp expired' });
     }
 
+    const first = await markSeenOnce(`replay:reloadly:${timestamp}:${signature}`, 24 * 60 * 60);
+    if (!first) {
+      logger.warn('Reloadly webhook replay detected');
+      return res.status(200).json({ ok: true, duplicate: true });
+    }
+
     logger.info('Reloadly webhook signature verified');
     next();
   } catch (error) {
@@ -76,7 +162,16 @@ export function verifyReloadlyWebhook(
 /**
  * Verify webhook signature for Stripe
  */
-export function verifyStripeWebhook(
+let stripeWebhookClient: Stripe | null = null;
+function getStripeWebhookClient(): Stripe {
+  if (stripeWebhookClient) return stripeWebhookClient;
+  // API key is not used for signature verification, but Stripe's SDK requires a non-empty string.
+  const key = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+  stripeWebhookClient = new Stripe(key, { apiVersion: '2023-10-16' as any });
+  return stripeWebhookClient;
+}
+
+export async function verifyStripeWebhook(
   req: Request,
   res: Response,
   next: NextFunction
@@ -96,51 +191,25 @@ export function verifyStripeWebhook(
       return res.status(401).json({ error: 'Missing webhook signature' });
     }
 
-    // Stripe uses a specific signature format: timestamp,signature
-    // We need the raw body for Stripe verification
-    const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-    
-    // For production, you should use stripe.webhooks.constructEvent()
-    // This is a simplified version
-    const elements = signature.split(',');
-    const timestamp = elements.find((e: string) => e.startsWith('t='))?.substring(2);
-    const signatures = elements.filter((e: string) => e.startsWith('v1='));
+    const raw = (req as any).rawBody ?? JSON.stringify(req.body ?? {});
+    const rawBody = Buffer.isBuffer(raw) ? raw : Buffer.from(String(raw), 'utf8');
 
-    if (!timestamp || signatures.length === 0) {
-      return res.status(401).json({ error: 'Invalid signature format' });
-    }
-
-    const signedPayload = `${timestamp}.${rawBody}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(signedPayload)
-      .digest('hex');
-
-    const isValid = signatures.some((sig: string) => {
-      const sigValue = sig.substring(3);
-      try {
-        return crypto.timingSafeEqual(
-          Buffer.from(sigValue),
-          Buffer.from(expectedSignature)
-        );
-      } catch {
-        return false;
-      }
-    });
-
-    if (!isValid) {
-      logger.warn({ ip: req.ip }, 'Invalid Stripe webhook signature');
+    let event: Stripe.Event;
+    try {
+      // Use Stripe's official verifier (includes timestamp tolerance).
+      event = getStripeWebhookClient().webhooks.constructEvent(rawBody, signature, secret, 300);
+    } catch (err: any) {
+      logger.warn({ ip: req.ip, err: err?.message || err }, 'Invalid Stripe webhook signature');
       return res.status(401).json({ error: 'Invalid webhook signature' });
     }
 
-    // Verify timestamp
-    const requestTime = parseInt(timestamp, 10);
-    const currentTime = Math.floor(Date.now() / 1000);
-    const timeDiff = Math.abs(currentTime - requestTime);
+    // Attach verified event for downstream handlers (if they want it).
+    (req as any).stripeEvent = event;
 
-    if (timeDiff > 300) {
-      logger.warn({ timeDiff }, 'Stripe webhook timestamp too old');
-      return res.status(401).json({ error: 'Webhook timestamp expired' });
+    const first = await markSeenOnce(`replay:stripe:${event.id}`, 24 * 60 * 60);
+    if (!first) {
+      logger.warn({ eventId: event.id }, 'Stripe webhook replay detected');
+      return res.status(200).json({ ok: true, duplicate: true });
     }
 
     logger.info('Stripe webhook signature verified');
@@ -161,6 +230,7 @@ export function verifyWebhookSignature(options: WebhookVerificationOptions) {
       algorithm = 'sha256',
       headerName = 'x-webhook-signature',
       signaturePrefix = '',
+      signatureEncoding = 'utf8',
     } = options;
 
     if (!secret) {
@@ -198,11 +268,14 @@ export function verifyWebhookSignature(options: WebhookVerificationOptions) {
         ? signature.replace(signaturePrefix, '')
         : signature;
 
-      // Constant-time comparison
-      if (!crypto.timingSafeEqual(
-        Buffer.from(cleanSignature),
-        Buffer.from(expectedSignature)
-      )) {
+      const ok =
+        signatureEncoding === 'hex'
+          ? safeTimingEqualHex(cleanSignature, expectedSignature)
+          : signatureEncoding === 'base64'
+            ? safeTimingEqualBase64(cleanSignature, expectedSignature)
+            : safeTimingEqualUtf8(cleanSignature, expectedSignature);
+
+      if (!ok) {
         logger.warn({ ip: req.ip }, 'Invalid webhook signature');
         return res.status(401).json({ error: 'Invalid webhook signature' });
       }
@@ -221,7 +294,7 @@ export function verifyWebhookSignature(options: WebhookVerificationOptions) {
  * Mailgun uses HMAC SHA256 with timestamp and token
  * Format: signature = HMAC-SHA256(timestamp + token, signing_key)
  */
-export function verifyMailgunWebhook(
+export async function verifyMailgunWebhook(
   req: Request,
   res: Response,
   next: NextFunction
@@ -258,11 +331,8 @@ export function verifyMailgunWebhook(
       .update(signedString)
       .digest('hex');
 
-    // Use constant-time comparison to prevent timing attacks
-    if (!crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )) {
+    // Constant-time comparison (Mailgun signature is hex).
+    if (!safeTimingEqualHex(String(signature), expectedSignature)) {
       logger.warn({ ip: req.ip }, 'Invalid Mailgun webhook signature');
       return res.status(401).json({ error: 'Invalid webhook signature' });
     }
@@ -275,6 +345,12 @@ export function verifyMailgunWebhook(
     if (timeDiff > 900) { // 15 minutes
       logger.warn({ timeDiff }, 'Mailgun webhook timestamp too old');
       return res.status(401).json({ error: 'Webhook timestamp expired' });
+    }
+
+    const first = await markSeenOnce(`replay:mailgun:${timestamp}:${token}`, 24 * 60 * 60);
+    if (!first) {
+      logger.warn('Mailgun webhook replay detected');
+      return res.status(200).json({ ok: true, duplicate: true });
     }
 
     logger.info('Mailgun webhook signature verified');
@@ -297,7 +373,7 @@ export function captureRawBody(req: Request, res: Response, next: NextFunction) 
   });
 
   req.on('end', () => {
-    (req as any).rawBody = Buffer.concat(chunks).toString('utf8');
+    (req as any).rawBody = Buffer.concat(chunks);
     next();
   });
 }

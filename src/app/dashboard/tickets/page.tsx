@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,6 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 
 const statusConfig: Record<TicketStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
   OPEN: { label: 'Open', variant: 'default', icon: AlertCircle },
@@ -43,7 +41,6 @@ export default function MyTicketsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -124,7 +121,7 @@ export default function MyTicketsPage() {
   };
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col w-full p-6">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -350,7 +347,7 @@ export default function MyTicketsPage() {
           </Card>
         </div>
       </main>
-    </DashboardLayout>
+    </>
   );
 }
 

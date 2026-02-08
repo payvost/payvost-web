@@ -18,8 +18,9 @@ import { format, isToday } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, writeBatch, getDoc, arrayUnion, Timestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, writeBatch, getDoc, arrayUnion, Timestamp, collection, addDoc } from 'firebase/firestore';
 import { Skeleton } from './ui/skeleton';
+import { recipientService, type Recipient } from '@/services/recipientService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +55,7 @@ export function CreateRecurringPaymentForm({ onBack }: CreateRecurringPaymentFor
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { user } = useAuth();
-    const [beneficiaries, setBeneficiaries] = useState<any[]>([]);
+    const [beneficiaries, setBeneficiaries] = useState<Recipient[]>([]);
     const [loadingBeneficiaries, setLoadingBeneficiaries] = useState(true);
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [formData, setFormData] = useState<RecurringPaymentFormValues | null>(null);
@@ -78,14 +79,24 @@ export function CreateRecurringPaymentForm({ onBack }: CreateRecurringPaymentFor
             setLoadingBeneficiaries(false);
             return;
         }
-        const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-            if (doc.exists()) {
-                setBeneficiaries(doc.data().beneficiaries || []);
-            }
-            setLoadingBeneficiaries(false);
-        });
 
-        return () => unsub();
+        let cancelled = false;
+        setLoadingBeneficiaries(true);
+        recipientService
+          .list()
+          .then((data) => {
+            if (!cancelled) setBeneficiaries(data);
+          })
+          .catch(() => {
+            if (!cancelled) setBeneficiaries([]);
+          })
+          .finally(() => {
+            if (!cancelled) setLoadingBeneficiaries(false);
+          });
+
+        return () => {
+          cancelled = true;
+        };
     }, [user]);
 
     const onFormSubmit: SubmitHandler<RecurringPaymentFormValues> = (data) => {
@@ -202,7 +213,12 @@ export function CreateRecurringPaymentForm({ onBack }: CreateRecurringPaymentFor
                                             <SelectContent>
                                                 {beneficiaries.map((b) => (
                                                     <SelectItem key={b.id} value={b.name}>
-                                                        {b.name} ({b.bank} ••••{b.accountLast4})
+                                                        {(() => {
+                                                          const bank = b.bankName || 'Bank';
+                                                          const last4 = (b.accountLast4 || (b.accountNumber || '').toString().slice(-4)) as string;
+                                                          const masked = last4 ? ` ****${last4}` : '';
+                                                          return `${b.name} (${bank}${masked})`;
+                                                        })()}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

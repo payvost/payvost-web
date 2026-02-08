@@ -15,8 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Label } from '@/components/ui/label';
 
@@ -48,18 +46,35 @@ export function PaymentConfirmationDialog({
   const [step, setStep] = useState<'review' | 'pin'>('review');
   const [isConfirming, setIsConfirming] = useState(false);
   const [pin, setPin] = useState('');
-  const [userPin, setUserPin] = useState<string | null>(null);
+  const [pinStatus, setPinStatus] = useState<{ loaded: boolean; hasPin: boolean }>({
+    loaded: false,
+    hasPin: false,
+  });
 
   useEffect(() => {
-    if (!user) return;
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsub = onSnapshot(userDocRef, (snap) => {
-      if (snap.exists()) {
-        setUserPin((snap.data() as any)?.transactionPin || null);
+    let cancelled = false;
+
+    const loadStatus = async () => {
+      if (!open || !user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/security/pin/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to load PIN status');
+        const data = (await res.json()) as { hasPin?: boolean };
+        if (!cancelled) setPinStatus({ loaded: true, hasPin: Boolean(data?.hasPin) });
+      } catch (err) {
+        console.error('PIN status load error:', err);
+        if (!cancelled) setPinStatus({ loaded: false, hasPin: false });
       }
-    });
-    return () => unsub();
-  }, [user]);
+    };
+
+    void loadStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user]);
 
   const feeAmount = parseFloat(String(transactionDetails.fee).replace('$', '')) || 0;
   const sendAmountNum = parseFloat(String(transactionDetails.sendAmount)) || 0;
@@ -150,7 +165,23 @@ export function PaymentConfirmationDialog({
               <AlertDialogCancel disabled={isConfirming || isLoading}>Cancel</AlertDialogCancel>
               <Button
                 onClick={() => {
-                  if (userPin) setStep('pin');
+                  if (!user) {
+                    toast({
+                      title: 'Not authenticated',
+                      description: 'Please sign in again.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (!pinStatus.loaded) {
+                    toast({
+                      title: 'Security check unavailable',
+                      description: 'Could not verify your PIN status. Please try again.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (pinStatus.hasPin) setStep('pin');
                   else void handleConfirm();
                 }}
                 disabled={isConfirming || isLoading}
@@ -181,16 +212,57 @@ export function PaymentConfirmationDialog({
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isConfirming || isLoading}>Cancel</AlertDialogCancel>
               <Button
-                onClick={() => {
-                  if (!userPin || pin !== userPin) {
-                    toast({
-                      title: 'Invalid PIN',
-                      description: 'The transaction PIN you entered is incorrect.',
-                      variant: 'destructive',
-                    });
+                onClick={async () => {
+                  if (!user) {
+                    toast({ title: 'Not authenticated', description: 'Please sign in again.', variant: 'destructive' });
                     return;
                   }
-                  void handleConfirm();
+                  if (!/^\d{4}$/.test(pin)) {
+                    toast({ title: 'Invalid PIN', description: 'PIN must be exactly 4 digits.', variant: 'destructive' });
+                    return;
+                  }
+
+                  try {
+                    const token = await user.getIdToken();
+                    const res = await fetch('/api/security/pin/verify', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ pin }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+
+                    if (res.ok && data?.ok === true) {
+                      void handleConfirm();
+                      return;
+                    }
+
+                    if (res.status === 423) {
+                      toast({
+                        title: 'PIN locked',
+                        description: data?.lockedUntil
+                          ? `Too many attempts. Try again after ${new Date(String(data.lockedUntil)).toLocaleString()}.`
+                          : 'Too many attempts. Try again later.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    toast({
+                      title: 'Invalid PIN',
+                      description: data?.error || 'The transaction PIN you entered is incorrect.',
+                      variant: 'destructive',
+                    });
+                  } catch (err) {
+                    console.error('PIN verify error:', err);
+                    toast({
+                      title: 'Verification failed',
+                      description: 'Could not verify your PIN. Please try again.',
+                      variant: 'destructive',
+                    });
+                  }
                 }}
                 disabled={isConfirming || isLoading}
               >

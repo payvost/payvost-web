@@ -5,6 +5,7 @@ import cron from 'node-cron';
 import { prisma } from './prisma';
 import { sendEmailViaMailgun } from './mailgun';
 import { invoiceReminderCronJob } from './cron-jobs';
+import { resolveLocationFromIp } from './ip-location';
 import {
   renderInvoiceEmail,
   renderKycEmail,
@@ -216,11 +217,19 @@ app.post('/notify/login', async (req: NotifyRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: email' });
     }
 
+    // Best-effort enrich location for security emails.
+    // If caller sends "Unknown" (current frontend behavior), we derive from IP.
+    let resolvedLocation = (location || '').trim() || 'Unknown';
+    if (resolvedLocation.toLowerCase() === 'unknown') {
+      const inferred = await resolveLocationFromIp(String(ipAddress || '').trim());
+      if (inferred) resolvedLocation = inferred;
+    }
+
     const rendered = renderLoginEmail({
       to: email,
       name: name || 'User',
       device: deviceInfo || 'Unknown',
-      location: location || 'Unknown',
+      location: resolvedLocation,
       timestamp: formatTimestamp(timestamp),
       ipAddress: ipAddress || 'Unknown',
     });
@@ -233,7 +242,7 @@ app.post('/notify/login', async (req: NotifyRequest, res: Response) => {
       tags: rendered.tags,
     });
 
-    return res.json({ success: true, messageId: result.id });
+    return res.json({ success: true, messageId: result.id, location: resolvedLocation });
   } catch (error: any) {
     console.error('Error sending login notification:', error);
     return res.status(500).json({ success: false, error: error.message || 'Failed to send login notification' });

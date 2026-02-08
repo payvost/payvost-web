@@ -13,6 +13,8 @@ import type {
   FaceMatchResult,
   AddressVerificationResult,
   AMLScreeningResult,
+  EmailVerificationResult,
+  PhoneVerificationResult,
 } from '../types';
 
 export class DojahProvider extends BaseVerificationProvider {

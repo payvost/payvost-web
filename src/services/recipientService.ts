@@ -9,6 +9,7 @@ export interface Recipient {
     payvostUserId?: string;
     bankName?: string;
     accountNumber?: string;
+    accountLast4?: string;
     swiftCode?: string;
     currency?: string;
     country?: string;

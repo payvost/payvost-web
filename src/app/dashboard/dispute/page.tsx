@@ -2,8 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -42,7 +40,6 @@ type View = 'list' | 'create';
 
 
 export default function DisputePage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [view, setView] = useState<View>('list');
   const { user } = useAuth();
   const [disputes, setDisputes] = useState<DocumentData[]>([]);
@@ -253,10 +250,10 @@ export default function DisputePage() {
   )};
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         {view === 'list' ? renderListView() : <RaiseDisputeForm onBack={() => setView('list')} />}
       </main>
-    </DashboardLayout>
+    </>
   );
 }

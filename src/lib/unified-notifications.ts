@@ -787,12 +787,7 @@ export async function notifyLowBalance(userId: string, balance: number, currency
       alertType: 'low_balance',
     },
     clickAction: '/dashboard/wallet',
-    emailTemplate: 'low_balance_alert',
-    emailVariables: {
-      balance: balance.toString(),
-      currency,
-      threshold: threshold.toString(),
-    },
+    // No dedicated email template yet; keep this push/in-app only until templates are implemented.
   });
 }
 
@@ -870,7 +865,7 @@ export async function notifyDisputeStatusChange(userId: string, disputeId: strin
     data: {
       disputeId,
       status,
-      resolution: resolution || null,
+      resolution: resolution || '',
     },
     clickAction: '/dashboard/disputes',
   });
@@ -933,7 +928,7 @@ export async function notifyPaymentMethodAdded(userId: string, methodType: strin
     data: {
       eventType: 'payment_method_added',
       methodType,
-      last4: last4 || null,
+      last4: last4 || '',
     },
     clickAction: '/dashboard/settings/payment-methods',
   });
@@ -948,7 +943,7 @@ export async function notifyPaymentMethodRemoved(userId: string, methodType: str
     data: {
       eventType: 'payment_method_removed',
       methodType,
-      last4: last4 || null,
+      last4: last4 || '',
     },
     clickAction: '/dashboard/settings/payment-methods',
   });

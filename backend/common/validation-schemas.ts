@@ -139,6 +139,93 @@ export const paymentSchemas = {
 };
 
 /**
+ * Payout (Outbound Remittance) validation schemas
+ */
+export const payoutSchemas = {
+  createPayout: z.object({
+    fromAccountId: z.string().uuid('Invalid fromAccountId format'),
+    recipientId: z.string().min(1, 'recipientId is required'),
+    amount: commonSchemas.amount,
+    currency: commonSchemas.currency,
+    description: z.string().max(500, 'Description must be 500 characters or less').optional(),
+    idempotencyKey: commonSchemas.idempotencyKey,
+  }),
+};
+
+/**
+ * Recipient (Beneficiary / Address Book) validation schemas
+ *
+ * Note: The Address Book is for *external payout targets* only.
+ * Internal Payvost-to-Payvost transfers are handled elsewhere.
+ */
+const optionalTrimmedString = (max: number) =>
+  z.preprocess((val) => {
+    if (typeof val !== 'string') return val;
+    const trimmed = val.trim();
+    return trimmed === '' ? undefined : trimmed;
+  }, z.string().max(max).optional());
+
+export const recipientSchemas = {
+  createRecipient: z.object({
+    name: z.preprocess((val) => {
+      if (typeof val !== 'string') return val;
+      return val.trim();
+    }, z.string().min(1, 'name is required').max(255, 'name must be 255 characters or less')),
+    email: z.preprocess((val) => {
+      if (typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? undefined : trimmed;
+    }, commonSchemas.email.optional()),
+    phone: optionalTrimmedString(50),
+    bankName: optionalTrimmedString(255),
+    accountNumber: optionalTrimmedString(64),
+    swiftCode: optionalTrimmedString(32),
+    currency: z.preprocess((val) => {
+      if (typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? undefined : trimmed.toUpperCase();
+    }, commonSchemas.currency.optional()),
+    // Legacy/transition: allow either `country` (free-form) or `countryCode` (ISO2).
+    country: optionalTrimmedString(100),
+    countryCode: z.preprocess((val) => {
+      if (typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? undefined : trimmed.toUpperCase();
+    }, commonSchemas.countryCode.optional()),
+  }),
+
+  updateRecipient: z
+    .object({
+      name: z.preprocess((val) => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed;
+      }, z.string().min(1).max(255).optional()),
+      email: z.preprocess((val) => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed;
+      }, commonSchemas.email.optional()),
+      phone: optionalTrimmedString(50),
+      bankName: optionalTrimmedString(255),
+      accountNumber: optionalTrimmedString(64),
+      swiftCode: optionalTrimmedString(32),
+      currency: z.preprocess((val) => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed.toUpperCase();
+      }, commonSchemas.currency.optional()),
+      country: optionalTrimmedString(100),
+      countryCode: z.preprocess((val) => {
+        if (typeof val !== 'string') return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed.toUpperCase();
+      }, commonSchemas.countryCode.optional()),
+    })
+    .refine((obj) => Object.keys(obj).length > 0, { message: 'At least one field is required' }),
+};
+
+/**
  * Wallet validation schemas
  */
 export const walletSchemas = {

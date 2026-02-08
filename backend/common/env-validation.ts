@@ -8,10 +8,10 @@ interface EnvConfig {
   DATABASE_URL: string;
   DIRECT_URL?: string;
   
-  // Firebase
-  FIREBASE_PROJECT_ID: string;
-  FIREBASE_PRIVATE_KEY: string;
-  FIREBASE_CLIENT_EMAIL: string;
+  // Firebase Admin (preferred: single service account JSON, optionally base64 encoded)
+  FIREBASE_SERVICE_ACCOUNT_KEY?: string;
+  FIREBASE_SERVICE_ACCOUNT_KEY_BASE64?: string;
+  FIREBASE_DATABASE_URL?: string;
   
   // API Configuration
   PORT?: string;
@@ -59,13 +59,6 @@ export function validateEnvironment(): ValidationResult {
     'DATABASE_URL',
   ];
   
-  // Firebase variables - required in production, optional in development
-  const firebaseRequired: Array<keyof EnvConfig> = [
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_PRIVATE_KEY',
-    'FIREBASE_CLIENT_EMAIL',
-  ];
-  
   // Check always required variables
   for (const key of required) {
     const value = process.env[key];
@@ -73,16 +66,29 @@ export function validateEnvironment(): ValidationResult {
       errors.push(`Missing required environment variable: ${key}`);
     }
   }
-  
-  // Check Firebase variables - required in production, optional (with warning) in development
-  for (const key of firebaseRequired) {
-    const value = process.env[key];
-    if (!value || value.trim().length === 0) {
-      if (isDevelopment) {
-        warnings.push(`Missing optional environment variable (Firebase features may not work): ${key}`);
-      } else {
-        errors.push(`Missing required environment variable: ${key}`);
-      }
+
+  // Firebase Admin credentials:
+  // - In production: must be present (as JSON string or base64 JSON).
+  // - In development: warn only (local key file can be used instead).
+  const hasServiceAccountJson = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
+  const hasServiceAccountB64 = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64?.trim();
+  if (!hasServiceAccountJson && !hasServiceAccountB64) {
+    if (isDevelopment) {
+      warnings.push(
+        'Missing FIREBASE_SERVICE_ACCOUNT_KEY/FIREBASE_SERVICE_ACCOUNT_KEY_BASE64. Firebase Admin features may not work unless a local service account file is present.'
+      );
+    } else {
+      errors.push('Missing required Firebase Admin credentials: FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_KEY_BASE64');
+    }
+  } else {
+    // If present, ensure it parses as JSON (after base64 decode if needed).
+    try {
+      const raw = hasServiceAccountJson
+        ? (process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string)
+        : Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 as string, 'base64').toString('utf8');
+      JSON.parse(raw);
+    } catch {
+      errors.push('Firebase Admin credentials are not valid JSON (check FIREBASE_SERVICE_ACCOUNT_KEY / FIREBASE_SERVICE_ACCOUNT_KEY_BASE64)');
     }
   }
   
@@ -120,21 +126,6 @@ export function validateEnvironment(): ValidationResult {
     
     if (!process.env.INTERNAL_API_KEY && !process.env.CORE_BANKING_SERVICE_API_KEY) {
       warnings.push('No internal API key configured. Internal service communication may be insecure.');
-    }
-  }
-  
-  // Validate Firebase private key format (should be a JSON string or path)
-  if (process.env.FIREBASE_PRIVATE_KEY) {
-    try {
-      // Try to parse as JSON if it looks like JSON
-      if (process.env.FIREBASE_PRIVATE_KEY.startsWith('{')) {
-        JSON.parse(process.env.FIREBASE_PRIVATE_KEY);
-      }
-    } catch (e) {
-      // If it's not JSON, it might be a file path - that's okay
-      if (!process.env.FIREBASE_PRIVATE_KEY.includes('/') && !process.env.FIREBASE_PRIVATE_KEY.includes('\\')) {
-        warnings.push('FIREBASE_PRIVATE_KEY format may be invalid');
-      }
     }
   }
   

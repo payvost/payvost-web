@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session cookie (expires in 14 days)
-    const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 days
+    // Privileged session cookie: shorter absolute expiry.
+    const expiresIn = 60 * 60 * 12 * 1000; // 12 hours
     const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn,
     });
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     cookieStore.set('hr_session', sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: expiresIn / 1000, // Convert to seconds
       path: '/',
     });
@@ -53,6 +53,50 @@ export async function POST(request: NextRequest) {
       { error: error.message || 'Failed to create session' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * DELETE /api/auth/hr-session
+ * Logs out HR user by deleting session cookie and revoking refresh tokens.
+ */
+export async function DELETE(_request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('hr_session')?.value;
+    if (sessionCookie) {
+      try {
+        const decoded = await auth.verifySessionCookie(sessionCookie);
+        await auth.revokeRefreshTokens(decoded.uid);
+      } catch {
+        // Ignore verification errors (cookie may already be expired).
+      }
+    }
+    cookieStore.delete('hr_session');
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('HR logout error:', error);
+    return NextResponse.json({ error: 'Failed to end session' }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/auth/hr-session
+ * Verify current HR session.
+ */
+export async function GET(_request: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('hr_session')?.value;
+    if (!sessionCookie) return NextResponse.json({ error: 'No active session' }, { status: 401 });
+
+    const decoded = await auth.verifySessionCookie(sessionCookie, true);
+    const ok = await isHrAdmin(decoded.uid);
+    if (!ok) return NextResponse.json({ error: 'Unauthorized: HR Admin access required' }, { status: 403 });
+
+    return NextResponse.json({ success: true, user: { uid: decoded.uid, email: decoded.email } });
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
   }
 }
 

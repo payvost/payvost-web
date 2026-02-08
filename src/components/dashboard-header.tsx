@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Search, LifeBuoy } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import type { User } from 'firebase/auth';
 
@@ -13,14 +12,14 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserNav } from '@/components/user-nav';
-import { QuickActionsDropdown } from '@/components/quick-actions-dropdown';
 import { DashboardSearch } from '@/components/dashboard-search';
 
+type DashboardContext = 'personal' | 'business';
+
 export interface DashboardHeaderProps {
-  context: 'personal';
+  context: DashboardContext;
   user: User | null;
   scrolled?: boolean;
-  supportHref?: string;
   rightSlot?: React.ReactNode;
   businessLogoUrl?: string | null;
 }
@@ -29,12 +28,9 @@ export function DashboardHeader({
   context,
   user,
   scrolled = false,
-  supportHref,
   rightSlot,
   businessLogoUrl,
 }: DashboardHeaderProps) {
-  const resolvedSupportHref = supportHref ?? '/dashboard/support';
-
   return (
     <header
       className={cn(
@@ -73,14 +69,7 @@ export function DashboardHeader({
           </Sheet>
         </div>
 
-        <QuickActionsDropdown />
         {rightSlot}
-        <Button variant="ghost" size="icon" asChild aria-label="Support">
-          <Link href={resolvedSupportHref}>
-            <LifeBuoy className="h-[1.15rem] w-[1.15rem]" />
-            <span className="sr-only">Support</span>
-          </Link>
-        </Button>
         <ThemeSwitcher />
         <NotificationDropdown context={context} />
         <UserNav user={user} businessLogoUrl={businessLogoUrl} />

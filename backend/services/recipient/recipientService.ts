@@ -24,27 +24,16 @@ export class RecipientService {
         name: string;
         email?: string;
         phone?: string;
-        payvostUserId?: string;
         bankName?: string;
         accountNumber?: string;
         swiftCode?: string;
         currency?: string;
         country?: string;
+        // Deprecated: internal Payvost-to-Payvost recipients are handled elsewhere.
+        // The Address Book is for external payout targets only.
         type?: string;
     }) {
-        // If it's intended to be internal or we have an email, check if they exist in Payvost
-        let payvostUserId = data.payvostUserId;
-        let type = data.type || 'EXTERNAL';
-
-        if (!payvostUserId && data.email) {
-            const targetUser = await prisma.user.findUnique({
-                where: { email: data.email }
-            });
-            if (targetUser) {
-                payvostUserId = targetUser.id;
-                type = 'INTERNAL';
-            }
-        }
+        const accountLast4 = data.accountNumber ? String(data.accountNumber).slice(-4) : undefined;
 
         return prisma.recipient.create({
             data: {
@@ -52,13 +41,15 @@ export class RecipientService {
                 name: data.name,
                 email: data.email,
                 phone: data.phone,
-                payvostUserId,
                 bankName: data.bankName,
-                accountNumber: data.accountNumber,
+                // Do not persist full account numbers long-term.
+                accountNumber: null,
+                accountLast4,
                 swiftCode: data.swiftCode,
                 currency: data.currency,
                 country: data.country,
-                type
+                // Force EXTERNAL: beneficiaries are external payout targets only.
+                type: 'EXTERNAL',
             }
         });
     }
@@ -85,14 +76,35 @@ export class RecipientService {
     /**
      * Update a saved recipient.
      */
-    async updateRecipient(userId: string, id: string, data: Partial<Omit<Recipient, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) {
+    async updateRecipient(
+        userId: string,
+        id: string,
+        data: Partial<Pick<Recipient, 'name' | 'email' | 'phone' | 'bankName' | 'accountNumber' | 'swiftCode' | 'currency' | 'country'>>
+    ) {
         // Authorization check
         const recipient = await this.getRecipient(userId, id);
         if (!recipient) throw new Error('Recipient not found');
 
+        const accountLast4 = data.accountNumber !== undefined ? String(data.accountNumber).slice(-4) : undefined;
+
         return prisma.recipient.update({
             where: { id },
-            data
+            data: {
+                ...(data.name !== undefined ? { name: data.name } : {}),
+                ...(data.email !== undefined ? { email: data.email } : {}),
+                ...(data.phone !== undefined ? { phone: data.phone } : {}),
+                ...(data.bankName !== undefined ? { bankName: data.bankName } : {}),
+                ...(data.accountNumber !== undefined
+                    ? {
+                          // Do not persist full account numbers long-term.
+                          accountNumber: null,
+                          accountLast4,
+                      }
+                    : {}),
+                ...(data.swiftCode !== undefined ? { swiftCode: data.swiftCode } : {}),
+                ...(data.currency !== undefined ? { currency: data.currency } : {}),
+                ...(data.country !== undefined ? { country: data.country } : {}),
+            },
         });
     }
 

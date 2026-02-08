@@ -2,8 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -54,7 +52,6 @@ const apiLogs = [
 
 
 export default function IntegrationsPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const [secretKeyVisible, setSecretKeyVisible] = useState(false);
   const { toast } = useToast();
 
@@ -65,7 +62,7 @@ export default function IntegrationsPage() {
   
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         <div className="flex items-center">
           <h1 className="text-lg font-semibold md:text-2xl">Integrations & Developer</h1>
@@ -268,6 +265,6 @@ export default function IntegrationsPage() {
 
         </Tabs>
       </main>
-    </DashboardLayout>
+    </>
   );
 }

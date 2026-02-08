@@ -35,6 +35,12 @@ export async function sendEmailViaMailgun(options: SendEmailOptions) {
     text,
   };
 
+  // Transactional/security emails: avoid tracking/unsubscribe behaviors in clients/providers.
+  // (Some clients surface unsubscribe UI when messages look like bulk marketing.)
+  message['o:tracking'] = 'no';
+  message['o:tracking-clicks'] = 'no';
+  message['o:tracking-opens'] = 'no';
+
   if (tags && tags.length > 0) {
     message['o:tag'] = tags;
   }

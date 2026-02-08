@@ -1036,14 +1036,15 @@ export default function CustomerDetailsPage() {
                                                             return date.toLocaleString();
                                                         }
                                                     }
-                                                    if (submittedAt.toDate && typeof submittedAt.toDate === 'function') {
-                                                        return submittedAt.toDate().toLocaleString();
+                                                    const v: any = submittedAt as any;
+                                                    if (v?.toDate && typeof v.toDate === 'function') {
+                                                        return v.toDate().toLocaleString();
                                                     }
-                                                    if (submittedAt._seconds) {
-                                                        return new Date(submittedAt._seconds * 1000).toLocaleString();
+                                                    if (v?._seconds) {
+                                                        return new Date(v._seconds * 1000).toLocaleString();
                                                     }
                                                     // Try to convert to Date directly
-                                                    const date = new Date(submittedAt);
+                                                    const date = new Date(v);
                                                     if (!isNaN(date.getTime())) {
                                                         return date.toLocaleString();
                                                     }

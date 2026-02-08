@@ -27,10 +27,13 @@ import { useAuth } from "@/hooks/use-auth"
 import { doc, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import Link from "next/link"
+import { recipientService } from "@/services/recipientService"
 
 
 export function AccountCompletion() {
   const { user } = useAuth();
+  const [userData, setUserData] = useState<any>(null);
+  const [hasRecipient, setHasRecipient] = useState(false);
   const [checklistItems, setChecklistItems] = useState([
     { id: 'verify-email', label: 'Verify your email address', icon: <Mail className="h-5 w-5" />, completed: false, href: '/verify-email' },
     { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: false, href: '/dashboard/payments/send' },
@@ -46,23 +49,42 @@ export function AccountCompletion() {
     }
 
     const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-        setLoading(true);
-        const userData = doc.data();
-        
-        const updatedChecklist = [
-            { id: 'verify-email', label: 'Verify your email address', icon: <Mail className="h-5 w-5" />, completed: user.emailVerified, href: '/verify-email' },
-            { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: userData?.beneficiaries?.length > 0, href: '/dashboard/payments/send' },
-            { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: userData?.transactions?.length > 0, href: '/dashboard/payments/send' },
-            { id: 'setup-2fa', label: 'Secure your account with 2FA', icon: <ShieldCheck className="h-5 w-5" />, completed: false, href: '/dashboard/settings' }, // 2FA status might need a different check
-        ];
-
-        setChecklistItems(updatedChecklist);
+        setUserData(doc.data() || null);
         setLoading(false);
     });
 
     return () => unsub();
 
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    recipientService
+      .list()
+      .then((items) => {
+        if (!cancelled) setHasRecipient(items.length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setHasRecipient(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const updatedChecklist = [
+      { id: 'verify-email', label: 'Verify your email address', icon: <Mail className="h-5 w-5" />, completed: !!user.emailVerified, href: '/verify-email' },
+      { id: 'add-recipient', label: 'Add your first recipient', icon: <UserPlus className="h-5 w-5" />, completed: hasRecipient, href: '/dashboard/payments/send' },
+      { id: 'first-transfer', label: 'Make your first transfer', icon: <Send className="h-5 w-5" />, completed: (userData?.transactions?.length || 0) > 0, href: '/dashboard/payments/send' },
+      { id: 'setup-2fa', label: 'Secure your account with 2FA', icon: <ShieldCheck className="h-5 w-5" />, completed: false, href: '/dashboard/settings' }, // 2FA status might need a different check
+    ];
+    setChecklistItems(updatedChecklist);
+  }, [user, userData, hasRecipient]);
 
   const completedCount = checklistItems.filter(item => item.completed).length;
   const totalCount = checklistItems.length;

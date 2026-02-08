@@ -109,10 +109,11 @@ export function BillPaymentHistory() {
       <CardContent>
         <div className="space-y-4">
           {history.map((item) => {
-            const billerId = item.metadata?.billerId ? String(item.metadata.billerId) : null;
-            const billerName = item.metadata?.billerName ? String(item.metadata.billerName) : null;
-            const acct = item.metadata?.subscriberAccountNumber ? String(item.metadata.subscriberAccountNumber) : null;
-            const receipt = item.metadata?.receiptNumber ? String(item.metadata.receiptNumber) : null;
+            const meta = item.metadata as any;
+            const billerId = meta?.billerId ? String(meta.billerId) : null;
+            const billerName = meta?.billerName ? String(meta.billerName) : null;
+            const acct = meta?.subscriberAccountNumber ? String(meta.subscriberAccountNumber) : null;
+            const receipt = meta?.receiptNumber ? String(meta.receiptNumber) : null;
             return (
               <div
                 key={item.id}

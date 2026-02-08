@@ -9,6 +9,12 @@ import { BaseVerificationProvider } from './base';
 import type {
   VerificationProviderName,
   AMLScreeningResult,
+  IDVerificationResult,
+  FaceMatchResult,
+  AddressVerificationResult,
+  TaxIDVerificationResult,
+  EmailVerificationResult,
+  PhoneVerificationResult,
 } from '../types';
 
 export class ComplyAdvantageProvider extends BaseVerificationProvider {

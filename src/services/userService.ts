@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 export interface UserProfile {
   uid: string;
@@ -25,34 +25,18 @@ export const userService = {
    */
   async lookupUser(identifier: string): Promise<UserProfile | null> {
     try {
-      const identifierTrimmed = identifier.trim().replace('@', '');
-
-      // Check if it's an email
-      const isEmail = identifier.includes('@');
-
-      const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where(isEmail ? 'email' : 'username', '==', isEmail ? identifier : identifierTrimmed),
-        limit(1)
-      );
-
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        return null;
-      }
-
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
+      const { apiClient } = await import('./apiClient');
+      const response = await apiClient.post<{ user: any | null }>('/api/user/lookup', { identifier });
+      const userData = response.user;
+      if (!userData) return null;
 
       return {
-        uid: userDoc.id,
+        uid: userData.uid,
         username: userData.username,
         email: userData.email,
-        fullName: userData.fullName || userData.name,
-        photoURL: userData.photoURL || userData.photo,
-        isVerified: userData.isVerified || userData.kycStatus === 'Verified',
+        fullName: userData.fullName,
+        photoURL: userData.photoURL,
+        isVerified: !!userData.isVerified,
         kycStatus: userData.kycStatus,
         country: userData.country,
         countryCode: userData.countryCode,

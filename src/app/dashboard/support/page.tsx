@@ -5,8 +5,6 @@ import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -130,7 +128,6 @@ const priorityConfig: Record<TicketPriority, { label: string; variant: "default"
 function SupportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const { toast } = useToast();
   const userName = user?.displayName?.split(' ')[0] || 'there';
@@ -437,7 +434,7 @@ function SupportPageContent() {
   };
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col w-full">
         {/* Hero Section */}
         <section className="w-full bg-primary/10 rounded-lg">
@@ -1243,21 +1240,21 @@ function SupportPageContent() {
         </div>
 
       </main>
-    </DashboardLayout>
+    </>
   );
 }
 
 export default function SupportPage() {
   return (
-    <Suspense fallback={
-      <DashboardLayout language="en" setLanguage={() => {}}>
+    <Suspense
+      fallback={
         <main className="flex flex-1 flex-col w-full">
           <div className="container mx-auto px-4 md:px-6 max-w-7xl py-12">
             <Skeleton className="h-96 w-full" />
           </div>
         </main>
-      </DashboardLayout>
-    }>
+      }
+    >
       <SupportPageContent />
     </Suspense>
   );

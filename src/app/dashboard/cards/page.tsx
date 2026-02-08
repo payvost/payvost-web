@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -34,7 +32,6 @@ import { CardControlsDialog } from '@/components/card-controls-dialog';
 type CardTypeFilter = 'ALL' | CardType;
 
 export default function CardsPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -321,7 +318,7 @@ export default function CardsPage() {
   const canCreate = isKycVerified && filteredAccounts.length > 0;
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
         {!isKycVerified && (
           <Alert>
@@ -419,6 +416,6 @@ export default function CardsPage() {
           onMembersChanged={setMembers}
         />
       </main>
-    </DashboardLayout>
+    </>
   );
 }

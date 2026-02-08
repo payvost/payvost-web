@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, ArrowRight, CheckCircle2, AlertCircle, Loader2, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
@@ -167,7 +167,7 @@ export function SendMoneyWizard({ onComplete }: { onComplete?: () => void }) {
                                     {wallets.map(w => (
                                         <SelectItem key={w.id} value={w.id}>
                                             <div className="flex justify-between w-full gap-4">
-                                                <span>{w.name} ({w.currency})</span>
+                                                <span>{(w as any).name || `${w.currency} Wallet`} ({w.currency})</span>
                                                 <span className="font-medium">{formatCurrency(w.balance, w.currency)}</span>
                                             </div>
                                         </SelectItem>

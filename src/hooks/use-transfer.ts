@@ -77,9 +77,7 @@ export function useTransfer() {
             // Let's assume for now that we fetch the recipient's accounts if we select them.
             // For simplicity in this demo, I'll assume the first account of the recipient.
 
-            const recipientProfile = await userService.getUserProfile(state.recipient.uid);
-            // Wait, listUsers gave us the info. But we need their account ID.
-            // I'll add a check for receiver accounts.
+            // Resolve recipient id (Payvost user uid or external recipient id).
 
             const recipientId = 'uid' in state.recipient
                 ? state.recipient.uid

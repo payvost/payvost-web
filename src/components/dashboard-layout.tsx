@@ -26,7 +26,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Icons } from '@/components/icons';
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, LifeBuoy, Settings } from 'lucide-react';
 import type { LanguagePreference } from '@/types/language';
 import { LanguageSwitcher } from './language-switcher';
 import { Button } from './ui/button';
@@ -341,6 +341,14 @@ export function DashboardLayout({ children, language, setLanguage }: DashboardLa
 
           <SidebarFooter className="p-2 border-t border-border/40">
             <SidebarMenu className="w-full">
+              <SidebarMenuItem className="w-full">
+                <SidebarMenuButton asChild isActive={isActive('/dashboard/support')} tooltip="Support">
+                  <Link href="/dashboard/support">
+                    <LifeBuoy strokeWidth={2.5} />
+                    <span className="group-data-[collapsible=icon]:hidden">Support</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem className="w-full">
                 <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')} tooltip="Settings">
                   <Link href="/dashboard/settings">

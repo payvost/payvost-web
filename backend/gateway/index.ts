@@ -108,6 +108,16 @@ export { requestLogger };
 export function createGateway() {
   const app = express();
 
+  // Fintech hardening: ensure req.ip / req.ips reflect the real client IP behind proxies (Render/Vercel/NGINX).
+  // Defaults to trusting the first proxy hop in production. Override via TRUST_PROXY if needed.
+  if (process.env.TRUST_PROXY) {
+    const raw = process.env.TRUST_PROXY.trim();
+    const asNum = Number(raw);
+    app.set('trust proxy', Number.isFinite(asNum) ? asNum : raw === 'true' ? true : raw);
+  } else if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
   // Error tracker request handler (must be first)
   app.use(errorTrackerHandler());
 

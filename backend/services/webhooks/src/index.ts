@@ -4,6 +4,7 @@ import admin from 'firebase-admin';
 import cors from 'cors';
 import { prisma } from './prisma';
 import { handleMailgunWebhook } from './mailgun-handler';
+import { verifyRapydWebhookSignature, type RapydWebhookHeaders } from './rapyd-webhook';
 
 const app = express();
 const PORT = process.env.WEBHOOK_SERVICE_PORT || 3008;
@@ -92,6 +93,27 @@ function verifyWebhookSignature(
   return result === 0;
 }
 
+function sha256Hex(input: string): string {
+  return createHmac('sha256', 'payvost-webhook-event').update(input).digest('hex');
+}
+
+function toNumber(value: any): number {
+  const n = typeof value === 'number' ? value : parseFloat(String(value || '0'));
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function createInAppNotification(userId: string, payload: any) {
+  try {
+    await db.collection('users').doc(userId).collection('notifications').add({
+      ...payload,
+      createdAt: new Date(),
+      read: false,
+    });
+  } catch (e) {
+    // Best-effort only.
+  }
+}
+
 /**
  * Fetch user data from Firebase
  */
@@ -115,6 +137,172 @@ async function getUserData(userId: string): Promise<{ email: string; name: strin
     console.error('[Webhook Service] Error fetching user data:', error);
     return null;
   }
+}
+
+async function handleRapydPaymentEvent(params: {
+  eventType: string;
+  data: any;
+}) {
+  const { eventType, data } = params;
+
+  const paymentId = String(data?.id || data?.payment_id || '').trim();
+  const providerCheckoutId = String(data?.checkout_id || data?.checkout?.id || '').trim() || null;
+  const statusRaw = String(data?.status || '').toUpperCase();
+  const amount = toNumber(data?.amount ?? data?.original_amount ?? data?.gross_amount ?? 0);
+  const currency = String(data?.currency_code || data?.currency || 'USD').toUpperCase();
+  const metadata = (data?.metadata || {}) as Record<string, any>;
+
+  const paymentLinkId = String(metadata.paymentLinkId || data?.merchant_reference_id || '').trim() || null;
+  const checkoutId = String(metadata.checkoutId || '').trim() || null;
+  const publicId = String(metadata.publicId || '').trim() || null;
+
+  if (!paymentLinkId || !paymentId) {
+    return { ok: true, skipped: true, reason: 'not a payment link event' };
+  }
+
+  const isCompleted = eventType === 'PAYMENT_COMPLETED' || eventType === 'PAYMENT_SUCCESS';
+  const isFailed = eventType === 'PAYMENT_FAILED' || eventType === 'PAYMENT_ERROR';
+
+  const nextPaymentStatus = isCompleted
+    ? ('COMPLETED' as const)
+    : isFailed
+      ? ('FAILED' as const)
+      : ('PROCESSING' as const);
+
+  const result = await prisma.$transaction(async (tx: any) => {
+    // Upsert payment record
+    const payment = await tx.paymentLinkPayment.upsert({
+      where: { providerPaymentId: paymentId },
+      update: {
+        paymentLinkId,
+        checkoutId: checkoutId || undefined,
+        provider: 'RAPYD',
+        amount: String(amount || 0),
+        currency,
+        status: nextPaymentStatus,
+        providerData: data,
+      },
+      create: {
+        paymentLinkId,
+        checkoutId: checkoutId || undefined,
+        provider: 'RAPYD',
+        providerPaymentId: paymentId,
+        amount: String(amount || 0),
+        currency,
+        status: nextPaymentStatus,
+        providerData: data,
+      },
+    });
+
+    // Update checkout best-effort
+    if (checkoutId) {
+      await tx.paymentLinkCheckout.update({
+        where: { id: checkoutId },
+        data: {
+          providerCheckoutId: providerCheckoutId || undefined,
+          status: isCompleted ? 'COMPLETED' : isFailed ? 'FAILED' : 'REDIRECTED',
+          completedAt: isCompleted || isFailed ? new Date() : undefined,
+        },
+      }).catch(() => null);
+    } else if (providerCheckoutId) {
+      await tx.paymentLinkCheckout.updateMany({
+        where: { providerCheckoutId },
+        data: {
+          status: isCompleted ? 'COMPLETED' : isFailed ? 'FAILED' : 'REDIRECTED',
+          completedAt: isCompleted || isFailed ? new Date() : undefined,
+        },
+      }).catch(() => null);
+    }
+
+    // Totals idempotency: only count once per providerPaymentId.
+    if (isCompleted && !payment.countedInTotals) {
+      const link = await tx.paymentLink.findUnique({ where: { id: paymentLinkId } });
+      if (!link) return { payment, link: null };
+
+      const linkUpdates: any = {
+        paidCount: { increment: 1 },
+        totalPaidAmount: { increment: String(amount || 0) },
+      };
+
+      if (link.linkType === 'ONE_TIME') {
+        // Mark as fulfilled + disable on first completion.
+        linkUpdates.fulfilledAt = link.fulfilledAt || new Date();
+        linkUpdates.fulfilledPaymentId = link.fulfilledPaymentId || payment.id;
+        linkUpdates.status = 'DISABLED';
+      }
+
+      await tx.paymentLink.update({
+        where: { id: paymentLinkId },
+        data: linkUpdates,
+      });
+
+      await tx.paymentLinkPayment.update({
+        where: { id: payment.id },
+        data: { countedInTotals: true },
+      });
+
+      return { payment: { ...payment, countedInTotals: true }, link: { ...link, ...linkUpdates } };
+    }
+
+    const link = await tx.paymentLink.findUnique({ where: { id: paymentLinkId } });
+    return { payment, link };
+  });
+
+  // Notifications (best-effort)
+  try {
+    const link = await prisma.paymentLink.findUnique({ where: { id: paymentLinkId } });
+    if (link) {
+      const merchant = await getUserData(link.createdByUserId);
+      if (merchant?.email) {
+        await sendEmailNotification(
+          merchant.email,
+          'Payment received',
+          `
+            <h2>Payment received</h2>
+            <p>Hi ${merchant.name},</p>
+            <p>You received a payment via a Payvost payment link.</p>
+            <div style="background:#f3f4f6;padding:12px;border-radius:8px;">
+              <p><strong>Amount:</strong> ${amount} ${currency}</p>
+              <p><strong>Status:</strong> ${nextPaymentStatus}</p>
+              ${publicId ? `<p><strong>Link:</strong> /pay/${publicId}</p>` : ''}
+              <p><strong>Provider Payment ID:</strong> ${paymentId}</p>
+            </div>
+          `
+        );
+      }
+
+      await createInAppNotification(link.createdByUserId, {
+        type: 'payment_link.paid',
+        title: 'Payment received',
+        message: `You received ${amount} ${currency} via payment link.`,
+        metadata: { paymentLinkId, publicId, providerPaymentId: paymentId },
+      });
+
+      if (checkoutId) {
+        const chk = await prisma.paymentLinkCheckout.findUnique({ where: { id: checkoutId } }).catch(() => null);
+        const payerEmail = chk?.payerEmail || null;
+        if (payerEmail) {
+          await sendEmailNotification(
+            payerEmail,
+            'Payment receipt',
+            `
+              <h2>Payment receipt</h2>
+              <p>Your payment has been received.</p>
+              <div style="background:#f3f4f6;padding:12px;border-radius:8px;">
+                <p><strong>Amount:</strong> ${amount} ${currency}</p>
+                <p><strong>Status:</strong> ${nextPaymentStatus}</p>
+                <p><strong>Provider Payment ID:</strong> ${paymentId}</p>
+              </div>
+            `
+          );
+        }
+      }
+    }
+  } catch (e) {
+    // non-blocking
+  }
+
+  return { ok: true, processed: true, status: nextPaymentStatus };
 }
 
 /**
@@ -727,6 +915,7 @@ app.get('/', (_req: Request, res: Response) => {
       health: 'GET /health',
       reloadly: 'POST /reloadly',
       mailgun: 'POST /mailgun',
+      rapyd: 'POST /rapyd',
     },
   });
 });
@@ -734,6 +923,107 @@ app.get('/', (_req: Request, res: Response) => {
 // Mailgun webhook endpoint
 // Note: Mailgun sends form-encoded data, which is handled by the urlencoded middleware above
 app.post('/mailgun', handleMailgunWebhook);
+
+// Rapyd webhook endpoint (used for payment links + wallet events)
+app.post('/rapyd', async (req: Request, res: Response) => {
+  const secretKey = process.env.RAPYD_SECRET_KEY || '';
+  if (!secretKey) {
+    return res.status(500).json({ error: 'Rapyd webhook not configured' });
+  }
+
+  const bodyText = typeof (req as any).body === 'string' ? ((req as any).body as string) : JSON.stringify((req as any).body || {});
+
+  const headers: RapydWebhookHeaders = {
+    signature: String(req.headers['signature'] || '').trim() || undefined,
+    salt: String(req.headers['salt'] || '').trim() || undefined,
+    timestamp: String(req.headers['timestamp'] || '').trim() || undefined,
+    access_key: String(req.headers['access_key'] || req.headers['access-key'] || '').trim() || undefined,
+  };
+
+  const urlPathFromReq = String((req as any).originalUrl || req.url || '').split('?')[0] || '';
+  const urlPathCandidates = Array.from(new Set([
+    // When Rapyd calls the gateway (/api/webhooks/rapyd) and the gateway proxies here (/rapyd),
+    // the signature still reflects the original URL path in Rapyd's request.
+    '/api/webhooks/rapyd',
+    '/rapyd',
+    urlPathFromReq,
+  ].filter(Boolean)));
+
+  const ok = verifyRapydWebhookSignature({
+    urlPathCandidates,
+    headers,
+    secretKey,
+    body: bodyText,
+  });
+
+  if (!ok.ok) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  let event: any;
+  try {
+    event = JSON.parse(bodyText);
+  } catch {
+    return res.status(400).json({ error: 'Invalid JSON' });
+  }
+
+  const eventType = String(event?.type || event?.event_type || 'UNKNOWN');
+  const providerEventId = `rapyd:${sha256Hex(`${eventType}:${bodyText}`)}`;
+
+  // Deduplicate by providerEventId
+  const existing = await prisma.webhookEvent.findUnique({ where: { providerEventId } }).catch(() => null);
+  if (existing?.status === 'PROCESSED') {
+    return res.json({ received: true, deduped: true, eventType });
+  }
+
+  await prisma.webhookEvent.upsert({
+    where: { providerEventId },
+    update: {
+      payload: event,
+      eventType,
+      provider: 'RAPYD',
+      status: 'RECEIVED',
+      errorMessage: null,
+      processedAt: null,
+    },
+    create: {
+      providerEventId,
+      provider: 'RAPYD',
+      eventType,
+      payload: event,
+      status: 'RECEIVED',
+    },
+  });
+
+  try {
+    const data = event?.data || event;
+    if (eventType.startsWith('PAYMENT_')) {
+      await handleRapydPaymentEvent({ eventType, data });
+    }
+
+    await prisma.webhookEvent.update({
+      where: { providerEventId },
+      data: {
+        status: 'PROCESSED',
+        processedAt: new Date(),
+        errorMessage: null,
+      },
+    });
+
+    return res.json({ received: true, eventType });
+  } catch (error: any) {
+    await prisma.webhookEvent.update({
+      where: { providerEventId },
+      data: {
+        status: 'FAILED',
+        processedAt: new Date(),
+        errorMessage: error?.message || 'Processing failed',
+      },
+    }).catch(() => null);
+
+    return res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
 
 // Reloadly webhook endpoint
 app.post('/reloadly', async (req: Request, res: Response) => {

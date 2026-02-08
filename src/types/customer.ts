@@ -85,7 +85,6 @@ export interface CustomerData {
   createdAt?: string | Timestamp;
   updatedAt?: string | Timestamp;
   associatedAccounts?: AssociatedAccount[];
-  transactionPin?: string;
   pinSetupNotified?: boolean;
 
     // Address details

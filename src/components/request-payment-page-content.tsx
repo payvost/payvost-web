@@ -21,14 +21,13 @@ import { SplitPaymentTab } from '@/components/split-payment-tab';
 import { EventTicketsTab } from '@/components/event-tickets-tab';
 import { DonationsTab } from '@/components/donations-tab';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, onSnapshot, arrayUnion, Timestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { sendPaymentRequestEmail } from '@/services/emailService';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { QRCodeDialog } from '@/components/qr-code-dialog';
+import { apiClient } from '@/services/apiClient';
 
 
 function PaymentLinkTab() {
@@ -48,22 +47,22 @@ function PaymentLinkTab() {
         if (!authLoading) setLoadingRequests(false);
         return;
     }
-    const q = query(
-        collection(db, "paymentRequests"), 
-        where("userId", "==", user.uid),
-        limit(5)
-    );
-    const unsub = onSnapshot(q, (querySnapshot) => {
-        const requests: any[] = [];
-        querySnapshot.forEach((doc) => {
-            requests.push({ id: doc.id, ...doc.data() });
-        });
-        // Sort on the client side
-        requests.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-        setRecentRequests(requests);
-        setLoadingRequests(false);
-    });
-    return () => unsub();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoadingRequests(true);
+        const res = await apiClient.get<{ items: any[] }>(`/api/payment-links?limit=5&offset=0`);
+        if (!cancelled) setRecentRequests(res.items || []);
+      } catch {
+        if (!cancelled) setRecentRequests([]);
+      } finally {
+        if (!cancelled) setLoadingRequests(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [user, authLoading]);
   
 
@@ -81,24 +80,16 @@ function PaymentLinkTab() {
     const description = (form as any).description.value;
     const payerEmail = (form as any)['payer-email'].value;
 
-    const newRequestData = {
-        to: payerEmail || 'No email (Link)',
-        amount: `${currency} ${amount}`,
-        description,
-        status: 'Active',
-        date: new Date().toISOString().split('T')[0],
-        createdAt: Timestamp.now(),
-        userId: user.uid,
-        numericAmount: parseFloat(amount),
-        currency: currency,
-        linkType: linkType, // 'one-time' or 'reusable'
-    };
-
     try {
-      const docRef = await addDoc(collection(db, 'paymentRequests'), newRequestData);
-      const paymentId = docRef.id;
-      const link = `${window.location.origin}/pay/${paymentId}`;
-      await updateDoc(docRef, { link: link });
+      const res = await apiClient.post<{ url: string }>(`/api/payment-links`, {
+        title: String(description || 'Payment Request'),
+        description: String(description || ''),
+        linkType: linkType === 'reusable' ? 'REUSABLE' : 'ONE_TIME',
+        amountType: 'FIXED',
+        amount: Number(amount),
+        currency,
+      });
+      const link = res.url;
       
       if (payerEmail) {
         console.log("Sending email to:", payerEmail);
@@ -135,6 +126,10 @@ function PaymentLinkTab() {
       setCurrency('USD');
       setLinkType('one-time');
       setGeneratedLink(link);
+      try {
+        const refreshed = await apiClient.get<{ items: any[] }>(`/api/payment-links?limit=5&offset=0`);
+        setRecentRequests(refreshed.items || []);
+      } catch {}
     } catch (err) {
       console.error('Error saving request:', err);
       toast({
@@ -153,6 +148,18 @@ function PaymentLinkTab() {
       title: 'Copied to Clipboard!',
       description: 'The payment link has been copied.',
     });
+  };
+
+  const generateShareLink = async (paymentLinkId: string) => {
+    try {
+      const res = await apiClient.post<{ url: string }>(`/api/payment-links/${encodeURIComponent(paymentLinkId)}/rotate-token`, {});
+      if (res?.url) {
+        copyLink(res.url);
+        setGeneratedLink(res.url);
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Failed to generate share link', variant: 'destructive' });
+    }
   };
 
   return (
@@ -262,8 +269,8 @@ function PaymentLinkTab() {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Requests</CardTitle>
-            <CardDescription>A log of your recent payment requests.</CardDescription>
+            <CardTitle>Recent Payment Links</CardTitle>
+            <CardDescription>A log of your recent payment links.</CardDescription>
           </CardHeader>
           <CardContent>
              {loadingRequests ? (
@@ -272,13 +279,13 @@ function PaymentLinkTab() {
                 </div>
              ) : recentRequests.length === 0 ? (
                 <div className="text-center text-muted-foreground py-10">
-                    <p>You haven't made any payment requests yet.</p>
+                    <p>You haven't created any payment links yet.</p>
                 </div>
             ) : (
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>To</TableHead>
+                    <TableHead>Title</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="text-right">Status</TableHead>
                     <TableHead className="text-right sr-only">Actions</TableHead>
@@ -286,25 +293,29 @@ function PaymentLinkTab() {
                 </TableHeader>
                 <TableBody>
                     {recentRequests.map((req) => (
-                    <TableRow key={req.id} className="cursor-pointer" onClick={() => router.push(`/dashboard/request-payment/${req.id}`)}>
+                    <TableRow key={req.id}>
                         <TableCell>
-                        <div className="font-medium truncate">{req.to}</div>
+                        <div className="font-medium truncate">{req.title || 'Payment Link'}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            {new Date(req.createdAt.toDate()).toLocaleDateString()}
+                            {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : ''}
                             {req.linkType && (
                                 <Badge variant="outline" className="text-xs">
-                                    {req.linkType === 'reusable' ? 'Reusable' : 'One-Time'}
+                                    {String(req.linkType) === 'REUSABLE' ? 'Reusable' : 'One-Time'}
                                 </Badge>
                             )}
                         </div>
                         </TableCell>
-                        <TableCell>{req.amount}</TableCell>
+                        <TableCell>
+                          {String(req.amountType) === 'OPEN'
+                            ? `${req.currency} (open)`
+                            : `${req.currency} ${req.amount ?? ''}`}
+                        </TableCell>
                         <TableCell className="text-right">
                         <Badge
                             variant={
-                            req.status === 'Paid'
+                            req.status === 'DISABLED'
                                 ? 'default'
-                                : req.status === 'Pending' || req.status === 'Active'
+                                : req.status === 'ACTIVE' || req.status === 'DRAFT'
                                 ? 'secondary'
                                 : 'destructive'
                             }
@@ -314,9 +325,9 @@ function PaymentLinkTab() {
                         </Badge>
                         </TableCell>
                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); copyLink(req.link); }}>
+                            <Button variant="ghost" size="icon" onClick={() => generateShareLink(req.id)}>
                                 <Copy className="h-4 w-4" />
-                                <span className="sr-only">Copy Link</span>
+                                <span className="sr-only">Generate Link</span>
                             </Button>
                         </TableCell>
                     </TableRow>

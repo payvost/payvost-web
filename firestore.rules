@@ -2,81 +2,134 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ✅ Helper: only Tier1 users can do finance
+    // Tier gating: only verified (KYC) users can perform financial operations.
     function isTier1(userId) {
       return request.auth != null
-             && request.auth.uid == userId
-             && get(/databases/$(database)/documents/users/$(userId)).data.kycStatus == "verified";
+        && request.auth.uid == userId
+        && get(/databases/$(database)/documents/users/$(userId)).data.kycStatus == "verified";
     }
 
-    // ✅ Helper: check if user is admin
     function isAdmin() {
       return request.auth != null && request.auth.token.admin == true;
     }
 
-    // ✅ Helper: check if user is HR admin
     function isHrAdmin() {
-      return request.auth != null 
-             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['hr_admin', 'admin', 'super_admin'];
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['hr_admin', 'admin', 'super_admin'];
     }
 
-    // 🔹 Users collection
-    match /users/{userId} {
-      allow read: if true; // public profiles visible
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Public profiles: safe subset only (no roles, KYC state, or sensitive metadata).
+    match /publicProfiles/{userId} {
+      allow read, list: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "username",
+          "displayName",
+          "photoURL",
+          "country",
+          "countryCode",
+          "updatedAt"
+        ]);
+      allow delete: if false;
+    }
 
-      // 🪪 KYC Documents (subcollection)
+    // Users: private by default.
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      // Allow only non-sensitive profile/preferences fields to be written by the user.
+      // Roles/KYC/risk/limits/financial aggregates must be set by backend services (Admin SDK).
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "photoURL",
+          "dateOfBirth",
+          "phone",
+          "country",
+          "countryName",
+          "countryCode",
+          "street",
+          "city",
+          "state",
+          "zip",
+          "location",
+          "defaultWalletCurrency",
+          "preferences",
+          "fcmToken",
+          "fcmTokenUpdatedAt",
+          "updatedAt"
+        ]);
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          "name",
+          "firstName",
+          "middleName",
+          "lastName",
+          "photoURL",
+          "dateOfBirth",
+          "phone",
+          "country",
+          "countryName",
+          "countryCode",
+          "street",
+          "city",
+          "state",
+          "zip",
+          "location",
+          "defaultWalletCurrency",
+          "preferences",
+          "fcmToken",
+          "fcmTokenUpdatedAt",
+          "updatedAt"
+        ]);
+      allow delete: if false;
+
       match /kycDocuments/{docId} {
         allow create: if request.auth != null
-                       && request.auth.uid == userId
-                       && request.resource.data.keys().hasAll([
-                          "idType", "idNumber", "filePath", "status"
-                        ])
-                       && request.resource.data.status == "pending";
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasAll(["idType", "idNumber", "filePath", "status"])
+          && request.resource.data.status == "pending";
         allow read: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if false;
       }
 
-      // 🔹 Scheduled payments
       match /scheduledPayments/{paymentId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create, update, delete: if isTier1(userId);
       }
 
-      // 🔹 Transactions (user-private copy)
       match /transactions/{txnId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create: if isTier1(userId);
         allow update, delete: if false;
       }
 
-      // 🔹 Virtual Cards
       match /cards/{cardId} {
         allow read, update, delete: if isTier1(userId);
         allow create: if isTier1(userId)
-                      && request.resource.data.keys().hasAll([
-                          "currency", "cardType", "last4", "expiry", "status"
-                        ]);
+          && request.resource.data.keys().hasAll(["currency", "cardType", "last4", "expiry", "status"]);
       }
 
-      // 🔹 Wallets
       match /wallets/{walletId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create: if isTier1(userId)
-                      && request.resource.data.keys().hasAll([
-                          "currency", "balance", "status"
-                        ]);
+          && request.resource.data.keys().hasAll(["currency", "balance", "status"]);
         allow update, delete: if isTier1(userId);
       }
 
-      // 🔔 Notifications
       match /notifications/{notifId} {
         allow read, create, update: if request.auth != null && request.auth.uid == userId;
         allow delete: if false;
       }
-      
-      // 🔹 Save & Invest Collections
+
       match /savings_plans/{planId} {
         allow list, read, create, update: if request.auth != null && request.auth.uid == userId;
         allow delete: if false;
@@ -90,73 +143,58 @@ service cloud.firestore {
       match /autosave_logs/{logId} {
         allow read, create: if request.auth != null && request.auth.uid == userId;
       }
-      
+
       match /user_investments/{recordId} {
         allow read, create, update: if request.auth != null && request.auth.uid == userId;
         allow delete: if false;
       }
-      
-       match /withdrawals/{withdrawalId} {
+
+      match /withdrawals/{withdrawalId} {
         allow read, create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if false;
       }
     }
 
-    // ✅ Global Transactions (for dispute verification)
+    // Global Transactions (dispute verification). Consider tightening further for production.
     match /transactions/{transactionId} {
-      allow read: if request.auth != null;   // any logged-in user can verify tx
-      allow write: if false;                 // prevent tampering
-    }
-
-    // ✅ Global Escrow (for dispute verification)
-    match /escrow/{escrowId} {
-      allow read: if request.auth != null; 
+      allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // ✅ Disputes
+    match /escrow/{escrowId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     match /disputes/{disputeId} {
-      allow create: if request.auth != null; 
+      allow create: if request.auth != null;
       allow read, list: if request.auth != null &&
-                  (resource.data.userId == request.auth.uid ||
-                   request.auth.token.admin == true);
+        (resource.data.userId == request.auth.uid || request.auth.token.admin == true);
       allow update, delete: if false;
     }
 
-    // 🔹 Invoices (for individual users)
+    // Invoices: private; public access must be token-gated at backend.
     match /invoices/{invoiceId} {
-      // Public invoices are now token-gated at the backend; do not allow public Firestore reads.
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow list: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
-    
-    // 🏢 Business Invoices (for registered businesses)
+
     match /businessInvoices/{invoiceId} {
-      // Public invoices are now token-gated at the backend; do not allow public Firestore reads.
       allow read: if request.auth != null && request.auth.uid == resource.data.createdBy;
-
-      // ✅ List invoices (authenticated users only)
-      // Must always query with: where("createdBy", "==", user.uid)
       allow list: if request.auth != null;
+      allow create: if request.auth != null
+        && isTier1(request.auth.uid)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.businessId is string;
+      allow update, delete: if request.auth != null && resource.data.createdBy == request.auth.uid;
+    }
 
-      // ✅ Create invoice (only verified business users)
-      allow create: if request.auth != null &&
-                     isTier1(request.auth.uid) &&
-                     request.resource.data.createdBy == request.auth.uid &&
-                     request.resource.data.businessId is string;
-
-      // ✅ Update / Delete invoice (only creator)
-      allow update, delete: if request.auth != null &&
-                             resource.data.createdBy == request.auth.uid;
-    }    // 🔹 Donation campaigns
     match /donations/{campaignId} {
       allow read: if true;
-      allow create: if request.auth != null &&
-                    request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null &&
-                             resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
 
       match /contributions/{donationId} {
         allow read: if true;
@@ -165,28 +203,26 @@ service cloud.firestore {
       }
     }
 
-    // 🔹 Payment requests
     match /paymentRequests/{requestId} {
       allow read: if true;
-      allow create: if isTier1(request.auth.uid) &&
-                     request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isTier1(request.auth.uid) &&
-                             resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && isTier1(request.auth.uid)
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && isTier1(request.auth.uid)
+        && resource.data.userId == request.auth.uid;
 
       match /payments/{paymentId} {
         allow read: if true;
-        allow create: if isTier1(request.auth.uid);
+        allow create: if request.auth != null && isTier1(request.auth.uid);
         allow update, delete: if false;
       }
     }
 
-    // 🔹 Events
     match /events/{eventId} {
       allow read: if true;
-      allow create: if request.auth != null &&
-                    request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null &&
-                             resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
 
       match /tickets/{ticketId} {
         allow read: if true;
@@ -194,13 +230,12 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
-    
-    // 🌐 Publicly Readable Content
+
     match /investment_listings/{investmentId} {
       allow read: if true;
       allow create, update, delete: if false;
     }
-    
+
     match /education_articles/{articleId} {
       allow read: if true;
       allow write: if false;
@@ -211,111 +246,59 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // 🪪 KYC Submissions (admin readable, user can read their own)
     match /kyc_submissions/{submissionId} {
-      // Users can read their own submissions, admins can read all
-      allow read: if request.auth != null 
-                   && (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Users can create their own submissions
-      // Allow creation if user is authenticated and userId matches
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if request.auth != null
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.status == "submitted"
-                    && request.resource.data.userId is string
-                    && request.resource.data.countryCode is string;
-      
-      // Only system/admins can update (via backend)
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.status == "submitted"
+        && request.resource.data.userId is string
+        && request.resource.data.countryCode is string;
       allow update: if isAdmin();
-      
-      // Prevent deletion
       allow delete: if false;
     }
 
-    // 🏢 Business Onboarding (admin readable, user can read/create/update their own)
     match /business_onboarding/{submissionId} {
-      // Users can read their own submissions, admins can read all
-      allow read: if request.auth != null 
-                   && (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Allow listing/querying - users can query their own, admins can query all
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
       allow list: if request.auth != null;
-      
-      // Users can create their own business onboarding submissions
       allow create: if request.auth != null
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.status == "submitted"
-                    && request.resource.data.userId is string;
-      
-      // Users can update their own submissions, admins can update any
-      allow update: if request.auth != null
-                    && (request.auth.uid == resource.data.userId || isAdmin());
-      
-      // Prevent deletion
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.status == "submitted"
+        && request.resource.data.userId is string;
+      allow update: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
       allow delete: if false;
     }
 
-    // 💼 Jobs Collection (HR & Public)
     match /jobs/{jobId} {
-      // ✅ Public can read active jobs (for careers page)
       allow read: if resource.data.status == 'active' || isHrAdmin();
-      
-      // ✅ HR admins can list all jobs
-      allow list: if isHrAdmin() || true; // Public can list, but only active jobs will be returned
-      
-      // ✅ Only HR admins can create/update/delete jobs
-      allow create: if isHrAdmin() 
-                    && request.resource.data.keys().hasAll(['title', 'department', 'location', 'type', 'status'])
-                    && request.resource.data.status in ['active', 'closed'];
-      
-      allow update: if isHrAdmin() 
-                    && request.resource.data.status in ['active', 'closed'];
-      
+      allow list: if true;
+      allow create: if isHrAdmin()
+        && request.resource.data.keys().hasAll(['title', 'department', 'location', 'type', 'status'])
+        && request.resource.data.status in ['active', 'closed'];
+      allow update: if isHrAdmin() && request.resource.data.status in ['active', 'closed'];
       allow delete: if isHrAdmin();
     }
 
-    // 📝 Job Applications Collection
     match /jobApplications/{applicationId} {
-      // ✅ Users can read their own applications, HR admins can read all
-      allow read: if request.auth != null 
-                   && (resource.data.userId == request.auth.uid || isHrAdmin());
-      
-      // ✅ Users can list their own applications, HR admins can list all
-      allow list: if request.auth != null; // Filtering by userId or HR admin is done in queries
-      
-      // ✅ Authenticated users can create applications for themselves
-      allow create: if request.auth != null 
-                    && request.auth.uid == request.resource.data.userId
-                    && request.resource.data.keys().hasAll(['jobId', 'userId', 'status'])
-                    && request.resource.data.status == 'pending';
-      
-      // ✅ Users can update their own applications, HR admins can update any
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isHrAdmin());
+      allow list: if request.auth != null;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.keys().hasAll(['jobId', 'userId', 'status'])
+        && request.resource.data.status == 'pending';
       allow update: if request.auth != null
-                    && (request.auth.uid == resource.data.userId || isHrAdmin())
-                    && request.resource.data.status in ['pending', 'shortlisted', 'rejected', 'accepted'];
-      
-      // ✅ Prevent deletion (maintain audit trail)
+        && (request.auth.uid == resource.data.userId || isHrAdmin())
+        && request.resource.data.status in ['pending', 'shortlisted', 'rejected', 'accepted'];
       allow delete: if false;
     }
 
-    // 📄 Legal Documents (Terms & Privacy Policy)
     match /legalDocuments/{docId} {
-      // ✅ Public can read published versions
       allow read: if resource.data.status == 'published' || isAdmin();
-      
-      // ✅ Admins can list all versions
-      allow list: if isAdmin() || true; // Public can list, but only published will be returned in queries
-      
-      // ✅ Only admins can create/update legal documents
-      allow create: if isAdmin() 
-                    && request.resource.data.keys().hasAll(['type', 'content', 'status', 'versionNumber'])
-                    && request.resource.data.type in ['terms', 'privacy']
-                    && request.resource.data.status in ['draft', 'published', 'archived'];
-      
-      allow update: if isAdmin() 
-                    && request.resource.data.status in ['draft', 'published', 'archived'];
-      
-      // ✅ Prevent deletion (maintain version history)
+      allow list: if true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll(['type', 'content', 'status', 'versionNumber'])
+        && request.resource.data.type in ['terms', 'privacy']
+        && request.resource.data.status in ['draft', 'published', 'archived'];
+      allow update: if isAdmin() && request.resource.data.status in ['draft', 'published', 'archived'];
       allow delete: if false;
     }
   }

@@ -100,3 +100,7 @@ export type {
   Recipient,
   CreateRecipientDto,
 } from './recipientService';
+
+// Payouts (external transfers)
+export { payoutService } from './payoutService';
+export type { CreatePayoutDto } from './payoutService';

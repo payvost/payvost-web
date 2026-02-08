@@ -1,5 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { Request } from 'express';
+import Redis from 'ioredis';
+import { RedisStore } from 'rate-limit-redis';
 
 // Extend Express Request to include rateLimit property
 type RateLimitedRequest = Request & {
@@ -10,6 +12,34 @@ type RateLimitedRequest = Request & {
   };
 };
 
+let rateLimitRedis: Redis | null = null;
+
+function getRateLimitRedis(): Redis | null {
+  if (rateLimitRedis) return rateLimitRedis;
+  const url = process.env.REDIS_URL;
+  if (!url) return null;
+
+  const client = new Redis(url, {
+    enableReadyCheck: true,
+    lazyConnect: true,
+    maxRetriesPerRequest: 3,
+  });
+  rateLimitRedis = client;
+  client.connect().catch(() => {
+    // Best-effort: if Redis is unavailable, express-rate-limit still works in-memory per instance.
+  });
+  return client;
+}
+
+function maybeRedisStore(prefix: string) {
+  const client = getRateLimitRedis();
+  if (!client) return undefined;
+  return new RedisStore({
+    prefix,
+    sendCommand: (...args: string[]) => (client as any).call(...args),
+  });
+}
+
 /**
  * General API rate limiter
  * 100 requests per 15 minutes per IP
@@ -17,6 +47,7 @@ type RateLimitedRequest = Request & {
 export const generalLimiter: any = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
+  store: maybeRedisStore('rl:general:'),
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -36,6 +67,7 @@ export const generalLimiter: any = rateLimit({
 export const authLimiter: any = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login attempts per windowMs
+  store: maybeRedisStore('rl:auth:'),
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful requests
   standardHeaders: true,
@@ -56,6 +88,7 @@ export const authLimiter: any = rateLimit({
 export const transactionLimiter: any = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20, // Limit each IP to 20 transactions per minute
+  store: maybeRedisStore('rl:txn:'),
   message: 'Too many transaction requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -76,6 +109,7 @@ export const createApiKeyLimiter = (maxRequests: number = 100, windowMs: number 
   return rateLimit({
     windowMs,
     max: maxRequests,
+    store: maybeRedisStore('rl:apikey:'),
     keyGenerator: (req: any) => {
       // Use API key from header if present, otherwise fall back to IP
       const apiKey = req.headers?.['x-api-key'] as string;

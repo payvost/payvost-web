@@ -24,11 +24,12 @@ export function CardAuditDialog(props: {
 
   useEffect(() => {
     if (!props.open || !props.card) return;
+    const cardId = props.card.id;
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
-        const resp = await fetchCardEvents(props.card.id, { limit: 50 });
+        const resp = await fetchCardEvents(cardId, { limit: 50 });
         if (!cancelled) setEvents(resp.events || []);
       } finally {
         if (!cancelled) setLoading(false);
@@ -90,4 +91,3 @@ export function CardAuditDialog(props: {
     </Dialog>
   );
 }
-

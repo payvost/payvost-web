@@ -4,11 +4,13 @@ import { useState } from 'react';
 import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Payvost } from '@/components/Payvost';
-import { Beneficiaries } from '@/components/beneficiaries';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Users } from 'lucide-react';
 
 export default function PaymentsSendPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string | undefined>();
 
   return (
     <DashboardLayout language={language} setLanguage={setLanguage}>
@@ -19,18 +21,28 @@ export default function PaymentsSendPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
           <div className="lg:col-span-2">
-            <Payvost initialBeneficiaryId={selectedBeneficiaryId} />
+            <Payvost />
           </div>
           <div className="lg:col-span-1">
-            <Beneficiaries
-              onSelectBeneficiary={(id) => {
-                setSelectedBeneficiaryId(id);
-              }}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Address book</CardTitle>
+                <CardDescription>
+                  Manage saved beneficiaries for bank payouts. Internal Payvost transfers stay in the Payment ID tab.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" className="w-full justify-start gap-2">
+                  <Link href="/dashboard/recipients">
+                    <Users className="h-4 w-4" />
+                    Manage beneficiaries
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
     </DashboardLayout>
   );
 }
-

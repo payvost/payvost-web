@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Map database incidents to API format
-    const incidents = recentIncidents.map((incident: { id: string; title: string; description: string; status: string; severity: string; startedAt: Date; resolvedAt?: Date | null }) => ({
+    const incidents = recentIncidents.map((incident: { id: string; title: string; description: string; status: string; severity: string; startedAt: Date; resolvedAt?: Date | null; affectedServices?: string[] }) => ({
       id: incident.id,
       title: incident.title,
       description: incident.description,
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
       severity: incident.severity.toLowerCase() as 'high' | 'medium' | 'low',
       startedAt: incident.startedAt.toISOString(),
       resolvedAt: incident.resolvedAt?.toISOString(),
-      affectedServices: incident.affectedServices,
+      affectedServices: incident.affectedServices || [],
     }));
 
     // Calculate system-wide uptime from all services

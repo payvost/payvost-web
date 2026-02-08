@@ -1100,6 +1100,7 @@ model Recipient {
   payvostUserId String?
   bankName      String?
   accountNumber String?
+  accountLast4  String?
   swiftCode     String?
   currency      String?
   country       String?
@@ -1384,6 +1385,7 @@ model User {
   CardsCreated                                                Card[]                @relation("CardCreatedBy")
   CardsAssigned                                               Card[]                @relation("CardAssignedTo")
   CardControlsUpdated                                         CardControl[]         @relation("CardControlUpdatedBy")
+  PaymentLinksCreated                                         PaymentLink[]         @relation("PaymentLink_createdByUser")
 }
 
 enum ArticleStatus {
@@ -1503,6 +1505,170 @@ enum ExternalTransactionType {
   VIRTUAL_ACCOUNT_DEPOSIT
   WALLET_TRANSFER
   CARD_ISSUANCE
+}
+
+// ============================================
+// Payment Links (Hosted Checkout / Pay-by-Link)
+// ============================================
+
+enum PaymentLinkType {
+  ONE_TIME
+  REUSABLE
+}
+
+enum PaymentLinkAmountType {
+  FIXED
+  OPEN
+}
+
+enum PaymentLinkStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+  EXPIRED
+}
+
+enum PaymentLinkCheckoutStatus {
+  CREATING
+  CREATED
+  REDIRECTED
+  COMPLETED
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentLinkPaymentStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+model PaymentLink {
+  id              String              @id @default(cuid())
+  publicId         String              @unique
+  publicTokenHash  String              @unique
+  createdByUserId  String
+  workspaceId      String?
+
+  title            String
+  description      String?
+
+  linkType         PaymentLinkType
+  amountType       PaymentLinkAmountType
+  amount           Decimal?            @db.Decimal(20, 8)
+  minAmount        Decimal?            @db.Decimal(20, 8)
+  maxAmount        Decimal?            @db.Decimal(20, 8)
+  currency         String
+
+  status           PaymentLinkStatus   @default(DRAFT)
+  expiresAt        DateTime?
+
+  successUrl       String?
+  cancelUrl        String?
+  failureUrl       String?
+
+  viewCount        Int                 @default(0)
+  checkoutCount    Int                 @default(0)
+  paidCount        Int                 @default(0)
+  totalPaidAmount  Decimal             @default(0) @db.Decimal(20, 8)
+
+  fulfilledAt      DateTime?
+  fulfilledPaymentId String?
+
+  metadata         Json?
+
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  createdByUser    User                @relation("PaymentLink_createdByUser", fields: [createdByUserId], references: [id])
+  checkouts        PaymentLinkCheckout[]
+  payments         PaymentLinkPayment[]
+
+  @@index([createdByUserId, createdAt])
+  @@index([status, createdAt])
+  @@index([workspaceId])
+}
+
+model PaymentLinkCheckout {
+  id               String                 @id @default(cuid())
+  paymentLinkId     String
+  idempotencyKey    String
+  provider          ExternalProvider      @default(RAPYD)
+  providerCheckoutId String?              @unique
+  checkoutUrl       String?
+
+  payerEmail        String?
+  payerName         String?
+  country           String
+
+  amount            Decimal               @db.Decimal(20, 8)
+  currency          String
+
+  status            PaymentLinkCheckoutStatus @default(CREATING)
+  completedAt       DateTime?
+
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  paymentLink       PaymentLink           @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  payments          PaymentLinkPayment[]
+
+  @@unique([paymentLinkId, idempotencyKey])
+  @@index([paymentLinkId, createdAt])
+  @@index([provider, providerCheckoutId])
+  @@index([status, createdAt])
+}
+
+model PaymentLinkPayment {
+  id               String                 @id @default(cuid())
+  paymentLinkId    String
+  checkoutId       String?
+  provider         ExternalProvider       @default(RAPYD)
+  providerPaymentId String                @unique
+
+  amount           Decimal                @db.Decimal(20, 8)
+  currency         String
+  status           PaymentLinkPaymentStatus @default(PROCESSING)
+
+  // Ensure we only increment PaymentLink totals once per providerPaymentId.
+  countedInTotals  Boolean                @default(false)
+
+  externalTransactionId String?
+  providerData     Json?
+
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  paymentLink      PaymentLink            @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  checkout         PaymentLinkCheckout?   @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+
+  @@index([paymentLinkId, createdAt])
+  @@index([checkoutId])
+  @@index([provider, providerPaymentId])
+  @@index([status, createdAt])
+}
+
+model WebhookEvent {
+  id              String             @id @default(cuid())
+  provider        ExternalProvider
+  eventType       String
+  providerEventId String             @unique
+  payload         Json
+  status          WebhookEventStatus @default(RECEIVED)
+  errorMessage    String?
+  receivedAt      DateTime           @default(now())
+  processedAt     DateTime?
+
+  @@index([provider, receivedAt])
+  @@index([status, receivedAt])
 }
 
 enum PaymentOrderType {

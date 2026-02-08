@@ -59,6 +59,12 @@ services:
         sync: false  # URL of Notification Processor service (set to payvost-notification-processor URL)
       - key: INTERNAL_SERVICE_TOKEN
         sync: false  # Internal service authentication token for service-to-service communication
+      - key: RAPYD_ACCESS_KEY
+        sync: false  # Rapyd API access key (payment links)
+      - key: RAPYD_SECRET_KEY
+        sync: false  # Rapyd API secret key (payment links + webhook verification)
+      - key: RAPYD_ENV
+        value: sandbox  # set to production in live environment
 
   # Rate Alert Monitor Service (Background Worker / Cron Job)
   - type: web
@@ -164,6 +170,14 @@ services:
         sync: false  # Firebase service account JSON (as string)
       - key: RELOADLY_WEBHOOK_SECRET
         sync: false  # Reloadly webhook secret for signature verification
+      - key: RAPYD_ACCESS_KEY
+        sync: false  # Rapyd access key (used in webhook signature verification)
+      - key: RAPYD_SECRET_KEY
+        sync: false  # Rapyd secret key (webhook verification + optional API calls)
+      - key: RAPYD_ENV
+        value: sandbox  # set to production in live environment
+      - key: EMAIL_SERVICE_URL
+        sync: false  # URL of Email service (set after deployment)
       - key: NODE_ENV
         value: production
 

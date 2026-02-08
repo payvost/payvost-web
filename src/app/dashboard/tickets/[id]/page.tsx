@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +24,6 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 
 const statusConfig: Record<TicketStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
   OPEN: { label: 'Open', variant: 'default', icon: AlertCircle },
@@ -47,7 +45,6 @@ export default function TicketDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const ticketId = params.id as string;
 
   const [ticket, setTicket] = useState<(SupportTicket & { messages: TicketMessage[]; attachments: any[] }) | null>(null);
@@ -117,20 +114,20 @@ export default function TicketDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout language={language} setLanguage={setLanguage}>
+      <>
         <main className="flex flex-1 flex-col w-full p-6">
           <div className="space-y-6">
             <Skeleton className="h-10 w-64" />
             <Skeleton className="h-96 w-full" />
           </div>
         </main>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (!ticket) {
     return (
-      <DashboardLayout language={language} setLanguage={setLanguage}>
+      <>
         <main className="flex flex-1 flex-col w-full p-6">
           <div className="text-center py-12">
             <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -140,7 +137,7 @@ export default function TicketDetailPage() {
             </Button>
           </div>
         </main>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -149,7 +146,7 @@ export default function TicketDetailPage() {
   const StatusIcon = statusInfo.icon;
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col w-full p-6">
         <div className="space-y-6">
           {/* Header */}
@@ -415,7 +412,7 @@ export default function TicketDetailPage() {
           </div>
         </div>
       </main>
-    </DashboardLayout>
+    </>
   );
 }
 

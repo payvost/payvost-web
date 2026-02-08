@@ -9,6 +9,11 @@ import type {
   VerificationProviderName,
   EmailVerificationResult,
   PhoneVerificationResult,
+  IDVerificationResult,
+  FaceMatchResult,
+  AddressVerificationResult,
+  TaxIDVerificationResult,
+  AMLScreeningResult,
 } from '../types';
 
 export class FirebaseProvider extends BaseVerificationProvider {
@@ -37,7 +42,7 @@ export class FirebaseProvider extends BaseVerificationProvider {
 
       // Check if domain is valid (basic check)
       const domain = email.split('@')[1];
-      const isDomainValid = domain && domain.length > 0;
+      const isDomainValid = !!(domain && domain.length > 0);
 
       // Check if disposable email (basic list - expand as needed)
       const disposableDomains = [

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -174,7 +176,7 @@ export function WalletActivityFeed(props: {
       </Tabs>
       <CardFooter>
         <Button variant="outline" className="w-full" asChild>
-          <a href="/dashboard/transactions">View all transactions</a>
+          <Link href="/dashboard/transactions">View all transactions</Link>
         </Button>
       </CardFooter>
     </Card>

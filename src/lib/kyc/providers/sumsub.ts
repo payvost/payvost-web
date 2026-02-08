@@ -10,6 +10,10 @@ import type {
   IDVerificationResult,
   FaceMatchResult,
   AddressVerificationResult,
+  EmailVerificationResult,
+  PhoneVerificationResult,
+  TaxIDVerificationResult,
+  AMLScreeningResult,
 } from '../types';
 
 export class SumsubProvider extends BaseVerificationProvider {

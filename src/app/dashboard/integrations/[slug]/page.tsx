@@ -2,8 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -52,12 +50,11 @@ const integrationData = {
 };
 
 export default function IntegrationDetailPage({ params }: { params: { slug: string } }) {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   // For now, we'll hardcode to woocommerce. In a real app, you'd use the slug.
   const integration = integrationData.woocommerce;
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex-1 p-4 lg:p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="outline" size="icon" className="h-8 w-8" asChild>
@@ -134,7 +131,7 @@ export default function IntegrationDetailPage({ params }: { params: { slug: stri
           </div>
         </div>
       </main>
-    </DashboardLayout>
+    </>
   );
 }
 

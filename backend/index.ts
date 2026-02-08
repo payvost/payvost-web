@@ -59,9 +59,12 @@ import contentRoutes from './services/content/routes';
 import supportRoutes from './services/support/routes';
 import referralRoutes from './services/referral/routes';
 import recipientRoutes from './services/recipient/routes';
+import payoutRoutes from './services/payouts/routes';
 import { startRecurringInvoiceScheduler } from './services/invoice/src/scheduler';
 import createCardsRouter from './services/cards/routes';
 import createWorkspacesRouter from './services/workspaces/routes';
+import paymentLinksRoutes from './services/payment-links/routes';
+import publicPaymentLinksRoutes from './services/payment-links/public-routes';
 
 logger.info('Static service imports loaded');
 
@@ -105,9 +108,16 @@ registerVersionedRoutes(app, 'Invoice Service', '/api/invoices', invoiceRoutes, 
 registerVersionedRoutes(app, 'Public Invoice Service', '/public/invoices', publicInvoiceRoutes, ['v1']);
 registerVersionedRoutes(app, 'Business Service', '/api/business', businessRoutes, ['v1']);
 registerVersionedRoutes(app, 'Content Service', '/api/content', contentRoutes, ['v1']);
-registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
-registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
-registerVersionedRoutes(app, 'Recipient Service', '/api/recipient', recipientRoutes, ['v1']);
+  registerVersionedRoutes(app, 'Support Service', '/api/support', supportRoutes, ['v1']);
+  registerVersionedRoutes(app, 'Referral Service', '/referral', referralRoutes, ['v1']);
+  registerVersionedRoutes(app, 'Recipient Service', '/api/recipient', recipientRoutes, ['v1']);
+  registerVersionedRoutes(app, 'Payouts Service', '/api/payouts', payoutRoutes, ['v1']);
+  // Payment Links: do NOT use registerVersionedRoutes here because it prefixes with /api/v1 and expects `basePath` without /api.
+  // We mount explicit versioned and unversioned paths to match the production contract.
+  app.use('/api/payment-links', paymentLinksRoutes);
+  app.use('/api/v1/payment-links', paymentLinksRoutes);
+app.use('/public/payment-links', publicPaymentLinksRoutes);
+app.use('/public/v1/payment-links', publicPaymentLinksRoutes);
 
 // Fraud service might be optional or handled differently, but importing statically
 registerVersionedRoutes(app, 'Fraud Service', '/api/fraud', fraudRoutes, ['v1']);
@@ -315,6 +325,50 @@ app.post('/api/webhooks/reloadly', async (req, res) => {
     res.status(response.status).json(data);
   } catch (error: any) {
     logger.error({ err: error }, 'Webhook service proxy error');
+    res.status(500).json({
+      error: 'Failed to connect to webhook service',
+      message: error.message,
+    });
+  }
+});
+
+// Rapyd Webhook Proxy (raw-body forwarding for signature verification)
+app.post('/api/webhooks/rapyd', async (req: any, res) => {
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': (req.headers['content-type'] as string) || 'application/json',
+    };
+
+    // Forward Rapyd signature headers
+    const signature = req.headers['signature'];
+    const salt = req.headers['salt'];
+    const timestamp = req.headers['timestamp'];
+    const accessKey = req.headers['access_key'] || req.headers['access-key'];
+
+    if (signature) headers['signature'] = String(signature);
+    if (salt) headers['salt'] = String(salt);
+    if (timestamp) headers['timestamp'] = String(timestamp);
+    if (accessKey) headers['access_key'] = String(accessKey);
+
+    // Preserve exact raw payload bytes for signature verification downstream.
+    const raw: Buffer | undefined = req.rawBody as Buffer | undefined;
+    const body = raw ? raw.toString('utf8') : JSON.stringify(req.body || {});
+
+    const response = await fetch(`${WEBHOOK_SERVICE_URL}/rapyd`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+
+    const text = await response.text();
+    try {
+      const json = text ? JSON.parse(text) : null;
+      return res.status(response.status).json(json);
+    } catch {
+      return res.status(response.status).send(text);
+    }
+  } catch (error: any) {
+    logger.error({ err: error }, 'Rapyd webhook proxy error');
     res.status(500).json({
       error: 'Failed to connect to webhook service',
       message: error.message,

@@ -51,6 +51,7 @@
     "pino": "^10.1.0",
     "pino-pretty": "^13.1.2",
     "prisma": "^6.18.0",
+    "rate-limit-redis": "^4.2.2",
     "rc9": "^1.2.4",
     "socket.io": "^4.8.1",
     "stripe": "^14.21.0",

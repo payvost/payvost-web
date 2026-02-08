@@ -2,8 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,7 +46,6 @@ function formatTimeAgo(date: Date) {
 }
 
 export default function NotificationsPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +130,7 @@ export default function NotificationsPage() {
   );
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex-1 p-4 lg:p-6">
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-lg font-semibold md:text-2xl">Notifications</h1>
@@ -167,6 +164,6 @@ export default function NotificationsPage() {
             </CardContent>
         </Card>
       </main>
-    </DashboardLayout>
+    </>
   );
 }

@@ -2,8 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,10 +9,8 @@ import { Mail, Store } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TerminalComingSoonPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
-
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 lg:gap-6 lg:p-6 text-center">
         <div className="p-6 bg-primary/10 rounded-full">
             <Store className="h-16 w-16 text-primary" />
@@ -48,6 +44,6 @@ export default function TerminalComingSoonPage() {
             </Link>
         </Button>
       </main>
-    </DashboardLayout>
+    </>
   );
 }

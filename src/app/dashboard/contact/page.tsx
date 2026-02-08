@@ -2,8 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { GenerateNotificationInput } from '@/ai/flows/adaptive-notification-tool';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,7 +45,6 @@ const faqs = [
 ];
 
 export default function ContactPage() {
-  const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   const { toast } = useToast();
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema)
@@ -63,7 +60,7 @@ export default function ContactPage() {
   };
 
   return (
-    <DashboardLayout language={language} setLanguage={setLanguage}>
+    <>
       <main className="flex-1 p-4 lg:p-6">
         {/* Hero Section */}
         <div className="w-full bg-primary/10 rounded-lg p-12 md:p-20 lg:p-24 text-center">
@@ -199,6 +196,6 @@ export default function ContactPage() {
             </Card>
         </div>
       </main>
-    </DashboardLayout>
+    </>
   );
 }

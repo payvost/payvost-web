@@ -113,6 +113,13 @@ export interface VirtualAccount {
 const RAPYD_ENDPOINTS = {
   WALLETS: '/v1/user',
   WALLET_BY_ID: '/v1/user/:walletId',
+  // Payments / Customers / Checkout
+  PAYMENTS: '/v1/payments',
+  PAYMENT_BY_ID: '/v1/payments/:paymentId',
+  CUSTOMERS: '/v1/customers',
+  CUSTOMER_BY_ID: '/v1/customers/:customerId',
+  CHECKOUT: '/v1/checkout',
+  CHECKOUT_BY_ID: '/v1/checkout/:checkoutId',
   VIRTUAL_ACCOUNTS: '/v1/virtual_accounts',
   VIRTUAL_ACCOUNT_BY_ID: '/v1/virtual_accounts/:virtualAccountId',
   // Card issuing
@@ -120,6 +127,84 @@ const RAPYD_ENDPOINTS = {
   CARD_BY_ID: '/v1/issuing/cards/:cardId',
   UPDATE_CARD_STATUS: '/v1/issuing/cards/status',
 } as const;
+
+/**
+ * Rapyd Customer types
+ */
+export interface CreateCustomerRequest {
+  name: string;
+  email: string;
+  phone_number?: string;
+  metadata?: Record<string, any>;
+  payment_method?: {
+    type: string;
+    fields?: Record<string, any>;
+  };
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone_number?: string;
+  created_at?: number;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+/**
+ * Rapyd Checkout types
+ */
+export interface CreateCheckoutRequest {
+  amount: number;
+  currency: string;
+  country: string;
+  description?: string;
+  merchant_reference_id?: string;
+  customer?: string;
+  payment_method_types_include?: string[];
+  payment_method_types_exclude?: string[];
+  metadata?: Record<string, any>;
+  complete_payment_url?: string;
+  error_payment_url?: string;
+  cancel_payment_url?: string;
+  complete_checkout_url?: string;
+  error_checkout_url?: string;
+  cancel_checkout_url?: string;
+  expiration?: number;
+  language?: string;
+}
+
+export interface Checkout {
+  id: string;
+  amount: number;
+  currency: string;
+  country: string;
+  status: string;
+  description?: string;
+  merchant_reference_id?: string;
+  customer?: string;
+  checkout_url: string;
+  created_at?: number;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
+
+/**
+ * Rapyd Payment (minimal fields for webhook reconciliation)
+ */
+export interface Payment {
+  id: string;
+  status: string;
+  amount?: number;
+  original_amount?: number;
+  currency_code?: string;
+  country_code?: string;
+  merchant_reference_id?: string;
+  checkout_id?: string;
+  metadata?: Record<string, any>;
+  [key: string]: any;
+}
 
 /**
  * Card Issuing types
@@ -337,6 +422,65 @@ class RapydService {
     } catch (error) {
       throw new RapydError(
         `Failed to get wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Customers =============
+
+  async createCustomer(customerData: CreateCustomerRequest): Promise<Customer> {
+    try {
+      return await this.request<Customer>('POST', RAPYD_ENDPOINTS.CUSTOMERS, customerData);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create customer: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  async getCustomer(customerId: string): Promise<Customer> {
+    try {
+      const endpoint = this.replaceUrlParams(RAPYD_ENDPOINTS.CUSTOMER_BY_ID, { customerId });
+      return await this.request<Customer>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get customer: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Checkout =============
+
+  async createCheckout(payload: CreateCheckoutRequest): Promise<Checkout> {
+    try {
+      return await this.request<Checkout>('POST', RAPYD_ENDPOINTS.CHECKOUT, payload);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to create checkout: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  async getCheckout(checkoutId: string): Promise<Checkout> {
+    try {
+      const endpoint = this.replaceUrlParams(RAPYD_ENDPOINTS.CHECKOUT_BY_ID, { checkoutId });
+      return await this.request<Checkout>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get checkout: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  // ============= Payments =============
+
+  async getPayment(paymentId: string): Promise<Payment> {
+    try {
+      const endpoint = this.replaceUrlParams(RAPYD_ENDPOINTS.PAYMENT_BY_ID, { paymentId });
+      return await this.request<Payment>('GET', endpoint);
+    } catch (error) {
+      throw new RapydError(
+        `Failed to get payment: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }

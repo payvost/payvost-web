@@ -60,10 +60,9 @@ function initFirebaseAdmin() {
         } else {
           // In production, throw error
           const envVarName = `FIREBASE_SERVICE_ACCOUNT_KEY${envB64 ? '_BASE64' : ''}`;
-          const rawPreview = (envJson ?? (envB64 ? Buffer.from(envB64 as string, 'base64').toString('utf8') : '')).substring(0, 100);
           const hint = `Invalid ${envVarName}. Ensure it's valid JSON${envB64 ? ' after base64 decoding' : ''}.`;
-          const debugInfo = `First 100 chars: ${rawPreview}${rawPreview.length >= 100 ? '...' : ''}`;
-          throw new Error(`${hint} Original error: ${e?.message || e}. ${debugInfo}`);
+          // Never include any secret material (even small previews) in logs/errors.
+          throw new Error(`${hint} Original error: ${e?.message || e}.`);
         }
       }
     }

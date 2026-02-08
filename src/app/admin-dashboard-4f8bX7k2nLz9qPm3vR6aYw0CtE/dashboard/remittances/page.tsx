@@ -92,8 +92,8 @@ export default function AdminRemittancesPage() {
             try {
                 setLoading(true);
                 const params = new URLSearchParams();
-                if (dateRange.from) params.append('startDate', dateRange.from.toISOString());
-                if (dateRange.to) params.append('endDate', dateRange.to.toISOString());
+                if (dateRange?.from) params.append('startDate', dateRange.from.toISOString());
+                if (dateRange?.to) params.append('endDate', dateRange.to.toISOString());
                 if (activeTab !== 'all') params.append('status', activeTab);
 
                 const response = await axios.get(`/api/admin/remittances?${params}`);

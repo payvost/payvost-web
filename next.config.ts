@@ -1,11 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Fintech hardening: do not ship builds with type or lint errors.
   async rewrites() {
     return [
       // Serve flag assets from /public/flag when requested via /flags
@@ -52,15 +47,12 @@ const nextConfig = {
       ...config.resolve.alias,
       handlebars: 'handlebars/dist/cjs/handlebars.js',
     };
-    
-    // Remove custom cache configuration that causes issues in Vercel
-    // Next.js handles webpack caching automatically and doesn't need manual config
-    // The previous custom cache config was causing "Can't resolve next.config.compiled.js" errors
-    if (config.cache && config.cache.buildDependencies) {
-      // Remove buildDependencies to let Next.js handle it automatically
-      delete config.cache.buildDependencies.config;
-    }
-    
+
+    // On Windows, `fs.readlink()` on a normal directory throws `EISDIR` (not `EINVAL`),
+    // which can bubble up via webpack's resolver in some setups. Disabling symlink
+    // resolution avoids the `readlink` path entirely.
+    config.resolve.symlinks = false;
+
     return config;
   },
 };

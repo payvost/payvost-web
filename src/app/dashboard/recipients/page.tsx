@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -42,20 +41,31 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import type { LanguagePreference } from '@/types/language';
 
 export default function RecipientsPage() {
-    const [language, setLanguage] = useState<LanguagePreference>('en');
     const { user } = useAuth();
     const { toast } = useToast();
     const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isAddingRecipient, setIsAddingRecipient] = useState(false);
+    const [isEditingRecipient, setIsEditingRecipient] = useState(false);
+    const [editingRecipientId, setEditingRecipientId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     // New Recipient Form State
     const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        bankName: '',
+        accountNumber: '',
+        swiftCode: '',
+        currency: 'USD',
+        country: '',
+    });
+
+    const [editFormData, setEditFormData] = useState({
         name: '',
         email: '',
         phone: '',
@@ -91,7 +101,7 @@ export default function RecipientsPage() {
     const handleCreateRecipient = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await recipientService.create(formData);
+            await recipientService.create({ ...formData, type: 'EXTERNAL' });
             toast({
                 title: 'Success',
                 description: 'Recipient added successfully.',
@@ -112,6 +122,42 @@ export default function RecipientsPage() {
             toast({
                 title: 'Error',
                 description: error.message || 'Failed to add recipient.',
+                variant: 'destructive',
+            });
+        }
+    };
+
+    const openEditRecipient = (recipient: Recipient) => {
+        setEditingRecipientId(recipient.id);
+        setEditFormData({
+            name: recipient.name || '',
+            email: recipient.email || '',
+            phone: recipient.phone || '',
+            bankName: recipient.bankName || '',
+            accountNumber: recipient.accountNumber || '',
+            swiftCode: recipient.swiftCode || '',
+            currency: recipient.currency || 'USD',
+            country: recipient.country || '',
+        });
+        setIsEditingRecipient(true);
+    };
+
+    const handleUpdateRecipient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingRecipientId) return;
+        try {
+            await recipientService.update(editingRecipientId, editFormData);
+            toast({
+                title: 'Success',
+                description: 'Recipient updated successfully.',
+            });
+            setIsEditingRecipient(false);
+            setEditingRecipientId(null);
+            fetchRecipients();
+        } catch (error: any) {
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to update recipient.',
                 variant: 'destructive',
             });
         }
@@ -143,7 +189,7 @@ export default function RecipientsPage() {
     );
 
     return (
-        <DashboardLayout language={language} setLanguage={setLanguage}>
+        <>
             <main className="flex-1 p-4 lg:p-6 max-w-6xl mx-auto w-full">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                     <div>
@@ -240,6 +286,89 @@ export default function RecipientsPage() {
                     </Dialog>
                 </div>
 
+                <Dialog open={isEditingRecipient} onOpenChange={setIsEditingRecipient}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <form onSubmit={handleUpdateRecipient}>
+                            <DialogHeader>
+                                <DialogTitle>Edit Recipient</DialogTitle>
+                                <DialogDescription>
+                                    Update the details for this saved beneficiary.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-name">Full Name</Label>
+                                    <Input
+                                        id="edit-name"
+                                        placeholder="e.g. John Doe"
+                                        value={editFormData.name}
+                                        onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="edit-email">Email (Optional)</Label>
+                                        <Input
+                                            id="edit-email"
+                                            type="email"
+                                            placeholder="john@example.com"
+                                            value={editFormData.email}
+                                            onChange={e => setEditFormData({ ...editFormData, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="edit-phone">Phone (Optional)</Label>
+                                        <Input
+                                            id="edit-phone"
+                                            placeholder="+1 234 567 8900"
+                                            value={editFormData.phone}
+                                            onChange={e => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <Separator className="my-2" />
+                                <p className="text-sm font-medium text-muted-foreground">Bank Details (Optional)</p>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="edit-bankName">Bank Name</Label>
+                                    <Input
+                                        id="edit-bankName"
+                                        placeholder="Chase Bank"
+                                        value={editFormData.bankName}
+                                        onChange={e => setEditFormData({ ...editFormData, bankName: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="edit-accountNumber">Account Number</Label>
+                                        <Input
+                                            id="edit-accountNumber"
+                                            placeholder="123456789"
+                                            value={editFormData.accountNumber}
+                                            onChange={e => setEditFormData({ ...editFormData, accountNumber: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="edit-swiftCode">SWIFT/BIC</Label>
+                                        <Input
+                                            id="edit-swiftCode"
+                                            placeholder="CHASUS33"
+                                            value={editFormData.swiftCode}
+                                            onChange={e => setEditFormData({ ...editFormData, swiftCode: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsEditingRecipient(false)}>Cancel</Button>
+                                <Button type="submit" disabled={!editFormData.name}>Save Changes</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
                 <Card className="mb-8">
                     <CardContent className="p-4">
                         <div className="relative">
@@ -287,8 +416,11 @@ export default function RecipientsPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => openEditRecipient(recipient)}>
+                                                    Edit
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem asChild>
-                                                    <Link href={`/dashboard/send?recipientId=${recipient.id}`} className="flex items-center">
+                                                    <Link href={`/dashboard/payments/send`} className="flex items-center">
                                                         <Banknote className="mr-2 h-4 w-4" /> Send Money
                                                     </Link>
                                                 </DropdownMenuItem>
@@ -323,7 +455,7 @@ export default function RecipientsPage() {
 
                                     <div className="pt-4 flex gap-2">
                                         <Button asChild size="sm" className="flex-1 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary">
-                                            <Link href={`/dashboard?recipientId=${recipient.id}`}>
+                                            <Link href={`/dashboard/payments/send`}>
                                                 Send Money
                                             </Link>
                                         </Button>
@@ -354,6 +486,6 @@ export default function RecipientsPage() {
                     </div>
                 )}
             </main>
-        </DashboardLayout>
+        </>
     );
 }

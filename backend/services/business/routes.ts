@@ -284,8 +284,8 @@ router.post('/payouts', verifyFirebaseToken, async (req: AuthenticatedRequest, r
           recipientType,
           savedRecipientId,
           recipientName,
-          accountNumber,
-          bank,
+          bankName: bank,
+          accountLast4: accountNumber ? String(accountNumber).slice(-4) : undefined,
         },
         metadata: {
           fundingSource,
@@ -294,16 +294,18 @@ router.post('/payouts', verifyFirebaseToken, async (req: AuthenticatedRequest, r
       },
     });
 
-    // If saveBeneficiary is true, save to Firestore
+    // If saveBeneficiary is true, save to Prisma Address Book (no plaintext account numbers stored).
     if (saveBeneficiary && recipientName && accountNumber) {
-      const beneficiariesRef = admin.firestore().collection('beneficiaries');
-      await beneficiariesRef.add({
-        userId,
-        name: recipientName,
-        accountNumber,
-        bank,
-        currency,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      await prisma.recipient.create({
+        data: {
+          userId,
+          name: recipientName,
+          bankName: bank,
+          accountNumber: null,
+          accountLast4: String(accountNumber).slice(-4),
+          currency,
+          type: 'EXTERNAL',
+        },
       });
     }
 

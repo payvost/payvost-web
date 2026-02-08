@@ -260,7 +260,7 @@ export function ProfessionalChatWidget({
     if (useFallback || !socket || !isConnected) {
       try {
         const chatHistory = messages.map((msg) => ({
-          role: msg.senderId === user?.uid ? 'user' : 'model',
+          role: (msg.senderId === user?.uid ? 'user' : 'model') as 'user' | 'model',
           content: [{ text: msg.content }],
         }));
 

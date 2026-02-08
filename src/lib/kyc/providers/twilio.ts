@@ -9,6 +9,12 @@ import { BaseVerificationProvider } from './base';
 import type {
   VerificationProviderName,
   PhoneVerificationResult,
+  EmailVerificationResult,
+  IDVerificationResult,
+  FaceMatchResult,
+  AddressVerificationResult,
+  TaxIDVerificationResult,
+  AMLScreeningResult,
 } from '../types';
 
 export class TwilioProvider extends BaseVerificationProvider {

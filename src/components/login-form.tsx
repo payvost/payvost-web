@@ -7,8 +7,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signInWithEmailAndPassword, TotpMultiFactorGenerator, PhoneMultiFactorGenerator, PhoneAuthProvider, RecaptchaVerifier, getMultiFactorResolver, type MultiFactorResolver, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,19 +182,11 @@ export function LoginForm() {
     setIsLoading(true);
     
     try {
-      let emailToUse = data.credential;
-      if (!data.credential.includes('@')) {
-        // Resolve username -> email via Firestore
-        const q = query(collection(db, 'users'), where('username', '==', data.credential), limit(1));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          throw { code: 'auth/user-not-found', message: 'Username does not exist' };
-        }
-        const docData: any = snap.docs[0].data();
-        if (!docData.email) {
-          throw { code: 'auth/user-not-found', message: 'No email associated with this username' };
-        }
-        emailToUse = docData.email;
+      let emailToUse = data.credential.trim();
+      if (!emailToUse.includes('@')) {
+        // Resolve username -> email via server route (avoids client-side Firestore list permissions).
+        const resp = await axios.post('/api/auth/resolve-credential', { credential: emailToUse });
+        emailToUse = resp.data?.resolvedEmail || emailToUse;
       }
 
       // Sign in - if MFA is required, we'll handle it
