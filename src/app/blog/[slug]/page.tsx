@@ -14,9 +14,10 @@ function calculateReadingTime(content: string): string {
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
-    const article = await contentService.getBySlug(params.slug);
+    const { slug } = await params;
+    const article = await contentService.getBySlug(slug);
     
     if (!article || article.contentType !== 'BLOG' || article.status !== 'PUBLISHED') {
       return {
@@ -50,11 +51,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   let article: Content;
   
   try {
-    article = await contentService.getBySlug(params.slug);
+    const { slug } = await params;
+    article = await contentService.getBySlug(slug);
     
     if (!article || article.contentType !== 'BLOG' || article.status !== 'PUBLISHED') {
       notFound();

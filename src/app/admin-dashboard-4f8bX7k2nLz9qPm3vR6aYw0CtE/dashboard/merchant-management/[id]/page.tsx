@@ -38,7 +38,7 @@ const statusConfig: Record<MerchantAccountData['status'], { icon: React.ReactEle
     Suspended: { icon: <XCircle className="h-5 w-5 text-red-500" />, variant: 'destructive' as const },
 };
 
-export default function MerchantDetailsPage({ params }: { params: { id: string } }) {
+export default function MerchantDetailsPage() {
     const merchant = merchantDetails; // Fetch by params.id in real app
     const status = statusConfig[merchant.status];
 

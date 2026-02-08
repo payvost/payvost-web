@@ -29,7 +29,7 @@ const recentPayments = [
     { id: 'txn_4', customer: 'emma@example.com', amount: 50.00, date: '2024-08-14' },
 ];
 
-export default function PaymentLinkDetailsPage({ params }: { params: { id: string } }) {
+export default function PaymentLinkDetailsPage() {
 
     return (
         <>

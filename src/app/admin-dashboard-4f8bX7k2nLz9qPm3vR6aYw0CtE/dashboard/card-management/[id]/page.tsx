@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,9 +52,10 @@ const demoTransactions = [
 ];
 
 
-export default function CardDetailsPage({ params }: { params: { id: string } }) {
+export default function CardDetailsPage() {
     const router = useRouter();
-    const card = cardDetails; // Fetch by params.id in real app
+    const { id: _id } = useParams<{ id: string }>();
+    const card = cardDetails; // Fetch by _id in real app
 
     const limit = Number(card.controls?.spendLimitAmount || 0);
     const spent = demoTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);

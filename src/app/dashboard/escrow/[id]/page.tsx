@@ -56,7 +56,7 @@ const milestoneStatusInfo = {
     'Pending': { icon: <Clock className="h-4 w-4 text-gray-400" />, text: 'Pending' },
 }
 
-export default function AgreementDetailsPage({ params }: { params: { id: string } }) {
+export default function AgreementDetailsPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
     const { user, loading: authLoading } = useAuth();
     const [userData, setUserData] = useState<any>(null);

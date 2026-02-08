@@ -45,7 +45,7 @@ const getInitials = (name: string) => {
 }
 
 
-export default function TicketDetailsPage({ params }: { params: { id: string } }) {
+export default function TicketDetailsPage() {
     const ticket = ticketDetails;
 
     return (

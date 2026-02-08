@@ -47,7 +47,7 @@ const riskConfig: Record<ComplianceAlert['riskLevel'], { className: string }> = 
 };
 
 
-export default function CaseDetailsPage({ params }: { params: { id: string } }) {
+export default function CaseDetailsPage() {
     const caseData = caseDetails; // Fetch by params.id in real app
     const risk = riskConfig[caseData.riskLevel] ?? { className: 'text-muted-foreground' };
 

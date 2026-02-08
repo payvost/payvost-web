@@ -42,7 +42,7 @@ const milestoneStatusInfo = {
 }
 
 
-export default function ManageFundsPage({ params }: { params: { id: string } }) {
+export default function ManageFundsPage() {
     const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
     const { user, loading: authLoading } = useAuth();
     const [userData, setUserData] = useState<any>(null);

@@ -51,7 +51,7 @@ const integrationData = {
     // Add other integrations here
 };
 
-export default function IntegrationDetailPage({ params }: { params: { slug: string } }) {
+export default function IntegrationDetailPage() {
   const [language, setLanguage] = useState<GenerateNotificationInput['languagePreference']>('en');
   // For now, we'll hardcode to woocommerce. In a real app, you'd use the slug.
   const integration = integrationData.woocommerce;

@@ -58,7 +58,7 @@ const statusInfo: { [key in Status]: { icon: React.ReactNode; variant: 'default'
 };
 
 
-export default function AdminTransactionDetailsPage({ params }: { params: { id: string } }) {
+export default function AdminTransactionDetailsPage() {
     const transaction = transactionDetails; // Fetch by params.id in real app
     const currentStatusInfo = statusInfo[transaction.status];
 

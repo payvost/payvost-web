@@ -37,7 +37,7 @@ const statusConfig = {
     'Lost': 'outline',
 };
 
-export default function CaseDetailsPage({ params }: { params: { id: string } }) {
+export default function CaseDetailsPage() {
     const caseData = caseDetails; // Fetch by params.id in real app
 
     return (

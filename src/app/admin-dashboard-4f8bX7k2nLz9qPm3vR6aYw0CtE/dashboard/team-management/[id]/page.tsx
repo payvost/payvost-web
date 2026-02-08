@@ -37,7 +37,7 @@ const statusConfig = {
     Suspended: { color: 'text-red-600', variant: 'destructive' as const },
 };
 
-export default function TeamMemberDetailsPage({ params }: { params: { id: string } }) {
+export default function TeamMemberDetailsPage() {
     const member = memberDetails; // Fetch by params.id in real app
     const status = statusConfig[member.status];
 
